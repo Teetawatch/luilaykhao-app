@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Travel App - Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#d8e2ff",
+                        "on-primary-container": "#fefcff",
+                        "on-surface": "#1a1c1c",
+                        "inverse-primary": "#adc6ff",
+                        "on-primary-fixed": "#001a41",
+                        "on-background": "#1a1c1c",
+                        "inverse-on-surface": "#f0f1f1",
+                        "surface-container-high": "#e8e8e8",
+                        "on-secondary-fixed-variant": "#26467d",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-primary-fixed-variant": "#004493",
+                        "on-surface-variant": "#414755",
+                        "surface": "#f9f9f9",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e2e2e2",
+                        "secondary": "#405e96",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#2f3131",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed": "#2d1600",
+                        "error": "#ba1a1a",
+                        "on-tertiary-container": "#fffbff",
+                        "outline": "#717786",
+                        "secondary-fixed": "#d8e2ff",
+                        "primary": "#0058bc",
+                        "background": "#f9f9f9",
+                        "surface-dim": "#dadada",
+                        "tertiary-fixed": "#ffdcbf",
+                        "surface-container-low": "#f3f3f3",
+                        "on-tertiary-fixed-variant": "#6a3b00",
+                        "on-secondary-container": "#2d4c83",
+                        "surface-container-highest": "#e2e2e2",
+                        "surface-bright": "#f9f9f9",
+                        "primary-container": "#0070eb",
+                        "tertiary-container": "#ac6300",
+                        "primary-fixed-dim": "#adc6ff",
+                        "on-secondary-fixed": "#001a41",
+                        "surface-tint": "#005bc1",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#a1befd",
+                        "on-error": "#ffffff",
+                        "surface-container": "#eeeeee",
+                        "outline-variant": "#c1c6d7",
+                        "tertiary": "#894d00",
+                        "tertiary-fixed-dim": "#ffb874",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans", "sans-serif"],
+                        "body": ["Be Vietnam Pro", "sans-serif"],
+                        "label": ["Be Vietnam Pro", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .hero-gradient {
+            background: linear-gradient(135deg, rgba(0, 88, 188, 0.4) 0%, rgba(0, 112, 235, 0.1) 100%);
+        }
+        .text-shadow {
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .card-shadow {
+            box-shadow: 0 8px 24px rgba(26, 28, 28, 0.04);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface antialiased pb-24 min-h-screen flex flex-col">
+<!-- TopAppBar (Web & Mobile) -->
+<header class="fixed top-0 w-full z-50 bg-transparent no-border-tonal-shift flat no shadows flex justify-between items-center px-6 py-4 w-full md:hidden">
+<div class="flex items-center gap-3">
+<img alt="User profile photo" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" data-alt="close-up of a smiling person's face for a profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXbJ4DL9TwoSRvy22BgrnLuVlsEQoXI6jQnbUHPmcNQCQeno-gA85oqXdWsscmzdTEGJNHOlo11fyjBB_uxqk4gzTijveVFxCzXmlZCGrE1fE8sL22UemADZ02jsE0TLkmgUIZN30jhq1YzhAKIfFpAGeA7ScSG-ZJlzy_PSGe7wlNJM73wEcMRJbarrstDvLyYTYcnG-EDyo0xMfc4uaoC-zk22s_P_1hhqwZFxu7btKA6zwtELMo21ihCrO8echWPuuuebMgcw"/>
+<span class="font-headline text-lg font-semibold tracking-tight text-white drop-shadow-md">Hi, Tukul</span>
+</div>
+<button class="relative w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all hover:bg-white/30 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2.5 w-2 h-2 bg-error rounded-full border border-white"></span>
+</button>
+</header>
+<!-- TopAppBar (Web/Desktop Cluster - Simplified for demo) -->
+<header class="hidden md:flex fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-surface-container shadow-sm justify-between items-center px-8 py-4">
+<span class="font-headline text-2xl font-bold tracking-tight text-primary">Explore</span>
+<nav class="flex gap-8 items-center">
+<a class="font-headline font-semibold text-primary transition-colors" href="#">Home</a>
+<a class="font-headline font-semibold text-on-surface-variant hover:text-primary transition-colors" href="#">Discover</a>
+<a class="font-headline font-semibold text-on-surface-variant hover:text-primary transition-colors" href="#">Booking</a>
+<a class="font-headline font-semibold text-on-surface-variant hover:text-primary transition-colors" href="#">Profile</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="relative text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<img alt="User profile photo" class="w-10 h-10 rounded-full object-cover border border-surface-container" data-alt="close-up of a smiling person's face for a profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5eUqJHOJv0DEUmtTJ6ZXzehUZA4WzQ9vluz2CwPnSzFND9M4ruZOhuYvU43MjUxlte6dStu0drsKLUG5Kqi7Liap2U6vYlVodSLwU_6M88XtTtG5aj5TYgS4M8X8K24LyyOJX1-Qd8WlVzPXrvW8CmZvybgv1DqXhqWe7frar7HUokaWBQLWSoHbJDCJiqSLZOAdWxUC6EpJdC5G0Zm8tgf32NkZd6q5Tmvdg_HBsV-UYRosEBZpziTkoLLFT3oCVRJMGfVmyTw"/>
+</div>
+</header>
+<main class="flex-grow">
+<!-- Hero Section -->
+<section class="relative w-full h-[574px] md:h-[618px] rounded-b-[2rem] overflow-hidden">
+<!-- Background Image -->
+<div class="absolute inset-0 bg-cover bg-center" data-alt="aerial view of a luxury tropical resort with a bright turquoise infinity pool, wooden deck, and lush green palm trees under a sunny sky" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAuDjp0NyY26jPIIR5jOly49O8v4N8gBVT5FHZ1Egts2vyTLFBbovi84AOCYsmYJHp5rm5lzM83accxzeK-uYUd_5M9XWHPOiKvLyW9QBcDHsj02g4qhMA22Knp0n-Ji8hjv8rqOM6PFhhoouRBpevEeVhjjNUetsaPfrViQmeOUJZvyt7aeV4eYxopzxlb_L5iaHsGnnv0977yfyXsmT4O7px6ytZQ2LPHd6jf33AZqAmuFxQL2Qr0xgOMrP2kfszbtMOyD-xnXw');"></div>
+<!-- Gradient Overlay -->
+<div class="absolute inset-0 bg-black/30 hero-gradient"></div>
+<!-- Content Container -->
+<div class="absolute inset-0 flex flex-col justify-center px-6 md:px-12 pt-16 md:pt-0">
+<h1 class="font-headline text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-4 text-shadow max-w-2xl">
+                    Enjoy your journey without limits
+                </h1>
+<p class="font-body text-white/90 text-base md:text-lg max-w-md text-shadow">
+                    Find accommodations and exciting experiences
+                </p>
+</div>
+</section>
+<!-- Categories / Services Card (Floating) -->
+<section class="relative -mt-20 md:-mt-24 px-4 md:px-12 z-10">
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0_12px_40px_rgba(26,28,28,0.08)]">
+<div class="grid grid-cols-4 md:grid-cols-8 gap-y-6 gap-x-4">
+<!-- Item 1 -->
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-14 h-14 rounded-full bg-secondary-fixed flex items-center justify-center text-primary group-hover:scale-105 transition-transform duration-300">
+<span class="material-symbols-outlined text-[28px]" data-icon="villa" data-weight="fill" style="font-variation-settings: 'FILL' 1;">villa</span>
+</div>
+<span class="font-label text-sm font-medium text-on-surface-variant">Villa</span>
+</div>
+<!-- Item 2 -->
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-14 h-14 rounded-full bg-primary-fixed flex items-center justify-center text-primary group-hover:scale-105 transition-transform duration-300">
+<span class="material-symbols-outlined text-[28px]" data-icon="domain" data-weight="fill" style="font-variation-settings: 'FILL' 1;">domain</span>
+</div>
+<span class="font-label text-sm font-medium text-on-surface-variant">Hotel</span>
+</div>
+<!-- Item 3 -->
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-14 h-14 rounded-full bg-tertiary-fixed flex items-center justify-center text-tertiary group-hover:scale-105 transition-transform duration-300">
+<span class="material-symbols-outlined text-[28px]" data-icon="apartment" data-weight="fill" style="font-variation-settings: 'FILL' 1;">apartment</span>
+</div>
+<span class="font-label text-sm font-medium text-on-surface-variant">Apartment</span>
+</div>
+<!-- Item 4 -->
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-14 h-14 rounded-full bg-error-container flex items-center justify-center text-on-error-container group-hover:scale-105 transition-transform duration-300">
+<span class="material-symbols-outlined text-[28px]" data-icon="house" data-weight="fill" style="font-variation-settings: 'FILL' 1;">house</span>
+</div>
+<span class="font-label text-sm font-medium text-on-surface-variant">Guesthouse</span>
+</div>
+<!-- Item 5 -->
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-14 h-14 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:scale-105 transition-transform duration-300">
+<span class="material-symbols-outlined text-[28px]" data-icon="local_activity" data-weight="fill" style="font-variation-settings: 'FILL' 1;">local_activity</span>
+</div>
+<span class="font-label text-sm font-medium text-on-surface-variant">Voucher</span>
+</div>
+<!-- Item 6 -->
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-on-primary group-hover:scale-105 transition-transform duration-300 shadow-md">
+<span class="material-symbols-outlined text-[28px]" data-icon="percent" data-weight="fill" style="font-variation-settings: 'FILL' 1;">percent</span>
+</div>
+<span class="font-label text-sm font-bold text-primary">BIG DEAL</span>
+</div>
+<!-- Item 7 -->
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:scale-105 transition-transform duration-300">
+<span class="material-symbols-outlined text-[28px]" data-icon="explore" data-weight="fill" style="font-variation-settings: 'FILL' 1;">explore</span>
+</div>
+<span class="font-label text-sm font-medium text-on-surface-variant">To Do</span>
+</div>
+<!-- Item 8 -->
+<div class="flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-14 h-14 rounded-full bg-surface flex items-center justify-center text-outline group-hover:scale-105 transition-transform duration-300 border border-outline-variant/30">
+<span class="material-symbols-outlined text-[28px]" data-icon="grid_view" data-weight="fill" style="font-variation-settings: 'FILL' 1;">grid_view</span>
+</div>
+<span class="font-label text-sm font-medium text-on-surface-variant">See More</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Popular Stays Section -->
+<section class="mt-12 px-4 md:px-12 bg-surface-container-low py-8 rounded-t-xl pb-24 md:pb-8">
+<div class="flex justify-between items-end mb-6">
+<h2 class="font-headline text-2xl md:text-3xl font-bold text-on-surface">Popular Stays</h2>
+<a class="font-label text-sm font-semibold text-primary hover:text-primary-container transition-colors mb-1" href="#">See All</a>
+</div>
+<!-- Horizontal Scroll Container for Cards -->
+<div class="flex gap-6 overflow-x-auto hide-scrollbar pb-4 snap-x snap-mandatory">
+<!-- Property Card 1 -->
+<div class="min-w-[280px] md:min-w-[320px] bg-surface-container-lowest rounded-xl p-3 flex flex-col gap-3 shadow-[0_8px_24px_rgba(26,28,28,0.04)] snap-center group cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+<div class="relative w-full h-48 rounded-DEFAULT overflow-hidden">
+<div class="absolute inset-0 rounded-DEFAULT ring-1 ring-white/20 inset-ring z-10 pointer-events-none"></div>
+<img alt="Modern villa" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="exterior view of a modern luxury villa with a glowing swimming pool at twilight, warm interior lighting spilling out" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOSGv-xxuFGRXLHwSQNwAOnD1_i6w2-vhpCFdG1bV4MqzGH7GX_vZvLEu6c5OH0GL35xOc_uusEqdhVOX-msu1WPFJc8VL7_r2m-tmNLCS14crFWBqLSELkDxHUJYgg1GR7_wCriuZuCXmBh51O0bfSwjhfpCVkEJJrOoS3xdTpfGjIlwUi3Bq6-ltMv_6qmUKwPHgCZa9Q0QmBUD0hV7VYVHMPJQYuOtCJh5vz2mjq7GpZOF9zNRApj_4YrX8rGAlHyEzISILDA"/>
+<!-- Tags Overlay -->
+<div class="absolute top-3 left-3 flex gap-2 z-20">
+<span class="bg-surface-container-highest/90 backdrop-blur-sm text-on-surface-variant font-label text-xs font-semibold px-2.5 py-1 rounded-full">
+                                Villa
+                            </span>
+</div>
+<div class="absolute bottom-3 left-3 z-20">
+<span class="bg-tertiary-fixed/95 backdrop-blur-sm text-on-tertiary-fixed font-label text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+                                5.0 (1.2k Reviews)
+                            </span>
+</div>
+</div>
+<div class="px-1 flex flex-col gap-1 pb-2">
+<h3 class="font-headline text-lg font-bold text-on-surface leading-tight">Villa de Villaonteonte</h3>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="location_on">location_on</span>
+<span class="font-body text-sm">Bali, Seminyak</span>
+</div>
+</div>
+</div>
+<!-- Property Card 2 -->
+<div class="min-w-[280px] md:min-w-[320px] bg-surface-container-lowest rounded-xl p-3 flex flex-col gap-3 shadow-[0_8px_24px_rgba(26,28,28,0.04)] snap-center group cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+<div class="relative w-full h-48 rounded-DEFAULT overflow-hidden">
+<div class="absolute inset-0 rounded-DEFAULT ring-1 ring-white/20 inset-ring z-10 pointer-events-none"></div>
+<img alt="Hotel" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="grand white colonial-style hotel building surrounded by lush tropical gardens under a bright blue sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCK0Lbd2CqjsLSynBwbxRBT-Wk1jw2CVKzSFSlRM_eI7Ako_D43znehwQBIR6ho1TmyiVfXREZM0xjK_Rwv2Tj4STSmkdU9EzgPdwgnpK7HxcK9_dBYFr8eD7FQ7iXy9d5qt3VU1o2gQSBP1QKm59nYfus3Oc31Au6_jGmUnB6hSB4TC14D1bof6m3f7tvf1aSG9tIQBmVMfNEqph7jgeCYi7WoUIbMbqQx_yj0Qw8p6-PVpunZGVNOrk4jm6KUgBpmly3ckzSuWg"/>
+<!-- Tags Overlay -->
+<div class="absolute top-3 left-3 flex gap-2 z-20">
+<span class="bg-surface-container-highest/90 backdrop-blur-sm text-on-surface-variant font-label text-xs font-semibold px-2.5 py-1 rounded-full">
+                                Hotel
+                            </span>
+</div>
+<div class="absolute bottom-3 left-3 z-20">
+<span class="bg-tertiary-fixed/95 backdrop-blur-sm text-on-tertiary-fixed font-label text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+                                4.9 (2.1 Reviews)
+                            </span>
+</div>
+</div>
+<div class="px-1 flex flex-col gap-1 pb-2">
+<h3 class="font-headline text-lg font-bold text-on-surface leading-tight">Hotel Mama Lemon</h3>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="location_on">location_on</span>
+<span class="font-body text-sm">Bali, Ubud</span>
+</div>
+</div>
+</div>
+<!-- Placeholder for spacing at the end of scroll -->
+<div class="min-w-[16px] md:min-w-[48px]"></div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl fixed bottom-0 w-full z-50 rounded-t-[32px] surface-container-high-top-glow shadow-[0_-8px_24px_rgba(26,28,28,0.04)] fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-6 pt-3">
+<!-- Active Item: Home -->
+<a class="flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 group Active: scale-90 duration-200" href="#">
+<div class="w-12 h-8 rounded-full bg-primary-fixed flex items-center justify-center mb-1 transition-colors">
+<span class="material-symbols-outlined text-primary" data-icon="home" data-weight="fill" style="font-variation-settings: 'FILL' 1;">home</span>
+</div>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium text-primary">Home</span>
+</a>
+<!-- Inactive Items -->
+<a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 hover:opacity-80 transition-opacity group" href="#">
+<div class="w-12 h-8 rounded-full flex items-center justify-center mb-1 group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors" data-icon="explore">explore</span>
+</div>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium text-on-surface-variant">Discover</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 hover:opacity-80 transition-opacity group" href="#">
+<div class="w-12 h-8 rounded-full flex items-center justify-center mb-1 group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors" data-icon="confirmation_number">confirmation_number</span>
+</div>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium text-on-surface-variant">Booking</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 hover:opacity-80 transition-opacity group" href="#">
+<div class="w-12 h-8 rounded-full flex items-center justify-center mb-1 group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors" data-icon="person">person</span>
+</div>
+<span class="font-['Plus_Jakarta_Sans'] text-[11px] font-medium text-on-surface-variant">Profile</span>
+</a>
+</nav>
+</body></html>

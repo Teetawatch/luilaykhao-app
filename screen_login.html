@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Wanderer - Login</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#e2e2e2",
+                        "primary-fixed-dim": "#adc6ff",
+                        "on-primary-fixed-variant": "#004493",
+                        "on-primary-container": "#fefcff",
+                        "primary": "#0058bc",
+                        "surface-container-high": "#e8e8e8",
+                        "surface-container": "#eeeeee",
+                        "secondary-container": "#a1befd",
+                        "tertiary": "#894d00",
+                        "inverse-surface": "#2f3131",
+                        "surface-bright": "#f9f9f9",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#ac6300",
+                        "on-primary-fixed": "#001a41",
+                        "error-container": "#ffdad6",
+                        "on-surface": "#1a1c1c",
+                        "on-secondary-fixed": "#001a41",
+                        "surface-variant": "#e2e2e2",
+                        "primary-container": "#0070eb",
+                        "surface-container-low": "#f3f3f3",
+                        "on-tertiary-container": "#fffbff",
+                        "on-background": "#1a1c1c",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "error": "#ba1a1a",
+                        "secondary": "#405e96",
+                        "surface-tint": "#005bc1",
+                        "on-tertiary-fixed": "#2d1600",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#d8e2ff",
+                        "inverse-on-surface": "#f0f1f1",
+                        "tertiary-fixed": "#ffdcbf",
+                        "outline-variant": "#c1c6d7",
+                        "on-surface-variant": "#414755",
+                        "inverse-primary": "#adc6ff",
+                        "surface": "#f9f9f9",
+                        "surface-dim": "#dadada",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-error-container": "#93000a",
+                        "outline": "#717786",
+                        "tertiary-fixed-dim": "#ffb874",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#6a3b00",
+                        "on-secondary-fixed-variant": "#26467d",
+                        "background": "#f9f9f9",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#2d4c83"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": [
+                            "Plus Jakarta Sans"
+                        ],
+                        "body": [
+                            "Be Vietnam Pro"
+                        ],
+                        "label": [
+                            "Be Vietnam Pro"
+                        ]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
+    <div class="w-full max-w-md bg-surface-container-lowest rounded-lg overflow-hidden flex flex-col relative"
+        style="box-shadow: 0 24px 48px -12px rgba(26, 28, 28, 0.08);">
+        <div class="h-64 md:h-72 w-full relative bg-surface-container overflow-hidden">
+            <img alt="Serene coastal travel destination" class="w-full h-full object-cover object-center"
+                data-alt="A tranquil, sun-drenched coastal scene with turquoise waters gently lapping against white sand, soft morning light creating an airy, peaceful travel mood."
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkcoh81AthX8BRpp0grFV1rpVGg6w_keM6F2TZJWPth2Aa8BmMa4Kqn8kWvyjR0wJcprEVJMMda7Lwh9Zs20focIgUjy6iSfWYyLGzUSW3D8cOeuQg5wM0jnkpjmGE3LpL8ghj_vGPZVQZhktFhAqBcC4gf43zPAAFu6P2J775FSmbkAx25jCmK7UhGCqRnxFoBJTvpo72pU9jWONc9dSZ9eiGC0MfxnXouHdi2f6XqP6lRpgclEH59UJL0O7kT7mJCGiE81GHDw" />
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent to-surface-container-lowest"></div>
+            <div class="absolute bottom-6 left-8 right-8 z-10">
+                <h1 class="font-headline text-3xl font-bold text-on-surface tracking-tight mb-1">Welcome Back</h1>
+                <p class="font-body text-on-surface-variant text-sm">Your next adventure awaits.</p>
+            </div>
+        </div>
+        <div class="px-8 pb-10 pt-4 flex-1 flex flex-col justify-center">
+            <form class="space-y-5">
+                <div class="space-y-1.5">
+                    <label class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider ml-4"
+                        for="email">Email</label>
+                    <div class="relative group">
+                        <span
+                            class="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors text-xl">mail</span>
+                        <input
+                            class="w-full bg-surface-container-low text-on-surface font-body text-sm rounded-full py-4 pl-14 pr-6 border-0 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline/70"
+                            id="email" name="email" placeholder="hello@wanderer.com" type="email" />
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider ml-4"
+                        for="password">Password</label>
+                    <div class="relative group">
+                        <span
+                            class="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors text-xl">lock</span>
+                        <input
+                            class="w-full bg-surface-container-low text-on-surface font-body text-sm rounded-full py-4 pl-14 pr-6 border-0 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline/70"
+                            id="password" name="password" placeholder="••••••••" type="password" />
+                        <button
+                            class="absolute right-5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors"
+                            type="button">
+                            <span class="material-symbols-outlined text-xl">visibility_off</span>
+                        </button>
+                    </div>
+                    <div class="flex justify-end mt-2">
+                        <a class="font-body text-xs text-primary hover:text-primary-container font-medium transition-colors"
+                            href="#">Forgot password?</a>
+                    </div>
+                </div>
+                <button
+                    class="w-full rounded-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline text-sm font-semibold py-4 mt-4 shadow-[0_8px_16px_-4px_rgba(0,88,188,0.2)] hover:shadow-[0_12px_24px_-6px_rgba(0,88,188,0.3)] transition-all active:scale-[0.98]"
+                    type="submit">
+                    Sign In
+                </button>
+            </form>
+            <div class="mt-8 mb-6 flex items-center justify-center space-x-4">
+                <div class="h-px bg-surface-container-high flex-1"></div>
+                <span class="font-body text-xs text-outline font-medium uppercase tracking-wider">Or continue
+                    with</span>
+                <div class="h-px bg-surface-container-high flex-1"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <button
+                    class="flex items-center justify-center space-x-2 bg-surface-container-low hover:bg-surface-container transition-colors rounded-full py-3.5 px-4 group"
+                    type="button">
+                    <svg class="w-5 h-5" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            fill="#4285F4"></path>
+                        <path
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            fill="#34A853"></path>
+                        <path
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                            fill="#FBBC05"></path>
+                        <path
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                            fill="#EA4335"></path>
+                    </svg>
+                    <span
+                        class="font-body text-sm font-medium text-on-surface group-hover:text-primary transition-colors">Google</span>
+                </button>
+                <button
+                    class="flex items-center justify-center space-x-2 bg-surface-container-low hover:bg-surface-container transition-colors rounded-full py-3.5 px-4 group"
+                    type="button">
+                    <svg class="w-5 h-5 text-on-surface" fill="currentColor" viewbox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.05 2.26.45 3.09.45.81 0 1.96-.54 3.41-.44 2.28.16 3.96.9 4.92 2.27-4.14 2.26-3.4 7.62.63 9.06-1.01 2.37-2.4 4.54-4.05 6.63zm-4.13-13.88c-.28-2.66 2.06-4.75 4.38-5.11.45 2.88-2.58 5-4.38 5.11z">
+                        </path>
+                    </svg>
+                    <span
+                        class="font-body text-sm font-medium text-on-surface group-hover:text-primary transition-colors">Apple</span>
+                </button>
+            </div>
+            <div class="mt-8 text-center">
+                <p class="font-body text-sm text-on-surface-variant">
+                    Don't have an account? <a
+                        class="text-primary hover:text-primary-container font-semibold transition-colors" href="#">Sign
+                        up</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

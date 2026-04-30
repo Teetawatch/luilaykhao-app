@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Azure Horizon - Profile</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#e8e8e8",
+                        "secondary": "#405e96",
+                        "outline-variant": "#c1c6d7",
+                        "surface-bright": "#f9f9f9",
+                        "surface-container-lowest": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-tertiary-container": "#fffbff",
+                        "outline": "#717786",
+                        "on-secondary-container": "#2d4c83",
+                        "surface": "#f9f9f9",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#001a41",
+                        "surface-container": "#eeeeee",
+                        "tertiary-fixed-dim": "#ffb874",
+                        "surface-container-low": "#f3f3f3",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "primary-container": "#0070eb",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#adc6ff",
+                        "tertiary-fixed": "#ffdcbf",
+                        "surface-dim": "#dadada",
+                        "surface-tint": "#005bc1",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#2f3131",
+                        "secondary-container": "#a1befd",
+                        "on-primary-container": "#fefcff",
+                        "tertiary-container": "#ac6300",
+                        "primary-fixed": "#d8e2ff",
+                        "on-background": "#1a1c1c",
+                        "on-surface-variant": "#414755",
+                        "on-secondary-fixed": "#001a41",
+                        "primary": "#0058bc",
+                        "surface-variant": "#e2e2e2",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#1a1c1c",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-primary-fixed-variant": "#004493",
+                        "on-error": "#ffffff",
+                        "tertiary": "#894d00",
+                        "on-tertiary-fixed-variant": "#6a3b00",
+                        "background": "#f9f9f9",
+                        "surface-container-highest": "#e2e2e2",
+                        "primary-fixed-dim": "#adc6ff",
+                        "inverse-on-surface": "#f0f1f1",
+                        "on-tertiary-fixed": "#2d1600",
+                        "on-secondary-fixed-variant": "#26467d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Be Vietnam Pro"],
+                        "label": ["Be Vietnam Pro"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #f9f9f9;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        .font-headline {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+
+<body class="bg-surface text-on-surface pb-24">
+    <!-- TopAppBar -->
+    <header class="fixed top-0 w-full z-50 bg-[#f9f9f9]/70 dark:bg-gray-900/70 backdrop-blur-xl shadow-none">
+        <div class="flex justify-between items-center px-6 py-4 w-full">
+            <button class="scale-95 active:duration-100 hover:opacity-80 transition-opacity">
+                <span
+                    class="material-symbols-outlined text-[#1a1c1c] dark:text-white font-bold text-2xl">arrow_back</span>
+            </button>
+            <h1 class="font-['Plus_Jakarta_Sans'] text-lg font-bold text-[#1a1c1c] dark:text-white">Profile</h1>
+            <button class="scale-95 active:duration-100 hover:opacity-80 transition-opacity">
+                <span
+                    class="material-symbols-outlined text-[#1a1c1c] dark:text-white font-bold text-2xl">more_vert</span>
+            </button>
+        </div>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="pt-24 px-6 max-w-3xl mx-auto space-y-8">
+        <!-- Profile Header -->
+        <section class="flex flex-col items-center text-center mt-4">
+            <div class="relative w-32 h-32 mb-4">
+                <img alt="User Avatar"
+                    class="w-full h-full object-cover rounded-full shadow-lg border-4 border-surface-container-lowest"
+                    data-alt="portrait of a young woman with natural light, soft focus background, professional photography"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBEj03f4hLSbXndewduA4jomEUw7so817SE_8aWajcrotUUOgNn9A11x_2WYaZQx_SU3SnovOgXGo3JExs0oBfNAJUaTUd9ly-xSRXN6k5jNRAbapnQtmSvS-_W8Z2ElCz5yfSVHvRr__Wk5Ul6rV59qx8WVYjpgRYqB6jJzNJGZnfcWhBzGE9okO9zgdZI_G75EKNKPJD4LnbsU91TIY1Sz8wVeo0oIr3vKaCFTmItdtrTazpcipMDUVDau8LDYOhaXlaAdsTdtQ" />
+                <button
+                    class="absolute bottom-0 right-0 bg-primary text-on-primary rounded-full p-2 shadow-md hover:opacity-90 transition-opacity">
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                </button>
+            </div>
+            <h2 class="font-headline text-2xl font-bold text-on-surface">Elena Rodriguez</h2>
+            <p class="font-body text-on-surface-variant text-sm mt-1 flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-sm text-primary">location_on</span>
+                San Francisco, CA
+            </p>
+            <p class="font-body text-on-surface-variant text-sm mt-2 max-w-xs mx-auto">
+                "Wandering the globe, one coastal city at a time. Lover of boutique stays and local coffee."
+            </p>
+        </section>
+        <!-- Stats Section (Bento Style) -->
+        <section class="grid grid-cols-3 gap-4">
+            <div class="bg-surface-container-lowest rounded-lg p-4 text-center shadow-[0_8px_24px_rgba(26,28,28,0.04)]">
+                <span class="material-symbols-outlined text-primary text-3xl mb-2" data-weight="fill"
+                    style="font-variation-settings: 'FILL' 1;">flight_takeoff</span>
+                <p class="font-headline text-xl font-bold text-on-surface">14</p>
+                <p class="font-label text-xs text-on-surface-variant mt-1">Trips Taken</p>
+            </div>
+            <div class="bg-surface-container-lowest rounded-lg p-4 text-center shadow-[0_8px_24px_rgba(26,28,28,0.04)]">
+                <span class="material-symbols-outlined text-tertiary-container text-3xl mb-2" data-weight="fill"
+                    style="font-variation-settings: 'FILL' 1;">favorite</span>
+                <p class="font-headline text-xl font-bold text-on-surface">42</p>
+                <p class="font-label text-xs text-on-surface-variant mt-1">Saved Places</p>
+            </div>
+            <div class="bg-surface-container-lowest rounded-lg p-4 text-center shadow-[0_8px_24px_rgba(26,28,28,0.04)]">
+                <span class="material-symbols-outlined text-primary-container text-3xl mb-2" data-weight="fill"
+                    style="font-variation-settings: 'FILL' 1;">star</span>
+                <p class="font-headline text-xl font-bold text-on-surface">8.5k</p>
+                <p class="font-label text-xs text-on-surface-variant mt-1">Loyalty Points</p>
+            </div>
+        </section>
+        <!-- Menu Sections -->
+        <section class="space-y-6">
+            <!-- Account -->
+            <div>
+                <h3
+                    class="font-headline text-sm font-semibold text-on-surface-variant mb-3 uppercase tracking-wider pl-4">
+                    Account</h3>
+                <div
+                    class="bg-surface-container-lowest rounded-DEFAULT shadow-[0_8px_24px_rgba(26,28,28,0.04)] overflow-hidden">
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">person</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">Personal Information</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                    </button>
+                    <div class="h-[1px] bg-surface-container mx-4"></div>
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">payments</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">Payment Methods</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+            <!-- My Travel -->
+            <div>
+                <h3
+                    class="font-headline text-sm font-semibold text-on-surface-variant mb-3 uppercase tracking-wider pl-4">
+                    My Travel</h3>
+                <div
+                    class="bg-surface-container-lowest rounded-DEFAULT shadow-[0_8px_24px_rgba(26,28,28,0.04)] overflow-hidden">
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">event_note</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">My Bookings</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                    </button>
+                    <div class="h-[1px] bg-surface-container mx-4"></div>
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">history</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">Past Trips</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                    </button>
+                    <div class="h-[1px] bg-surface-container mx-4"></div>
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">reviews</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">Reviews</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Settings -->
+            <div>
+                <h3
+                    class="font-headline text-sm font-semibold text-on-surface-variant mb-3 uppercase tracking-wider pl-4">
+                    Settings</h3>
+                <div
+                    class="bg-surface-container-lowest rounded-DEFAULT shadow-[0_8px_24px_rgba(26,28,28,0.04)] overflow-hidden">
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">notifications</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">Notifications</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                    </button>
+                    <div class="h-[1px] bg-surface-container mx-4"></div>
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">security</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">Security</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                    </button>
+                    <div class="h-[1px] bg-surface-container mx-4"></div>
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">language</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">Language</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-on-surface-variant">
+                            <span class="text-sm">English</span>
+                            <span class="material-symbols-outlined">chevron_right</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <!-- Support -->
+            <div>
+                <h3
+                    class="font-headline text-sm font-semibold text-on-surface-variant mb-3 uppercase tracking-wider pl-4">
+                    Support</h3>
+                <div
+                    class="bg-surface-container-lowest rounded-DEFAULT shadow-[0_8px_24px_rgba(26,28,28,0.04)] overflow-hidden">
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">help</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">Help Center</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                    </button>
+                    <div class="h-[1px] bg-surface-container mx-4"></div>
+                    <button
+                        class="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-surface-container p-2 rounded-full text-primary">
+                                <span class="material-symbols-outlined">description</span>
+                            </div>
+                            <span class="font-body font-medium text-on-surface">Terms of Service</span>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+        <!-- Log Out Button -->
+        <div class="pt-6 pb-12 flex justify-center">
+            <button
+                class="bg-error-container text-on-error-container font-headline font-semibold text-sm px-8 py-3 rounded-full hover:bg-error hover:text-on-error transition-colors flex items-center gap-2 shadow-sm">
+                <span class="material-symbols-outlined">logout</span>
+                Log Out
+            </button>
+        </div>
+    </main>
+    <!-- BottomNavBar -->
+    <nav
+        class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-3 bg-[#f9f9f9]/70 dark:bg-gray-900/70 backdrop-blur-xl shadow-[0_-8px_24px_rgba(26,28,28,0.04)] rounded-t-[32px] z-50 md:hidden">
+        <button
+            class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 hover:scale-105 transition-transform tap-highlight-transparent group">
+            <span class="material-symbols-outlined text-2xl mb-1 group-hover:text-[#007AFF]">explore</span>
+            <span class="font-['Plus_Jakarta_Sans'] text-[10px] font-semibold">Explore</span>
+        </button>
+        <button
+            class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 hover:scale-105 transition-transform tap-highlight-transparent group">
+            <span class="material-symbols-outlined text-2xl mb-1 group-hover:text-[#007AFF]">event_note</span>
+            <span class="font-['Plus_Jakarta_Sans'] text-[10px] font-semibold">Bookings</span>
+        </button>
+        <button
+            class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 hover:scale-105 transition-transform tap-highlight-transparent group">
+            <span class="material-symbols-outlined text-2xl mb-1 group-hover:text-[#007AFF]">favorite</span>
+            <span class="font-['Plus_Jakarta_Sans'] text-[10px] font-semibold">Saved</span>
+        </button>
+        <button
+            class="flex flex-col items-center justify-center text-[#007AFF] dark:text-[#007AFF] hover:scale-105 transition-transform tap-highlight-transparent group">
+            <span class="material-symbols-outlined text-2xl mb-1" data-weight="fill"
+                style="font-variation-settings: 'FILL' 1;">person</span>
+            <span class="font-['Plus_Jakarta_Sans'] text-[10px] font-semibold">Profile</span>
+        </button>
+    </nav>
+</body>
+
+</html>
