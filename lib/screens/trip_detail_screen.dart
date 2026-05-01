@@ -21,8 +21,17 @@ const double _contentOverlap = 32;
 
 class TripDetailScreen extends StatefulWidget {
   final String? slug;
+  final int? initialScheduleId;
+  final int? initialPickupPointId;
+  final String? initialPickupRegionKey;
 
-  const TripDetailScreen({super.key, this.slug});
+  const TripDetailScreen({
+    super.key,
+    this.slug,
+    this.initialScheduleId,
+    this.initialPickupPointId,
+    this.initialPickupRegionKey,
+  });
 
   @override
   State<TripDetailScreen> createState() => _TripDetailScreenState();
@@ -81,6 +90,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           schedules: snapshot.data?['schedules'] as List<dynamic>? ?? const [],
           reviews: snapshot.data?['reviews'] as List<dynamic>? ?? const [],
           isLoading: isLoading,
+          initialScheduleId: widget.initialScheduleId,
+          initialPickupPointId: widget.initialPickupPointId,
+          initialPickupRegionKey: widget.initialPickupRegionKey,
           isDescriptionExpanded: _isDescriptionExpanded,
           onDescriptionToggle: () {
             setState(() {
@@ -98,6 +110,9 @@ class TravelDetailPage extends StatefulWidget {
   final List<dynamic> schedules;
   final List<dynamic> reviews;
   final bool isLoading;
+  final int? initialScheduleId;
+  final int? initialPickupPointId;
+  final String? initialPickupRegionKey;
   final bool isDescriptionExpanded;
   final VoidCallback onDescriptionToggle;
 
@@ -107,6 +122,9 @@ class TravelDetailPage extends StatefulWidget {
     required this.schedules,
     required this.reviews,
     required this.isLoading,
+    this.initialScheduleId,
+    this.initialPickupPointId,
+    this.initialPickupRegionKey,
     required this.isDescriptionExpanded,
     required this.onDescriptionToggle,
   });
@@ -120,6 +138,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
   bool _isCollapsed = false;
   int? _selectedScheduleId;
   int? _selectedPickupPointId;
+  bool _hasAppliedInitialSelection = false;
 
   @override
   void initState() {
@@ -180,19 +199,54 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       return;
     }
 
-    final selected = _selectedSchedule ?? asMap(widget.schedules.first);
+    final preferredScheduleId = !_hasAppliedInitialSelection
+        ? widget.initialScheduleId
+        : _selectedScheduleId;
+    final selected = asMap(
+      widget.schedules.firstWhere(
+        (item) =>
+            preferredScheduleId != null &&
+            asMap(item)['id'].toString() == preferredScheduleId.toString(),
+        orElse: () => _selectedSchedule ?? widget.schedules.first,
+      ),
+    );
     _selectedScheduleId = int.tryParse(selected['id'].toString());
-    _syncPickupSelection(selected);
+    _syncPickupSelection(
+      selected,
+      preferredPickupPointId: !_hasAppliedInitialSelection
+          ? widget.initialPickupPointId
+          : _selectedPickupPointId,
+      preferredRegionKey: !_hasAppliedInitialSelection
+          ? widget.initialPickupRegionKey
+          : null,
+    );
+    _hasAppliedInitialSelection = true;
   }
 
   void _syncPickupSelection(
     Map<String, dynamic> schedule, {
     int? preferredPickupPointId,
+    String? preferredRegionKey,
   }) {
     final points = asList(schedule['pickup_points']);
     if (points.isEmpty) {
       _selectedPickupPointId = null;
       return;
+    }
+
+    final normalizedRegionKey = preferredRegionKey?.trim();
+    if (normalizedRegionKey != null && normalizedRegionKey.isNotEmpty) {
+      final regionPoint = asMap(
+        points.firstWhere(
+          (item) => _pickupRegionKey(asMap(item)) == normalizedRegionKey,
+          orElse: () => const <String, dynamic>{},
+        ),
+      );
+      final regionPointId = int.tryParse(regionPoint['id']?.toString() ?? '');
+      if (regionPointId != null) {
+        _selectedPickupPointId = regionPointId;
+        return;
+      }
     }
 
     final point = asMap(
@@ -831,7 +885,7 @@ class TravelPlanSelectionSection extends StatelessWidget {
                 return DropdownMenuItem<int>(
                   value: id,
                   child: _DropdownText(
-                    title: dateText(schedule['departure_date']),
+                    title: _scheduleTravelDateText(schedule),
                     subtitle: regionSummary.isEmpty
                         ? 'เหลือ $seats ที่'
                         : 'เหลือ $seats ที่ • $regionSummary',
@@ -2219,6 +2273,22 @@ String _regionSummary(Map<String, dynamic> schedule) {
   if (regions.isEmpty) return '';
   if (regions.length == 1) return regions.first;
   return '${regions.length} ภูมิภาค';
+}
+
+String _scheduleTravelDateText(Map<String, dynamic> schedule) {
+  final start = dateText(schedule['departure_date']);
+  if (start == '-') return 'รอระบุวัน';
+
+  final end = dateText(schedule['return_date']);
+  if (end == '-' || end == start) return start;
+
+  return '$start - $end';
+}
+
+String _pickupRegionKey(Map<String, dynamic> point) {
+  final region = textOf(point['region']).trim();
+  if (region.isNotEmpty) return region;
+  return textOf(point['region_label']).trim();
 }
 
 String _pickupPriceText(dynamic value) {

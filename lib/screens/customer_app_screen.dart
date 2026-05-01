@@ -566,6 +566,7 @@ class HomeTopSection extends StatefulWidget {
 class _HomeTopSectionState extends State<HomeTopSection> {
   String? _selectedSlug;
   int? _selectedScheduleId;
+  String? _selectedPickupRegionKey;
   Future<List<dynamic>>? _schedulesFuture;
   bool _isPickupExpanded = false;
 
@@ -577,6 +578,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
         !trips.any((trip) => trip['slug']?.toString() == _selectedSlug)) {
       _selectedSlug = null;
       _selectedScheduleId = null;
+      _selectedPickupRegionKey = null;
       _schedulesFuture = null;
     }
   }
@@ -598,6 +600,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
     setState(() {
       _selectedSlug = slug;
       _selectedScheduleId = null;
+      _selectedPickupRegionKey = null;
       _schedulesFuture = widget.app.schedules(slug);
       _isPickupExpanded = false;
     });
@@ -658,6 +661,8 @@ class _HomeTopSectionState extends State<HomeTopSection> {
               schedulesFuture: _schedulesFuture,
               selectedScheduleId: _selectedScheduleId,
               onChanged: (id) => setState(() => _selectedScheduleId = id),
+              onRegionChanged: (regionKey) =>
+                  setState(() => _selectedPickupRegionKey = regionKey),
               app: context.read<AppProvider>(),
               isExpanded: _isPickupExpanded,
               onToggleExpand: () =>
@@ -671,7 +676,11 @@ class _HomeTopSectionState extends State<HomeTopSection> {
                 icon: Icons.explore_rounded,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => TripDetailScreen(slug: _selectedSlug!),
+                    builder: (_) => TripDetailScreen(
+                      slug: _selectedSlug!,
+                      initialScheduleId: _selectedScheduleId,
+                      initialPickupRegionKey: _selectedPickupRegionKey,
+                    ),
                   ),
                 ),
               ),
@@ -2721,6 +2730,7 @@ class BookingCard extends StatefulWidget {
 class _BookingCardState extends State<BookingCard> {
   String? _selectedSlug;
   int? _selectedScheduleId;
+  String? _selectedPickupRegionKey;
   Future<List<dynamic>>? _schedulesFuture;
   bool _isPackagesExpanded = false;
 
@@ -2732,6 +2742,7 @@ class _BookingCardState extends State<BookingCard> {
         !trips.any((trip) => trip['slug']?.toString() == _selectedSlug)) {
       _selectedSlug = null;
       _selectedScheduleId = null;
+      _selectedPickupRegionKey = null;
       _schedulesFuture = null;
     }
   }
@@ -2748,6 +2759,7 @@ class _BookingCardState extends State<BookingCard> {
     setState(() {
       _selectedSlug = slug;
       _selectedScheduleId = null;
+      _selectedPickupRegionKey = null;
       _schedulesFuture = widget.app.schedules(slug);
       _isPackagesExpanded = false; // Reset expansion on trip change
     });
@@ -2808,6 +2820,8 @@ class _BookingCardState extends State<BookingCard> {
             onChanged: (id) => setState(() {
               _selectedScheduleId = id;
             }),
+            onRegionChanged: (regionKey) =>
+                setState(() => _selectedPickupRegionKey = regionKey),
             app: widget.app,
             onSelectedSchedule: (schedule) {
               // This can be used if we need more info from the selected schedule
@@ -2830,6 +2844,8 @@ class _BookingCardState extends State<BookingCard> {
                     MaterialPageRoute(
                       builder: (_) => TripDetailScreen(
                         slug: selectedTrip!['slug'].toString(),
+                        initialScheduleId: _selectedScheduleId,
+                        initialPickupRegionKey: _selectedPickupRegionKey,
                       ),
                     ),
                   ),
@@ -2906,6 +2922,7 @@ class DateSelectorCard extends StatefulWidget {
   final Future<List<dynamic>>? schedulesFuture;
   final int? selectedScheduleId;
   final ValueChanged<int?> onChanged;
+  final ValueChanged<String?>? onRegionChanged;
   final AppProvider app;
   final Function(Map<String, dynamic>)? onSelectedSchedule;
   final bool isExpanded;
@@ -2916,6 +2933,7 @@ class DateSelectorCard extends StatefulWidget {
     required this.schedulesFuture,
     required this.selectedScheduleId,
     required this.onChanged,
+    this.onRegionChanged,
     required this.app,
     this.onSelectedSchedule,
     required this.isExpanded,
@@ -3051,6 +3069,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                         onChanged: (value) {
                           setState(() => _selectedRegionKey = value);
                           widget.onChanged(null);
+                          widget.onRegionChanged?.call(value);
                         },
                       ),
                     ),

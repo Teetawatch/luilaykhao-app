@@ -90,6 +90,11 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 
+  Future<List<dynamic>> activeSeatLocks() async {
+    final response = await api.get('seat-locks/active');
+    return List<dynamic>.from(api.data(response) ?? []);
+  }
+
   Future<Map<String, dynamic>> lockSeats(
     int scheduleId,
     List<String> seatIds,
@@ -105,6 +110,16 @@ class AppProvider extends ChangeNotifier {
     await api.delete(
       'schedules/$scheduleId/seats/lock',
       body: {'seat_ids': seatIds},
+    );
+  }
+
+  Future<void> cancelActiveSeatLock(
+    int scheduleId, {
+    List<String> seatIds = const [],
+  }) async {
+    await api.delete(
+      'seat-locks/$scheduleId',
+      body: {if (seatIds.isNotEmpty) 'seat_ids': seatIds},
     );
   }
 

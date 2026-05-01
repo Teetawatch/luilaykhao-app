@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +20,14 @@ const Color _cardBorder = Color(0xFFEAEAEA);
 const Color _fieldBackground = Color(0xFFF7F8F7);
 const List<String> _titleOptions = ['นาย', 'นาง', 'นางสาว'];
 const List<String> _bloodGroupOptions = ['A', 'B', 'O', 'AB'];
+const Duration _seatRefreshInterval = Duration(seconds: 5);
+
+class _ImageCacheSize {
+  final int width;
+  final int height;
+
+  const _ImageCacheSize({required this.width, required this.height});
+}
 
 class BookingFlowScreen extends StatelessWidget {
   final Map<String, dynamic> trip;
@@ -74,10 +84,16 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   bool _submitting = false;
   bool _showPricingDetails = false;
   bool _seatLoading = false;
+  bool _seatRefreshing = false;
+  bool _activeSeatLocksLoading = false;
   int _currentStep = 0;
   String? _seatError;
   Map<String, dynamic>? _seatMap;
   int? _seatMapScheduleId;
+  Timer? _seatRefreshTimer;
+  Timer? _activeSeatLockRefreshTimer;
+  int? _activeSeatLockActionScheduleId;
+  List<dynamic> _activeSeatLocks = const [];
   final Set<String> _selectedSeatIds = <String>{};
   final Set<String> _lockedSeatIds = <String>{};
 
@@ -142,10 +158,14 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       preferredPickupPointId: widget.initialPickupPointId,
     );
     _loadSeatMap();
+    _loadActiveSeatLocks();
+    _startActiveSeatLockRefresh();
   }
 
   @override
   void dispose() {
+    _stopSeatRealtimeRefresh();
+    _stopActiveSeatLockRefresh();
     _promo.dispose();
     _groupNotes.dispose();
     for (final passenger in _passengers) {
@@ -216,9 +236,12 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     );
   }
 
-  Future<void> _loadSeatMap() async {
+  Future<void> _loadSeatMap({bool silent = false}) async {
+    if (silent && _seatRefreshing) return;
+
     final scheduleId = _scheduleId;
     if (scheduleId == null) {
+      _stopSeatRealtimeRefresh();
       setState(() {
         _seatMap = null;
         _seatMapScheduleId = null;
@@ -229,28 +252,185 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       return;
     }
 
-    setState(() {
-      _seatLoading = true;
-      _seatError = null;
-      _seatMapScheduleId = scheduleId;
-      _seatMap = null;
-      _selectedSeatIds.clear();
-      _lockedSeatIds.clear();
-      _syncPassengerCount(1);
-    });
+    if (silent) {
+      _seatRefreshing = true;
+    } else {
+      setState(() {
+        _seatLoading = true;
+        _seatError = null;
+        _seatMapScheduleId = scheduleId;
+        _seatMap = null;
+        _selectedSeatIds.clear();
+        _lockedSeatIds.clear();
+        _syncPassengerCount(1);
+      });
+    }
 
     try {
       final seatMap = await context.read<AppProvider>().seats(scheduleId);
       if (!mounted || _seatMapScheduleId != scheduleId) return;
-      setState(() => _seatMap = seatMap);
+      var removedSeats = <String>[];
+      setState(() {
+        _seatMap = seatMap;
+        if (silent) {
+          removedSeats = _reconcileSelectedSeats(seatMap);
+        }
+      });
+      if (silent && removedSeats.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'ที่นั่ง ${removedSeats.join(', ')} มีผู้ใช้อื่นกำลังจองอยู่แล้ว',
+            ),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted || _seatMapScheduleId != scheduleId) return;
-      setState(() => _seatError = e.toString());
+      if (!silent) setState(() => _seatError = e.toString());
     } finally {
-      if (mounted && _seatMapScheduleId == scheduleId) {
+      if (silent) {
+        _seatRefreshing = false;
+      } else if (mounted && _seatMapScheduleId == scheduleId) {
         setState(() => _seatLoading = false);
       }
     }
+  }
+
+  void _startSeatRealtimeRefresh() {
+    _stopSeatRealtimeRefresh();
+    if (_scheduleId == null) return;
+    _seatRefreshTimer = Timer.periodic(_seatRefreshInterval, (_) {
+      if (!mounted) return;
+      if (!_usesSeatStep || _safeCurrentStep != _seatStepIndex) return;
+      _loadSeatMap(silent: true);
+    });
+  }
+
+  void _stopSeatRealtimeRefresh() {
+    _seatRefreshTimer?.cancel();
+    _seatRefreshTimer = null;
+    _seatRefreshing = false;
+  }
+
+  void _startActiveSeatLockRefresh() {
+    _stopActiveSeatLockRefresh();
+    _activeSeatLockRefreshTimer = Timer.periodic(_seatRefreshInterval, (_) {
+      if (!mounted) return;
+      _loadActiveSeatLocks(silent: true);
+    });
+  }
+
+  void _stopActiveSeatLockRefresh() {
+    _activeSeatLockRefreshTimer?.cancel();
+    _activeSeatLockRefreshTimer = null;
+  }
+
+  Future<void> _loadActiveSeatLocks({bool silent = false}) async {
+    if (_activeSeatLocksLoading) return;
+
+    if (!silent && mounted) {
+      setState(() => _activeSeatLocksLoading = true);
+    } else {
+      _activeSeatLocksLoading = true;
+    }
+
+    try {
+      final locks = await context.read<AppProvider>().activeSeatLocks();
+      if (!mounted) return;
+      setState(() => _activeSeatLocks = locks);
+    } catch (_) {
+      if (!silent && mounted) {
+        setState(() => _activeSeatLocks = const []);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _activeSeatLocksLoading = false);
+      } else {
+        _activeSeatLocksLoading = false;
+      }
+    }
+  }
+
+  Future<void> _cancelActiveSeatLock(Map<String, dynamic> lock) async {
+    final scheduleId = int.tryParse(textOf(lock['schedule_id']));
+    if (scheduleId == null) return;
+
+    final seatIds = asList(lock['seat_ids'])
+        .map((item) => item?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList();
+
+    setState(() => _activeSeatLockActionScheduleId = scheduleId);
+    try {
+      await context.read<AppProvider>().cancelActiveSeatLock(
+        scheduleId,
+        seatIds: seatIds,
+      );
+      if (!mounted) return;
+
+      if (scheduleId == _scheduleId) {
+        setState(() {
+          _selectedSeatIds.removeAll(seatIds);
+          _lockedSeatIds.removeAll(seatIds);
+          if (_lockedSeatIds.isEmpty) {
+            _syncPassengerCount(
+              _selectedSeatIds.isEmpty ? 1 : _selectedSeatIds.length,
+            );
+          }
+          if (_usesSeatStep && _safeCurrentStep == _passengerStepIndex) {
+            _currentStep = _seatStepIndex;
+          }
+        });
+        if (_usesSeatStep && _safeCurrentStep == _seatStepIndex) {
+          _startSeatRealtimeRefresh();
+        }
+        await _loadSeatMap(silent: true);
+      }
+
+      await _loadActiveSeatLocks(silent: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ยกเลิกที่นั่งที่กำลังจองแล้ว')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _activeSeatLockActionScheduleId = null);
+      }
+    }
+  }
+
+  List<String> _reconcileSelectedSeats(Map<String, dynamic> seatMap) {
+    if (_selectedSeatIds.isEmpty) return const <String>[];
+
+    final availableSeatIds = <String>{};
+    for (final item in asList(seatMap['seats'])) {
+      final seat = asMap(item);
+      final id = textOf(seat['id']);
+      if (id.isEmpty) continue;
+      if (_isSeatAvailable(seat) || _seatLockedByCurrentUser(seat)) {
+        availableSeatIds.add(id);
+      }
+    }
+
+    final removedSeats =
+        _selectedSeatIds
+            .where((seatId) => !availableSeatIds.contains(seatId))
+            .toList()
+          ..sort();
+    if (removedSeats.isEmpty) return const <String>[];
+
+    _selectedSeatIds.removeAll(removedSeats);
+    _lockedSeatIds.removeAll(removedSeats);
+    _syncPassengerCount(_selectedSeatIds.isEmpty ? 1 : _selectedSeatIds.length);
+    return removedSeats;
   }
 
   void _toggleSeat(Map<String, dynamic> seat) {
@@ -305,6 +485,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     _lockedSeatIds
       ..clear()
       ..addAll(seatIds);
+    await _loadActiveSeatLocks(silent: true);
   }
 
   Future<void> _unlockLockedSeats() async {
@@ -315,6 +496,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       await context.read<AppProvider>().unlockSeats(_scheduleId!, seatIds);
     } catch (_) {
       // Seat locks expire automatically; checkout should still recover gracefully.
+    } finally {
+      if (mounted) {
+        await _loadActiveSeatLocks(silent: true);
+      }
     }
   }
 
@@ -358,10 +543,12 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
     if (step == 0) {
       if (!_validatePickupStep()) return;
+      final shouldRefreshSeats = _usesSeatStep;
       setState(
         () =>
             _currentStep = _usesSeatStep ? _seatStepIndex : _passengerStepIndex,
       );
+      if (shouldRefreshSeats) _startSeatRealtimeRefresh();
       return;
     }
 
@@ -371,6 +558,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       setState(() => _submitting = true);
       try {
         await _lockSelectedSeatsIfNeeded();
+        _stopSeatRealtimeRefresh();
         if (mounted) setState(() => _currentStep = _passengerStepIndex);
       } catch (e) {
         await _unlockLockedSeats();
@@ -390,14 +578,21 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   void _goBack() {
     FocusScope.of(context).unfocus();
-    if (_safeCurrentStep == 0) {
+    final step = _safeCurrentStep;
+    if (step == 0) {
       Navigator.pop(context);
       return;
     }
-    if (_safeCurrentStep == _passengerStepIndex) {
+    if (step == _passengerStepIndex) {
       _unlockLockedSeats();
     }
-    setState(() => _currentStep = _safeCurrentStep - 1);
+    if (step == _seatStepIndex) {
+      _stopSeatRealtimeRefresh();
+    }
+    setState(() => _currentStep = step - 1);
+    if (step == _passengerStepIndex && _usesSeatStep) {
+      _startSeatRealtimeRefresh();
+    }
   }
 
   String get _primaryActionLabel {
@@ -438,6 +633,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             ),
           );
           _unlockLockedSeats();
+          _stopSeatRealtimeRefresh();
           setState(() {
             _scheduleId = value;
             _syncPickup(nextSchedule, preferredRegion: _pickupRegion);
@@ -556,6 +752,14 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
                             pickupPoint: _selectedPickupPoint,
                             pricePerTraveler: pricing.pricePerTraveler,
                           ),
+                          if (_activeSeatLocks.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            ActiveSeatLocksCard(
+                              locks: _activeSeatLocks,
+                              actionScheduleId: _activeSeatLockActionScheduleId,
+                              onCancel: _cancelActiveSeatLock,
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           const TrustSignalsSection(),
                           const SizedBox(height: 24),
@@ -757,6 +961,7 @@ class TripSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageCacheSize = _cacheSizeFor(context, width: 104, height: 116);
     final image = ApiConfig.mediaUrl(
       trip['thumbnail_image'] ?? trip['cover_image'],
     );
@@ -769,19 +974,29 @@ class TripSummaryCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: SizedBox(
-              width: 104,
-              height: 116,
-              child: image.isEmpty
-                  ? const _TripImageFallback()
-                  : CachedNetworkImage(
-                      imageUrl: image,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const _TripImageFallback(),
-                      errorWidget: (_, __, ___) => const _TripImageFallback(),
-                    ),
+          RepaintBoundary(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: SizedBox(
+                width: 104,
+                height: 116,
+                child: image.isEmpty
+                    ? const _TripImageFallback()
+                    : CachedNetworkImage(
+                        imageUrl: image,
+                        fit: BoxFit.cover,
+                        memCacheWidth: imageCacheSize.width,
+                        memCacheHeight: imageCacheSize.height,
+                        maxWidthDiskCache: imageCacheSize.width,
+                        maxHeightDiskCache: imageCacheSize.height,
+                        fadeInDuration: const Duration(milliseconds: 120),
+                        fadeOutDuration: Duration.zero,
+                        useOldImageOnUrlChange: true,
+                        filterQuality: FilterQuality.low,
+                        placeholder: (_, __) => const _TripImageFallback(),
+                        errorWidget: (_, __, ___) => const _TripImageFallback(),
+                      ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -823,6 +1038,185 @@ class TripSummaryCard extends StatelessWidget {
                   text: 'ราคาต่อคน ${money(pricePerTraveler)}',
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ActiveSeatLocksCard extends StatelessWidget {
+  final List<dynamic> locks;
+  final int? actionScheduleId;
+  final ValueChanged<Map<String, dynamic>> onCancel;
+
+  const ActiveSeatLocksCard({
+    super.key,
+    required this.locks,
+    required this.actionScheduleId,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _premiumDecoration(radius: 28).copyWith(
+        color: const Color(0xFFF0FDF9),
+        border: Border.all(color: _softAccent.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.timer_rounded, color: _softAccent, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'ที่นั่งที่กำลังจองอยู่',
+                  style: GoogleFonts.anuphan(
+                    color: const Color(0xFF126B5B),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...locks.map((item) {
+            final lock = asMap(item);
+            final scheduleId = int.tryParse(textOf(lock['schedule_id']));
+            final isCancelling =
+                scheduleId != null && scheduleId == actionScheduleId;
+            return _ActiveSeatLockTile(
+              lock: lock,
+              isCancelling: isCancelling,
+              onCancel: isCancelling ? null : () => onCancel(lock),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveSeatLockTile extends StatelessWidget {
+  final Map<String, dynamic> lock;
+  final bool isCancelling;
+  final VoidCallback? onCancel;
+
+  const _ActiveSeatLockTile({
+    required this.lock,
+    required this.isCancelling,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final trip = asMap(lock['trip']);
+    final schedule = asMap(lock['schedule']);
+    final title = textOf(lock['trip_title'], textOf(trip['title'], '-'));
+    final seats = asList(lock['seat_ids'])
+        .map((item) => item?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList();
+    final seatText = seats.isEmpty ? '-' : seats.join(', ');
+    final remaining = _lockRemainingLabel(lock['locked_ttl_seconds']);
+    final travelDate = _compactScheduleDate(schedule);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _softAccent.withValues(alpha: 0.12)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.anuphan(
+                color: _premiumText,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                height: 1.25,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _InlineStatusChip(
+                  icon: Icons.calendar_month_rounded,
+                  text: travelDate,
+                ),
+                _InlineStatusChip(
+                  icon: Icons.event_seat_rounded,
+                  text: 'ที่นั่ง $seatText',
+                ),
+                _InlineStatusChip(icon: Icons.timer_rounded, text: remaining),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onCancel,
+                icon: isCancelling
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.cancel_outlined, size: 18),
+                label: Text(isCancelling ? 'กำลังยกเลิก...' : 'ยกเลิก'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.errorColor,
+                  textStyle: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InlineStatusChip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _InlineStatusChip({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: _fieldBackground,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: _softAccent),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: GoogleFonts.anuphan(
+              color: _mutedText,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -1050,90 +1444,119 @@ class _VehiclePhotoPreviewState extends State<_VehiclePhotoPreview> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: images.isEmpty
-                ? const _VehiclePhotoFallback()
-                : Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      PageView.builder(
-                        controller: _photoController,
-                        itemCount: images.length,
-                        onPageChanged: (index) =>
-                            setState(() => _photoIndex = index),
-                        itemBuilder: (context, index) {
-                          return CachedNetworkImage(
-                            imageUrl: images[index],
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) =>
-                                const _VehiclePhotoFallback(),
-                            errorWidget: (_, __, ___) =>
-                                const _VehiclePhotoFallback(),
-                          );
-                        },
-                      ),
-                      if (canSlide) ...[
-                        Positioned(
-                          left: 10,
-                          top: 0,
-                          bottom: 0,
-                          child: Center(
-                            child: _VehiclePhotoNavButton(
-                              icon: Icons.chevron_left_rounded,
-                              onPressed: () =>
-                                  _showPreviousPhoto(images.length),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 10,
-                          top: 0,
-                          bottom: 0,
-                          child: Center(
-                            child: _VehiclePhotoNavButton(
-                              icon: Icons.chevron_right_rounded,
-                              onPressed: () => _showNextPhoto(images.length),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 10,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(images.length, (index) {
-                              final selected = index == _photoIndex;
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                width: selected ? 18 : 7,
-                                height: 7,
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(
-                                    alpha: selected ? 0.95 : 0.55,
+          RepaintBoundary(
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: images.isEmpty
+                  ? const _VehiclePhotoFallback()
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final imageCacheSize = _cacheSizeFor(
+                          context,
+                          width: constraints.maxWidth,
+                          height: constraints.maxHeight,
+                        );
+
+                        return Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            PageView.builder(
+                              controller: _photoController,
+                              itemCount: images.length,
+                              onPageChanged: (index) =>
+                                  setState(() => _photoIndex = index),
+                              itemBuilder: (context, index) {
+                                return CachedNetworkImage(
+                                  imageUrl: images[index],
+                                  fit: BoxFit.cover,
+                                  memCacheWidth: imageCacheSize.width,
+                                  memCacheHeight: imageCacheSize.height,
+                                  maxWidthDiskCache: imageCacheSize.width,
+                                  maxHeightDiskCache: imageCacheSize.height,
+                                  fadeInDuration: const Duration(
+                                    milliseconds: 120,
                                   ),
-                                  borderRadius: BorderRadius.circular(999),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.18,
-                                      ),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
+                                  fadeOutDuration: Duration.zero,
+                                  useOldImageOnUrlChange: true,
+                                  filterQuality: FilterQuality.low,
+                                  placeholder: (_, __) =>
+                                      const _VehiclePhotoFallback(),
+                                  errorWidget: (_, __, ___) =>
+                                      const _VehiclePhotoFallback(),
+                                );
+                              },
+                            ),
+                            if (canSlide) ...[
+                              Positioned(
+                                left: 10,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: _VehiclePhotoNavButton(
+                                    icon: Icons.chevron_left_rounded,
+                                    onPressed: () =>
+                                        _showPreviousPhoto(images.length),
+                                  ),
                                 ),
-                              );
-                            }),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                              ),
+                              Positioned(
+                                right: 10,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: _VehiclePhotoNavButton(
+                                    icon: Icons.chevron_right_rounded,
+                                    onPressed: () =>
+                                        _showNextPhoto(images.length),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 10,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(images.length, (
+                                    index,
+                                  ) {
+                                    final selected = index == _photoIndex;
+                                    return AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 180,
+                                      ),
+                                      width: selected ? 18 : 7,
+                                      height: 7,
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: selected ? 0.95 : 0.55,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.18,
+                                            ),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(14),
@@ -1306,6 +1729,7 @@ class SeatSelectionSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final map = seatMap ?? <String, dynamic>{};
     final hasSeatMap = map['has_seat_map'] == true;
+    final statusCounts = _SeatStatusCounts.from(map);
 
     return _SectionShell(
       title: 'เลือกที่นั่ง',
@@ -1327,6 +1751,11 @@ class SeatSelectionSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _SelectedSeatSummary(selectedSeatIds: selectedSeatIds),
+                  const SizedBox(height: 14),
+                  _SeatRealtimeSummary(
+                    counts: statusCounts,
+                    refreshInterval: _seatRefreshInterval,
+                  ),
                   const SizedBox(height: 14),
                   const _SeatLegend(),
                   const SizedBox(height: 16),
@@ -1401,6 +1830,121 @@ class _SelectedSeatSummary extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SeatRealtimeSummary extends StatelessWidget {
+  final _SeatStatusCounts counts;
+  final Duration refreshInterval;
+
+  const _SeatRealtimeSummary({
+    required this.counts,
+    required this.refreshInterval,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF9),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _softAccent.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.sync_rounded, color: _softAccent, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'อัปเดตสถานะที่นั่งทุก ${refreshInterval.inSeconds} วินาที ล็อกที่นั่งชั่วคราวได้ไม่เกิน 10 นาที',
+                  style: GoogleFonts.anuphan(
+                    color: const Color(0xFF126B5B),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.5,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _SeatStatusPill(
+                color: const Color(0xFFE5E7EB),
+                label: 'ว่าง',
+                value: counts.available,
+              ),
+              _SeatStatusPill(
+                color: const Color(0xFFCBD5D1),
+                label: 'กำลังจอง',
+                value: counts.locked,
+              ),
+              _SeatStatusPill(
+                color: const Color(0xFF6B7280),
+                label: 'จองแล้ว',
+                value: counts.booked,
+              ),
+            ],
+          ),
+          if (counts.lockedSeatLabels.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'กำลังจองอยู่: ${counts.lockedSeatLabels.take(4).join(', ')}${counts.lockedSeatLabels.length > 4 ? ' ...' : ''}',
+              style: GoogleFonts.anuphan(
+                color: const Color(0xFF126B5B),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SeatStatusPill extends StatelessWidget {
+  final Color color;
+  final String label;
+  final int value;
+
+  const _SeatStatusPill({
+    required this.color,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = color.computeLuminance() < 0.5
+        ? Colors.white
+        : _premiumText;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+      ),
+      child: Text(
+        '$label $value',
+        style: GoogleFonts.anuphan(
+          color: textColor,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -1616,11 +2160,23 @@ class _SeatButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final id = textOf(seat?['id'] ?? seatId);
     final status = textOf(seat?['status'], 'available');
-    final disabled = seat == null || status == 'booked' || status == 'locked';
+    final lockedByCurrentUser = seat != null && _seatLockedByCurrentUser(seat!);
+    final disabled =
+        seat == null ||
+        status == 'booked' ||
+        (status == 'locked' && !lockedByCurrentUser);
     final color = _seatColor(status: status, selected: selected);
+    final muted = disabled && status != 'booked';
+    final seatColor = muted ? color.withValues(alpha: 0.55) : color;
+    final foregroundColor = selected || status == 'booked'
+        ? Colors.white
+        : _mutedText.withValues(alpha: muted ? 0.62 : 1);
+    final labelColor = selected
+        ? _softAccent
+        : _mutedText.withValues(alpha: muted ? 0.62 : 1);
 
-    return Opacity(
-      opacity: disabled && status != 'booked' ? 0.55 : 1,
+    return Tooltip(
+      message: _seatTooltip(seat, id, selected: selected),
       child: InkWell(
         onTap: disabled ? null : onTap,
         borderRadius: BorderRadius.circular(16),
@@ -1640,7 +2196,7 @@ class _SeatButton extends StatelessWidget {
                 width: 42,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: color,
+                  color: seatColor,
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: selected
                       ? [
@@ -1652,12 +2208,27 @@ class _SeatButton extends StatelessWidget {
                         ]
                       : null,
                 ),
-                child: Icon(
-                  Icons.airline_seat_recline_extra_rounded,
-                  color: selected || status == 'booked'
-                      ? Colors.white
-                      : _mutedText,
-                  size: 20,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      Icons.airline_seat_recline_extra_rounded,
+                      color: foregroundColor,
+                      size: 20,
+                    ),
+                    if (selected || status == 'locked')
+                      Positioned(
+                        top: 3,
+                        right: 3,
+                        child: Icon(
+                          selected ? Icons.check_circle : Icons.timer_rounded,
+                          color: selected
+                              ? Colors.white
+                              : _premiumText.withValues(alpha: 0.72),
+                          size: 11,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 4),
@@ -1666,7 +2237,7 @@ class _SeatButton extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.anuphan(
-                  color: selected ? _softAccent : _mutedText,
+                  color: labelColor,
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1813,6 +2384,51 @@ class _SeatLegendItem {
   final String label;
 
   const _SeatLegendItem(this.color, this.label);
+}
+
+class _SeatStatusCounts {
+  final int available;
+  final int locked;
+  final int booked;
+  final List<String> lockedSeatLabels;
+
+  const _SeatStatusCounts({
+    required this.available,
+    required this.locked,
+    required this.booked,
+    required this.lockedSeatLabels,
+  });
+
+  factory _SeatStatusCounts.from(Map<String, dynamic> seatMap) {
+    var available = 0;
+    var locked = 0;
+    var booked = 0;
+    final lockedSeatLabels = <String>[];
+
+    for (final item in asList(seatMap['seats'])) {
+      final seat = asMap(item);
+      final status = textOf(seat['status'], 'available');
+      if (status == 'booked') {
+        booked++;
+      } else if (status == 'locked') {
+        locked++;
+        final seatLabel = textOf(seat['label'], textOf(seat['id']));
+        final remaining = _seatLockRemainingText(seat);
+        lockedSeatLabels.add(
+          remaining.isEmpty ? seatLabel : '$seatLabel $remaining',
+        );
+      } else {
+        available++;
+      }
+    }
+
+    return _SeatStatusCounts(
+      available: available,
+      locked: locked,
+      booked: booked,
+      lockedSeatLabels: lockedSeatLabels,
+    );
+  }
 }
 
 class _SeatRowData {
@@ -2075,7 +2691,6 @@ class TrustSignalsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const signals = [
-      _TrustSignal(Icons.verified_user_rounded, 'ยกเลิกฟรี'),
       _TrustSignal(Icons.lock_rounded, 'ชำระเงินปลอดภัย'),
       _TrustSignal(Icons.task_alt_rounded, 'ยืนยันการจองทันที'),
       _TrustSignal(Icons.support_agent_rounded, 'ติดต่อทีมงาน 24 ชม.'),
@@ -3349,9 +3964,74 @@ bool _sameStringList(List<String> left, List<String> right) {
   return true;
 }
 
+_ImageCacheSize _cacheSizeFor(
+  BuildContext context, {
+  required double width,
+  required double height,
+}) {
+  final dpr = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
+  return _ImageCacheSize(
+    width: (width * dpr).round().clamp(1, 1200),
+    height: (height * dpr).round().clamp(1, 900),
+  );
+}
+
 bool _isSeatAvailable(Map<String, dynamic> seat) {
   final status = textOf(seat['status'], 'available');
   return status != 'booked' && status != 'locked';
+}
+
+bool _seatLockedByCurrentUser(Map<String, dynamic> seat) {
+  return _asBool(seat['locked_by_current_user']);
+}
+
+String _seatTooltip(
+  Map<String, dynamic>? seat,
+  String id, {
+  required bool selected,
+}) {
+  if (seat == null) return '$id ไม่พร้อมใช้งาน';
+  if (selected) return '$id กำลังเลือก';
+
+  final status = textOf(seat['status'], 'available');
+  if (status == 'booked') return '$id จองแล้ว';
+  if (status == 'locked') {
+    final remaining = _seatLockRemainingText(seat);
+    if (_seatLockedByCurrentUser(seat)) {
+      return remaining.isEmpty
+          ? '$id คุณกำลังจองอยู่'
+          : '$id คุณกำลังจองอยู่ เหลือ $remaining';
+    }
+    return remaining.isEmpty
+        ? '$id มีผู้ใช้อื่นกำลังจองอยู่'
+        : '$id มีผู้ใช้อื่นกำลังจองอยู่ เหลือ $remaining';
+  }
+
+  return '$id ว่าง';
+}
+
+String _seatLockRemainingText(Map<String, dynamic> seat) {
+  final seconds = int.tryParse(textOf(seat['locked_ttl_seconds'])) ?? 0;
+  if (seconds <= 0) return '';
+  final minutes = seconds ~/ 60;
+  final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
+  return '$minutes:$remainingSeconds นาที';
+}
+
+String _lockRemainingLabel(dynamic value) {
+  final seconds = int.tryParse(textOf(value)) ?? 0;
+  if (seconds <= 0) return 'หมดเวลาแล้ว';
+  if (seconds < 60) return 'เหลือไม่ถึง 1 นาที';
+  final minutes = (seconds / 60).ceil();
+  return 'เหลือ $minutes นาที';
+}
+
+String _compactScheduleDate(Map<String, dynamic> schedule) {
+  final departure = textOf(schedule['departure_date']);
+  final returning = textOf(schedule['return_date']);
+  if (departure.isEmpty) return '-';
+  if (returning.isEmpty || returning == departure) return dateText(departure);
+  return '${dateText(departure)} - ${dateText(returning)}';
 }
 
 Color _seatColor({required String status, required bool selected}) {
