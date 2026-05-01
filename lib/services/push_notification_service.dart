@@ -41,43 +41,52 @@ class PushNotificationService {
   FirebaseMessaging get _messaging => FirebaseMessaging.instance;
 
   bool _firebaseReady = false;
+  bool _initialized = false;
   bool _localReady = false;
   ApiClient? _api;
   VoidCallback? _onRefreshRequested;
 
   Future<void> initialize({VoidCallback? onRefreshRequested}) async {
-    _onRefreshRequested = onRefreshRequested;
-    if (_firebaseReady) return;
+    if (onRefreshRequested != null) {
+      _onRefreshRequested = onRefreshRequested;
+    }
+    if (_initialized) return;
 
     try {
       final options = FirebaseConfig.options;
-      if (options == null) {
-        await Firebase.initializeApp();
-      } else {
-        await Firebase.initializeApp(options: options);
+      if (!_firebaseReady) {
+        if (Firebase.apps.isNotEmpty) {
+          _firebaseReady = true;
+        } else if (options == null) {
+          await Firebase.initializeApp();
+          _firebaseReady = true;
+        } else {
+          await Firebase.initializeApp(options: options);
+          _firebaseReady = true;
+        }
       }
-      _firebaseReady = true;
+
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      await _initializeLocalNotifications();
+      await _requestPermission();
+
+      FirebaseMessaging.onMessage.listen((message) {
+        _showForegroundNotification(message);
+        _onRefreshRequested?.call();
+      });
+
+      FirebaseMessaging.onMessageOpenedApp.listen((message) {
+        _onRefreshRequested?.call();
+      });
+
+      _initialized = true;
+
+      final initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        _onRefreshRequested?.call();
+      }
     } catch (e) {
       debugPrint('Push notifications disabled: $e');
-      return;
-    }
-
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    await _initializeLocalNotifications();
-    await _requestPermission();
-
-    FirebaseMessaging.onMessage.listen((message) {
-      _showForegroundNotification(message);
-      _onRefreshRequested?.call();
-    });
-
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      _onRefreshRequested?.call();
-    });
-
-    final initialMessage = await _messaging.getInitialMessage();
-    if (initialMessage != null) {
-      _onRefreshRequested?.call();
     }
   }
 

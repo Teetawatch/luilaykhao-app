@@ -20,6 +20,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     final app = context.watch<AppProvider>();
     if (!app.isLoggedIn) return const AuthScreen();
 
+    final media = MediaQuery.of(context);
+    final screenWidth = media.size.width;
+    final horizontalPadding = screenWidth < 380
+        ? 16.0
+        : screenWidth >= 700
+        ? 32.0
+        : 20.0;
+    final contentMaxWidth = screenWidth >= 700 ? 760.0 : double.infinity;
+    final bottomPadding = 132.0 + media.viewPadding.bottom;
+
     final allBookings = app.bookings.map(asMap).toList();
     final filtered = _filteredBookings(allBookings);
     final upcoming = filtered.where(_isUpcomingBooking).toList();
@@ -33,6 +43,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         color: AppTheme.primaryColor,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
             SliverAppBar(
               pinned: true,
@@ -47,69 +58,87 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 132),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _BookingsHeader(
-                    totalCount: allBookings.length,
-                    upcomingCount: allBookings.where(_isUpcomingBooking).length,
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                12,
+                horizontalPadding,
+                bottomPadding,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _BookingsHeader(
+                          totalCount: allBookings.length,
+                          upcomingCount: allBookings
+                              .where(_isUpcomingBooking)
+                              .length,
+                        ),
+                        const SizedBox(height: 24),
+                        ReservationSegmentTabs(
+                          selected: _segment,
+                          counts: {
+                            _ReservationSegment.all: allBookings.length,
+                            _ReservationSegment.upcoming: allBookings
+                                .where(_isUpcomingBooking)
+                                .length,
+                            _ReservationSegment.past: allBookings
+                                .where(_isPastBooking)
+                                .length,
+                            _ReservationSegment.cancelled: allBookings
+                                .where(_isCancelledBooking)
+                                .length,
+                          },
+                          onChanged: (value) =>
+                              setState(() => _segment = value),
+                        ),
+                        const SizedBox(height: 16),
+                        _BookingUtilityBar(
+                          query: _query,
+                          sort: _sort,
+                          statusFilter: _statusFilter,
+                          onQueryChanged: (value) =>
+                              setState(() => _query = value),
+                          onSortChanged: (value) =>
+                              setState(() => _sort = value),
+                          onStatusFilterChanged: (value) =>
+                              setState(() => _statusFilter = value),
+                        ),
+                        const SizedBox(height: 24),
+                        if (app.bookings.isEmpty)
+                          const EmptyStateWidget()
+                        else if (filtered.isEmpty)
+                          const _FilteredEmptyState()
+                        else ...[
+                          if (_segment == _ReservationSegment.all) ...[
+                            UpcomingSection(
+                              bookings: upcoming,
+                              onCancel: _cancelBooking,
+                            ),
+                            if (upcoming.isNotEmpty) const SizedBox(height: 28),
+                            PastTripsSection(bookings: past),
+                            if (past.isNotEmpty) const SizedBox(height: 28),
+                            BookingSection(
+                              eyebrow: 'รายการที่ปิดแล้ว',
+                              title: 'ยกเลิก',
+                              bookings: cancelled,
+                              onCancel: _cancelBooking,
+                            ),
+                          ] else
+                            BookingSection(
+                              eyebrow: _segmentEyebrow,
+                              title: _segmentTitle,
+                              bookings: filtered,
+                              onCancel: _cancelBooking,
+                            ),
+                        ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  ReservationSegmentTabs(
-                    selected: _segment,
-                    counts: {
-                      _ReservationSegment.all: allBookings.length,
-                      _ReservationSegment.upcoming: allBookings
-                          .where(_isUpcomingBooking)
-                          .length,
-                      _ReservationSegment.past: allBookings
-                          .where(_isPastBooking)
-                          .length,
-                      _ReservationSegment.cancelled: allBookings
-                          .where(_isCancelledBooking)
-                          .length,
-                    },
-                    onChanged: (value) => setState(() => _segment = value),
-                  ),
-                  const SizedBox(height: 16),
-                  _BookingUtilityBar(
-                    query: _query,
-                    sort: _sort,
-                    statusFilter: _statusFilter,
-                    onQueryChanged: (value) => setState(() => _query = value),
-                    onSortChanged: (value) => setState(() => _sort = value),
-                    onStatusFilterChanged: (value) =>
-                        setState(() => _statusFilter = value),
-                  ),
-                  const SizedBox(height: 24),
-                  if (app.bookings.isEmpty)
-                    const EmptyStateWidget()
-                  else if (filtered.isEmpty)
-                    const _FilteredEmptyState()
-                  else ...[
-                    if (_segment == _ReservationSegment.all) ...[
-                      UpcomingSection(
-                        bookings: upcoming,
-                        onCancel: _cancelBooking,
-                      ),
-                      if (upcoming.isNotEmpty) const SizedBox(height: 28),
-                      PastTripsSection(bookings: past),
-                      if (past.isNotEmpty) const SizedBox(height: 28),
-                      BookingSection(
-                        eyebrow: 'รายการที่ปิดแล้ว',
-                        title: 'ยกเลิก',
-                        bookings: cancelled,
-                        onCancel: _cancelBooking,
-                      ),
-                    ] else
-                      BookingSection(
-                        eyebrow: _segmentEyebrow,
-                        title: _segmentTitle,
-                        bookings: filtered,
-                        onCancel: _cancelBooking,
-                      ),
-                  ],
-                ]),
+                ),
               ),
             ),
           ],

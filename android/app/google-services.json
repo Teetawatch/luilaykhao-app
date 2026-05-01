@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "464879775117",
+    "project_id": "luilaykhao-bb09f",
+    "storage_bucket": "luilaykhao-bb09f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:464879775117:android:af6cd20209ea8a521be1c4",
+        "android_client_info": {
+          "package_name": "com.luilaykhao.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDF4TKeG7x_imjCKfoRI7Lb6CKnqtNBu9w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
