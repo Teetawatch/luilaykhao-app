@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,8 +25,11 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> myReviews = [];
   List<dynamic> rewards = [];
   List<dynamic> coupons = [];
+  List<dynamic> activeSeatLocks = [];
   Map<String, dynamic>? loyalty;
   Map<String, dynamic>? stats;
+  Timer? _activeSeatLockTimer;
+  bool _activeSeatLocksLoading = false;
 
   bool get isLoggedIn => api.token != null && api.token!.isNotEmpty;
   String? get token => api.token;
@@ -41,6 +46,8 @@ class AppProvider extends ChangeNotifier {
       await Future.wait([loadPublicData(), if (isLoggedIn) refreshMe()]);
       if (isLoggedIn) {
         await loadAccountData();
+        await loadActiveSeatLocks();
+        startActiveSeatLockPolling();
         await PushNotificationService.instance.syncToken(api);
       }
     } catch (e) {
@@ -90,20 +97,58 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 
-  Future<List<dynamic>> activeSeatLocks() async {
+  Future<List<dynamic>> fetchActiveSeatLocks() async {
     final response = await api.get('seat-locks/active');
     return List<dynamic>.from(api.data(response) ?? []);
   }
 
+  Future<void> loadActiveSeatLocks({bool silent = false}) async {
+    if (!isLoggedIn || _activeSeatLocksLoading) return;
+    _activeSeatLocksLoading = true;
+    if (!silent) notifyListeners();
+
+    try {
+      activeSeatLocks = await fetchActiveSeatLocks();
+    } catch (_) {
+      activeSeatLocks = [];
+    } finally {
+      _activeSeatLocksLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void startActiveSeatLockPolling() {
+    _activeSeatLockTimer?.cancel();
+    if (!isLoggedIn) return;
+    _activeSeatLockTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => loadActiveSeatLocks(silent: true),
+    );
+  }
+
+  void stopActiveSeatLockPolling() {
+    _activeSeatLockTimer?.cancel();
+    _activeSeatLockTimer = null;
+  }
+
   Future<Map<String, dynamic>> lockSeats(
     int scheduleId,
-    List<String> seatIds,
-  ) async {
+    List<String> seatIds, {
+    int? pickupPointId,
+    String? pickupRegion,
+  }) async {
     final response = await api.post(
       'schedules/$scheduleId/seats/lock',
-      body: {'seat_ids': seatIds},
+      body: {
+        'seat_ids': seatIds,
+        if (pickupPointId != null) 'pickup_point_id': pickupPointId,
+        if (pickupRegion != null && pickupRegion.isNotEmpty)
+          'pickup_region': pickupRegion,
+      },
     );
-    return Map<String, dynamic>.from(api.data(response) ?? {});
+    final result = Map<String, dynamic>.from(api.data(response) ?? {});
+    await loadActiveSeatLocks(silent: true);
+    return result;
   }
 
   Future<void> unlockSeats(int scheduleId, List<String> seatIds) async {
@@ -111,6 +156,7 @@ class AppProvider extends ChangeNotifier {
       'schedules/$scheduleId/seats/lock',
       body: {'seat_ids': seatIds},
     );
+    await loadActiveSeatLocks(silent: true);
   }
 
   Future<void> cancelActiveSeatLock(
@@ -121,6 +167,7 @@ class AppProvider extends ChangeNotifier {
       'seat-locks/$scheduleId',
       body: {if (seatIds.isNotEmpty) 'seat_ids': seatIds},
     );
+    await loadActiveSeatLocks(silent: true);
   }
 
   Future<void> login(String email, String password) async {
@@ -147,6 +194,8 @@ class AppProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tokenKey, token);
       await loadAccountData();
+      await loadActiveSeatLocks();
+      startActiveSeatLockPolling();
       await PushNotificationService.instance.syncToken(api);
     } catch (e) {
       error = e.toString();
@@ -169,6 +218,8 @@ class AppProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tokenKey, api.token ?? '');
       await loadAccountData();
+      await loadActiveSeatLocks();
+      startActiveSeatLockPolling();
       await PushNotificationService.instance.syncToken(api);
     } catch (e) {
       error = e.toString();
@@ -221,13 +272,21 @@ class AppProvider extends ChangeNotifier {
     await prefs.remove(_tokenKey);
     api.token = null;
     user = null;
+    stopActiveSeatLockPolling();
     bookings = [];
     notifications = [];
+    activeSeatLocks = [];
     loyalty = null;
     myReviews = [];
     rewards = [];
     coupons = [];
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    stopActiveSeatLockPolling();
+    super.dispose();
   }
 
   Future<void> loadAccountData() async {
@@ -258,6 +317,7 @@ class AppProvider extends ChangeNotifier {
     final response = await api.post('bookings', body: payload);
     final booking = Map<String, dynamic>.from(api.data(response) as Map);
     await loadAccountData();
+    await loadActiveSeatLocks(silent: true);
     return booking;
   }
 

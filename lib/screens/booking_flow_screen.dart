@@ -34,6 +34,8 @@ class BookingFlowScreen extends StatelessWidget {
   final List<dynamic> schedules;
   final int? initialScheduleId;
   final int? initialPickupPointId;
+  final List<String> initialSeatIds;
+  final bool resumeLockedSeats;
 
   const BookingFlowScreen({
     super.key,
@@ -41,6 +43,8 @@ class BookingFlowScreen extends StatelessWidget {
     required this.schedules,
     this.initialScheduleId,
     this.initialPickupPointId,
+    this.initialSeatIds = const [],
+    this.resumeLockedSeats = false,
   });
 
   @override
@@ -50,6 +54,8 @@ class BookingFlowScreen extends StatelessWidget {
       schedules: schedules,
       initialScheduleId: initialScheduleId,
       initialPickupPointId: initialPickupPointId,
+      initialSeatIds: initialSeatIds,
+      resumeLockedSeats: resumeLockedSeats,
     );
   }
 }
@@ -59,6 +65,8 @@ class BookingCheckoutPage extends StatefulWidget {
   final List<dynamic> schedules;
   final int? initialScheduleId;
   final int? initialPickupPointId;
+  final List<String> initialSeatIds;
+  final bool resumeLockedSeats;
 
   const BookingCheckoutPage({
     super.key,
@@ -66,6 +74,8 @@ class BookingCheckoutPage extends StatefulWidget {
     required this.schedules,
     this.initialScheduleId,
     this.initialPickupPointId,
+    this.initialSeatIds = const [],
+    this.resumeLockedSeats = false,
   });
 
   @override
@@ -85,15 +95,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   bool _showPricingDetails = false;
   bool _seatLoading = false;
   bool _seatRefreshing = false;
-  bool _activeSeatLocksLoading = false;
   int _currentStep = 0;
   String? _seatError;
   Map<String, dynamic>? _seatMap;
   int? _seatMapScheduleId;
   Timer? _seatRefreshTimer;
-  Timer? _activeSeatLockRefreshTimer;
-  int? _activeSeatLockActionScheduleId;
-  List<dynamic> _activeSeatLocks = const [];
   final Set<String> _selectedSeatIds = <String>{};
   final Set<String> _lockedSeatIds = <String>{};
 
@@ -157,15 +163,23 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       initialSchedule,
       preferredPickupPointId: widget.initialPickupPointId,
     );
-    _loadSeatMap();
-    _loadActiveSeatLocks();
-    _startActiveSeatLockRefresh();
+    final initialSeatIds = widget.initialSeatIds
+        .where((seatId) => seatId.isNotEmpty)
+        .toSet();
+    if (initialSeatIds.isNotEmpty) {
+      _selectedSeatIds.addAll(initialSeatIds);
+      _lockedSeatIds.addAll(initialSeatIds);
+      _syncPassengerCount(initialSeatIds.length);
+      if (widget.resumeLockedSeats) {
+        _currentStep = _passengerStepIndex;
+      }
+    }
+    _loadSeatMap(preserveSelection: initialSeatIds.isNotEmpty);
   }
 
   @override
   void dispose() {
     _stopSeatRealtimeRefresh();
-    _stopActiveSeatLockRefresh();
     _promo.dispose();
     _groupNotes.dispose();
     for (final passenger in _passengers) {
@@ -236,7 +250,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     );
   }
 
-  Future<void> _loadSeatMap({bool silent = false}) async {
+  Future<void> _loadSeatMap({
+    bool silent = false,
+    bool preserveSelection = false,
+  }) async {
     if (silent && _seatRefreshing) return;
 
     final scheduleId = _scheduleId;
@@ -260,9 +277,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         _seatError = null;
         _seatMapScheduleId = scheduleId;
         _seatMap = null;
-        _selectedSeatIds.clear();
-        _lockedSeatIds.clear();
-        _syncPassengerCount(1);
+        if (!preserveSelection) {
+          _selectedSeatIds.clear();
+          _lockedSeatIds.clear();
+          _syncPassengerCount(1);
+        }
       });
     }
 
@@ -272,7 +291,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       var removedSeats = <String>[];
       setState(() {
         _seatMap = seatMap;
-        if (silent) {
+        if (silent || preserveSelection) {
           removedSeats = _reconcileSelectedSeats(seatMap);
         }
       });
@@ -311,100 +330,6 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     _seatRefreshTimer?.cancel();
     _seatRefreshTimer = null;
     _seatRefreshing = false;
-  }
-
-  void _startActiveSeatLockRefresh() {
-    _stopActiveSeatLockRefresh();
-    _activeSeatLockRefreshTimer = Timer.periodic(_seatRefreshInterval, (_) {
-      if (!mounted) return;
-      _loadActiveSeatLocks(silent: true);
-    });
-  }
-
-  void _stopActiveSeatLockRefresh() {
-    _activeSeatLockRefreshTimer?.cancel();
-    _activeSeatLockRefreshTimer = null;
-  }
-
-  Future<void> _loadActiveSeatLocks({bool silent = false}) async {
-    if (_activeSeatLocksLoading) return;
-
-    if (!silent && mounted) {
-      setState(() => _activeSeatLocksLoading = true);
-    } else {
-      _activeSeatLocksLoading = true;
-    }
-
-    try {
-      final locks = await context.read<AppProvider>().activeSeatLocks();
-      if (!mounted) return;
-      setState(() => _activeSeatLocks = locks);
-    } catch (_) {
-      if (!silent && mounted) {
-        setState(() => _activeSeatLocks = const []);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _activeSeatLocksLoading = false);
-      } else {
-        _activeSeatLocksLoading = false;
-      }
-    }
-  }
-
-  Future<void> _cancelActiveSeatLock(Map<String, dynamic> lock) async {
-    final scheduleId = int.tryParse(textOf(lock['schedule_id']));
-    if (scheduleId == null) return;
-
-    final seatIds = asList(lock['seat_ids'])
-        .map((item) => item?.toString() ?? '')
-        .where((id) => id.isNotEmpty)
-        .toList();
-
-    setState(() => _activeSeatLockActionScheduleId = scheduleId);
-    try {
-      await context.read<AppProvider>().cancelActiveSeatLock(
-        scheduleId,
-        seatIds: seatIds,
-      );
-      if (!mounted) return;
-
-      if (scheduleId == _scheduleId) {
-        setState(() {
-          _selectedSeatIds.removeAll(seatIds);
-          _lockedSeatIds.removeAll(seatIds);
-          if (_lockedSeatIds.isEmpty) {
-            _syncPassengerCount(
-              _selectedSeatIds.isEmpty ? 1 : _selectedSeatIds.length,
-            );
-          }
-          if (_usesSeatStep && _safeCurrentStep == _passengerStepIndex) {
-            _currentStep = _seatStepIndex;
-          }
-        });
-        if (_usesSeatStep && _safeCurrentStep == _seatStepIndex) {
-          _startSeatRealtimeRefresh();
-        }
-        await _loadSeatMap(silent: true);
-      }
-
-      await _loadActiveSeatLocks(silent: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ยกเลิกที่นั่งที่กำลังจองแล้ว')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _activeSeatLockActionScheduleId = null);
-      }
-    }
   }
 
   List<String> _reconcileSelectedSeats(Map<String, dynamic> seatMap) {
@@ -476,6 +401,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     final result = await context.read<AppProvider>().lockSeats(
       _scheduleId!,
       seatIds,
+      pickupPointId: _pickupPointId,
+      pickupRegion: _pickupRegion,
     );
     if (result['locked'] != true) {
       throw _CheckoutValidationException(
@@ -485,7 +412,6 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     _lockedSeatIds
       ..clear()
       ..addAll(seatIds);
-    await _loadActiveSeatLocks(silent: true);
   }
 
   Future<void> _unlockLockedSeats() async {
@@ -496,10 +422,6 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       await context.read<AppProvider>().unlockSeats(_scheduleId!, seatIds);
     } catch (_) {
       // Seat locks expire automatically; checkout should still recover gracefully.
-    } finally {
-      if (mounted) {
-        await _loadActiveSeatLocks(silent: true);
-      }
     }
   }
 
@@ -752,14 +674,6 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
                             pickupPoint: _selectedPickupPoint,
                             pricePerTraveler: pricing.pricePerTraveler,
                           ),
-                          if (_activeSeatLocks.isNotEmpty) ...[
-                            const SizedBox(height: 16),
-                            ActiveSeatLocksCard(
-                              locks: _activeSeatLocks,
-                              actionScheduleId: _activeSeatLockActionScheduleId,
-                              onCancel: _cancelActiveSeatLock,
-                            ),
-                          ],
                           const SizedBox(height: 16),
                           const TrustSignalsSection(),
                           const SizedBox(height: 24),
@@ -1038,185 +952,6 @@ class TripSummaryCard extends StatelessWidget {
                   text: 'ราคาต่อคน ${money(pricePerTraveler)}',
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ActiveSeatLocksCard extends StatelessWidget {
-  final List<dynamic> locks;
-  final int? actionScheduleId;
-  final ValueChanged<Map<String, dynamic>> onCancel;
-
-  const ActiveSeatLocksCard({
-    super.key,
-    required this.locks,
-    required this.actionScheduleId,
-    required this.onCancel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: _premiumDecoration(radius: 28).copyWith(
-        color: const Color(0xFFF0FDF9),
-        border: Border.all(color: _softAccent.withValues(alpha: 0.18)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.timer_rounded, color: _softAccent, size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'ที่นั่งที่กำลังจองอยู่',
-                  style: GoogleFonts.anuphan(
-                    color: const Color(0xFF126B5B),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...locks.map((item) {
-            final lock = asMap(item);
-            final scheduleId = int.tryParse(textOf(lock['schedule_id']));
-            final isCancelling =
-                scheduleId != null && scheduleId == actionScheduleId;
-            return _ActiveSeatLockTile(
-              lock: lock,
-              isCancelling: isCancelling,
-              onCancel: isCancelling ? null : () => onCancel(lock),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActiveSeatLockTile extends StatelessWidget {
-  final Map<String, dynamic> lock;
-  final bool isCancelling;
-  final VoidCallback? onCancel;
-
-  const _ActiveSeatLockTile({
-    required this.lock,
-    required this.isCancelling,
-    required this.onCancel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final trip = asMap(lock['trip']);
-    final schedule = asMap(lock['schedule']);
-    final title = textOf(lock['trip_title'], textOf(trip['title'], '-'));
-    final seats = asList(lock['seat_ids'])
-        .map((item) => item?.toString() ?? '')
-        .where((id) => id.isNotEmpty)
-        .toList();
-    final seatText = seats.isEmpty ? '-' : seats.join(', ');
-    final remaining = _lockRemainingLabel(lock['locked_ttl_seconds']);
-    final travelDate = _compactScheduleDate(schedule);
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _softAccent.withValues(alpha: 0.12)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
-                color: _premiumText,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                height: 1.25,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _InlineStatusChip(
-                  icon: Icons.calendar_month_rounded,
-                  text: travelDate,
-                ),
-                _InlineStatusChip(
-                  icon: Icons.event_seat_rounded,
-                  text: 'ที่นั่ง $seatText',
-                ),
-                _InlineStatusChip(icon: Icons.timer_rounded, text: remaining),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: onCancel,
-                icon: isCancelling
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.cancel_outlined, size: 18),
-                label: Text(isCancelling ? 'กำลังยกเลิก...' : 'ยกเลิก'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.errorColor,
-                  textStyle: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InlineStatusChip extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _InlineStatusChip({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: _fieldBackground,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: _softAccent),
-          const SizedBox(width: 5),
-          Text(
-            text,
-            style: GoogleFonts.anuphan(
-              color: _mutedText,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -4016,22 +3751,6 @@ String _seatLockRemainingText(Map<String, dynamic> seat) {
   final minutes = seconds ~/ 60;
   final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
   return '$minutes:$remainingSeconds นาที';
-}
-
-String _lockRemainingLabel(dynamic value) {
-  final seconds = int.tryParse(textOf(value)) ?? 0;
-  if (seconds <= 0) return 'หมดเวลาแล้ว';
-  if (seconds < 60) return 'เหลือไม่ถึง 1 นาที';
-  final minutes = (seconds / 60).ceil();
-  return 'เหลือ $minutes นาที';
-}
-
-String _compactScheduleDate(Map<String, dynamic> schedule) {
-  final departure = textOf(schedule['departure_date']);
-  final returning = textOf(schedule['return_date']);
-  if (departure.isEmpty) return '-';
-  if (returning.isEmpty || returning == departure) return dateText(departure);
-  return '${dateText(departure)} - ${dateText(returning)}';
 }
 
 Color _seatColor({required String status, required bool selected}) {

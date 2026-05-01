@@ -10,6 +10,9 @@ import 'providers/tracking_provider.dart';
 import 'screens/customer_app_screen.dart';
 import 'services/push_notification_service.dart';
 import 'theme/app_theme.dart';
+import 'widgets/active_seat_lock_overlay.dart';
+
+final appNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,9 +47,16 @@ class LuilaykhaoApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TrackingProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: appNavigatorKey,
         title: 'ลุยเลเขา',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        builder: (context, child) {
+          return ActiveSeatLockOverlay(
+            navigatorKey: appNavigatorKey,
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         home: const CustomerAppScreen(),
       ),
     );
