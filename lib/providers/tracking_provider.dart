@@ -35,9 +35,10 @@ class TrackingProvider extends ChangeNotifier {
   bool get locationPermissionDenied => _locationPermissionDenied;
   String? get locationError => _locationError;
 
-  Future<void> startTracking(String bookingRef) async {
+  Future<void> startTracking(String bookingRef, {String? authToken}) async {
     _isLoading = true;
     _errorMessage = '';
+    _service.authToken = authToken;
     notifyListeners();
 
     final booking = await _service.fetchBookingInfo(bookingRef);

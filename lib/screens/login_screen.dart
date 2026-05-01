@@ -16,8 +16,9 @@ import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
+  final bool popOnSuccess;
 
-  const LoginScreen({super.key, this.onLoginSuccess});
+  const LoginScreen({super.key, this.onLoginSuccess, this.popOnSuccess = true});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -157,11 +158,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _finishLogin() {
-    widget.onLoginSuccess?.call();
+    final onLoginSuccess = widget.onLoginSuccess;
     final navigator = Navigator.of(context);
-    if (navigator.canPop()) {
+    if (widget.popOnSuccess && navigator.canPop()) {
       navigator.pop();
     }
+    onLoginSuccess?.call();
   }
 
   Future<void> _handleLogin() async {

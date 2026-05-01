@@ -2705,7 +2705,7 @@ class AuthScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LoginScreen(onLoginSuccess: afterLogin);
+    return LoginScreen(onLoginSuccess: afterLogin, popOnSuccess: false);
   }
 }
 
@@ -3144,13 +3144,15 @@ class _ScheduleDropdown extends StatelessWidget {
         ),
         selectedItemBuilder: (context) {
           return schedules.map((schedule) {
-            final date = dateText(schedule['departure_date']);
+            final date = scheduleTravelDateText(schedule);
             final seats = textOf(schedule['available_seats'], '0');
             return Row(
               children: [
                 Expanded(
                   child: Text(
                     date,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(
                       color: AppTheme.primaryColor,
                       fontSize: 16,
@@ -3164,7 +3166,7 @@ class _ScheduleDropdown extends StatelessWidget {
           }).toList();
         },
         items: schedules.map((schedule) {
-          final date = dateText(schedule['departure_date']);
+          final date = scheduleTravelDateText(schedule);
           final seats = textOf(schedule['available_seats'], '0');
           return DropdownMenuItem<int>(
             value: int.tryParse(schedule['id'].toString()),
@@ -3173,6 +3175,8 @@ class _ScheduleDropdown extends StatelessWidget {
                 Expanded(
                   child: Text(
                     date,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(
                       color: AppTheme.primaryColor,
                       fontSize: 15,
@@ -3481,6 +3485,27 @@ String scheduleRegionSummary(Map<String, dynamic> schedule) {
   final visible = labels.take(3).join(', ');
   final more = labels.length > 3 ? ' +${labels.length - 3}' : '';
   return 'ภาค: $visible$more';
+}
+
+String scheduleTravelDateText(Map<String, dynamic> schedule) {
+  final start = _compactThaiDate(schedule['departure_date']);
+  if (start == '-') return 'รอระบุวัน';
+
+  final end = _compactThaiDate(schedule['return_date']);
+  if (end == '-' || end == start) return start;
+
+  return '$start - $end';
+}
+
+String _compactThaiDate(dynamic value) {
+  final raw = value?.toString() ?? '';
+  if (raw.isEmpty) return '-';
+
+  final date = DateTime.tryParse(raw);
+  if (date == null) return raw;
+
+  final month = DateFormat('MMM', 'th_TH').format(date);
+  return '${date.day} $month${date.year + 543}';
 }
 
 class _PickupRegionOption {

@@ -13,6 +13,7 @@ import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
+import 'login_screen.dart';
 import 'tracking_screen.dart';
 
 enum _TrackEntryState { notStarted, ready, invalid, expired }
@@ -29,6 +30,11 @@ class BookingLookupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppProvider>();
+    if (!app.isLoggedIn) {
+      return const LoginScreen(popOnSuccess: false);
+    }
+
     return TrackVehiclePage(embedded: embedded, onOpenBookings: onOpenBookings);
   }
 }
@@ -113,6 +119,11 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
   }
 
   Future<void> _onTrack([String? code]) async {
+    final app = context.read<AppProvider>();
+    if (!app.isLoggedIn || app.token == null) {
+      return;
+    }
+
     final raw = (code ?? _controller.text).trim().toUpperCase();
     final ref = _extractBookingRef(raw) ?? raw;
 
@@ -141,7 +152,7 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
     });
 
     final provider = context.read<TrackingProvider>();
-    await provider.startTracking(ref);
+    await provider.startTracking(ref, authToken: app.token);
 
     if (!mounted) return;
     setState(() => _isLoading = false);

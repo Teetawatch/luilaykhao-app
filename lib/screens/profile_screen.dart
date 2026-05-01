@@ -24,7 +24,7 @@ class ProfileScreen extends StatelessWidget {
     final app = context.watch<AppProvider>();
 
     if (!app.isLoggedIn) {
-      return const LoginScreen();
+      return const LoginScreen(popOnSuccess: false);
     }
 
     final user = app.user ?? {};

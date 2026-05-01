@@ -12,6 +12,8 @@ class TrackingService {
     defaultValue: 'https://luilaykhao.com/api/v1',
   );
 
+  String? authToken;
+
   static const Duration _farInterval = Duration(minutes: 30);
   static const Duration _nearSoonInterval = Duration(seconds: 30);
   static const Duration _imminentInterval = Duration(seconds: 4);
@@ -24,13 +26,19 @@ class TrackingService {
 
   Stream<VehicleTracking?> get trackingStream => _trackingController.stream;
 
+  Map<String, String> get _headers => {
+    'Accept': 'application/json',
+    if (authToken != null && authToken!.isNotEmpty)
+      'Authorization': 'Bearer $authToken',
+  };
+
   Future<BookingInfo?> fetchBookingInfo(String bookingRef) async {
     try {
       final response = await http.get(
         Uri.parse(
           '$baseUrl/bookings/${Uri.encodeComponent(bookingRef)}/tracking',
         ),
-        headers: const {'Accept': 'application/json'},
+        headers: _headers,
       );
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
@@ -50,7 +58,7 @@ class TrackingService {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/tracking/current/$vehicleId'),
-        headers: const {'Accept': 'application/json'},
+        headers: _headers,
       );
       if (response.statusCode == 200) {
         final body = json.decode(response.body);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
+import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
@@ -303,7 +304,7 @@ class _RegisterHeader extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.network(
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuAkcoh81AthX8BRpp0grFV1rpVGg6w_keM6F2TZJWPth2Aa8BmMa4Kqn8kWvyjR0wJcprEVJMMda7Lwh9Zs20focIgUjy6iSfWYyLGzUSW3D8cOeuQg5wM0jnkpjmGE3LpL8ghj_vGPZVQZhktFhAqBcC4gf43zPAAFu6P2J775FSmbkAx25jCmK7UhGCqRnxFoBJTvpo72pU9jWONc9dSZ9eiGC0MfxnXouHdi2f6XqP6lRpgclEH59UJL0O7kT7mJCGiE81GHDw',
+            ApiConfig.mediaUrl('/images/register_page.png'),
             fit: BoxFit.cover,
           ),
           Container(
