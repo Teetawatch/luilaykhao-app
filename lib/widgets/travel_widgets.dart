@@ -313,18 +313,21 @@ class TravelSliverAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SliverAppBar(
       pinned: true,
       backgroundColor: isTransparent
           ? Colors.transparent
-          : AppTheme.bgLight.withValues(alpha: 0.85),
+          : Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
       title: Text(
         title,
         style: GoogleFonts.anuphan(
-          color: AppTheme.textMain,
+          color: colorScheme.onSurface,
           fontWeight: FontWeight.w800,
           fontSize: 18,
         ),
@@ -339,7 +342,11 @@ class TravelSliverAppBar extends StatelessWidget {
                 child: IconButton(
                   icon: Icon(
                     Icons.arrow_back,
-                    color: isTransparent ? Colors.white : AppTheme.textMain,
+                    color: isTransparent
+                        ? Colors.white
+                        : isDark
+                        ? colorScheme.onSurface
+                        : AppTheme.textMain,
                     size: 20,
                   ),
                   onPressed: () => Navigator.pop(context),

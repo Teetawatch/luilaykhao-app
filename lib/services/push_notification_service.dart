@@ -43,6 +43,7 @@ class PushNotificationService {
   bool _firebaseReady = false;
   bool _initialized = false;
   bool _localReady = false;
+  Future<void>? _initFuture;
   ApiClient? _api;
   VoidCallback? _onRefreshRequested;
 
@@ -51,6 +52,14 @@ class PushNotificationService {
       _onRefreshRequested = onRefreshRequested;
     }
     if (_initialized) return;
+    if (_initFuture != null) {
+      return _initFuture;
+    }
+    _initFuture = _doInitialize();
+    return _initFuture;
+  }
+
+  Future<void> _doInitialize() async {
 
     try {
       final options = FirebaseConfig.options;

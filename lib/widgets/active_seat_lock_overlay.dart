@@ -45,8 +45,6 @@ class _ActiveSeatLockOverlayState extends State<ActiveSeatLockOverlay> {
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
     final locks = app.activeSeatLocks.map(asMap).where(_isActiveLock).toList();
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    final bottomOffset = bottomInset > 0 ? bottomInset + 12 : 82.0;
 
     return Stack(
       children: [
@@ -55,10 +53,10 @@ class _ActiveSeatLockOverlayState extends State<ActiveSeatLockOverlay> {
           Positioned(
             left: 12,
             right: 12,
-            bottom: bottomOffset,
+            top: 8,
             child: SafeArea(
-              top: false,
-              child: _ActiveSeatLockBanner(
+              bottom: false,
+              child: ActiveSeatLockBanner(
                 lock: locks.first,
                 extraCount: locks.length - 1,
                 busy: _busyScheduleId == _scheduleId(locks.first),
@@ -111,20 +109,37 @@ class _ActiveSeatLockOverlayState extends State<ActiveSeatLockOverlay> {
 
   Future<void> _cancelLock(Map<String, dynamic> lock) async {
     final app = context.read<AppProvider>();
+    final trip = asMap(lock['trip']);
+    final slug = textOf(trip['slug']);
     final scheduleId = _scheduleId(lock);
-    if (scheduleId == null) return;
+    if (slug.isEmpty || scheduleId == null) return;
 
     final seatIds = asList(lock['seat_ids'])
         .map((item) => item?.toString() ?? '')
         .where((id) => id.isNotEmpty)
         .toList();
+    final pickupPointId = int.tryParse(textOf(lock['pickup_point_id']));
 
     setState(() => _busyScheduleId = scheduleId);
     try {
+      final results = await Future.wait([app.trip(slug), app.schedules(slug)]);
       await app.cancelActiveSeatLock(scheduleId, seatIds: seatIds);
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('ยกเลิกที่นั่งที่กำลังจองแล้ว')),
+        const SnackBar(
+          content: Text('ยกเลิกการจองแล้ว เลือกที่นั่งใหม่ได้เลย'),
+        ),
+      );
+      widget.navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => BookingFlowScreen(
+            trip: Map<String, dynamic>.from(results[0] as Map),
+            schedules: List<dynamic>.from(results[1] as List),
+            initialScheduleId: scheduleId,
+            initialPickupPointId: pickupPointId,
+            startAtSeatSelection: true,
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -137,14 +152,14 @@ class _ActiveSeatLockOverlayState extends State<ActiveSeatLockOverlay> {
   }
 }
 
-class _ActiveSeatLockBanner extends StatelessWidget {
+class ActiveSeatLockBanner extends StatelessWidget {
   final Map<String, dynamic> lock;
   final int extraCount;
   final bool busy;
   final VoidCallback onContinue;
   final VoidCallback onCancel;
 
-  const _ActiveSeatLockBanner({
+  const ActiveSeatLockBanner({
     required this.lock,
     required this.extraCount,
     required this.busy,
@@ -174,12 +189,14 @@ class _ActiveSeatLockBanner extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: accent.withValues(alpha: 0.22)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
+              color: Colors.black.withValues(
+                alpha: AppTheme.isDark(context) ? 0.28 : 0.12,
+              ),
               blurRadius: 24,
               offset: const Offset(0, 10),
             ),
@@ -207,7 +224,7 @@ class _ActiveSeatLockBanner extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(
-                      color: const Color(0xFF111827),
+                      color: AppTheme.onSurface(context),
                       fontSize: 13.5,
                       fontWeight: FontWeight.w900,
                     ),
@@ -220,7 +237,7 @@ class _ActiveSeatLockBanner extends StatelessWidget {
                     style: GoogleFonts.anuphan(
                       color: isUrgent
                           ? AppTheme.errorColor
-                          : const Color(0xFF6B7280),
+                          : AppTheme.mutedText(context),
                       fontSize: 11.5,
                       fontWeight: FontWeight.w800,
                     ),
@@ -229,38 +246,57 @@ class _ActiveSeatLockBanner extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            TextButton(
-              onPressed: busy ? null : onContinue,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: accent,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 9,
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              alignment: WrapAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: busy ? null : onContinue,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: accent,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
+                    ),
+                    minimumSize: const Size(0, 38),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+                  ),
+                  child: busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('ต่อ'),
                 ),
-                minimumSize: const Size(0, 38),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
-              ),
-              child: busy
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                TextButton(
+                  onPressed: busy ? null : onCancel,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.errorColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 9,
+                    ),
+                    minimumSize: const Size(0, 38),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: AppTheme.errorColor.withValues(alpha: 0.22),
                       ),
-                    )
-                  : const Text('ต่อ'),
-            ),
-            IconButton(
-              tooltip: 'ยกเลิก',
-              onPressed: busy ? null : onCancel,
-              icon: const Icon(Icons.close_rounded),
-              color: const Color(0xFF6B7280),
-              visualDensity: VisualDensity.compact,
+                    ),
+                    textStyle: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+                  ),
+                  child: const Text('ยกเลิกการจอง'),
+                ),
+              ],
             ),
           ],
         ),

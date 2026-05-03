@@ -46,18 +46,39 @@ class LuilaykhaoApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppProvider()..boot()),
         ChangeNotifierProvider(create: (_) => TrackingProvider()),
       ],
-      child: MaterialApp(
-        navigatorKey: appNavigatorKey,
-        title: 'ลุยเลเขา',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        builder: (context, child) {
-          return ActiveSeatLockOverlay(
+      child: Consumer<AppProvider>(
+        builder: (context, app, _) {
+          final overlayStyle = app.isDarkMode
+              ? SystemUiOverlayStyle.light.copyWith(
+                  statusBarColor: Colors.transparent,
+                  systemNavigationBarColor: AppTheme.bgDark,
+                  systemNavigationBarIconBrightness: Brightness.light,
+                )
+              : SystemUiOverlayStyle.dark.copyWith(
+                  statusBarColor: Colors.transparent,
+                  systemNavigationBarColor: Colors.white,
+                  systemNavigationBarIconBrightness: Brightness.dark,
+                );
+
+          return MaterialApp(
             navigatorKey: appNavigatorKey,
-            child: child ?? const SizedBox.shrink(),
+            title: 'ลุยเลเขา',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: app.themeMode,
+            builder: (context, child) {
+              return AnnotatedRegion<SystemUiOverlayStyle>(
+                value: overlayStyle,
+                child: ActiveSeatLockOverlay(
+                  navigatorKey: appNavigatorKey,
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              );
+            },
+            home: const CustomerAppScreen(),
           );
         },
-        home: const CustomerAppScreen(),
       ),
     );
   }

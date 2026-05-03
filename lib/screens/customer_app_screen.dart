@@ -12,6 +12,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/travel_widgets.dart';
 import 'booking_lookup_screen.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';
@@ -70,13 +71,15 @@ class CustomBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.96),
+            color: colorScheme.surface.withValues(alpha: 0.96),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),
@@ -96,13 +99,10 @@ class CustomBottomNav extends StatelessWidget {
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 iconTheme: WidgetStateProperty.resolveWith((states) {
                   if (states.contains(WidgetState.selected)) {
-                    return const IconThemeData(
-                      color: AppTheme.primaryColor,
-                      size: 24,
-                    );
+                    return IconThemeData(color: colorScheme.primary, size: 24);
                   }
-                  return const IconThemeData(
-                    color: AppTheme.textSecondary,
+                  return IconThemeData(
+                    color: colorScheme.onSurfaceVariant,
                     size: 24,
                   );
                 }),
@@ -113,8 +113,8 @@ class CustomBottomNav extends StatelessWidget {
                         ? FontWeight.w800
                         : FontWeight.w500,
                     color: states.contains(WidgetState.selected)
-                        ? AppTheme.primaryColor
-                        : AppTheme.textSecondary,
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
                   );
                 }),
               ),
@@ -202,10 +202,41 @@ class _ExploreScreenState extends State<ExploreScreen> {
             .map(asMap)
             .toList();
 
+    Future<void> openNotifications() async {
+      if (!app.isLoggedIn) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LoginScreen(
+              onLoginSuccess: () async {
+                final currentApp = context.read<AppProvider>();
+                await currentApp.loadNotifications();
+                if (!context.mounted) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationsScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        return;
+      }
+
+      await app.loadNotifications();
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+      );
+    }
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: AppTheme.bgLight,
+        backgroundColor: AppTheme.background(context),
         body: Stack(
           children: [
             RefreshIndicator(
@@ -241,6 +272,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
                   const SizedBox(height: 16),
                   _PopularTripsSection(trips: showTrips),
+                  _PromotionsSection(promotions: app.promotions.map(asMap).toList()),
                   const SizedBox(height: 100), // Bottom padding for Nav Bar
                 ],
               ),
@@ -253,6 +285,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 user: app.user,
                 notificationCount: notificationCount,
                 backgroundProgress: _topBarProgress,
+                onNotificationsTap: openNotifications,
               ),
             ),
           ],
@@ -271,7 +304,28 @@ class HeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final image = ApiConfig.mediaUrl('/images/khaochangphueak.webp');
     final size = MediaQuery.of(context).size;
+    final safeTop = MediaQuery.paddingOf(context).top;
     final heroHeight = size.height * 0.55;
+    final compactWidth = size.width < 390;
+    final compactHeight = size.height < 700;
+    final horizontalPadding = compactWidth ? 18.0 : 24.0;
+    final contentTop = safeTop + (compactHeight ? 76.0 : 96.0);
+    final contentBottom = (heroHeight * (compactHeight ? 0.34 : 0.40)).clamp(
+      96.0,
+      220.0,
+    );
+    final contentWidth = (size.width - (horizontalPadding * 2)).clamp(
+      260.0,
+      680.0,
+    );
+    final titleSize = size.width >= 700
+        ? 36.0
+        : compactWidth
+        ? 24.0
+        : compactHeight
+        ? 26.0
+        : 28.0;
+    final subtitleSize = compactWidth ? 13.0 : 15.0;
 
     return SizedBox(
       height: heroHeight,
@@ -338,48 +392,59 @@ class HeroHeader extends StatelessWidget {
           ),
           // Hero Content
           Positioned(
-            left: 24,
-            right: 24,
-            bottom: heroHeight * 0.50,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  'การเที่ยวที่ดี เริ่มจาก\nความรู้สึกที่ดี ตั้งแต่การจอง',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.anuphan(
-                    color: Colors.white,
-                    fontSize: size.width > 600 ? 36 : 28,
-                    height: 1.2,
-                    fontWeight: FontWeight.w900,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        offset: const Offset(0, 2),
-                        blurRadius: 10,
+            left: horizontalPadding,
+            right: horizontalPadding,
+            top: contentTop,
+            bottom: contentBottom,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: SizedBox(
+                  width: contentWidth,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'การเที่ยวที่ดี เริ่มจาก\nความรู้สึกที่ดี ตั้งแต่การจอง',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.anuphan(
+                          color: Colors.white,
+                          fontSize: titleSize,
+                          height: 1.2,
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              offset: const Offset(0, 2),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: compactHeight ? 8 : 12),
+                      Text(
+                        'ค้นหาทริปและประสบการณ์ที่พร้อมเดินทาง',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.anuphan(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: subtitleSize,
+                          height: 1.4,
+                          fontWeight: FontWeight.w500,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              offset: const Offset(0, 2),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'ค้นหาทริปและประสบการณ์ที่พร้อมเดินทาง',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.anuphan(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 15,
-                    height: 1.4,
-                    fontWeight: FontWeight.w500,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        offset: const Offset(0, 2),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -392,11 +457,13 @@ class _HeroTopBar extends StatelessWidget {
   final Map<String, dynamic>? user;
   final int notificationCount;
   final double backgroundProgress;
+  final VoidCallback onNotificationsTap;
 
   const _HeroTopBar({
     required this.user,
     required this.notificationCount,
     required this.backgroundProgress,
+    required this.onNotificationsTap,
   });
 
   @override
@@ -507,7 +574,7 @@ class _HeroTopBar extends StatelessWidget {
                             ),
                             child: IconButton(
                               padding: EdgeInsets.zero,
-                              onPressed: () {},
+                              onPressed: onNotificationsTap,
                               icon: Icon(
                                 Icons.notifications_none,
                                 color: iconColor,
@@ -614,10 +681,10 @@ class _HomeTopSectionState extends State<HomeTopSection> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(32),
         border: Border.all(
-          color: AppTheme.outlineColor.withValues(alpha: 0.55),
+          color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
         boxShadow: [
           BoxShadow(
@@ -635,7 +702,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
           Text(
             'ทริปที่กำลังเปิดรับสมัคร',
             style: GoogleFonts.anuphan(
-              color: AppTheme.textMain,
+              color: AppTheme.onSurface(context),
               fontSize: 15,
               fontWeight: FontWeight.w800,
             ),
@@ -651,7 +718,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
             Text(
               'เลือกภาคที่จะขึ้นและวันเดินทาง',
               style: GoogleFonts.anuphan(
-                color: AppTheme.textMain,
+                color: AppTheme.onSurface(context),
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
@@ -763,7 +830,7 @@ class _PopularTripsSection extends StatelessWidget {
       margin: const EdgeInsets.only(top: 48),
       padding: const EdgeInsets.fromLTRB(20, 40, 0, 40),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: AppTheme.subtleSurface(context),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(56)),
         boxShadow: [
           BoxShadow(
@@ -853,6 +920,491 @@ class _PopularTripsSection extends StatelessWidget {
   }
 }
 
+// ─── Promotions Section ──────────────────────────────────────────────────────
+
+class _PromotionsSection extends StatelessWidget {
+  final List<Map<String, dynamic>> promotions;
+
+  const _PromotionsSection({required this.promotions});
+
+  @override
+  Widget build(BuildContext context) {
+    if (promotions.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 32),
+      padding: const EdgeInsets.fromLTRB(20, 36, 0, 36),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(56)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 20,
+            offset: const Offset(0, -8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24, left: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'โปรโมชั่นและสิทธิพิเศษ',
+                        style: GoogleFonts.anuphan(
+                          color: AppTheme.textMain,
+                          fontSize: 22,
+                          height: 1.1,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'ส่วนลดและโค้ดพิเศษสำหรับการจอง',
+                        style: GoogleFonts.anuphan(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          PromotionsScreen(promotions: promotions),
+                    ),
+                  ),
+                  iconAlignment: IconAlignment.end,
+                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  label: Text(
+                    'ดูทั้งหมด',
+                    style: GoogleFonts.anuphan(
+                      color: AppTheme.primaryColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 160,
+            child: ListView.separated(
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 20),
+              itemCount: promotions.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) => SizedBox(
+                width: MediaQuery.of(context).size.width > 700 ? 360 : 300,
+                child: _PromotionCard(promotion: promotions[index]),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PromotionCard extends StatelessWidget {
+  final Map<String, dynamic> promotion;
+
+  const _PromotionCard({required this.promotion});
+
+  String _discountLabel() {
+    final type = promotion['type']?.toString() ?? '';
+    final value = promotion['value'];
+    if (value == null) return '';
+    final num v = value is num ? value : num.tryParse(value.toString()) ?? 0;
+    return type == 'percent'
+        ? 'ลด ${v.toStringAsFixed(v.truncateToDouble() == v ? 0 : 1)}%'
+        : 'ลด ฿${v.toStringAsFixed(v.truncateToDouble() == v ? 0 : 2)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final code = promotion['code']?.toString() ?? '';
+    final name = promotion['name']?.toString() ?? '-';
+    final endDate = promotion['end_date'];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryColor, AppTheme.accentColor],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.anuphan(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Text(
+                  _discountLabel(),
+                  style: GoogleFonts.anuphan(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _CodeChip(code: code),
+              if (endDate != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'ใช้ได้ถึง ${_formatDate(endDate.toString())}',
+                  style: GoogleFonts.anuphan(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return raw;
+    }
+  }
+}
+
+class _CodeChip extends StatelessWidget {
+  final String code;
+
+  const _CodeChip({required this.code});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // Copy code
+        _copyCode(context, code);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.35),
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              code,
+              style: GoogleFonts.anuphan(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.copy_rounded, color: Colors.white70, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _copyCode(BuildContext context, String code) {
+    Clipboard.setData(ClipboardData(text: code));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'คัดลอกโค้ด "$code" แล้ว',
+          style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    );
+  }
+}
+
+// ─── Promotions Full Screen ───────────────────────────────────────────────────
+
+class PromotionsScreen extends StatelessWidget {
+  final List<Map<String, dynamic>> promotions;
+
+  const PromotionsScreen({super.key, required this.promotions});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background(context),
+      body: CustomScrollView(
+        slivers: [
+          const TravelSliverAppBar(title: 'โปรโมชั่นและสิทธิพิเศษ'),
+          SliverToBoxAdapter(
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                child: promotions.isEmpty
+                    ? const _EmptyState(
+                        icon: Icons.local_offer_outlined,
+                        title: 'ยังไม่มีโปรโมชั่น',
+                        body: 'ติดตามโปรโมชั่นและสิทธิพิเศษได้ที่นี่',
+                      )
+                    : Column(
+                        children: [
+                          for (final promo in promotions) ...[
+                            _PromotionListCard(promotion: promo),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PromotionListCard extends StatelessWidget {
+  final Map<String, dynamic> promotion;
+
+  const _PromotionListCard({required this.promotion});
+
+  String _discountLabel() {
+    final type = promotion['type']?.toString() ?? '';
+    final value = promotion['value'];
+    if (value == null) return '';
+    final num v = value is num ? value : num.tryParse(value.toString()) ?? 0;
+    return type == 'percent'
+        ? 'ลด ${v.toStringAsFixed(v.truncateToDouble() == v ? 0 : 1)}%'
+        : 'ลด ฿${v.toStringAsFixed(v.truncateToDouble() == v ? 0 : 2)}';
+  }
+
+  String _formatDate(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final code = promotion['code']?.toString() ?? '';
+    final name = promotion['name']?.toString() ?? '-';
+    final startDate = promotion['start_date'];
+    final endDate = promotion['end_date'];
+    final maxUses = promotion['max_uses'];
+    final usedCount = promotion['used_count'] ?? 0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppTheme.primaryColor, AppTheme.accentColor],
+              ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    name,
+                    style: GoogleFonts.anuphan(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Text(
+                    _discountLabel(),
+                    style: GoogleFonts.anuphan(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _CodeChip(code: code),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    if (startDate != null)
+                      _MetaPill(
+                        icon: Icons.calendar_today_outlined,
+                        text: 'เริ่ม ${_formatDate(startDate.toString())}',
+                      ),
+                    if (endDate != null)
+                      _MetaPill(
+                        icon: Icons.event_outlined,
+                        text: 'ถึง ${_formatDate(endDate.toString())}',
+                      ),
+                    if (maxUses != null)
+                      _MetaPill(
+                        icon: Icons.people_outline_rounded,
+                        text:
+                            'ใช้แล้ว $usedCount/$maxUses',
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _MetaPill({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.border(context)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppTheme.textSecondary),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: GoogleFonts.anuphan(
+              color: AppTheme.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PopularTripCard extends StatelessWidget {
   final Map<String, dynamic> trip;
 
@@ -864,9 +1416,8 @@ class _PopularTripCard extends StatelessWidget {
       trip['thumbnail_image'] ?? trip['cover_image'],
     );
     final slug = textOf(trip['slug']);
-    final tag = textOf(
-      trip['category_name'] ?? trip['category'] ?? trip['type'],
-      'ทริป',
+    final tag = _tripTypeLabel(
+      textOf(trip['category_name'] ?? trip['category'] ?? trip['type'], 'ทริป'),
     );
     final location = textOf(trip['location'], 'ประเทศไทย');
     final price = trip['min_price'] ?? trip['price'];
@@ -881,7 +1432,7 @@ class _PopularTripCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
@@ -995,7 +1546,7 @@ class _PopularTripCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFDCBF).withValues(alpha: 0.4),
+                          color: AppTheme.warningTint(context),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -1101,7 +1652,7 @@ class FeaturedTripCard extends StatelessWidget {
           children: [
             if (image.isEmpty)
               Container(
-                color: const Color(0xFFF3F3F3),
+                color: AppTheme.subtleSurface(context),
                 child: const Icon(
                   Icons.landscape,
                   size: 54,
@@ -1113,7 +1664,7 @@ class FeaturedTripCard extends StatelessWidget {
                 imageUrl: image,
                 fit: BoxFit.cover,
                 placeholder: (context, url) =>
-                    Container(color: const Color(0xFFF3F3F3)),
+                    Container(color: AppTheme.subtleSurface(context)),
                 errorWidget: (context, url, error) => const Icon(Icons.error),
               ),
             DecoratedBox(
@@ -1248,10 +1799,10 @@ class TripCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surfaceLight,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppTheme.outlineColor.withValues(alpha: 0.3),
+            color: AppTheme.border(context).withValues(alpha: 0.3),
           ),
           boxShadow: [
             BoxShadow(
@@ -1276,14 +1827,15 @@ class TripCard extends StatelessWidget {
                   children: [
                     image.isEmpty
                         ? Container(
-                            color: const Color(0xFFF3F3F3),
+                            color: AppTheme.subtleSurface(context),
                             child: const Icon(Icons.landscape, size: 42),
                           )
                         : CachedNetworkImage(
                             imageUrl: image,
                             fit: BoxFit.cover,
-                            placeholder: (context, url) =>
-                                Container(color: const Color(0xFFF3F3F3)),
+                            placeholder: (context, url) => Container(
+                              color: AppTheme.subtleSurface(context),
+                            ),
                             errorWidget: (context, url, error) =>
                                 const Icon(Icons.error),
                           ),
@@ -1300,7 +1852,7 @@ class TripCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          textOf(trip['type'], 'ประสบการณ์'),
+                          _tripTypeLabel(textOf(trip['type'], 'ประสบการณ์')),
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
@@ -1341,7 +1893,7 @@ class TripCard extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3F3F3),
+                          color: AppTheme.subtleSurface(context),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -1442,17 +1994,12 @@ class TripCard extends StatelessWidget {
 
 // TripDetailScreen has been moved to its own file lib/screens/trip_detail_screen.dart
 
-BoxDecoration _ecoCardDecoration() {
-  return BoxDecoration(
-    color: AppTheme.surfaceLight,
-    borderRadius: BorderRadius.circular(32),
-    boxShadow: const [
-      BoxShadow(
-        color: Color(0x141A1C1C),
-        blurRadius: 40,
-        offset: Offset(0, 12),
-      ),
-    ],
+BoxDecoration _ecoCardDecoration(BuildContext context) {
+  return AppTheme.cardDecoration(
+    context,
+    radius: 32,
+    borderColor: AppTheme.border(context).withValues(alpha: 0.45),
+    shadowOpacity: 0.05,
   );
 }
 
@@ -1470,14 +2017,16 @@ class _BookingsHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: const Color(0xFFEAEDED)),
-        boxShadow: const [
+        border: Border.all(color: AppTheme.border(context)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0F111313),
+            color: Colors.black.withValues(
+              alpha: AppTheme.isDark(context) ? 0.18 : 0.06,
+            ),
             blurRadius: 32,
-            offset: Offset(0, 14),
+            offset: const Offset(0, 14),
           ),
         ],
       ),
@@ -1497,20 +2046,20 @@ class _BookingsHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'ติดตามและจัดการการเดินทางของคุณ',
             style: TextStyle(
-              color: Color(0xFF111313),
+              color: AppTheme.onSurface(context),
               fontSize: 24,
               height: 1.18,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'ดูสถานะทริป รายละเอียดการชำระเงิน และเอกสารยืนยันได้ครบในที่เดียว',
             style: TextStyle(
-              color: Color(0xFF687272),
+              color: AppTheme.mutedText(context),
               fontSize: 13,
               height: 1.55,
               fontWeight: FontWeight.w600,
@@ -1551,17 +2100,17 @@ class _SummaryPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F8F8),
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE7ECEC)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             value,
-            style: const TextStyle(
-              color: Color(0xFF111313),
+            style: TextStyle(
+              color: AppTheme.onSurface(context),
               fontSize: 24,
               fontWeight: FontWeight.w900,
               height: 1,
@@ -1570,8 +2119,8 @@ class _SummaryPill extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFF687272),
+            style: TextStyle(
+              color: AppTheme.mutedText(context),
               fontSize: 11,
               fontWeight: FontWeight.w800,
             ),
@@ -1612,14 +2161,16 @@ class ReservationSegmentTabs extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFE3E8E8)),
-          boxShadow: const [
+          border: Border.all(color: AppTheme.border(context)),
+          boxShadow: [
             BoxShadow(
-              color: Color(0x0D111313),
+              color: Colors.black.withValues(
+                alpha: AppTheme.isDark(context) ? 0.16 : 0.05,
+              ),
               blurRadius: 22,
-              offset: Offset(0, 10),
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -1694,18 +2245,18 @@ class _BookingUtilityBar extends StatelessWidget {
               hintText: 'ค้นหาการจอง',
               prefixIcon: const Icon(Icons.search_rounded),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppTheme.surface(context),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 14,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(18),
-                borderSide: const BorderSide(color: Color(0xFFE3E8E8)),
+                borderSide: BorderSide(color: AppTheme.border(context)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(18),
-                borderSide: const BorderSide(color: Color(0xFFE3E8E8)),
+                borderSide: BorderSide(color: AppTheme.border(context)),
               ),
             ),
           ),
@@ -1755,11 +2306,11 @@ class _UtilityIconButton extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE3E8E8)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
-      child: Icon(icon, color: const Color(0xFF111313)),
+      child: Icon(icon, color: AppTheme.onSurface(context)),
     );
   }
 }
@@ -1850,14 +2401,14 @@ class BookingSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppTheme.surface(context),
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0xFFE3E8E8)),
+                border: Border.all(color: AppTheme.border(context)),
               ),
               child: Text(
                 '${bookings.length} รายการ',
-                style: const TextStyle(
-                  color: Color(0xFF687272),
+                style: TextStyle(
+                  color: AppTheme.mutedText(context),
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1905,14 +2456,16 @@ class ReservationCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(28),
       child: Ink(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0xFFE4E8E8)),
-          boxShadow: const [
+          border: Border.all(color: AppTheme.border(context)),
+          boxShadow: [
             BoxShadow(
-              color: Color(0x10111313),
+              color: Colors.black.withValues(
+                alpha: AppTheme.isDark(context) ? 0.20 : 0.06,
+              ),
               blurRadius: 34,
-              offset: Offset(0, 16),
+              offset: const Offset(0, 16),
             ),
           ],
         ),
@@ -2025,7 +2578,7 @@ class ReservationCard extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF7F8F8),
+                            color: AppTheme.subtleSurface(context),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: const Icon(Icons.more_horiz_rounded),
@@ -2275,7 +2828,7 @@ class _ReservationMetaPill extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 142, maxWidth: 310),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE7ECEC)),
       ),
@@ -2413,14 +2966,16 @@ class EmptyStateWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: const Color(0xFFE3E8E8)),
-        boxShadow: const [
+        border: Border.all(color: AppTheme.border(context)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0D111313),
+            color: Colors.black.withValues(
+              alpha: AppTheme.isDark(context) ? 0.18 : 0.05,
+            ),
             blurRadius: 28,
-            offset: Offset(0, 12),
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -2778,7 +3333,7 @@ class _BookingCardState extends State<BookingCard> {
 
     return Container(
       padding: const EdgeInsets.all(20), // Standardized spacing
-      decoration: _ecoCardDecoration().copyWith(
+      decoration: _ecoCardDecoration(context).copyWith(
         borderRadius: BorderRadius.circular(24), // Softer corners
       ),
       child: Column(
@@ -2946,12 +3501,14 @@ class DateSelectorCard extends StatefulWidget {
 
 class _DateSelectorCardState extends State<DateSelectorCard> {
   String? _selectedRegionKey;
+  int? _selectedPickupPointId;
 
   @override
   void didUpdateWidget(covariant DateSelectorCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.schedulesFuture != widget.schedulesFuture) {
       _selectedRegionKey = null;
+      _selectedPickupPointId = null;
     }
   }
 
@@ -3067,7 +3624,10 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                           );
                         }).toList(),
                         onChanged: (value) {
-                          setState(() => _selectedRegionKey = value);
+                          setState(() {
+                            _selectedRegionKey = value;
+                            _selectedPickupPointId = null;
+                          });
                           widget.onChanged(null);
                           widget.onRegionChanged?.call(value);
                         },
@@ -3097,7 +3657,9 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                   : _ScheduleDropdown(
                       schedules: filteredSchedules,
                       value: dropdownScheduleId,
+                      regionKey: selectedRegion.key,
                       onChanged: (id) {
+                        setState(() => _selectedPickupPointId = null);
                         widget.onChanged(id);
                         final selectedSchedule = filteredSchedules
                             .where(
@@ -3110,6 +3672,136 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                         }
                       },
                     ),
+            ),
+            const SizedBox(height: 12),
+            _PlannerSelectFrame(
+              icon: Icons.place_outlined,
+              label: 'จุดขึ้นรถ',
+              child: currentSchedule == null || selectedRegion == null
+                  ? const Text(
+                      'เลือกวันเดินทางก่อน',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 15,
+                      ),
+                    )
+                  : Builder(builder: (context) {
+                      final pickupPoints = asList(
+                        currentSchedule['pickup_points'],
+                      )
+                          .map(asMap)
+                          .where(
+                            (p) => pickupRegionKey(p) == selectedRegion.key,
+                          )
+                          .toList();
+                      if (pickupPoints.isEmpty) {
+                        return const Text(
+                          'ยังไม่มีจุดขึ้นรถสำหรับภาคนี้',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 15,
+                          ),
+                        );
+                      }
+                      final validId =
+                          _selectedPickupPointId != null &&
+                              pickupPoints.any(
+                                (p) =>
+                                    int.tryParse(p['id'].toString()) ==
+                                    _selectedPickupPointId,
+                              )
+                          ? _selectedPickupPointId
+                          : int.tryParse(
+                              pickupPoints.first['id'].toString(),
+                            );
+                      return DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: validId,
+                          isExpanded: true,
+                          itemHeight: 64,
+                          borderRadius: BorderRadius.circular(16),
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppTheme.primaryColor,
+                          ),
+                          selectedItemBuilder: (context) =>
+                              pickupPoints.map((point) {
+                                final location = textOf(
+                                  point['pickup_location'],
+                                  textOf(point['region_label'], 'ไม่ระบุจุด'),
+                                );
+                                return Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    location,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.anuphan(
+                                      color: AppTheme.primaryColor,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                          items: pickupPoints.map((point) {
+                            final id = int.tryParse(
+                              point['id'].toString(),
+                            );
+                            final location = textOf(
+                              point['pickup_location'],
+                              textOf(
+                                point['region_label'],
+                                'ไม่ระบุจุด',
+                              ),
+                            );
+                            final priceNum = num.tryParse(
+                              point['price']?.toString() ?? '',
+                            );
+                            final priceText = priceNum != null && priceNum > 0
+                                ? money(priceNum)
+                                : '';
+                            final notes = textOf(point['notes']).trim();
+                            return DropdownMenuItem<int>(
+                              value: id,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    location,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.anuphan(
+                                      color: AppTheme.primaryColor,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  if (priceText.isNotEmpty || notes.isNotEmpty)
+                                    Text(
+                                      notes.isNotEmpty && priceText.isNotEmpty
+                                          ? '$notes  ·  $priceText'
+                                          : notes.isNotEmpty
+                                          ? notes
+                                          : priceText,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.anuphan(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) =>
+                              setState(() => _selectedPickupPointId = value),
+                        ),
+                      );
+                    }),
             ),
             if (currentSchedule != null && selectedRegion != null) ...[
               const SizedBox(height: 8),
@@ -3133,12 +3825,14 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
 class _ScheduleDropdown extends StatelessWidget {
   final List<Map<String, dynamic>> schedules;
   final int? value;
+  final String? regionKey;
   final ValueChanged<int?> onChanged;
 
   const _ScheduleDropdown({
     required this.schedules,
     required this.value,
     required this.onChanged,
+    this.regionKey,
   });
 
   @override
@@ -3203,6 +3897,7 @@ class _ScheduleDropdown extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 _SeatBadge(count: int.tryParse(seats) ?? 0, compact: true),
               ],
             ),
@@ -3329,10 +4024,10 @@ class PackageListSection extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface(context),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppTheme.outlineColor.withValues(alpha: 0.4),
+                color: AppTheme.border(context).withValues(alpha: 0.4),
               ),
             ),
             child: Row(
@@ -3448,9 +4143,11 @@ class _PlannerSelectFrame extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA), // Slightly lighter and cleaner
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.outlineColor.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.5),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3472,7 +4169,7 @@ class _PlannerSelectFrame extends StatelessWidget {
                 Text(
                   label,
                   style: GoogleFonts.anuphan(
-                    color: AppTheme.textSecondary,
+                    color: AppTheme.mutedText(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.3,
@@ -3486,6 +4183,19 @@ class _PlannerSelectFrame extends StatelessWidget {
       ),
     );
   }
+}
+
+String _tripTypeLabel(String type) {
+  return switch (type.toLowerCase()) {
+    'trekking' => 'เดินป่า',
+    'diving' => 'ดำน้ำ',
+    'snorkeling' => 'ดำน้ำตื้น',
+    'climbing' => 'ปีนเขา',
+    'camping' => 'แคมป์ปิ้ง',
+    'kayaking' => 'พายเรือคายัค',
+    'cycling' => 'ปั่นจักรยาน',
+    _ => type,
+  };
 }
 
 String scheduleRegionSummary(Map<String, dynamic> schedule) {

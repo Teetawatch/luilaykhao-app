@@ -74,7 +74,7 @@ class _TrackingScreenState extends State<TrackingScreen>
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark,
           child: Scaffold(
-            backgroundColor: const Color(0xFFF8F8F8),
+            backgroundColor: AppTheme.background(context),
             body: Stack(
               children: [
                 VehicleMapWidget(
@@ -334,7 +334,7 @@ class TrackingTopBar extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.96),
+                color: AppTheme.surface(context).withValues(alpha: 0.96),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: const [
                   BoxShadow(
@@ -372,7 +372,7 @@ class TrackingTopBar extends StatelessWidget {
                           style: GoogleFonts.anuphan(
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
-                            color: AppTheme.textMain,
+                            color: AppTheme.onSurface(context),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -383,7 +383,7 @@ class TrackingTopBar extends StatelessWidget {
                           style: GoogleFonts.anuphan(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: AppTheme.textSecondary,
+                            color: AppTheme.mutedText(context),
                           ),
                         ),
                       ],
@@ -432,14 +432,16 @@ class TrackingBottomSheet extends StatelessWidget {
       snapSizes: const [0.24, 0.32, 0.62],
       builder: (context, controller) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
             boxShadow: [
               BoxShadow(
-                color: Color(0x1A000000),
+                color: Colors.black.withValues(
+                  alpha: AppTheme.isDark(context) ? 0.32 : 0.10,
+                ),
                 blurRadius: 32,
-                offset: Offset(0, -10),
+                offset: const Offset(0, -10),
               ),
             ],
           ),
@@ -891,7 +893,7 @@ class _FloatingAction extends StatelessWidget {
       label: label,
       button: true,
       child: Material(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         shape: const CircleBorder(),
         elevation: 0,
         child: InkWell(
@@ -900,17 +902,19 @@ class _FloatingAction extends StatelessWidget {
           child: Container(
             width: 48,
             height: 48,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Color(0x14000000),
+                  color: Colors.black.withValues(
+                    alpha: AppTheme.isDark(context) ? 0.24 : 0.08,
+                  ),
                   blurRadius: 18,
-                  offset: Offset(0, 8),
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-            child: Icon(icon, color: AppTheme.textMain, size: 20),
+            child: Icon(icon, color: AppTheme.onSurface(context), size: 20),
           ),
         ),
       ),
@@ -924,12 +928,12 @@ class _TrackingLoadingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white.withValues(alpha: 0.72),
+      color: AppTheme.background(context).withValues(alpha: 0.72),
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(18),
             boxShadow: const [
               BoxShadow(

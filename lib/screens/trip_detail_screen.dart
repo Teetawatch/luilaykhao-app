@@ -8,11 +8,11 @@ import 'package:luilaykhao_app/providers/app_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
+import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
 import 'booking_flow_screen.dart';
 import 'login_screen.dart';
 
-const Color _pageBackground = Color(0xFFF8FAFC);
 const Color _premiumText = Color(0xFF0F172A);
 const Color _mutedText = Color(0xFF64748B);
 const Color _softAccent = Color(0xFF10B981);
@@ -74,7 +74,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
         if (snapshot.hasError) {
           return Scaffold(
-            backgroundColor: _pageBackground,
+            backgroundColor: AppTheme.background(context),
             body: Center(
               child: Text(
                 'เกิดข้อผิดพลาด: ${snapshot.error}',
@@ -138,6 +138,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
   bool _isCollapsed = false;
   int? _selectedScheduleId;
   int? _selectedPickupPointId;
+  String? _selectedPickupRegionKey;
   bool _hasAppliedInitialSelection = false;
 
   @override
@@ -186,10 +187,35 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     );
   }
 
+  String? get _initialPickupRegionKey {
+    final key = widget.initialPickupRegionKey?.trim();
+    if (key == null || key.isEmpty) return null;
+    return key;
+  }
+
+  /// The active region key: explicit selection takes precedence over the
+  /// initial region passed via navigation.
+  String? get _effectivePickupRegionKey =>
+      _selectedPickupRegionKey ?? _initialPickupRegionKey;
+
   List<dynamic> get _selectedPickupPoints {
     final schedule = _selectedSchedule;
     if (schedule == null) return const [];
-    return asList(schedule['pickup_points']);
+
+    final points = asList(schedule['pickup_points']);
+    final regionKey = _effectivePickupRegionKey;
+    if (regionKey == null) return points;
+
+    return points
+        .where((point) => _pickupRegionKey(asMap(point)) == regionKey)
+        .toList();
+  }
+
+  Map<String, dynamic> get _selectedPickupPoint {
+    final schedule = _selectedSchedule;
+    if (schedule == null) return <String, dynamic>{};
+
+    return _selectedPickupPointFor(schedule, _selectedPickupPointId);
   }
 
   void _syncInitialSelection() {
@@ -199,6 +225,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       return;
     }
 
+    final regionKey = _initialPickupRegionKey;
     final preferredScheduleId = !_hasAppliedInitialSelection
         ? widget.initialScheduleId
         : _selectedScheduleId;
@@ -206,8 +233,15 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       widget.schedules.firstWhere(
         (item) =>
             preferredScheduleId != null &&
-            asMap(item)['id'].toString() == preferredScheduleId.toString(),
-        orElse: () => _selectedSchedule ?? widget.schedules.first,
+            asMap(item)['id'].toString() == preferredScheduleId.toString() &&
+            (regionKey == null ||
+                _scheduleHasPickupRegion(asMap(item), regionKey)),
+        orElse: () => widget.schedules.firstWhere(
+          (item) =>
+              regionKey != null &&
+              _scheduleHasPickupRegion(asMap(item), regionKey),
+          orElse: () => _selectedSchedule ?? widget.schedules.first,
+        ),
       ),
     );
     _selectedScheduleId = int.tryParse(selected['id'].toString());
@@ -216,9 +250,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       preferredPickupPointId: !_hasAppliedInitialSelection
           ? widget.initialPickupPointId
           : _selectedPickupPointId,
-      preferredRegionKey: !_hasAppliedInitialSelection
-          ? widget.initialPickupRegionKey
-          : null,
+      preferredRegionKey: regionKey,
     );
     _hasAppliedInitialSelection = true;
   }
@@ -231,6 +263,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     final points = asList(schedule['pickup_points']);
     if (points.isEmpty) {
       _selectedPickupPointId = null;
+      _selectedPickupRegionKey = null;
       return;
     }
 
@@ -245,6 +278,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       final regionPointId = int.tryParse(regionPoint['id']?.toString() ?? '');
       if (regionPointId != null) {
         _selectedPickupPointId = regionPointId;
+        _selectedPickupRegionKey = normalizedRegionKey;
         return;
       }
     }
@@ -258,6 +292,8 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       ),
     );
     _selectedPickupPointId = int.tryParse(point['id'].toString());
+    _selectedPickupRegionKey =
+        point.isNotEmpty ? _pickupRegionKey(point) : null;
   }
 
   void _handleScheduleChanged(int? value) {
@@ -270,12 +306,70 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
 
     setState(() {
       _selectedScheduleId = value;
-      _syncPickupSelection(schedule);
+      _syncPickupSelection(
+        schedule,
+        preferredRegionKey: _effectivePickupRegionKey,
+      );
+    });
+  }
+
+  void _handleRegionChanged(String? regionKey) {
+    setState(() {
+      _selectedPickupRegionKey = regionKey;
+
+      // If current schedule doesn't support the new region, switch to the
+      // first schedule that does, then sync pickup from that schedule.
+      if (regionKey != null && regionKey.isNotEmpty) {
+        final current = _selectedSchedule;
+        final currentValid =
+            current != null && _scheduleHasPickupRegion(current, regionKey);
+
+        if (!currentValid) {
+          final match = asMap(
+            widget.schedules.firstWhere(
+              (item) => _scheduleHasPickupRegion(asMap(item), regionKey),
+              orElse: () => const <String, dynamic>{},
+            ),
+          );
+          if (match.isNotEmpty) {
+            _selectedScheduleId = int.tryParse(match['id'].toString());
+            _syncPickupSelection(match, preferredRegionKey: regionKey);
+            return;
+          }
+        }
+      }
+
+      // Current schedule is valid (or no region filter) — just re-sync pickup.
+      final schedule = _selectedSchedule;
+      if (schedule != null) {
+        _syncPickupSelection(schedule, preferredRegionKey: regionKey);
+      }
     });
   }
 
   void _handlePickupChanged(int? value) {
-    setState(() => _selectedPickupPointId = value);
+    if (value == null) {
+      setState(() {
+        _selectedPickupPointId = null;
+        _selectedPickupRegionKey = null;
+      });
+      return;
+    }
+    final schedule = _selectedSchedule;
+    String? newRegionKey;
+    if (schedule != null) {
+      final point = asMap(
+        asList(schedule['pickup_points']).firstWhere(
+          (item) => asMap(item)['id']?.toString() == value.toString(),
+          orElse: () => const <String, dynamic>{},
+        ),
+      );
+      if (point.isNotEmpty) newRegionKey = _pickupRegionKey(point);
+    }
+    setState(() {
+      _selectedPickupPointId = value;
+      _selectedPickupRegionKey = newRegionKey;
+    });
   }
 
   @override
@@ -288,7 +382,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
           ? SystemUiOverlayStyle.dark
           : SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: _pageBackground,
+        backgroundColor: AppTheme.background(context),
         body: CustomScrollView(
           controller: _scrollController,
           physics: const BouncingScrollPhysics(),
@@ -322,9 +416,11 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
                       const SizedBox(height: 16),
                       TravelPlanSelectionSection(
                         schedules: widget.schedules,
+                        pickupRegionKey: _effectivePickupRegionKey,
                         selectedScheduleId: _selectedScheduleId,
                         selectedPickupPointId: _selectedPickupPointId,
                         selectedPickupPoints: _selectedPickupPoints,
+                        onRegionChanged: _handleRegionChanged,
                         onScheduleChanged: _handleScheduleChanged,
                         onPickupChanged: _handlePickupChanged,
                       ),
@@ -333,7 +429,15 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
                       const SizedBox(height: 16),
                       IncludedSection(trip: widget.trip),
                       const SizedBox(height: 16),
-                      ItinerarySection(trip: widget.trip),
+                      ExcludedSection(trip: widget.trip),
+                      const SizedBox(height: 16),
+                      ItinerarySection(
+                        trip: widget.trip,
+                        pickupRegionKey: _effectivePickupRegionKey,
+                        pickupRegionLabel: _pickupRegionLabel(
+                          _selectedPickupPoint,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       ReviewSection(trip: widget.trip, reviews: widget.reviews),
                     ],
@@ -487,6 +591,7 @@ class _HeroImageGalleryState extends State<HeroImageGallery> {
     return Stack(
       fit: StackFit.expand,
       children: [
+        // ── image / page view ──────────────────────────────────────
         Container(
           color: const Color(0xFFE7ECEA),
           child: widget.isLoading
@@ -495,51 +600,76 @@ class _HeroImageGalleryState extends State<HeroImageGallery> {
               ? PageView.builder(
                   controller: _pageController,
                   itemCount: images.length,
-                  onPageChanged: (index) {
-                    setState(() => _currentPage = index);
-                  },
-                  itemBuilder: (context, index) {
-                    return CachedNetworkImage(
-                      imageUrl: images[index],
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const Skeleton(radius: 0),
-                      errorWidget: (context, url, error) =>
-                          const _GalleryImageFallback(),
-                    );
-                  },
+                  onPageChanged: (index) =>
+                      setState(() => _currentPage = index),
+                  itemBuilder: (context, index) => CachedNetworkImage(
+                    imageUrl: images[index],
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => const Skeleton(radius: 0),
+                    errorWidget: (_, __, ___) =>
+                        const _GalleryImageFallback(),
+                  ),
                 )
               : imageUrl.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => const Skeleton(radius: 0),
-                  errorWidget: (context, url, error) =>
-                      const _GalleryImageFallback(),
+                  placeholder: (_, __) => const Skeleton(radius: 0),
+                  errorWidget: (_, __, ___) => const _GalleryImageFallback(),
                 )
-              : const Icon(
-                  Icons.landscape_rounded,
-                  color: _softAccent,
-                  size: 64,
-                ),
+              : const _GalleryImageFallback(),
         ),
-        DecoratedBox(
+
+        // ── subtle gradient: light at top for button legibility,
+        //    stronger at bottom to blend into the card ──────────────
+        const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withValues(alpha: 0.50),
-                Colors.black.withValues(alpha: 0.08),
-                Colors.black.withValues(alpha: 0.38),
+                Color(0x55000000), // 33% — just enough for back button
+                Color(0x00000000), // transparent mid
+                Color(0x00000000),
+                Color(0x66000000), // 40% at bottom edge
               ],
-              stops: const [0, 0.48, 1],
+              stops: [0.0, 0.25, 0.6, 1.0],
             ),
           ),
         ),
+
+        // ── dot page indicators ────────────────────────────────────
+        if (canSwipe)
+          Positioned(
+            bottom: _contentOverlap + 14,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(images.length, (i) {
+                final active = i == _currentPage;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: active ? 20 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: active
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
+            ),
+          ),
+
+        // ── photo count badge (top-right) ──────────────────────────
         if (canSwipe)
           Positioned(
             right: 16,
-            bottom: _contentOverlap + 16,
+            bottom: _contentOverlap + 14,
             child: _GalleryBadge(
               currentIndex: _currentPage,
               count: images.length,
@@ -821,33 +951,69 @@ class AboutSection extends StatelessWidget {
 
 class TravelPlanSelectionSection extends StatelessWidget {
   final List<dynamic> schedules;
+  final String? pickupRegionKey;
   final int? selectedScheduleId;
   final int? selectedPickupPointId;
   final List<dynamic> selectedPickupPoints;
+  final ValueChanged<String?> onRegionChanged;
   final ValueChanged<int?> onScheduleChanged;
   final ValueChanged<int?> onPickupChanged;
 
   const TravelPlanSelectionSection({
     super.key,
     required this.schedules,
+    this.pickupRegionKey,
     required this.selectedScheduleId,
     required this.selectedPickupPointId,
     required this.selectedPickupPoints,
+    required this.onRegionChanged,
     required this.onScheduleChanged,
     required this.onPickupChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    final regionKey = pickupRegionKey?.trim();
+
+    // Collect distinct regions from all schedules
+    final regionMap = <String, String>{};
+    for (final schedule in schedules) {
+      for (final point in asList(asMap(schedule)['pickup_points'])) {
+        final p = asMap(point);
+        final key = _pickupRegionKey(p);
+        if (key.isNotEmpty) {
+          regionMap[key] ??= textOf(
+            p['region_label'],
+            textOf(p['region'], key),
+          );
+        }
+      }
+    }
+
     final scheduleMaps = schedules
         .map(asMap)
-        .where((schedule) => int.tryParse(schedule['id'].toString()) != null)
+        .where(
+          (schedule) =>
+              int.tryParse(schedule['id'].toString()) != null &&
+              (regionKey == null ||
+                  regionKey.isEmpty ||
+                  _scheduleHasPickupRegion(schedule, regionKey)),
+        )
         .toList();
     final pickupMaps = selectedPickupPoints
         .map(asMap)
-        .where((point) => int.tryParse(point['id'].toString()) != null)
+        .where(
+          (point) =>
+              int.tryParse(point['id'].toString()) != null &&
+              (regionKey == null ||
+                  regionKey.isEmpty ||
+                  _pickupRegionKey(point) == regionKey),
+        )
         .toList();
 
+    final regionValue = (regionKey != null && regionMap.containsKey(regionKey))
+        ? regionKey
+        : (regionMap.isEmpty ? null : regionMap.keys.first);
     final scheduleValue = _validDropdownValue(
       selectedScheduleId,
       scheduleMaps.map((item) => int.parse(item['id'].toString())),
@@ -863,9 +1029,31 @@ class TravelPlanSelectionSection extends StatelessWidget {
         children: [
           const _SectionHeader(
             icon: Icons.event_available_outlined,
-            title: 'เลือกวันเดินทาง',
+            title: 'เลือกแผนการเดินทาง',
           ),
           const SizedBox(height: 16),
+          // 1. ภูมิภาคที่จะขึ้นรถ
+          if (regionMap.isEmpty)
+            _EmptySelectionNotice(
+              icon: Icons.map_outlined,
+              text: 'ยังไม่มีภูมิภาคสำหรับทริปนี้',
+            )
+          else
+            _PremiumDropdown<String>(
+              key: ValueKey('region-$regionValue'),
+              label: 'ภูมิภาคที่จะขึ้นรถ',
+              icon: Icons.map_outlined,
+              value: regionValue,
+              items: regionMap.entries.map((e) {
+                return DropdownMenuItem<String>(
+                  value: e.key,
+                  child: _DropdownText(title: e.value, subtitle: ''),
+                );
+              }).toList(),
+              onChanged: onRegionChanged,
+            ),
+          const SizedBox(height: 12),
+          // 2. วันเดินทาง
           if (scheduleMaps.isEmpty)
             _EmptySelectionNotice(
               icon: Icons.calendar_month_outlined,
@@ -880,7 +1068,10 @@ class TravelPlanSelectionSection extends StatelessWidget {
               items: scheduleMaps.map((schedule) {
                 final id = int.parse(schedule['id'].toString());
                 final seats = textOf(schedule['available_seats'], '0');
-                final regionSummary = _regionSummary(schedule);
+                final regionSummary = _regionSummary(
+                  schedule,
+                  regionKey: regionKey,
+                );
 
                 return DropdownMenuItem<int>(
                   value: id,
@@ -895,39 +1086,28 @@ class TravelPlanSelectionSection extends StatelessWidget {
               onChanged: onScheduleChanged,
             ),
             const SizedBox(height: 12),
-            const _SectionHeader(
-              icon: Icons.directions_bus_filled_outlined,
-              title: 'เลือกภูมิภาคที่จะขึ้นรถ',
-            ),
-            const SizedBox(height: 16),
+            // 3. จุดที่จะขึ้นรถ
             if (pickupMaps.isEmpty)
               _EmptySelectionNotice(
                 icon: Icons.place_outlined,
-                text: 'ยังไม่มีภูมิภาคขึ้นรถสำหรับรอบนี้',
+                text: 'ยังไม่มีจุดขึ้นรถสำหรับรอบนี้',
               )
             else
               _PremiumDropdown<int>(
                 key: ValueKey('pickup-$pickupValue'),
-                label: 'ภูมิภาคที่จะขึ้นรถ',
+                label: 'จุดที่จะขึ้นรถ',
                 icon: Icons.place_rounded,
                 value: pickupValue,
                 items: pickupMaps.map((point) {
                   final id = int.parse(point['id'].toString());
-                  final region = textOf(
-                    point['region_label'],
-                    textOf(point['region'], 'ไม่ระบุภูมิภาค'),
-                  );
                   final location = textOf(point['pickup_location']).trim();
                   final price = _pickupPriceText(point['price']);
 
                   return DropdownMenuItem<int>(
                     value: id,
                     child: _DropdownText(
-                      title: region,
-                      subtitle: [
-                        if (location.isNotEmpty) location,
-                        if (price.isNotEmpty) price,
-                      ].join(' • '),
+                      title: location.isNotEmpty ? location : 'ไม่ระบุจุดขึ้นรถ',
+                      subtitle: price,
                     ),
                   );
                 }).toList(),
@@ -1000,14 +1180,61 @@ class IncludedSection extends StatelessWidget {
   }
 }
 
-class ItinerarySection extends StatelessWidget {
+class ExcludedSection extends StatelessWidget {
   final Map<String, dynamic> trip;
 
-  const ItinerarySection({super.key, required this.trip});
+  const ExcludedSection({super.key, required this.trip});
 
   @override
   Widget build(BuildContext context) {
-    final sectors = _itinerarySectors(trip);
+    final exclusions = asList(trip['exclusions'])
+        .map((item) => textOf(item).trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    if (exclusions.isEmpty) return const SizedBox.shrink();
+
+    return _PremiumCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeader(
+            icon: Icons.remove_circle_outline_rounded,
+            title: 'สิ่งที่ไม่รวมในแพ็กเกจ',
+          ),
+          const SizedBox(height: 16),
+          ...exclusions.map(
+            (item) => _FeatureRow(
+              icon: Icons.close_rounded,
+              title: item,
+              iconColor: Color(0xFFEF4444),
+              iconBackground: Color(0xFFFEF2F2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ItinerarySection extends StatelessWidget {
+  final Map<String, dynamic> trip;
+  final String? pickupRegionKey;
+  final String? pickupRegionLabel;
+
+  const ItinerarySection({
+    super.key,
+    required this.trip,
+    this.pickupRegionKey,
+    this.pickupRegionLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sectors = _itinerarySectors(
+      trip,
+      regionKey: pickupRegionKey,
+      regionLabel: pickupRegionLabel,
+    );
     if (sectors.isEmpty) return const SizedBox.shrink();
 
     return _PremiumCard(
@@ -1048,9 +1275,9 @@ class _ItinerarySectorTile extends StatelessWidget {
     return Container(
       margin: EdgeInsets.only(top: index == 0 ? 0 : 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FAF9),
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -1070,9 +1297,9 @@ class _ItinerarySectorTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface(context),
               borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+              border: Border.all(color: AppTheme.border(context)),
             ),
             child: Center(
               child: Text(
@@ -1137,7 +1364,7 @@ class _ItineraryTimelineItem extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface(context),
                   shape: BoxShape.circle,
                   border: Border.all(color: _softAccent, width: 2),
                   boxShadow: [
@@ -1220,13 +1447,15 @@ class ReviewSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasReviews =
-        _reviewCount(trip, reviews) > 0 && _ratingValue(trip) > 0;
+    final rating = _ratingValue(trip);
+    final count = _reviewCount(trip, reviews);
+    final hasReviews = count > 0 && rating > 0;
 
     return _PremiumCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── header row ──────────────────────────────────────────
           Row(
             children: [
               const Expanded(
@@ -1238,99 +1467,292 @@ class ReviewSection extends StatelessWidget {
               if (hasReviews) _RatingPill(trip: trip, reviews: reviews),
             ],
           ),
-          const SizedBox(height: 16),
-          if (!hasReviews)
-            Text(
-              'ยังไม่มีรีวิว',
-              style: GoogleFonts.anuphan(
-                fontSize: 14,
-                color: _mutedText,
-                height: 1.5,
+
+          if (!hasReviews) ...[
+            const SizedBox(height: 20),
+            // ── empty state ──────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 28),
+              alignment: Alignment.center,
+              child: Column(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(
+                      Icons.rate_review_outlined,
+                      size: 30,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'ยังไม่มีรีวิว',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: _premiumText,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'เป็นคนแรกที่มาสัมผัสและแชร์ประสบการณ์',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 13,
+                      color: _mutedText,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
-            )
-          else
+            ),
+          ] else ...[
+            const SizedBox(height: 20),
+            // ── rating summary bar ───────────────────────────────
+            _ReviewRatingSummary(trip: trip, reviews: reviews),
+            const SizedBox(height: 20),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 16),
+            // ── review cards ────────────────────────────────────
             ...reviews.take(3).map((reviewData) {
               final review = asMap(reviewData);
-              final user = asMap(review['user']);
-              final rating = _ratingValue(review).round().clamp(0, 5);
-              final comment = textOf(review['comment']).trim();
+              return _ReviewCard(review: review);
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
+class _ReviewRatingSummary extends StatelessWidget {
+  final Map<String, dynamic> trip;
+  final List<dynamic> reviews;
+
+  const _ReviewRatingSummary({required this.trip, required this.reviews});
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = _ratingValue(trip);
+    final count = _reviewCount(trip, reviews);
+
+    // count per star from review list
+    final starCounts = List.filled(5, 0);
+    for (final r in reviews) {
+      final v = _ratingValue(asMap(r)).round().clamp(1, 5);
+      starCounts[v - 1]++;
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // big score
+        Column(
+          children: [
+            Text(
+              numberText(rating, fallback: '0'),
+              style: GoogleFonts.anuphan(
+                fontSize: 44,
+                fontWeight: FontWeight.w900,
+                color: _premiumText,
+                height: 1,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(5, (i) {
+                final full = i < rating.floor();
+                final half = !full && i < rating;
+                return Icon(
+                  full
+                      ? Icons.star_rounded
+                      : half
+                      ? Icons.star_half_rounded
+                      : Icons.star_outline_rounded,
+                  size: 16,
+                  color: const Color(0xFFE8A117),
+                );
+              }),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$count รีวิว',
+              style: GoogleFonts.anuphan(
+                fontSize: 12,
+                color: _mutedText,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 20),
+        // star bars
+        Expanded(
+          child: Column(
+            children: List.generate(5, (i) {
+              final star = 5 - i;
+              final c = reviews.isEmpty ? 0 : starCounts[star - 1];
+              final pct = reviews.isEmpty ? 0.0 : c / reviews.length;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: const Color(0xFFE5E7EB),
-                          backgroundImage: user['avatar_url'] != null
-                              ? CachedNetworkImageProvider(user['avatar_url'])
-                              : null,
-                          child: user['avatar_url'] == null
-                              ? const Icon(
-                                  Icons.person_outline_rounded,
-                                  color: _mutedText,
-                                  size: 20,
-                                )
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                textOf(user['name'], 'ผู้ใช้ทั่วไป'),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.anuphan(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: _premiumText,
-                                ),
-                              ),
-                              Row(
-                                children: List.generate(
-                                  5,
-                                  (index) => Icon(
-                                    Icons.star_rounded,
-                                    size: 14,
-                                    color: index < rating
-                                        ? const Color(0xFFE8A117)
-                                        : const Color(0xFFE5E7EB),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          _formatRelativeDate(review['created_at']),
-                          style: GoogleFonts.anuphan(
-                            fontSize: 12,
-                            color: _mutedText,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      '$star',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _mutedText,
+                      ),
                     ),
-                    if (comment.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        comment,
-                        style: GoogleFonts.anuphan(
-                          fontSize: 14,
-                          color: const Color(0xFF374151),
-                          height: 1.6,
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 11,
+                      color: Color(0xFFE8A117),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: LinearProgressIndicator(
+                          value: pct,
+                          minHeight: 6,
+                          backgroundColor: const Color(0xFFF3F4F6),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFFE8A117),
+                          ),
                         ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 6),
+                    SizedBox(
+                      width: 20,
+                      child: Text(
+                        '$c',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 11,
+                          color: _mutedText,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               );
             }),
-        ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  final Map<String, dynamic> review;
+
+  const _ReviewCard({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = asMap(review['user']);
+    final rating = _ratingValue(review).round().clamp(0, 5);
+    final comment = textOf(review['comment']).trim();
+    final name = textOf(user['name'], 'ผู้ใช้ทั่วไป');
+    final avatarUrl = textOf(user['avatar_url']);
+    final date = _formatRelativeDate(review['created_at']);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFF1F5F4)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: const Color(0xFFE5F0EE),
+                  backgroundImage: avatarUrl.isNotEmpty
+                      ? CachedNetworkImageProvider(avatarUrl)
+                      : null,
+                  child: avatarUrl.isEmpty
+                      ? Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          style: GoogleFonts.anuphan(
+                            color: _softAccent,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: _premiumText,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          ...List.generate(
+                            5,
+                            (i) => Icon(
+                              Icons.star_rounded,
+                              size: 13,
+                              color: i < rating
+                                  ? const Color(0xFFE8A117)
+                                  : const Color(0xFFE5E7EB),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            date,
+                            style: GoogleFonts.anuphan(
+                              fontSize: 11,
+                              color: _mutedText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (comment.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                comment,
+                style: GoogleFonts.anuphan(
+                  fontSize: 14,
+                  color: const Color(0xFF374151),
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1352,6 +1774,19 @@ class StickyBookingBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedSchedule = _selectedScheduleFor(
+      schedules,
+      selectedScheduleId,
+    );
+    final selectedPickupPoint = _selectedPickupPointFor(
+      selectedSchedule,
+      selectedPickupPointId,
+    );
+    final selectedRegionLabel = _pickupRegionLabel(selectedPickupPoint);
+    final priceLabel = selectedRegionLabel.isEmpty
+        ? 'ราคาเริ่มต้น'
+        : 'ราคาสำหรับ $selectedRegionLabel';
+
     void openBooking() {
       Navigator.push(
         context,
@@ -1395,9 +1830,9 @@ class StickyBookingBar extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.88),
+              color: AppTheme.surface(context).withValues(alpha: 0.90),
               borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+              border: Border.all(color: AppTheme.border(context), width: 1),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF0F172A).withValues(alpha: 0.12),
@@ -1416,23 +1851,29 @@ class StickyBookingBar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'ราคาเริ่มต้น',
+                          priceLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.anuphan(
                             fontSize: 12,
-                            color: _mutedText,
+                            color: AppTheme.mutedText(context),
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.2,
                           ),
                         ),
                         const SizedBox(height: 1),
                         Text(
-                          _priceText(trip),
+                          _priceText(
+                            trip,
+                            schedule: selectedSchedule,
+                            pickupPoint: selectedPickupPoint,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.anuphan(
                             fontSize: 24,
                             fontWeight: FontWeight.w900,
-                            color: _premiumText,
+                            color: AppTheme.onSurface(context),
                             height: 1.1,
                             letterSpacing: -0.5,
                           ),
@@ -1499,22 +1940,11 @@ class _PremiumCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: padding,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      decoration: AppTheme.cardDecoration(
+        context,
+        radius: 32,
+        borderColor: AppTheme.border(context).withValues(alpha: 0.7),
+        shadowOpacity: 0.045,
       ),
       child: child,
     );
@@ -1572,11 +2002,15 @@ class _FeatureRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? description;
+  final Color iconColor;
+  final Color iconBackground;
 
   const _FeatureRow({
     required this.icon,
     required this.title,
     this.description,
+    this.iconColor = _softAccent,
+    this.iconBackground = const Color(0xFFF7FAF9),
   });
 
   @override
@@ -1592,11 +2026,11 @@ class _FeatureRow extends StatelessWidget {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              color: const Color(0xFFF7FAF9),
+              color: iconBackground,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
             ),
-            child: Icon(icon, color: _softAccent, size: 17),
+            child: Icon(icon, color: iconColor, size: 17),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1691,9 +2125,9 @@ class _PremiumDropdown<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FAF9),
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.055)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButtonFormField<T>(
@@ -1706,12 +2140,12 @@ class _PremiumDropdown<T> extends StatelessWidget {
             prefixIcon: Icon(icon, color: _softAccent, size: 21),
             prefixIconConstraints: const BoxConstraints(minWidth: 42),
             labelStyle: GoogleFonts.anuphan(
-              color: _mutedText,
+              color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
             ),
           ),
           style: GoogleFonts.anuphan(
-            color: _premiumText,
+            color: AppTheme.onSurface(context),
             fontSize: 14,
             fontWeight: FontWeight.w700,
           ),
@@ -1773,19 +2207,19 @@ class _EmptySelectionNotice extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FAF9),
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: _mutedText, size: 20),
+          Icon(icon, color: AppTheme.mutedText(context), size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
               style: GoogleFonts.anuphan(
-                color: _mutedText,
+                color: AppTheme.mutedText(context),
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
@@ -1810,45 +2244,32 @@ class _GalleryBadge extends StatelessWidget {
     return Semantics(
       label: 'รูปภาพที่ $current จาก $count',
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
-            height: 40,
-            padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 12, 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.36),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+              color: Colors.black.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.photo_library_rounded,
-                    size: 16,
-                    color: Colors.white,
-                  ),
+                const Icon(
+                  Icons.photo_library_outlined,
+                  size: 13,
+                  color: Colors.white,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 5),
                 AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
+                  duration: const Duration(milliseconds: 160),
                   child: Text(
-                    '$current จาก $count',
+                    '$current / $count',
                     key: ValueKey<int>(current),
                     style: GoogleFonts.anuphan(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w800,
                       height: 1,
                     ),
@@ -1903,7 +2324,7 @@ class _RatingPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF8E8),
+        color: AppTheme.warningTint(context),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: const Color(0xFFE8A117).withValues(alpha: 0.18),
@@ -1917,7 +2338,7 @@ class _RatingPill extends StatelessWidget {
           Text(
             numberText(rating, fallback: '0'),
             style: GoogleFonts.anuphan(
-              color: _premiumText,
+              color: AppTheme.onSurface(context),
               fontSize: 13,
               fontWeight: FontWeight.w900,
             ),
@@ -1926,7 +2347,7 @@ class _RatingPill extends StatelessWidget {
           Text(
             '$count รีวิว',
             style: GoogleFonts.anuphan(
-              color: _mutedText,
+              color: AppTheme.mutedText(context),
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -2001,10 +2422,35 @@ List<String> _galleryImages(Map<String, dynamic> trip) {
       .toList();
 }
 
+String _tripTypeLabel(String type) {
+  return switch (type.toLowerCase()) {
+    'trekking' => 'เดินป่า',
+    'diving' => 'ดำน้ำ',
+    'snorkeling' => 'ดำน้ำตื้น',
+    'climbing' => 'ปีนเขา',
+    'camping' => 'แคมป์ปิ้ง',
+    'kayaking' => 'พายเรือคายัค',
+    'cycling' => 'ปั่นจักรยาน',
+    _ => type,
+  };
+}
+
+String _difficultyLabel(String difficulty) {
+  return switch (difficulty.toLowerCase()) {
+    'easy' => 'ง่าย',
+    'medium' || 'moderate' => 'ปานกลาง',
+    'hard' || 'difficult' => 'ยาก',
+    'extreme' => 'ท้าทายมาก',
+    _ => difficulty,
+  };
+}
+
 List<_QuickInfoItem> _quickInfoItems(Map<String, dynamic> trip) {
   final duration = _durationLabel(trip);
-  final type = textOf(trip['type'] ?? trip['category']).trim();
-  final difficulty = textOf(trip['difficulty']).trim();
+  final typeRaw = textOf(trip['type'] ?? trip['category']).trim();
+  final difficultyRaw = textOf(trip['difficulty']).trim();
+  final type = typeRaw.isNotEmpty ? _tripTypeLabel(typeRaw) : '';
+  final difficulty = difficultyRaw.isNotEmpty ? _difficultyLabel(difficultyRaw) : '';
   final items = <_QuickInfoItem>[];
 
   if (duration.isNotEmpty) {
@@ -2106,24 +2552,65 @@ IconData? _iconFor(String? name) {
   }
 }
 
-List<_ItinerarySector> _itinerarySectors(Map<String, dynamic> trip) {
+List<_ItinerarySector> _itinerarySectors(
+  Map<String, dynamic> trip, {
+  String? regionKey,
+  String? regionLabel,
+}) {
   final raw = trip['itinerary'] ?? trip['itineraries'] ?? trip['program'];
   final sectors = <_ItinerarySector>[];
   final flatItems = <_ItineraryItem>[];
+  final normalizedRegionKey = regionKey?.trim();
+  final normalizedRegionLabel = regionLabel?.trim();
 
   void addFlatItem(dynamic value) {
+    if (!_itineraryEntryMatchesRegion(
+      value,
+      normalizedRegionKey,
+      normalizedRegionLabel,
+    )) {
+      return;
+    }
+
     final item = _itineraryItemFrom(value, flatItems.length + 1);
     if (item != null) flatItems.add(item);
   }
 
-  void addSector(String title, List<dynamic> rawItems) {
+  void addSector(Map<String, dynamic> sectorData, List<dynamic> rawItems) {
+    final explicitSectorRegionValues = _itineraryExplicitRegionValues(
+      sectorData,
+    );
+    final sectorRegionValues = _itineraryRegionValues(sectorData);
+    final sectorMatches =
+        sectorRegionValues.isNotEmpty &&
+        sectorRegionValues.any(
+          (value) =>
+              _regionTextMatches(value, normalizedRegionKey) ||
+              _regionTextMatches(value, normalizedRegionLabel),
+        );
+    final explicitSectorMismatch =
+        explicitSectorRegionValues.isNotEmpty && !sectorMatches;
+    final visibleRawItems = explicitSectorMismatch
+        ? const <dynamic>[]
+        : sectorMatches
+        ? rawItems
+        : rawItems
+              .where(
+                (value) => _itineraryEntryMatchesRegion(
+                  value,
+                  normalizedRegionKey,
+                  normalizedRegionLabel,
+                ),
+              )
+              .toList();
     final items = <_ItineraryItem>[];
-    for (final value in rawItems) {
+    for (final value in visibleRawItems) {
       final item = _itineraryItemFrom(value, items.length + 1);
       if (item != null) items.add(item);
     }
 
     if (items.isNotEmpty) {
+      final title = _itinerarySectorTitle(sectorData, sectors.length + 1);
       sectors.add(
         _ItinerarySector(
           title: title.trim().isNotEmpty
@@ -2149,7 +2636,7 @@ List<_ItinerarySector> _itinerarySectors(Map<String, dynamic> trip) {
     final map = asMap(raw);
     final nestedItems = _nestedItineraryItems(map);
     if (nestedItems.isNotEmpty) {
-      addSector(_itinerarySectorTitle(map, 1), nestedItems);
+      addSector(map, nestedItems);
     } else {
       addFlatItem(map);
     }
@@ -2164,7 +2651,7 @@ List<_ItinerarySector> _itinerarySectors(Map<String, dynamic> trip) {
     final map = asMap(entry);
     final nestedItems = _nestedItineraryItems(map);
     if (nestedItems.isNotEmpty) {
-      addSector(_itinerarySectorTitle(map, sectors.length + 1), nestedItems);
+      addSector(map, nestedItems);
     } else {
       addFlatItem(entry);
     }
@@ -2180,6 +2667,33 @@ List<_ItinerarySector> _itinerarySectors(Map<String, dynamic> trip) {
   return sectors;
 }
 
+bool _itineraryEntryMatchesRegion(
+  dynamic value,
+  String? regionKey,
+  String? regionLabel,
+) {
+  if ((regionKey == null || regionKey.isEmpty) &&
+      (regionLabel == null || regionLabel.isEmpty)) {
+    return true;
+  }
+  if (value is String) {
+    return _regionTextMatches(value, regionKey) ||
+        _regionTextMatches(value, regionLabel);
+  }
+
+  final data = asMap(value);
+  if (data.isEmpty) return false;
+
+  final entryValues = _itineraryRegionValues(data);
+
+  if (entryValues.isEmpty) return false;
+  return entryValues.any(
+    (value) =>
+        _regionTextMatches(value, regionKey) ||
+        _regionTextMatches(value, regionLabel),
+  );
+}
+
 List<dynamic> _nestedItineraryItems(Map<String, dynamic> data) {
   for (final key in ['items', 'itinerary', 'itineraries', 'days', 'program']) {
     final items = asList(data[key]);
@@ -2187,6 +2701,43 @@ List<dynamic> _nestedItineraryItems(Map<String, dynamic> data) {
   }
 
   return const [];
+}
+
+String _itineraryRegionKey(Map<String, dynamic> data) {
+  final region = textOf(data['region']).trim();
+  if (region.isNotEmpty) return region;
+  return textOf(data['region_label']).trim();
+}
+
+Set<String> _itineraryExplicitRegionValues(Map<String, dynamic> data) {
+  final region = textOf(data['region']).trim();
+  final label = textOf(data['region_label']).trim();
+
+  return <String>{if (region.isNotEmpty) region, if (label.isNotEmpty) label};
+}
+
+Set<String> _itineraryRegionValues(Map<String, dynamic> data) {
+  final key = _itineraryRegionKey(data);
+  final label = textOf(data['region_label']).trim();
+  final sector = textOf(
+    data['sector'] ?? data['sector_name'] ?? data['section'] ?? data['part'],
+  ).trim();
+
+  return <String>{
+    if (key.isNotEmpty) key,
+    if (label.isNotEmpty) label,
+    if (sector.isNotEmpty) sector,
+  };
+}
+
+bool _regionTextMatches(String? value, String? selectedRegion) {
+  final text = value?.trim().toLowerCase();
+  final region = selectedRegion?.trim().toLowerCase();
+  if (text == null || text.isEmpty || region == null || region.isEmpty) {
+    return false;
+  }
+
+  return text == region || text.contains(region) || region.contains(text);
 }
 
 String _itinerarySectorTitle(Map<String, dynamic> data, int index) {
@@ -2257,9 +2808,21 @@ int? _validDropdownValue(int? selected, Iterable<int> values) {
   return ids.first;
 }
 
-String _regionSummary(Map<String, dynamic> schedule) {
+bool _scheduleHasPickupRegion(Map<String, dynamic> schedule, String regionKey) {
+  return asList(
+    schedule['pickup_points'],
+  ).map(asMap).any((point) => _pickupRegionKey(point) == regionKey);
+}
+
+String _regionSummary(Map<String, dynamic> schedule, {String? regionKey}) {
   final regions = asList(schedule['pickup_points'])
       .map(asMap)
+      .where(
+        (point) =>
+            regionKey == null ||
+            regionKey.isEmpty ||
+            _pickupRegionKey(point) == regionKey,
+      )
       .map(
         (point) => textOf(
           point['region_label'],
@@ -2297,9 +2860,53 @@ String _pickupPriceText(dynamic value) {
   return '+${money(number)}';
 }
 
-String _priceText(Map<String, dynamic> trip) {
-  final value =
-      trip['price_per_person'] ?? trip['price'] ?? trip['start_price'];
+Map<String, dynamic> _selectedScheduleFor(
+  List<dynamic> schedules,
+  int? selectedScheduleId,
+) {
+  if (schedules.isEmpty) return <String, dynamic>{};
+
+  return asMap(
+    schedules.firstWhere(
+      (item) => asMap(item)['id'].toString() == selectedScheduleId.toString(),
+      orElse: () => schedules.first,
+    ),
+  );
+}
+
+Map<String, dynamic> _selectedPickupPointFor(
+  Map<String, dynamic> schedule,
+  int? selectedPickupPointId,
+) {
+  final points = asList(schedule['pickup_points']);
+  if (points.isEmpty) return <String, dynamic>{};
+
+  return asMap(
+    points.firstWhere(
+      (item) =>
+          asMap(item)['id'].toString() == selectedPickupPointId.toString(),
+      orElse: () => points.first,
+    ),
+  );
+}
+
+String _pickupRegionLabel(Map<String, dynamic> point) {
+  return textOf(point['region_label'], textOf(point['region'])).trim();
+}
+
+String _priceText(
+  Map<String, dynamic> trip, {
+  Map<String, dynamic>? schedule,
+  Map<String, dynamic>? pickupPoint,
+}) {
+  final pickupPrice = num.tryParse(textOf(pickupPoint?['price']));
+  final value = pickupPrice != null && pickupPrice > 0
+      ? pickupPrice
+      : schedule?['effective_price'] ??
+            schedule?['price'] ??
+            trip['price_per_person'] ??
+            trip['price'] ??
+            trip['start_price'];
   final number = num.tryParse(textOf(value));
   if (number == null || number <= 0) return 'ดูราคา';
   return '${money(number)} / คน';

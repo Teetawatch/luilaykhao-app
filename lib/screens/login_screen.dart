@@ -203,17 +203,26 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: const Color(0xFFF8F8F8),
+        backgroundColor: AppTheme.background(context),
         body: LayoutBuilder(
           builder: (context, constraints) {
             final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+            final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
+            final compactHeight = constraints.maxHeight < 700;
             final heroHeight = math
-                .min(math.max(constraints.maxHeight * 0.3, 220.0), 300.0)
+                .min(
+                  math.max(
+                    constraints.maxHeight * (compactHeight ? 0.24 : 0.3),
+                    compactHeight ? 170.0 : 220.0,
+                  ),
+                  compactHeight ? 240.0 : 300.0,
+                )
                 .toDouble();
 
             return SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.only(bottom: bottomInset),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.only(bottom: bottomInset + 16),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Column(
@@ -221,7 +230,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     HeroHeaderSection(height: heroHeight),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                      padding: EdgeInsets.fromLTRB(
+                        24,
+                        compactHeight ? 18 : 24,
+                        24,
+                        32 + bottomSafeArea,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -294,12 +308,10 @@ class HeroHeaderSection extends StatelessWidget {
 
   const HeroHeaderSection({super.key, required this.height});
 
-  static const _imageUrl =
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAkcoh81AthX8BRpp0grFV1rpVGg6w_keM6F2TZJWPth2Aa8BmMa4Kqn8kWvyjR0wJcprEVJMMda7Lwh9Zs20focIgUjy6iSfWYyLGzUSW3D8cOeuQg5wM0jnkpjmGE3LpL8ghj_vGPZVQZhktFhAqBcC4gf43zPAAFu6P2J775FSmbkAx25jCmK7UhGCqRnxFoBJTvpo72pU9jWONc9dSZ9eiGC0MfxnXouHdi2f6XqP6lRpgclEH59UJL0O7kT7mJCGiE81GHDw';
-
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.paddingOf(context).top;
+    final imageUrl = ApiConfig.mediaUrl('/images/khaochangphueak.webp');
 
     return SizedBox(
       height: height,
@@ -307,9 +319,18 @@ class HeroHeaderSection extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.network(
-            _imageUrl,
+            imageUrl,
             fit: BoxFit.cover,
             alignment: Alignment.topCenter,
+            errorBuilder: (_, __, ___) => Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppTheme.primaryColor, AppTheme.accentColor],
+                ),
+              ),
+            ),
           ),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -418,8 +439,10 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
   Widget build(BuildContext context) {
     final borderColor = _hasFocus
         ? AppTheme.primaryColor.withValues(alpha: 0.72)
-        : const Color(0xFFE7E8EA);
-    final fillColor = _hasFocus ? Colors.white : const Color(0xFFFDFDFD);
+        : AppTheme.border(context);
+    final fillColor = _hasFocus
+        ? AppTheme.surface(context)
+        : AppTheme.fieldSurface(context);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
@@ -818,26 +841,13 @@ class SocialLoginSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF06C755).withValues(alpha: 0.10),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: _SocialButton(
-            icon: const _LineMark(),
-            label: 'LINE',
-            accentColor: const Color(0xFF06C755),
-            isFullWidth: true,
-            isLoading:
-                loadingProvider == 'line' || loadingProvider == 'callback',
-            onPressed: _isBusy ? null : onLine,
-          ),
+        _SocialButton(
+          icon: const _LineMark(),
+          label: 'LINE',
+          accentColor: const Color(0xFF06C755),
+          isFullWidth: true,
+          isLoading: loadingProvider == 'line' || loadingProvider == 'callback',
+          onPressed: _isBusy ? null : onLine,
         ),
       ],
     );
@@ -868,15 +878,13 @@ class _SocialButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppTheme.textMain,
-          backgroundColor: isFullWidth
-              ? accentColor.withValues(alpha: 0.06)
-              : Colors.white,
-          disabledBackgroundColor: const Color(0xFFF4F5F5),
+          foregroundColor: AppTheme.onSurface(context),
+          backgroundColor: AppTheme.surface(context),
+          disabledBackgroundColor: AppTheme.subtleSurface(context),
           side: BorderSide(
             color: isFullWidth
                 ? accentColor.withValues(alpha: 0.22)
-                : const Color(0xFFE3E5E8),
+                : AppTheme.border(context),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(isFullWidth ? 18 : 16),
@@ -944,26 +952,56 @@ class _GoogleMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      height: 22,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Text(
-        'G',
-        style: GoogleFonts.inter(
-          color: const Color(0xFF4285F4),
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
-          height: 1,
-        ),
-      ),
+    return const SizedBox(
+      width: 24,
+      height: 24,
+      child: CustomPaint(painter: _GoogleMarkPainter()),
     );
   }
+}
+
+class _GoogleMarkPainter extends CustomPainter {
+  const _GoogleMarkPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = size.width * 0.16;
+    final rect = Rect.fromLTWH(
+      stroke,
+      stroke,
+      size.width - (stroke * 2),
+      size.height - (stroke * 2),
+    );
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+
+    void arc(Color color, double start, double sweep) {
+      paint.color = color;
+      canvas.drawArc(rect, start, sweep, false, paint);
+    }
+
+    arc(const Color(0xFFEA4335), -2.75, 1.18);
+    arc(const Color(0xFFFBBC05), 2.45, 1.18);
+    arc(const Color(0xFF34A853), 1.05, 1.55);
+    arc(const Color(0xFF4285F4), -0.15, 1.25);
+
+    final blue = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.square;
+    final center = Offset(size.width * 0.52, size.height * 0.50);
+    canvas.drawLine(
+      center,
+      Offset(size.width * 0.86, size.height * 0.50),
+      blue,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _FacebookMark extends StatelessWidget {
@@ -972,8 +1010,8 @@ class _FacebookMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 22,
-      height: 22,
+      width: 24,
+      height: 24,
       alignment: Alignment.center,
       decoration: const BoxDecoration(
         color: Color(0xFF1877F2),
@@ -983,9 +1021,9 @@ class _FacebookMark extends StatelessWidget {
         'f',
         style: GoogleFonts.inter(
           color: Colors.white,
-          fontSize: 17,
+          fontSize: 23,
           fontWeight: FontWeight.w900,
-          height: 1,
+          height: 0.98,
         ),
       ),
     );
@@ -997,23 +1035,57 @@ class _LineMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      height: 22,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFF06C755),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        'L',
+    return const SizedBox(
+      width: 24,
+      height: 24,
+      child: CustomPaint(painter: _LineMarkPainter()),
+    );
+  }
+}
+
+class _LineMarkPainter extends CustomPainter {
+  const _LineMarkPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bubble = RRect.fromRectAndRadius(
+      Rect.fromLTWH(1, 2, size.width - 2, size.height - 5),
+      Radius.circular(size.width * 0.26),
+    );
+    final paint = Paint()
+      ..color = const Color(0xFF06C755)
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(bubble, paint);
+
+    final tail = Path()
+      ..moveTo(size.width * 0.44, size.height - 3)
+      ..lineTo(size.width * 0.36, size.height - 0.2)
+      ..lineTo(size.width * 0.56, size.height - 3)
+      ..close();
+    canvas.drawPath(tail, paint);
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'LINE',
         style: GoogleFonts.inter(
           color: Colors.white,
-          fontSize: 13,
+          fontSize: 6.4,
           fontWeight: FontWeight.w900,
-          height: 1,
+          letterSpacing: 0,
         ),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        (size.width - textPainter.width) / 2,
+        (size.height - textPainter.height) / 2 - 1.2,
       ),
     );
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

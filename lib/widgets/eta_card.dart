@@ -26,11 +26,13 @@ class ETACard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withValues(
+              alpha: AppTheme.isDark(context) ? 0.22 : 0.08,
+            ),
             blurRadius: 30,
             offset: const Offset(0, -10),
           ),
@@ -113,7 +115,7 @@ class _StatusHeader extends StatelessWidget {
                 style: GoogleFonts.anuphan(
                   fontWeight: FontWeight.w800,
                   fontSize: 16,
-                  color: AppTheme.textMain,
+                  color: AppTheme.onSurface(context),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -124,7 +126,7 @@ class _StatusHeader extends StatelessWidget {
                   Icon(
                     Icons.location_on_rounded,
                     size: 14,
-                    color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                    color: AppTheme.mutedText(context).withValues(alpha: 0.65),
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -132,7 +134,7 @@ class _StatusHeader extends StatelessWidget {
                       pickupLabel,
                       style: GoogleFonts.anuphan(
                         fontSize: 13,
-                        color: AppTheme.textSecondary,
+                        color: AppTheme.mutedText(context),
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
@@ -194,7 +196,7 @@ class _TrackingStats extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.bgLight,
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -205,12 +207,12 @@ class _TrackingStats extends StatelessWidget {
             value: eta?.formattedETA ?? '--:--',
             isHighlighted: true,
           ),
-          Container(width: 1, height: 40, color: Colors.grey[200]),
+          Container(width: 1, height: 40, color: AppTheme.border(context)),
           _StatTile(
             label: 'ระยะทาง',
             value: eta?.formattedDistance ?? '-- กม.',
           ),
-          Container(width: 1, height: 40, color: Colors.grey[200]),
+          Container(width: 1, height: 40, color: AppTheme.border(context)),
           _StatTile(label: 'อัปเดตทุกๆ', value: _getUpdateInterval()),
         ],
       ),
@@ -246,7 +248,7 @@ class _StatTile extends StatelessWidget {
           label,
           style: GoogleFonts.anuphan(
             fontSize: 10,
-            color: AppTheme.textSecondary,
+            color: AppTheme.mutedText(context),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -256,7 +258,9 @@ class _StatTile extends StatelessWidget {
           style: GoogleFonts.anuphan(
             fontSize: isHighlighted ? 18 : 14,
             fontWeight: FontWeight.w800,
-            color: isHighlighted ? AppTheme.primaryColor : AppTheme.textMain,
+            color: isHighlighted
+                ? AppTheme.primaryColor
+                : AppTheme.onSurface(context),
           ),
         ),
       ],

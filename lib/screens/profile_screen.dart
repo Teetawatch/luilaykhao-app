@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -15,6 +16,7 @@ import 'booking_lookup_screen.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';
 import 'tracking_screen.dart';
+import 'trip_detail_screen.dart' show TripDetailScreen;
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -49,7 +51,7 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: RefreshIndicator(
         onRefresh: () async {
           try {
@@ -113,23 +115,19 @@ class ProfileHeader extends StatelessWidget {
     final name = _cleanText(user['name'], fallback: 'ลุยเลเขา');
     final avatar = ApiConfig.mediaUrl(_cleanText(user['avatar_url']));
     final location = _cleanLocation(user['location']);
-    final isVerified = _truthy(
-      user['verified'] ??
-          user['is_verified'] ??
-          user['email_verified'] ??
-          user['phone_verified'],
-    );
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFEAF7F1)],
+          colors: AppTheme.isDark(context)
+              ? [AppTheme.surface(context), const Color(0xFF12352D)]
+              : [const Color(0xFFFFFFFF), const Color(0xFFEAF7F1)],
         ),
-        border: Border.all(color: Colors.white, width: 1),
+        border: Border.all(color: AppTheme.border(context), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.055),
@@ -160,7 +158,7 @@ class ProfileHeader extends StatelessWidget {
                           fontSize: 24,
                           height: 1.16,
                           fontWeight: FontWeight.w900,
-                          color: AppTheme.textMain,
+                          color: AppTheme.onSurface(context),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -170,7 +168,7 @@ class ProfileHeader extends StatelessWidget {
                           fontSize: 14,
                           height: 1.45,
                           fontWeight: FontWeight.w500,
-                          color: AppTheme.textSecondary,
+                          color: AppTheme.mutedText(context),
                         ),
                       ),
                     ],
@@ -187,27 +185,6 @@ class ProfileHeader extends StatelessWidget {
               color: AppTheme.primaryColor,
             ),
           ],
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _IdentityPill(
-                icon: isVerified
-                    ? Icons.verified_user_outlined
-                    : Icons.shield_outlined,
-                label: isVerified ? 'ยืนยันตัวตนแล้ว' : 'รอยืนยันตัวตน',
-                color: isVerified
-                    ? AppTheme.primaryColor
-                    : AppTheme.warningColor,
-              ),
-              _IdentityPill(
-                icon: Icons.lock_outline,
-                label: 'บัญชีส่วนตัว',
-                color: AppTheme.textSecondary,
-              ),
-            ],
-          ),
           const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
@@ -215,11 +192,11 @@ class ProfileHeader extends StatelessWidget {
               onPressed: () =>
                   _pushPremium(context, EditProfileScreen(initialUser: user)),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.textMain,
-                side: BorderSide(
-                  color: AppTheme.outlineColor.withValues(alpha: 0.9),
-                ),
-                backgroundColor: Colors.white.withValues(alpha: 0.78),
+                foregroundColor: AppTheme.onSurface(context),
+                side: BorderSide(color: AppTheme.border(context)),
+                backgroundColor: AppTheme.surface(
+                  context,
+                ).withValues(alpha: 0.78),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -257,7 +234,7 @@ class _Avatar extends StatelessWidget {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white,
+        color: AppTheme.surface(context),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.12),
@@ -331,7 +308,7 @@ class ProfileStatsSection extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: _sectionDecoration(),
+      decoration: _sectionDecoration(context: context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -447,10 +424,10 @@ class _StatMetric extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFFAFAFA),
+          color: AppTheme.subtleSurface(context),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppTheme.outlineColor.withValues(alpha: 0.7),
+            color: AppTheme.border(context).withValues(alpha: 0.7),
           ),
         ),
         child: Column(
@@ -466,7 +443,7 @@ class _StatMetric extends StatelessWidget {
                 style: GoogleFonts.anuphan(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
-                  color: AppTheme.textMain,
+                  color: AppTheme.onSurface(context),
                 ),
               ),
             ),
@@ -477,7 +454,7 @@ class _StatMetric extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.anuphan(
                 fontSize: 12,
-                color: AppTheme.textSecondary,
+                color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -572,7 +549,7 @@ class _QuickActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       borderRadius: BorderRadius.circular(20),
       shadowColor: Colors.black.withValues(alpha: 0.08),
       elevation: 1,
@@ -609,7 +586,7 @@ class _QuickActionTile extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
+                        color: AppTheme.warningTint(context),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -711,9 +688,37 @@ class SettingsMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppProvider>();
+    final isDarkMode = app.isDarkMode;
+
+    void updateTheme(bool enabled) {
+      unawaited(
+        context.read<AppProvider>().setThemeMode(
+          enabled ? ThemeMode.dark : ThemeMode.light,
+        ),
+      );
+      _showSuccess(
+        context,
+        enabled ? 'เปลี่ยนเป็นธีมมืดแล้ว' : 'เปลี่ยนเป็นธีมสว่างแล้ว',
+      );
+    }
+
     return MenuSection(
       title: 'การตั้งค่า',
       items: [
+        _MenuItem(
+          icon: isDarkMode
+              ? Icons.dark_mode_outlined
+              : Icons.light_mode_outlined,
+          label: 'ธีมมืด',
+          trailingWidget: Switch.adaptive(
+            value: isDarkMode,
+            activeThumbColor: AppTheme.primaryColor,
+            onChanged: updateTheme,
+          ),
+          showChevron: false,
+          onTap: () => updateTheme(!isDarkMode),
+        ),
         _MenuItem(
           icon: Icons.tune_outlined,
           label: 'ตั้งค่าแอป',
@@ -788,7 +793,7 @@ class MenuSection extends StatelessWidget {
         _SectionHeading(title),
         const SizedBox(height: 8),
         Container(
-          decoration: _sectionDecoration(radius: 22),
+          decoration: _sectionDecoration(context: context, radius: 22),
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
@@ -799,7 +804,9 @@ class MenuSection extends StatelessWidget {
                     height: 1,
                     indent: 64,
                     endIndent: 16,
-                    color: AppTheme.outlineColor.withValues(alpha: 0.65),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withValues(alpha: 0.65),
                   ),
               ],
             ],
@@ -817,6 +824,9 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -827,7 +837,7 @@ class _MenuTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              Icon(item.icon, color: AppTheme.primaryColor, size: 23),
+              Icon(item.icon, color: colorScheme.primary, size: 23),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
@@ -837,7 +847,7 @@ class _MenuTile extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.textMain,
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -848,12 +858,22 @@ class _MenuTile extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
-              const SizedBox(width: 6),
-              Icon(Icons.chevron_right, color: Colors.grey[300], size: 22),
+              if (item.trailingWidget != null) ...[
+                const SizedBox(width: 8),
+                item.trailingWidget!,
+              ],
+              if (item.showChevron) ...[
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.chevron_right,
+                  color: isDark ? Colors.white24 : Colors.grey[300],
+                  size: 22,
+                ),
+              ],
             ],
           ),
         ),
@@ -870,7 +890,7 @@ class LogoutSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: _sectionDecoration(radius: 22),
+      decoration: _sectionDecoration(context: context, radius: 22),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
@@ -1043,7 +1063,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       showDragHandle: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -1090,7 +1110,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppTheme.background(context),
       body: Form(
         key: _formKey,
         child: CustomScrollView(
@@ -1132,6 +1152,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             label: 'เบอร์โทรศัพท์',
                             icon: Icons.phone_outlined,
                             keyboardType: TextInputType.phone,
+                            maxLength: 10,
+                            validator: (value) {
+                              final text = value?.trim() ?? '';
+                              if (text.isEmpty) return null;
+                              return text.length == 10
+                                  ? null
+                                  : 'กรุณากรอกเบอร์โทรศัพท์ 10 หลัก';
+                            },
                           ),
                           _ProfileTextField(
                             controller: _title,
@@ -1148,6 +1176,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             label: 'เลขบัตรประชาชน',
                             icon: Icons.credit_card_outlined,
                             keyboardType: TextInputType.number,
+                            maxLength: 13,
                             validator: (value) {
                               final text = value?.trim() ?? '';
                               if (text.isEmpty) return null;
@@ -1168,17 +1197,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             icon: Icons.bloodtype_outlined,
                           ),
                           _ProfileTextField(
-                            controller: _emergencyContact,
-                            label: 'ผู้ติดต่อฉุกเฉิน',
-                            icon: Icons.contact_emergency_outlined,
-                          ),
-                          _ProfileTextField(
-                            controller: _emergencyPhone,
-                            label: 'เบอร์ฉุกเฉิน',
-                            icon: Icons.phone_in_talk_outlined,
-                            keyboardType: TextInputType.phone,
-                          ),
-                          _ProfileTextField(
                             controller: _allergies,
                             label: 'อาหาร/ยาที่แพ้',
                             icon: Icons.warning_amber_outlined,
@@ -1189,6 +1207,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             label: 'หมายเหตุสุขภาพ',
                             icon: Icons.medical_information_outlined,
                             maxLines: 3,
+                          ),
+                          _ProfileTextField(
+                            controller: _emergencyContact,
+                            label: 'ผู้ติดต่อฉุกเฉิน',
+                            icon: Icons.contact_emergency_outlined,
+                            validator: _required('กรุณากรอกชื่อผู้ติดต่อฉุกเฉิน'),
+                          ),
+                          _ProfileTextField(
+                            controller: _emergencyPhone,
+                            label: 'เบอร์ฉุกเฉิน',
+                            icon: Icons.phone_in_talk_outlined,
+                            keyboardType: TextInputType.phone,
+                            maxLength: 10,
+                            validator: (value) {
+                              final text = value?.trim() ?? '';
+                              if (text.isEmpty) return 'กรุณากรอกเบอร์ฉุกเฉิน';
+                              return text.length == 10
+                                  ? null
+                                  : 'กรุณากรอกเบอร์ฉุกเฉิน 10 หลัก';
+                            },
                           ),
                         ],
                       ),
@@ -1282,7 +1320,7 @@ class _ProfileBookingsScreenState extends State<ProfileBookingsScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppTheme.background(context),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: CustomScrollView(
@@ -1336,7 +1374,7 @@ class _BookingSummaryCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _sectionDecoration(radius: 22),
+      decoration: _sectionDecoration(context: context, radius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1444,7 +1482,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
         .toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppTheme.background(context),
       body: RefreshIndicator(
         onRefresh: _load,
         child: CustomScrollView(
@@ -1507,7 +1545,7 @@ class PaymentMethodsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppTheme.background(context),
       body: CustomScrollView(
         slivers: [
           const TravelSliverAppBar(title: 'วิธีการชำระเงิน'),
@@ -1554,7 +1592,27 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  bool _loading = false;
   bool _saving = false;
+  final Set<int> _busyIds = <int>{};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<AppProvider>().loadNotifications();
+    } catch (e) {
+      if (mounted) _showError(context, e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   Future<void> _markAllRead() async {
     setState(() => _saving = true);
@@ -1568,54 +1626,261 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Future<void> _openNotification(Map<String, dynamic> notification) async {
+    final id = int.tryParse(_cleanText(notification['id']));
+    if (id != null && notification['is_read'] != true) {
+      setState(() => _busyIds.add(id));
+      try {
+        await context.read<AppProvider>().markNotificationRead(id);
+      } catch (e) {
+        if (mounted) _showError(context, e);
+      } finally {
+        if (mounted) setState(() => _busyIds.remove(id));
+      }
+    }
+
+    if (!mounted) return;
+    final data = asMap(notification['data']);
+    final bookingRef = _cleanText(data['booking_ref']);
+    final tripSlug = _cleanText(data['trip_slug']);
+
+    if (bookingRef.isNotEmpty) {
+      _pushPremium(context, PaymentScreen(bookingRef: bookingRef));
+      return;
+    }
+    if (tripSlug.isNotEmpty) {
+      _pushPremium(context, TripDetailScreen(slug: tripSlug));
+    }
+  }
+
+  Future<void> _deleteNotification(Map<String, dynamic> notification) async {
+    final id = int.tryParse(_cleanText(notification['id']));
+    if (id == null) return;
+
+    setState(() => _busyIds.add(id));
+    try {
+      await context.read<AppProvider>().deleteNotification(id);
+      if (mounted) _showSuccess(context, 'ลบการแจ้งเตือนแล้ว');
+    } catch (e) {
+      if (mounted) _showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busyIds.remove(id));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final notifications = context.watch<AppProvider>().notifications.map(asMap);
+    final notifications = context
+        .watch<AppProvider>()
+        .notifications
+        .map(asMap)
+        .toList();
     final unread = notifications
         .where((item) => item['is_read'] != true)
         .length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
-      body: CustomScrollView(
-        slivers: [
-          const TravelSliverAppBar(title: 'การแจ้งเตือน'),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _FormCard(
-                    title: 'สถานะการแจ้งเตือน',
-                    subtitle: 'เชื่อมต่อกับข้อมูลแจ้งเตือนจาก Laravel',
-                    children: [
-                      _InfoLine(
-                        icon: Icons.notifications_active_outlined,
-                        text: 'ยังไม่ได้อ่าน $unread รายการ',
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: _saving ? null : _markAllRead,
-                        icon: _saving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.done_all_outlined),
-                        label: const Text('ทำเครื่องหมายว่าอ่านทั้งหมด'),
-                      ),
-                    ],
-                  ),
-                ],
+      backgroundColor: AppTheme.background(context),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            const TravelSliverAppBar(title: 'การแจ้งเตือน'),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _FormCard(
+                      title: 'สถานะการแจ้งเตือน',
+                      subtitle: unread > 0
+                          ? 'คุณมี $unread รายการใหม่ที่ยังไม่ได้อ่าน'
+                          : 'คุณอ่านการแจ้งเตือนครบทุกรายการแล้ว',
+                      children: [
+                        FilledButton.icon(
+                          onPressed: _saving || unread == 0
+                              ? null
+                              : _markAllRead,
+                          icon: _saving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.done_all_outlined),
+                          label: const Text('ทำเครื่องหมายว่าอ่านทั้งหมด'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    if (_loading && notifications.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (notifications.isEmpty)
+                      const _EmptyProfileState(
+                        icon: Icons.notifications_none_outlined,
+                        title: 'ยังไม่มีการแจ้งเตือน',
+                        body:
+                            'เมื่อ Laravel ส่งการแจ้งเตือน ระบบจะแสดงรายการล่าสุดที่นี่',
+                      )
+                    else
+                      for (final notification in notifications) ...[
+                        _NotificationCard(
+                          notification: notification,
+                          busy: _busyIds.contains(
+                            int.tryParse(_cleanText(notification['id'])),
+                          ),
+                          onTap: () => _openNotification(notification),
+                          onDelete: () => _deleteNotification(notification),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                  ],
+                ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationCard extends StatelessWidget {
+  final Map<String, dynamic> notification;
+  final bool busy;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _NotificationCard({
+    required this.notification,
+    required this.busy,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final type = _cleanText(notification['type']);
+    final title = _cleanText(notification['title'], fallback: 'การแจ้งเตือน');
+    final body = _cleanText(notification['body']);
+    final unread = notification['is_read'] != true;
+    final accent = _notificationColor(type);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: busy ? null : onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: unread
+                  ? accent.withValues(alpha: 0.35)
+                  : AppTheme.border(context),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: AppTheme.isDark(context)
+                      ? (unread ? 0.22 : 0.16)
+                      : (unread ? 0.07 : 0.04),
+                ),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(_notificationIcon(type), color: accent, size: 25),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.anuphan(
+                              fontSize: 15,
+                              fontWeight: unread
+                                  ? FontWeight.w900
+                                  : FontWeight.w700,
+                              color: AppTheme.textMain,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _notificationTimeAgo(notification['created_at']),
+                          style: GoogleFonts.anuphan(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textSecondary.withValues(
+                              alpha: 0.72,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (body.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        body,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 13,
+                          height: 1.45,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              busy
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : IconButton(
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'ลบการแจ้งเตือน',
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline_rounded),
+                      color: AppTheme.textSecondary.withValues(alpha: 0.72),
+                    ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1627,7 +1892,7 @@ class HelpCenterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppTheme.background(context),
       body: CustomScrollView(
         slivers: [
           const TravelSliverAppBar(title: 'ศูนย์ช่วยเหลือ'),
@@ -1732,7 +1997,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
     final user = context.watch<AppProvider>().user ?? {};
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppTheme.background(context),
       body: Form(
         key: _formKey,
         child: CustomScrollView(
@@ -1834,7 +2099,7 @@ class SimpleInfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppTheme.background(context),
       body: CustomScrollView(
         slivers: [
           TravelSliverAppBar(title: title),
@@ -1921,7 +2186,7 @@ class _FormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: _sectionDecoration(radius: 22),
+      decoration: _sectionDecoration(context: context, radius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2084,7 +2349,7 @@ class _AvatarSourceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFF7F8F7),
+      color: AppTheme.fieldSurface(context),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -2101,7 +2366,7 @@ class _AvatarSourceTile extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.textMain,
+                    color: AppTheme.onSurface(context),
                   ),
                 ),
               ),
@@ -2122,6 +2387,7 @@ class _ProfileTextField extends StatelessWidget {
   final int maxLines;
   final bool obscureText;
   final String? Function(String?)? validator;
+  final int? maxLength;
 
   const _ProfileTextField({
     required this.controller,
@@ -2131,6 +2397,7 @@ class _ProfileTextField extends StatelessWidget {
     this.maxLines = 1,
     this.obscureText = false,
     this.validator,
+    this.maxLength,
   });
 
   @override
@@ -2141,11 +2408,12 @@ class _ProfileTextField extends StatelessWidget {
       maxLines: obscureText ? 1 : maxLines,
       obscureText: obscureText,
       validator: validator,
+      maxLength: maxLength,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 20),
         filled: true,
-        fillColor: const Color(0xFFF7F8F7),
+        fillColor: AppTheme.fieldSurface(context),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -2176,7 +2444,7 @@ class _EmptyProfileState extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: _sectionDecoration(radius: 22),
+      decoration: _sectionDecoration(context: context, radius: 22),
       child: Column(
         children: [
           Icon(icon, size: 42, color: AppTheme.primaryColor),
@@ -2315,7 +2583,7 @@ class _ReviewableBookingCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _sectionDecoration(radius: 22),
+      decoration: _sectionDecoration(context: context, radius: 22),
       child: Row(
         children: [
           Expanded(
@@ -2366,7 +2634,7 @@ class _ReviewCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _sectionDecoration(radius: 22),
+      decoration: _sectionDecoration(context: context, radius: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2429,7 +2697,7 @@ class _PaymentMethodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: _sectionDecoration(radius: 22),
+      decoration: _sectionDecoration(context: context, radius: 22),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2482,14 +2750,14 @@ class _HelpTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       borderRadius: BorderRadius.circular(22),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Container(
           padding: const EdgeInsets.all(18),
-          decoration: _sectionDecoration(radius: 22),
+          decoration: _sectionDecoration(context: context, radius: 22),
           child: Row(
             children: [
               Icon(icon, color: AppTheme.primaryColor, size: 28),
@@ -2546,17 +2814,25 @@ class _MenuItem {
   final IconData icon;
   final String label;
   final String? trailing;
+  final Widget? trailingWidget;
+  final bool showChevron;
   final VoidCallback onTap;
 
   const _MenuItem({
     required this.icon,
     required this.label,
     this.trailing,
+    this.trailingWidget,
+    this.showChevron = true,
     required this.onTap,
   });
 }
 
-BoxDecoration _sectionDecoration({double radius = 24}) {
+BoxDecoration _sectionDecoration({BuildContext? context, double radius = 24}) {
+  if (context != null) {
+    return AppTheme.cardDecoration(context, radius: radius);
+  }
+
   return BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(radius),
@@ -2574,6 +2850,47 @@ BoxDecoration _sectionDecoration({double radius = 24}) {
 String _cleanText(dynamic value, {String fallback = ''}) {
   final text = value?.toString().trim() ?? '';
   return text.isEmpty ? fallback : text;
+}
+
+IconData _notificationIcon(String type) {
+  return switch (type) {
+    'seat_alert' => Icons.local_fire_department_rounded,
+    'booking_reminder' => Icons.calendar_month_rounded,
+    'promo' => Icons.card_giftcard_rounded,
+    'system' => Icons.info_outline_rounded,
+    'loyalty' => Icons.star_rounded,
+    'payment' => Icons.payments_rounded,
+    'booking' => Icons.confirmation_number_rounded,
+    _ => Icons.notifications_none_rounded,
+  };
+}
+
+Color _notificationColor(String type) {
+  return switch (type) {
+    'seat_alert' => AppTheme.errorColor,
+    'booking_reminder' => const Color(0xFF2563EB),
+    'promo' => AppTheme.warningColor,
+    'system' => AppTheme.textSecondary,
+    'loyalty' => const Color(0xFFEA580C),
+    'payment' => AppTheme.primaryColor,
+    'booking' => AppTheme.primaryColor,
+    _ => AppTheme.primaryColor,
+  };
+}
+
+String _notificationTimeAgo(dynamic value) {
+  final raw = _cleanText(value);
+  if (raw.isEmpty) return '';
+
+  final date = DateTime.tryParse(raw);
+  if (date == null) return raw;
+
+  final diff = DateTime.now().difference(date.toLocal());
+  if (diff.inMinutes < 1) return 'เมื่อกี้';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
+  if (diff.inHours < 24) return '${diff.inHours} ชม.ที่แล้ว';
+  if (diff.inDays < 7) return '${diff.inDays} วันที่แล้ว';
+  return dateText(raw);
 }
 
 String? _cleanLocation(dynamic value) {
@@ -2601,12 +2918,6 @@ String? Function(String?) _required(String message) {
     if (value == null || value.trim().isEmpty) return message;
     return null;
   };
-}
-
-bool _truthy(dynamic value) {
-  if (value is bool) return value;
-  final text = value?.toString().toLowerCase().trim() ?? '';
-  return text == '1' || text == 'true' || text == 'yes' || text == 'verified';
 }
 
 int _numberValue(dynamic value, {int fallback = 0}) {
@@ -2691,7 +3002,7 @@ Future<void> _confirmCancelBooking(
   final confirmed = await showModalBottomSheet<bool>(
     context: context,
     showDragHandle: true,
-    backgroundColor: Colors.white,
+    backgroundColor: AppTheme.surface(context),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),

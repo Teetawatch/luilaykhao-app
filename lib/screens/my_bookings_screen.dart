@@ -37,7 +37,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     final cancelled = filtered.where(_isCancelledBooking).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppTheme.background(context),
       body: RefreshIndicator(
         onRefresh: app.loadAccountData,
         color: AppTheme.primaryColor,
@@ -50,7 +50,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
               floating: true,
               elevation: 0,
               scrolledUnderElevation: 0,
-              backgroundColor: const Color(0xFFF8F8F8).withValues(alpha: 0.95),
+              backgroundColor: AppTheme.background(
+                context,
+              ).withValues(alpha: 0.95),
               surfaceTintColor: Colors.transparent,
               title: const Text(
                 'การจองของฉัน',
@@ -242,7 +244,7 @@ class _BookingCheckInCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(compact ? 14 : 18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2FBF8),
+        color: AppTheme.selectedTint(context),
         borderRadius: BorderRadius.circular(compact ? 22 : 28),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.14),
@@ -261,8 +263,8 @@ class _BookingCheckInCard extends StatelessWidget {
                 Container(
                   width: 50,
                   height: 50,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE7F7F2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.selectedTint(context),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -352,9 +354,9 @@ class _CheckInQrBox extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFEAEDED)),
+          border: Border.all(color: AppTheme.border(context)),
         ),
         child: const Icon(
           Icons.qr_code_2_rounded,
@@ -366,9 +368,9 @@ class _CheckInQrBox extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFEAEDED)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: QrImageView(
         data: code,
@@ -392,7 +394,7 @@ class _BookingReferencePanel extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.12),

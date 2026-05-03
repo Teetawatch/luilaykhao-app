@@ -1,20 +1,25 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/active_seat_lock_overlay.dart';
 import '../widgets/travel_widgets.dart';
+import 'booking_flow_screen.dart';
 
-const Color _pageBackground = Color(0xFFF8F8F8);
 const Color _text = Color(0xFF111827);
 const Color _muted = Color(0xFF6B7280);
 const Color _accent = Color(0xFF0F8F75);
@@ -46,6 +51,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
   TimeOfDay? _transferTime;
   XFile? _slipImage;
   bool _paying = false;
+  bool _downloadingQr = false;
+  final GlobalKey _promptPayQrKey = GlobalKey();
+  Timer? _countdownTimer;
 
   @override
   void initState() {
@@ -54,6 +62,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ? 'installment'
         : 'full';
     _future = _loadBooking();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AppProvider>().loadActiveSeatLocks(silent: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
   }
 
   Future<Map<String, dynamic>> _loadBooking() async {
@@ -209,6 +231,83 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _showSnack(message);
   }
 
+  void _goHome() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  Future<void> _downloadPromptPayQr() async {
+    if (_downloadingQr) return;
+
+    setState(() => _downloadingQr = true);
+    try {
+      final renderObject = _promptPayQrKey.currentContext?.findRenderObject();
+      if (renderObject is! RenderRepaintBoundary) {
+        throw Exception('ไม่พบ QR CODE สำหรับดาวน์โหลด');
+      }
+
+      final image = await renderObject.toImage(pixelRatio: 3);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      if (byteData == null) {
+        throw Exception('ไม่สามารถสร้างรูป QR CODE ได้');
+      }
+
+      final file = await _saveQrImage(byteData.buffer.asUint8List());
+      if (!mounted) return;
+      _showSnack('ดาวน์โหลด QR CODE แล้ว: ${file.path}');
+    } catch (e) {
+      if (mounted) _showSnack('ไม่สามารถดาวน์โหลด QR CODE ได้: $e');
+    } finally {
+      if (mounted) setState(() => _downloadingQr = false);
+    }
+  }
+
+  Future<File> _saveQrImage(Uint8List bytes) async {
+    final safeBookingRef = widget.bookingRef.replaceAll(
+      RegExp(r'[^A-Za-z0-9_-]'),
+      '_',
+    );
+    final fileName = 'luilaykhao-payment-$safeBookingRef-qr.png';
+    final directories = <Directory>[];
+
+    if (Platform.isAndroid) {
+      directories.add(Directory('/storage/emulated/0/Download'));
+    }
+
+    final downloadsDirectory = await _safeDownloadsDirectory();
+    if (downloadsDirectory != null) directories.add(downloadsDirectory);
+    directories.add(await getApplicationDocumentsDirectory());
+    directories.add(Directory.systemTemp);
+
+    Object? lastError;
+    for (final directory in directories) {
+      try {
+        if (!await directory.exists()) {
+          await directory.create(recursive: true);
+        }
+        final file = File(
+          '${directory.path}${Platform.pathSeparator}$fileName',
+        );
+        return file.writeAsBytes(bytes, flush: true);
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    throw FileSystemException(
+      'ไม่สามารถบันทึกไฟล์ QR CODE ได้',
+      lastError?.toString(),
+    );
+  }
+
+  Future<Directory?> _safeDownloadsDirectory() async {
+    try {
+      return await getDownloadsDirectory();
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _showSnack(String message) {
     ScaffoldMessenger.of(
       context,
@@ -218,11 +317,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _pageBackground,
+      backgroundColor: AppTheme.background(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface(context),
         elevation: 0,
-        foregroundColor: _text,
+        foregroundColor: AppTheme.onSurface(context),
         title: Text(
           'ชำระเงิน',
           style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
@@ -253,6 +352,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const _PaymentProgress(),
               const SizedBox(height: 16),
               if (status == 'pending') const _PaymentNotice(),
+              if (status == 'pending') const SizedBox(height: 10),
+              if (status == 'pending') _PaymentCountdownBanner(booking: booking),
               if (status == 'pending') const SizedBox(height: 16),
               if (checkInReady) ...[
                 _PaymentCompletedCard(booking: booking),
@@ -264,6 +365,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 schedule: schedule,
               ),
               const SizedBox(height: 16),
+              const _SeatLockSection(),
               if (status == 'pending') ...[
                 if (_installmentAvailable(booking)) ...[
                   _PaymentTypeSection(
@@ -277,7 +379,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   value: _paymentMethod,
                   amount: amountDue,
                   qrPayload: qrPayload,
+                  qrKey: _promptPayQrKey,
+                  downloadingQr: _downloadingQr,
                   onChanged: (value) => setState(() => _paymentMethod = value),
+                  onDownloadQr: _downloadPromptPayQr,
                   onCopyAmount: () =>
                       _copy(amountDue.toStringAsFixed(2), 'คัดลอกยอดชำระแล้ว'),
                   onCopyAccount: () => _copy(
@@ -335,10 +440,284 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                 ),
               ],
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: _goHome,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _accent,
+                    side: BorderSide(color: _accent.withValues(alpha: 0.3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                  ),
+                  icon: const Icon(Icons.home_rounded),
+                  label: Text(
+                    'กลับหน้าหลัก',
+                    style: GoogleFonts.anuphan(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+// ─── Payment countdown banner ───────────────────────────────────────────
+class _PaymentCountdownBanner extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  const _PaymentCountdownBanner({required this.booking});
+
+  static const _kDeadlineMinutes = 10;
+
+  @override
+  Widget build(BuildContext context) {
+    final createdAt = DateTime.tryParse(textOf(booking['created_at']))?.toLocal();
+    if (createdAt == null) return const SizedBox.shrink();
+
+    final deadline = createdAt.add(const Duration(minutes: _kDeadlineMinutes));
+    final remaining = deadline.difference(DateTime.now());
+    final expired = remaining.isNegative || remaining.inSeconds <= 0;
+    final isUrgent = !expired && remaining.inSeconds <= 120;
+
+    final accent =
+        expired || isUrgent ? AppTheme.errorColor : const Color(0xFF0F8F75);
+    final bgColor = accent.withValues(
+      alpha: AppTheme.isDark(context) ? 0.15 : 0.08,
+    );
+
+    final String timeText;
+    if (expired) {
+      timeText = 'หมดเวลาแล้ว';
+    } else {
+      final m = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
+      final s = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+      timeText = '$m:$s';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(
+              expired ? Icons.timer_off_rounded : Icons.timer_rounded,
+              color: accent,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  expired ? 'หมดเวลาชำระเงิน' : 'เหลือเวลาชำระเงิน',
+                  style: GoogleFonts.anuphan(
+                    color: accent,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  expired
+                      ? 'กรุณาติดต่อเจ้าหน้าที่หากต้องการจองใหม่'
+                      : 'การจองจะถูกยกเลิกอัตโนมัติหากไม่ชำระภายใน $_kDeadlineMinutes นาทีจากการจอง',
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.mutedText(context),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            timeText,
+            style: GoogleFonts.anuphan(
+              color: accent,
+              fontWeight: FontWeight.w900,
+              fontSize: expired ? 13 : 22,
+              fontFeatures: const [ui.FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Active seat lock section ───────────────────────────────────────────────
+class _SeatLockSection extends StatefulWidget {
+  const _SeatLockSection();
+
+  @override
+  State<_SeatLockSection> createState() => _SeatLockSectionState();
+}
+
+class _SeatLockSectionState extends State<_SeatLockSection> {
+  Timer? _ticker;
+  int? _busyScheduleId;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  bool _isActive(Map<String, dynamic> lock) {
+    final lockedUntil = DateTime.tryParse(textOf(lock['locked_until']));
+    if (lockedUntil != null) {
+      return lockedUntil.difference(DateTime.now()).inSeconds > 0;
+    }
+    return (int.tryParse(textOf(lock['locked_ttl_seconds'])) ?? 0) > 0;
+  }
+
+  Future<void> _continueBooking(Map<String, dynamic> lock) async {
+    final app = context.read<AppProvider>();
+    final trip = asMap(lock['trip']);
+    final slug = textOf(trip['slug']);
+    final scheduleId = int.tryParse(textOf(lock['schedule_id']));
+    if (slug.isEmpty || scheduleId == null) return;
+
+    setState(() => _busyScheduleId = scheduleId);
+    try {
+      final results =
+          await Future.wait([app.trip(slug), app.schedules(slug)]);
+      if (!mounted) return;
+      final seatIds = asList(lock['seat_ids'])
+          .map((item) => item?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList();
+      final pickupPointId = int.tryParse(textOf(lock['pickup_point_id']));
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => BookingFlowScreen(
+          trip: Map<String, dynamic>.from(results[0] as Map),
+          schedules: List<dynamic>.from(results[1] as List),
+          initialScheduleId: scheduleId,
+          initialPickupPointId: pickupPointId,
+          initialSeatIds: seatIds,
+          resumeLockedSeats: true,
+        ),
+      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)
+            ?.showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _busyScheduleId = null);
+    }
+  }
+
+  Future<void> _cancelLock(Map<String, dynamic> lock) async {
+    final app = context.read<AppProvider>();
+    final trip = asMap(lock['trip']);
+    final slug = textOf(trip['slug']);
+    final scheduleId = int.tryParse(textOf(lock['schedule_id']));
+    if (slug.isEmpty || scheduleId == null) return;
+    final seatIds = asList(lock['seat_ids'])
+        .map((item) => item?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList();
+    final pickupPointId = int.tryParse(textOf(lock['pickup_point_id']));
+
+    setState(() => _busyScheduleId = scheduleId);
+    try {
+      final results =
+          await Future.wait([app.trip(slug), app.schedules(slug)]);
+      await app.cancelActiveSeatLock(scheduleId, seatIds: seatIds);
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('ยกเลิกการจองแล้ว เลือกที่นั่งใหม่ได้เลย')),
+      );
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => BookingFlowScreen(
+          trip: Map<String, dynamic>.from(results[0] as Map),
+          schedules: List<dynamic>.from(results[1] as List),
+          initialScheduleId: scheduleId,
+          initialPickupPointId: pickupPointId,
+          startAtSeatSelection: true,
+        ),
+      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)
+            ?.showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _busyScheduleId = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locks = context
+        .watch<AppProvider>()
+        .activeSeatLocks
+        .map(asMap)
+        .where(_isActive)
+        .toList();
+
+    if (locks.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            'ที่นั่งที่รอการจอง',
+            style: GoogleFonts.anuphan(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: _text,
+            ),
+          ),
+        ),
+        ...locks.map((lock) {
+          final scheduleId = int.tryParse(textOf(lock['schedule_id']));
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: ActiveSeatLockBanner(
+              lock: lock,
+              extraCount: 0,
+              busy: _busyScheduleId == scheduleId,
+              onContinue: () => _continueBooking(lock),
+              onCancel: () => _cancelLock(lock),
+            ),
+          );
+        }),
+        const SizedBox(height: 6),
+      ],
     );
   }
 }
@@ -414,7 +793,7 @@ class _PaymentNotice extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFFBEB),
+              color: AppTheme.warningTint(context),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
@@ -427,7 +806,9 @@ class _PaymentNotice extends StatelessWidget {
             child: Text(
               'กรุณาชำระเงินและระบุเวลาโอนตามสลิป เพื่อยืนยันสิทธิ์การเดินทาง',
               style: GoogleFonts.anuphan(
-                color: const Color(0xFF92400E),
+                color: AppTheme.isDark(context)
+                    ? const Color(0xFFFCD34D)
+                    : const Color(0xFF92400E),
                 fontWeight: FontWeight.w800,
                 height: 1.35,
               ),
@@ -602,7 +983,10 @@ class _PaymentMethodSection extends StatelessWidget {
   final String value;
   final num amount;
   final String qrPayload;
+  final GlobalKey qrKey;
+  final bool downloadingQr;
   final ValueChanged<String> onChanged;
+  final VoidCallback onDownloadQr;
   final VoidCallback onCopyAmount;
   final VoidCallback onCopyAccount;
 
@@ -610,7 +994,10 @@ class _PaymentMethodSection extends StatelessWidget {
     required this.value,
     required this.amount,
     required this.qrPayload,
+    required this.qrKey,
+    required this.downloadingQr,
     required this.onChanged,
+    required this.onDownloadQr,
     required this.onCopyAmount,
     required this.onCopyAccount,
   });
@@ -656,25 +1043,59 @@ class _PaymentMethodSection extends StatelessWidget {
             Center(
               child: Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: _border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
+                  RepaintBoundary(
+                    key: qrKey,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppTheme.border(context)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: QrImageView(
+                        data: qrPayload,
+                        version: QrVersions.auto,
+                        size: 220,
+                        backgroundColor: Colors.white,
+                      ),
                     ),
-                    child: QrImageView(
-                      data: qrPayload,
-                      version: QrVersions.auto,
-                      size: 220,
-                      backgroundColor: Colors.white,
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: 220,
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: downloadingQr ? null : onDownloadQr,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _accent,
+                        side: BorderSide(
+                          color: _accent.withValues(alpha: 0.28),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                      ),
+                      icon: downloadingQr
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.download_rounded, size: 20),
+                      label: Text(
+                        downloadingQr ? 'กำลังดาวน์โหลด' : 'ดาวน์โหลด QR CODE',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -926,9 +1347,9 @@ class _SlipUploadSection extends StatelessWidget {
                           width: 54,
                           height: 54,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: AppTheme.surface(context),
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: _border),
+                            border: Border.all(color: AppTheme.border(context)),
                           ),
                           child: const Icon(
                             Icons.cloud_upload_rounded,
@@ -940,7 +1361,7 @@ class _SlipUploadSection extends StatelessWidget {
                         Text(
                           'แตะเพื่อแนบรูปภาพสลิป',
                           style: GoogleFonts.anuphan(
-                            color: _text,
+                            color: AppTheme.onSurface(context),
                             fontSize: 14,
                             fontWeight: FontWeight.w900,
                           ),
@@ -964,15 +1385,84 @@ class _SlipUploadSection extends StatelessWidget {
   }
 }
 
-class _PaymentCompletedCard extends StatelessWidget {
+class _PaymentCompletedCard extends StatefulWidget {
   final Map<String, dynamic> booking;
 
   const _PaymentCompletedCard({required this.booking});
 
   @override
+  State<_PaymentCompletedCard> createState() => _PaymentCompletedCardState();
+}
+
+class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
+  final GlobalKey _qrKey = GlobalKey();
+  bool _downloadingQr = false;
+
+  Future<void> _downloadQr() async {
+    if (_downloadingQr) return;
+    setState(() => _downloadingQr = true);
+    try {
+      final renderObject = _qrKey.currentContext?.findRenderObject();
+      if (renderObject is! RenderRepaintBoundary) {
+        throw Exception('ไม่พบ QR CODE สำหรับดาวน์โหลด');
+      }
+      final image = await renderObject.toImage(pixelRatio: 3);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      if (byteData == null) throw Exception('ไม่สามารถสร้างรูป QR CODE ได้');
+
+      final safeRef = textOf(widget.booking['booking_ref'], 'checkin')
+          .replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      final fileName = 'luilaykhao-checkin-$safeRef-qr.png';
+      final bytes = byteData.buffer.asUint8List();
+
+      final directories = <Directory>[];
+      if (Platform.isAndroid) {
+        directories.add(Directory('/storage/emulated/0/Download'));
+      }
+      try {
+        final dl = await getDownloadsDirectory();
+        if (dl != null) directories.add(dl);
+      } catch (_) {}
+      directories.add(await getApplicationDocumentsDirectory());
+      directories.add(Directory.systemTemp);
+
+      File? saved;
+      for (final dir in directories) {
+        try {
+          if (!await dir.exists()) await dir.create(recursive: true);
+          saved = await File(
+            '${dir.path}${Platform.pathSeparator}$fileName',
+          ).writeAsBytes(bytes, flush: true);
+          break;
+        } catch (_) {}
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            saved != null
+                ? 'ดาวน์โหลด QR CODE แล้ว: ${saved.path}'
+                : 'ไม่สามารถบันทึกไฟล์ได้',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ไม่สามารถดาวน์โหลด QR CODE ได้: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _downloadingQr = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final bookingRef = textOf(booking['booking_ref'], '-');
-    final checkInCode = textOf(booking['qr_code']).trim();
+    final bookingRef = textOf(widget.booking['booking_ref'], '-');
+    final checkInCode = textOf(widget.booking['qr_code']).trim();
 
     return _SectionCard(
       child: Column(
@@ -980,8 +1470,8 @@ class _PaymentCompletedCard extends StatelessWidget {
           Container(
             width: 58,
             height: 58,
-            decoration: const BoxDecoration(
-              color: Color(0xFFE7F7F2),
+            decoration: BoxDecoration(
+              color: AppTheme.selectedTint(context),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -1010,19 +1500,51 @@ class _PaymentCompletedCard extends StatelessWidget {
           ),
           if (checkInCode.isNotEmpty) ...[
             const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: _border),
+            RepaintBoundary(
+              key: _qrKey,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface(context),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: AppTheme.border(context)),
+                ),
+                child: QrImageView(
+                  data: checkInCode,
+                  version: QrVersions.auto,
+                  size: 176,
+                  backgroundColor: Colors.white,
+                  errorCorrectionLevel: QrErrorCorrectLevel.M,
+                ),
               ),
-              child: QrImageView(
-                data: checkInCode,
-                version: QrVersions.auto,
-                size: 176,
-                backgroundColor: Colors.white,
-                errorCorrectionLevel: QrErrorCorrectLevel.M,
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 220,
+              height: 44,
+              child: OutlinedButton.icon(
+                onPressed: _downloadingQr ? null : _downloadQr,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _accent,
+                  side: BorderSide(color: _accent.withValues(alpha: 0.28)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                ),
+                icon: _downloadingQr
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_rounded, size: 20),
+                label: Text(
+                  _downloadingQr ? 'กำลังดาวน์โหลด' : 'ดาวน์โหลด QR CODE',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1031,7 +1553,7 @@ class _PaymentCompletedCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF2FBF8),
+              color: AppTheme.selectedTint(context),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: _accent.withValues(alpha: 0.14)),
             ),
@@ -1114,17 +1636,10 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: padding,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.035),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
+      decoration: AppTheme.cardDecoration(
+        context,
+        radius: 24,
+        borderColor: AppTheme.border(context).withValues(alpha: 0.65),
       ),
       child: child,
     );
@@ -1184,16 +1699,24 @@ class _ChoiceTile extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: EdgeInsets.all(compact ? 12 : 14),
         decoration: BoxDecoration(
-          color: selected ? _accent.withValues(alpha: 0.08) : _field,
+          color: selected
+              ? _accent.withValues(
+                  alpha: AppTheme.isDark(context) ? 0.18 : 0.08,
+                )
+              : AppTheme.fieldSurface(context),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: selected ? _accent : _border,
+            color: selected ? _accent : AppTheme.border(context),
             width: selected ? 1.4 : 1,
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: selected ? _accent : _muted, size: 22),
+            Icon(
+              icon,
+              color: selected ? _accent : AppTheme.mutedText(context),
+              size: 22,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -1204,7 +1727,7 @@ class _ChoiceTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(
-                      color: selected ? _accent : _text,
+                      color: selected ? _accent : AppTheme.onSurface(context),
                       fontWeight: FontWeight.w900,
                       fontSize: compact ? 12.5 : 14,
                     ),
@@ -1215,7 +1738,7 @@ class _ChoiceTile extends StatelessWidget {
                     maxLines: compact ? 2 : 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(
-                      color: _muted,
+                      color: AppTheme.mutedText(context),
                       fontSize: compact ? 10.5 : 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1281,32 +1804,46 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: _muted, size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            label,
-            style: GoogleFonts.anuphan(
-              color: _muted,
-              fontWeight: FontWeight.w700,
+    return SizedBox(
+      width: double.infinity,
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Icon(icon, color: _muted, size: 18),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: GoogleFonts.anuphan(
+                      color: _muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
-              color: valueColor ?? _text,
-              fontWeight: FontWeight.w900,
+          const SizedBox(width: 12),
+          Flexible(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.anuphan(
+                  color: valueColor ?? _text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1322,10 +1859,14 @@ class _InstallmentRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: row.no == 1 ? const Color(0xFFFFFBEB) : _field,
+        color: row.no == 1
+            ? AppTheme.warningTint(context)
+            : AppTheme.fieldSurface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: row.no == 1 ? const Color(0xFFFDE68A) : _border,
+          color: row.no == 1
+              ? AppTheme.warningColor.withValues(alpha: 0.35)
+              : AppTheme.border(context),
         ),
       ),
       child: Row(
@@ -1333,7 +1874,7 @@ class _InstallmentRow extends StatelessWidget {
           Text(
             'งวด ${row.no}',
             style: GoogleFonts.anuphan(
-              color: _text,
+              color: AppTheme.onSurface(context),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1342,7 +1883,7 @@ class _InstallmentRow extends StatelessWidget {
             child: Text(
               dateText(row.dueDate),
               style: GoogleFonts.anuphan(
-                color: _muted,
+                color: AppTheme.mutedText(context),
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),

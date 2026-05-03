@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_client.dart';
@@ -8,9 +8,11 @@ import '../services/push_notification_service.dart';
 
 class AppProvider extends ChangeNotifier {
   static const _tokenKey = 'auth_token';
+  static const _themeModeKey = 'theme_mode';
 
   final ApiClient api = ApiClient();
 
+  ThemeMode _themeMode = ThemeMode.light;
   bool booting = true;
   bool busy = false;
   String? error;
@@ -25,6 +27,7 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> myReviews = [];
   List<dynamic> rewards = [];
   List<dynamic> coupons = [];
+  List<dynamic> promotions = [];
   List<dynamic> activeSeatLocks = [];
   Map<String, dynamic>? loyalty;
   Map<String, dynamic>? stats;
@@ -33,10 +36,13 @@ class AppProvider extends ChangeNotifier {
 
   bool get isLoggedIn => api.token != null && api.token!.isNotEmpty;
   String? get token => api.token;
+  ThemeMode get themeMode => _themeMode;
+  bool get isDarkMode => _themeMode == ThemeMode.dark;
 
   Future<void> boot() async {
     final prefs = await SharedPreferences.getInstance();
     api.token = prefs.getString(_tokenKey);
+    _themeMode = _themeModeFromStorage(prefs.getString(_themeModeKey));
     await PushNotificationService.instance.initialize(
       onRefreshRequested: () {
         if (isLoggedIn) loadAccountData();
@@ -58,6 +64,20 @@ class AppProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> setThemeMode(ThemeMode mode) async {
+    if (_themeMode == mode) return;
+
+    _themeMode = mode;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeModeKey, mode.name);
+  }
+
+  Future<void> toggleThemeMode() {
+    return setThemeMode(isDarkMode ? ThemeMode.light : ThemeMode.dark);
+  }
+
   Future<void> loadPublicData({String? search}) async {
     final results = await Future.wait([
       api.get('trips', query: {'per_page': 30, 'search': search}),
@@ -65,12 +85,14 @@ class AppProvider extends ChangeNotifier {
       api.get('categories'),
       api.get('reviews', query: {'per_page': 8}),
       api.get('stats'),
+      api.get('promotions/active'),
     ]);
     trips = List<dynamic>.from(api.data(results[0]) ?? []);
     featuredTrips = List<dynamic>.from(api.data(results[1]) ?? []);
     categories = List<dynamic>.from(api.data(results[2]) ?? []);
     reviews = List<dynamic>.from(api.data(results[3]) ?? []);
     stats = Map<String, dynamic>.from(api.data(results[4]) ?? {});
+    promotions = List<dynamic>.from(api.data(results[5]) ?? []);
     notifyListeners();
   }
 
@@ -369,7 +391,38 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> markAllNotificationsRead() async {
     await api.put('notifications/read-all');
-    await loadAccountData();
+    await loadNotifications();
+  }
+
+  Future<void> loadNotifications({int perPage = 50}) async {
+    if (!isLoggedIn) return;
+    final response = await api.get(
+      'notifications',
+      query: {'per_page': perPage},
+    );
+    notifications = List<dynamic>.from(api.data(response) ?? []);
+    notifyListeners();
+  }
+
+  Future<void> markNotificationRead(int id) async {
+    await api.put('notifications/$id/read');
+    notifications = notifications.map((item) {
+      final notification = Map<String, dynamic>.from(_asMap(item));
+      if (notification['id']?.toString() == id.toString()) {
+        notification['is_read'] = true;
+        notification['read_at'] = DateTime.now().toIso8601String();
+      }
+      return notification;
+    }).toList();
+    notifyListeners();
+  }
+
+  Future<void> deleteNotification(int id) async {
+    await api.delete('notifications/$id');
+    notifications = notifications
+        .where((item) => _asMap(item)['id']?.toString() != id.toString())
+        .toList();
+    notifyListeners();
   }
 
   Future<void> redeemReward(int rewardId) async {
@@ -400,4 +453,17 @@ class AppProvider extends ChangeNotifier {
   Future<void> sendContact(Map<String, dynamic> payload) async {
     await api.post('contacts', body: payload);
   }
+}
+
+Map<String, dynamic> _asMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return <String, dynamic>{};
+}
+
+ThemeMode _themeModeFromStorage(String? value) {
+  return switch (value) {
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.light,
+  };
 }

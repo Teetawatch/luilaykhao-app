@@ -12,7 +12,6 @@ import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
 import 'payment_screen.dart';
 
-const Color _pageBackground = Color(0xFFF8F8F8);
 const Color _premiumText = Color(0xFF111827);
 const Color _mutedText = Color(0xFF6B7280);
 const Color _softAccent = Color(0xFF0F8F75);
@@ -36,6 +35,7 @@ class BookingFlowScreen extends StatelessWidget {
   final int? initialPickupPointId;
   final List<String> initialSeatIds;
   final bool resumeLockedSeats;
+  final bool startAtSeatSelection;
 
   const BookingFlowScreen({
     super.key,
@@ -45,6 +45,7 @@ class BookingFlowScreen extends StatelessWidget {
     this.initialPickupPointId,
     this.initialSeatIds = const [],
     this.resumeLockedSeats = false,
+    this.startAtSeatSelection = false,
   });
 
   @override
@@ -56,6 +57,7 @@ class BookingFlowScreen extends StatelessWidget {
       initialPickupPointId: initialPickupPointId,
       initialSeatIds: initialSeatIds,
       resumeLockedSeats: resumeLockedSeats,
+      startAtSeatSelection: startAtSeatSelection,
     );
   }
 }
@@ -67,6 +69,7 @@ class BookingCheckoutPage extends StatefulWidget {
   final int? initialPickupPointId;
   final List<String> initialSeatIds;
   final bool resumeLockedSeats;
+  final bool startAtSeatSelection;
 
   const BookingCheckoutPage({
     super.key,
@@ -76,6 +79,7 @@ class BookingCheckoutPage extends StatefulWidget {
     this.initialPickupPointId,
     this.initialSeatIds = const [],
     this.resumeLockedSeats = false,
+    this.startAtSeatSelection = false,
   });
 
   @override
@@ -174,6 +178,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         _currentStep = _passengerStepIndex;
       }
     }
+    if (widget.startAtSeatSelection) {
+      _currentStep = _seatStepIndex;
+    }
     _loadSeatMap(preserveSelection: initialSeatIds.isNotEmpty);
   }
 
@@ -213,7 +220,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         preferredRegion: preferredRegion,
       );
       _pickupPointId = int.tryParse(point['id'].toString());
-      _pickupRegion = point['region']?.toString();
+      _pickupRegion = _pickupRegionKey(point);
     } else {
       _pickupPointId = null;
       _pickupRegion = null;
@@ -568,7 +575,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             preferredRegion: value,
           );
           setState(() {
-            _pickupRegion = point['region']?.toString() ?? value;
+            _pickupRegion = _pickupRegionKey(point).isNotEmpty
+                ? _pickupRegionKey(point)
+                : value;
             _pickupPointId = int.tryParse(point['id'].toString());
           });
         },
@@ -581,7 +590,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           );
           setState(() {
             _pickupPointId = value;
-            _pickupRegion = point['region']?.toString();
+            _pickupRegion = _pickupRegionKey(point);
           });
         },
       );
@@ -631,7 +640,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     final pricing = _pricing;
 
     return Scaffold(
-      backgroundColor: _pageBackground,
+      backgroundColor: AppTheme.background(context),
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         top: false,
@@ -791,7 +800,7 @@ class BookingProgressStepper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: _premiumDecoration(radius: 24),
+      decoration: _premiumDecoration(context, radius: 24),
       child: Row(
         children: List.generate(steps.length, (index) {
           final isActive = index == currentStep;
@@ -884,7 +893,7 @@ class TripSummaryCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _premiumDecoration(radius: 28),
+      decoration: _premiumDecoration(context, radius: 28),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -984,10 +993,30 @@ class TravelInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheduleMaps = schedules
+    final allScheduleMaps = schedules
         .map(asMap)
         .where((item) => int.tryParse(item['id'].toString()) != null)
         .toList();
+    final currentPickupMaps = pickupPoints
+        .map(asMap)
+        .where((item) => int.tryParse(item['id'].toString()) != null)
+        .toList();
+    final currentRegionMaps = _pickupRegionOptions(currentPickupMaps);
+    final requestedRegion = pickupRegion?.trim();
+    final selectedRegion = requestedRegion != null && requestedRegion.isNotEmpty
+        ? requestedRegion
+        : _validStringDropdownValue(
+            pickupRegion,
+            currentRegionMaps.map(_pickupRegionKey),
+          );
+    final scheduleMaps = selectedRegion == null
+        ? allScheduleMaps
+        : allScheduleMaps
+              .where(
+                (schedule) =>
+                    _scheduleHasPickupRegion(schedule, selectedRegion),
+              )
+              .toList();
     final selectedScheduleId = _validDropdownValue(
       scheduleId,
       scheduleMaps.map((item) => int.parse(item['id'].toString())),
@@ -999,19 +1028,22 @@ class TravelInfoSection extends StatelessWidget {
             orElse: () => <String, dynamic>{},
           );
     final selectedVehicle = asMap(selectedSchedule['vehicle']);
-    final pickupMaps = pickupPoints
-        .map(asMap)
-        .where((item) => int.tryParse(item['id'].toString()) != null)
-        .toList();
+    final pickupMaps = selectedSchedule.isEmpty
+        ? currentPickupMaps
+        : asList(selectedSchedule['pickup_points'])
+              .map(asMap)
+              .where((item) => int.tryParse(item['id'].toString()) != null)
+              .toList();
     final regionMaps = _pickupRegionOptions(pickupMaps);
-    final selectedRegion = _validStringDropdownValue(
-      pickupRegion,
-      regionMaps.map((item) => textOf(item['region'])),
-    );
+    final visibleRegionMaps = selectedRegion == null
+        ? regionMaps
+        : regionMaps
+              .where((point) => _pickupRegionKey(point) == selectedRegion)
+              .toList();
     final filteredPickupMaps = selectedRegion == null
         ? pickupMaps
         : pickupMaps
-              .where((point) => textOf(point['region']) == selectedRegion)
+              .where((point) => _pickupRegionKey(point) == selectedRegion)
               .toList();
     final selectedPickupPointId = _validDropdownValue(
       pickupPointId,
@@ -1054,8 +1086,8 @@ class TravelInfoSection extends StatelessWidget {
                   label: 'ภูมิภาคที่จะขึ้นรถ',
                   icon: Icons.travel_explore_rounded,
                   value: selectedRegion,
-                  items: regionMaps.map((region) {
-                    final value = textOf(region['region']);
+                  items: visibleRegionMaps.map((region) {
+                    final value = _pickupRegionKey(region);
                     return DropdownMenuItem<String>(
                       value: value,
                       child: Text(
@@ -1080,6 +1112,20 @@ class TravelInfoSection extends StatelessWidget {
                     label: 'จุดขึ้นรถ',
                     icon: Icons.directions_bus_filled_rounded,
                     value: selectedPickupPointId,
+                    selectedItemBuilder: (context) =>
+                        filteredPickupMaps.map((point) {
+                          final location = _pickupLocationLabel(point);
+                          return Text(
+                            location,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.anuphan(
+                              color: _premiumText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          );
+                        }).toList(),
                     items: filteredPickupMaps.map((point) {
                       final id = int.parse(point['id'].toString());
                       final location = _pickupLocationLabel(point);
@@ -1087,11 +1133,31 @@ class TravelInfoSection extends StatelessWidget {
                       final notes = textOf(point['notes']).trim();
                       return DropdownMenuItem<int>(
                         value: id,
-                        child: Text(
-                          notes.isEmpty
-                              ? '$location  ·  $price'
-                              : '$location  ·  $notes  ·  $price',
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              location,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: GoogleFonts.anuphan(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: _premiumText,
+                              ),
+                            ),
+                            Text(
+                              notes.isEmpty ? price : '$notes  ·  $price',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: GoogleFonts.anuphan(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _mutedText,
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }).toList(),
@@ -1376,9 +1442,9 @@ class _VehicleInfoPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: _cardBorder),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1388,7 +1454,7 @@ class _VehicleInfoPill extends StatelessWidget {
           Text(
             text,
             style: GoogleFonts.anuphan(
-              color: _mutedText,
+              color: AppTheme.mutedText(context),
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
               height: 1.2,
@@ -1584,7 +1650,7 @@ class _SeatRealtimeSummary extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF9),
+        color: AppTheme.selectedTint(context),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: _softAccent.withValues(alpha: 0.16)),
       ),
@@ -2438,7 +2504,7 @@ class TrustSignalsSection extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F8F6),
+            color: AppTheme.selectedTint(context),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: _softAccent.withValues(alpha: 0.10)),
           ),
@@ -2450,7 +2516,9 @@ class TrustSignalsSection extends StatelessWidget {
               Text(
                 signal.label,
                 style: GoogleFonts.anuphan(
-                  color: const Color(0xFF126B5B),
+                  color: AppTheme.isDark(context)
+                      ? AppTheme.accentColor
+                      : const Color(0xFF126B5B),
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -2490,8 +2558,8 @@ class StickyCheckoutBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: const Border(top: BorderSide(color: _cardBorder)),
+          color: AppTheme.surface(context),
+          border: Border(top: BorderSide(color: AppTheme.border(context))),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
@@ -2620,7 +2688,7 @@ class _SectionShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _premiumDecoration(radius: 28),
+      decoration: _premiumDecoration(context, radius: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2843,6 +2911,7 @@ class _TravelerCard extends StatelessWidget {
                 label: 'ชื่อเล่น',
                 hint: 'ชื่อเล่น',
                 icon: Icons.face_rounded,
+                validator: _requiredValidator('กรุณากรอกชื่อเล่น'),
                 textInputAction: TextInputAction.next,
               );
               final phoneField = _PremiumTextField(
@@ -2851,7 +2920,11 @@ class _TravelerCard extends StatelessWidget {
                 hint: '081-234-5678',
                 icon: Icons.phone_android_rounded,
                 keyboardType: TextInputType.phone,
-                validator: _requiredValidator('กรุณากรอกเบอร์โทรศัพท์'),
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                validator: _phoneValidator('กรุณากรอกเบอร์โทรศัพท์'),
                 autofillHints: const [AutofillHints.telephoneNumber],
                 textInputAction: TextInputAction.next,
               );
@@ -2889,6 +2962,11 @@ class _TravelerCard extends StatelessWidget {
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(13),
                 ],
+                validator: _exactDigitsValidator(
+                  requiredMessage: 'กรุณากรอกเลขบัตรประชาชน',
+                  lengthMessage: 'เลขบัตรประชาชนต้องมี 13 หลัก',
+                  length: 13,
+                ),
                 textInputAction: TextInputAction.next,
               );
               final bloodDropdown = _PremiumDropdown<String>(
@@ -2902,6 +2980,7 @@ class _TravelerCard extends StatelessWidget {
                     child: Text(group, overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
+                validator: _requiredValidator('กรุณาเลือกกรุ๊ปเลือด'),
                 onChanged: (value) {
                   controllers.bloodGroup.text = value ?? '';
                 },
@@ -2940,6 +3019,15 @@ class _TravelerCard extends StatelessWidget {
             maxLines: 2,
             textInputAction: TextInputAction.newline,
           ),
+          const SizedBox(height: 12),
+          _PremiumTextField(
+            controller: controllers.healthNotes,
+            label: 'โรคประจำตัว / หมายเหตุสุขภาพ',
+            hint: 'ไม่มี',
+            icon: Icons.health_and_safety_rounded,
+            maxLines: 2,
+            textInputAction: TextInputAction.newline,
+          ),
           const SizedBox(height: 16),
           Text(
             'ผู้ติดต่อฉุกเฉิน',
@@ -2958,6 +3046,7 @@ class _TravelerCard extends StatelessWidget {
                 label: 'ชื่อผู้ติดต่อ',
                 hint: 'ชื่อผู้ติดต่อ',
                 icon: Icons.contact_emergency_rounded,
+                validator: _requiredValidator('กรุณากรอกชื่อผู้ติดต่อฉุกเฉิน'),
                 autofillHints: const [AutofillHints.name],
                 textInputAction: TextInputAction.next,
               );
@@ -2967,6 +3056,11 @@ class _TravelerCard extends StatelessWidget {
                 hint: '089-xxx-xxxx',
                 icon: Icons.phone_enabled_rounded,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                validator: _phoneValidator('กรุณากรอกเบอร์ติดต่อฉุกเฉิน'),
                 autofillHints: const [AutofillHints.telephoneNumber],
                 textInputAction: TextInputAction.next,
               );
@@ -2989,15 +3083,6 @@ class _TravelerCard extends StatelessWidget {
                 ],
               );
             },
-          ),
-          const SizedBox(height: 12),
-          _PremiumTextField(
-            controller: controllers.healthNotes,
-            label: 'โรคประจำตัว / หมายเหตุสุขภาพ',
-            hint: 'ไม่มี',
-            icon: Icons.health_and_safety_rounded,
-            maxLines: 2,
-            textInputAction: TextInputAction.newline,
           ),
           if (!isLast)
             const Padding(
@@ -3117,6 +3202,7 @@ class _PremiumDropdown<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
   final String? Function(T?)? validator;
+  final DropdownButtonBuilder? selectedItemBuilder;
 
   const _PremiumDropdown({
     super.key,
@@ -3126,6 +3212,7 @@ class _PremiumDropdown<T> extends StatelessWidget {
     required this.items,
     required this.onChanged,
     this.validator,
+    this.selectedItemBuilder,
   });
 
   @override
@@ -3139,14 +3226,19 @@ class _PremiumDropdown<T> extends StatelessWidget {
           initialValue: value,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded),
-          decoration: _fieldDecoration(icon: icon, hint: label),
+          decoration: _fieldDecoration(
+            context: context,
+            icon: icon,
+            hint: label,
+          ),
           style: GoogleFonts.anuphan(
             color: _premiumText,
             fontSize: 14,
             fontWeight: FontWeight.w700,
           ),
-          dropdownColor: Colors.white,
+          dropdownColor: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(18),
+          selectedItemBuilder: selectedItemBuilder,
           items: items,
           onChanged: items.isEmpty ? null : onChanged,
           validator: validator,
@@ -3200,7 +3292,11 @@ class _PremiumTextField extends StatelessWidget {
           autofillHints: autofillHints,
           textInputAction: textInputAction,
           inputFormatters: inputFormatters,
-          decoration: _fieldDecoration(icon: icon, hint: hint),
+          decoration: _fieldDecoration(
+            context: context,
+            icon: icon,
+            hint: hint,
+          ),
           style: GoogleFonts.anuphan(
             color: _premiumText,
             fontSize: 14,
@@ -3492,22 +3588,16 @@ class _PassengerControllers {
   }
 }
 
-BoxDecoration _premiumDecoration({double radius = 24}) {
-  return BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(radius),
-    border: Border.all(color: _cardBorder),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.035),
-        blurRadius: 22,
-        offset: const Offset(0, 8),
-      ),
-    ],
+BoxDecoration _premiumDecoration(BuildContext context, {double radius = 24}) {
+  return AppTheme.cardDecoration(
+    context,
+    radius: radius,
+    borderColor: AppTheme.border(context).withValues(alpha: 0.65),
   );
 }
 
 InputDecoration _fieldDecoration({
+  required BuildContext context,
   required IconData icon,
   required String hint,
 }) {
@@ -3515,9 +3605,9 @@ InputDecoration _fieldDecoration({
     hintText: hint,
     isDense: true,
     filled: true,
-    fillColor: _fieldBackground,
+    fillColor: AppTheme.fieldSurface(context),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
-    prefixIcon: Icon(icon, size: 19, color: _mutedText),
+    prefixIcon: Icon(icon, size: 19, color: AppTheme.mutedText(context)),
     prefixIconConstraints: const BoxConstraints(minWidth: 44),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
@@ -3559,6 +3649,27 @@ TextStyle _labelStyle() {
 String? Function(String?) _requiredValidator(String message) {
   return (value) {
     if (value == null || value.trim().isEmpty) return message;
+    return null;
+  };
+}
+
+String? Function(String?) _phoneValidator(String requiredMessage) {
+  return _exactDigitsValidator(
+    requiredMessage: requiredMessage,
+    lengthMessage: 'เบอร์โทรศัพท์ต้องมี 10 หลัก',
+    length: 10,
+  );
+}
+
+String? Function(String?) _exactDigitsValidator({
+  required String requiredMessage,
+  required String lengthMessage,
+  required int length,
+}) {
+  return (value) {
+    final digits = value?.replaceAll(RegExp(r'\D'), '') ?? '';
+    if (digits.isEmpty) return requiredMessage;
+    if (digits.length != length) return lengthMessage;
     return null;
   };
 }
@@ -3632,7 +3743,7 @@ Map<String, dynamic> _preferredPickupPoint(
   if (preferredRegion != null && preferredRegion.isNotEmpty) {
     final match = points
         .map(asMap)
-        .where((point) => textOf(point['region']) == preferredRegion);
+        .where((point) => _pickupRegionKey(point) == preferredRegion);
     if (match.isNotEmpty) return match.first;
   }
 
@@ -3644,11 +3755,23 @@ List<Map<String, dynamic>> _pickupRegionOptions(
 ) {
   final options = <String, Map<String, dynamic>>{};
   for (final point in points) {
-    final region = textOf(point['region']);
+    final region = _pickupRegionKey(point);
     if (region.isEmpty || options.containsKey(region)) continue;
     options[region] = point;
   }
   return options.values.toList();
+}
+
+bool _scheduleHasPickupRegion(Map<String, dynamic> schedule, String regionKey) {
+  return asList(
+    schedule['pickup_points'],
+  ).map(asMap).any((point) => _pickupRegionKey(point) == regionKey);
+}
+
+String _pickupRegionKey(Map<String, dynamic> point) {
+  final region = textOf(point['region']).trim();
+  if (region.isNotEmpty) return region;
+  return textOf(point['region_label']).trim();
 }
 
 String _pickupRegionLabel(Map<String, dynamic> point) {

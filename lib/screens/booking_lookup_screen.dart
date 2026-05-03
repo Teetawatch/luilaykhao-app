@@ -211,7 +211,7 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: AppTheme.background(context),
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         bottom: false,
@@ -221,14 +221,16 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
           slivers: [
             SliverAppBar(
               pinned: true,
-              backgroundColor: const Color(0xFFF8F8F8).withValues(alpha: 0.92),
+              backgroundColor: AppTheme.background(
+                context,
+              ).withValues(alpha: 0.92),
               elevation: 0,
               scrolledUnderElevation: 0,
               centerTitle: true,
               title: Text(
                 'ติดตามรถ',
                 style: GoogleFonts.anuphan(
-                  color: AppTheme.textMain,
+                  color: AppTheme.onSurface(context),
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
                 ),
@@ -350,7 +352,7 @@ class HeroTrackingHeader extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(28),
         boxShadow: const [
           BoxShadow(
@@ -542,10 +544,10 @@ class BookingCodeField extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           height: 56,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: hasError ? AppTheme.errorColor : const Color(0xFFE4E7EC),
+              color: hasError ? AppTheme.errorColor : AppTheme.border(context),
               width: hasError ? 1.4 : 1,
             ),
             boxShadow: const [
@@ -746,7 +748,7 @@ class _SmartOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -756,7 +758,7 @@ class _SmartOption extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE4E7EC)),
+            border: Border.all(color: AppTheme.border(context)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -846,7 +848,7 @@ class _RecentBookingCard extends StatelessWidget {
     final date = _shortThaiDate(schedule['departure_date']);
 
     return Material(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -855,7 +857,7 @@ class _RecentBookingCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE4E7EC)),
+            border: Border.all(color: AppTheme.border(context)),
           ),
           child: Row(
             children: [
@@ -922,9 +924,9 @@ class HelpSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE4E7EC)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
