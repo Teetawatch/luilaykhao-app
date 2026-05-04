@@ -1570,12 +1570,46 @@ class _PopularTripCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  _ParticipantRow(trip: trip),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ParticipantRow extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const _ParticipantRow({required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final joined = trip['confirmed_passengers_count'] as int? ?? 0;
+
+    if (joined == 0) return const SizedBox.shrink();
+
+    return Row(
+      children: [
+        const Icon(
+          Icons.people_alt_outlined,
+          size: 13,
+          color: AppTheme.textSecondary,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$joined คน ร่วมเดินทางแล้ว',
+          style: GoogleFonts.anuphan(
+            color: AppTheme.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }
