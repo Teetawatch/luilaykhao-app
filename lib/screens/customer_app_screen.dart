@@ -17,6 +17,7 @@ import 'booking_lookup_screen.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';
 import 'profile_screen.dart';
+import 'staff_check_in_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 
 part 'my_bookings_screen.dart';
@@ -44,28 +45,39 @@ class _CustomerAppScreenState extends State<CustomerAppScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final showStaffCheckIn = app.canUseStaffCheckIn;
     final pages = [
       const ExploreScreen(),
       const MyBookingsScreen(),
       BookingLookupScreen(embedded: true, onOpenBookings: () => selectTab(1)),
       const ProfileScreen(),
+      if (showStaffCheckIn) const StaffCheckInScreen(),
     ];
 
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: CustomBottomNav(index: _index, onChanged: selectTab),
+      body: IndexedStack(
+        index: _index >= pages.length ? pages.length - 1 : _index,
+        children: pages,
+      ),
+      bottomNavigationBar: CustomBottomNav(
+        index: _index >= pages.length ? pages.length - 1 : _index,
+        showStaffCheckIn: showStaffCheckIn,
+        onChanged: selectTab,
+      ),
     );
   }
 }
 
 class CustomBottomNav extends StatelessWidget {
   final int index;
+  final bool showStaffCheckIn;
   final ValueChanged<int> onChanged;
 
   const CustomBottomNav({
     super.key,
     required this.index,
+    required this.showStaffCheckIn,
     required this.onChanged,
   });
 
@@ -122,7 +134,7 @@ class CustomBottomNav extends StatelessWidget {
                 selectedIndex: index,
                 onDestinationSelected: onChanged,
                 elevation: 0,
-                destinations: const [
+                destinations: [
                   NavigationDestination(
                     icon: Icon(Icons.home_outlined),
                     selectedIcon: Icon(Icons.home_rounded),
@@ -143,6 +155,12 @@ class CustomBottomNav extends StatelessWidget {
                     selectedIcon: Icon(Icons.person_rounded),
                     label: 'บัญชี',
                   ),
+                  if (showStaffCheckIn)
+                    const NavigationDestination(
+                      icon: Icon(Icons.qr_code_scanner_rounded),
+                      selectedIcon: Icon(Icons.fact_check_rounded),
+                      label: 'เช็คอิน',
+                    ),
                 ],
               ),
             ),
@@ -272,7 +290,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
                   const SizedBox(height: 16),
                   _PopularTripsSection(trips: showTrips),
-                  _PromotionsSection(promotions: app.promotions.map(asMap).toList()),
+                  _PromotionsSection(
+                    promotions: app.promotions.map(asMap).toList(),
+                  ),
                   const SizedBox(height: 100), // Bottom padding for Nav Bar
                 ],
               ),
@@ -981,8 +1001,7 @@ class _PromotionsSection extends StatelessWidget {
                 TextButton.icon(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) =>
-                          PromotionsScreen(promotions: promotions),
+                      builder: (_) => PromotionsScreen(promotions: promotions),
                     ),
                   ),
                   iconAlignment: IconAlignment.end,
@@ -1357,8 +1376,7 @@ class _PromotionListCard extends StatelessWidget {
                     if (maxUses != null)
                       _MetaPill(
                         icon: Icons.people_outline_rounded,
-                        text:
-                            'ใช้แล้ว $usedCount/$maxUses',
+                        text: 'ใช้แล้ว $usedCount/$maxUses',
                       ),
                   ],
                 ),
@@ -3719,123 +3737,119 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                         fontSize: 15,
                       ),
                     )
-                  : Builder(builder: (context) {
-                      final pickupPoints = asList(
-                        currentSchedule['pickup_points'],
-                      )
-                          .map(asMap)
-                          .where(
-                            (p) => pickupRegionKey(p) == selectedRegion.key,
-                          )
-                          .toList();
-                      if (pickupPoints.isEmpty) {
-                        return const Text(
-                          'ยังไม่มีจุดขึ้นรถสำหรับภาคนี้',
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 15,
-                          ),
-                        );
-                      }
-                      final validId =
-                          _selectedPickupPointId != null &&
-                              pickupPoints.any(
-                                (p) =>
-                                    int.tryParse(p['id'].toString()) ==
-                                    _selectedPickupPointId,
-                              )
-                          ? _selectedPickupPointId
-                          : int.tryParse(
-                              pickupPoints.first['id'].toString(),
-                            );
-                      return DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: validId,
-                          isExpanded: true,
-                          itemHeight: 64,
-                          borderRadius: BorderRadius.circular(16),
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: AppTheme.primaryColor,
-                          ),
-                          selectedItemBuilder: (context) =>
-                              pickupPoints.map((point) {
-                                final location = textOf(
-                                  point['pickup_location'],
-                                  textOf(point['region_label'], 'ไม่ระบุจุด'),
-                                );
-                                return Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    location,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.anuphan(
-                                      color: AppTheme.primaryColor,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                          items: pickupPoints.map((point) {
-                            final id = int.tryParse(
-                              point['id'].toString(),
-                            );
-                            final location = textOf(
-                              point['pickup_location'],
-                              textOf(
-                                point['region_label'],
-                                'ไม่ระบุจุด',
-                              ),
-                            );
-                            final priceNum = num.tryParse(
-                              point['price']?.toString() ?? '',
-                            );
-                            final priceText = priceNum != null && priceNum > 0
-                                ? money(priceNum)
-                                : '';
-                            final notes = textOf(point['notes']).trim();
-                            return DropdownMenuItem<int>(
-                              value: id,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    location,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.anuphan(
-                                      color: AppTheme.primaryColor,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  if (priceText.isNotEmpty || notes.isNotEmpty)
-                                    Text(
-                                      notes.isNotEmpty && priceText.isNotEmpty
-                                          ? '$notes  ·  $priceText'
-                                          : notes.isNotEmpty
-                                          ? notes
-                                          : priceText,
+                  : Builder(
+                      builder: (context) {
+                        final pickupPoints =
+                            asList(currentSchedule['pickup_points'])
+                                .map(asMap)
+                                .where(
+                                  (p) =>
+                                      pickupRegionKey(p) == selectedRegion.key,
+                                )
+                                .toList();
+                        if (pickupPoints.isEmpty) {
+                          return const Text(
+                            'ยังไม่มีจุดขึ้นรถสำหรับภาคนี้',
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 15,
+                            ),
+                          );
+                        }
+                        final validId =
+                            _selectedPickupPointId != null &&
+                                pickupPoints.any(
+                                  (p) =>
+                                      int.tryParse(p['id'].toString()) ==
+                                      _selectedPickupPointId,
+                                )
+                            ? _selectedPickupPointId
+                            : int.tryParse(pickupPoints.first['id'].toString());
+                        return DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: validId,
+                            isExpanded: true,
+                            itemHeight: 64,
+                            borderRadius: BorderRadius.circular(16),
+                            icon: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: AppTheme.primaryColor,
+                            ),
+                            selectedItemBuilder: (context) =>
+                                pickupPoints.map((point) {
+                                  final location = textOf(
+                                    point['pickup_location'],
+                                    textOf(point['region_label'], 'ไม่ระบุจุด'),
+                                  );
+                                  return Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      location,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.anuphan(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.primaryColor,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (value) =>
-                              setState(() => _selectedPickupPointId = value),
-                        ),
-                      );
-                    }),
+                                  );
+                                }).toList(),
+                            items: pickupPoints.map((point) {
+                              final id = int.tryParse(point['id'].toString());
+                              final location = textOf(
+                                point['pickup_location'],
+                                textOf(point['region_label'], 'ไม่ระบุจุด'),
+                              );
+                              final priceNum = num.tryParse(
+                                point['price']?.toString() ?? '',
+                              );
+                              final priceText = priceNum != null && priceNum > 0
+                                  ? money(priceNum)
+                                  : '';
+                              final notes = textOf(point['notes']).trim();
+                              return DropdownMenuItem<int>(
+                                value: id,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      location,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.anuphan(
+                                        color: AppTheme.primaryColor,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    if (priceText.isNotEmpty ||
+                                        notes.isNotEmpty)
+                                      Text(
+                                        notes.isNotEmpty && priceText.isNotEmpty
+                                            ? '$notes  ·  $priceText'
+                                            : notes.isNotEmpty
+                                            ? notes
+                                            : priceText,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.anuphan(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) =>
+                                setState(() => _selectedPickupPointId = value),
+                          ),
+                        );
+                      },
+                    ),
             ),
             if (currentSchedule != null && selectedRegion != null) ...[
               const SizedBox(height: 8),

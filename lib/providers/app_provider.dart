@@ -38,6 +38,25 @@ class AppProvider extends ChangeNotifier {
   String? get token => api.token;
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
+  List<String> get roleNames {
+    final roles = user?['roles'];
+    if (roles is! List) return const [];
+
+    return roles
+        .map((role) {
+          if (role is Map) return role['name']?.toString() ?? '';
+          return role?.toString() ?? '';
+        })
+        .where((role) => role.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  bool get canUseStaffCheckIn {
+    final roles = roleNames;
+    return roles.contains('staff') ||
+        roles.contains('operator') ||
+        roles.contains('admin');
+  }
 
   Future<void> boot() async {
     final prefs = await SharedPreferences.getInstance();
@@ -330,6 +349,22 @@ class AppProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>> booking(String ref) async {
     final response = await api.get('bookings/$ref');
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> lookupStaffCheckIn(String qrCode) async {
+    final response = await api.post(
+      'staff/check-in/lookup',
+      body: {'qr_code': qrCode},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> confirmStaffCheckIn(String qrCode) async {
+    final response = await api.post(
+      'staff/check-in/confirm',
+      body: {'qr_code': qrCode},
+    );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
