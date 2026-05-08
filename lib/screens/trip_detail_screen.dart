@@ -292,8 +292,9 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       ),
     );
     _selectedPickupPointId = int.tryParse(point['id'].toString());
-    _selectedPickupRegionKey =
-        point.isNotEmpty ? _pickupRegionKey(point) : null;
+    _selectedPickupRegionKey = point.isNotEmpty
+        ? _pickupRegionKey(point)
+        : null;
   }
 
   void _handleScheduleChanged(int? value) {
@@ -413,6 +414,10 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
                         isExpanded: widget.isDescriptionExpanded,
                         onToggle: widget.onDescriptionToggle,
                       ),
+                      const SizedBox(height: 16),
+                      MustKnowSection(trip: widget.trip),
+                      const SizedBox(height: 16),
+                      PreparationsSection(trip: widget.trip),
                       const SizedBox(height: 16),
                       TravelPlanSelectionSection(
                         schedules: widget.schedules,
@@ -606,8 +611,7 @@ class _HeroImageGalleryState extends State<HeroImageGallery> {
                     imageUrl: images[index],
                     fit: BoxFit.cover,
                     placeholder: (_, __) => const Skeleton(radius: 0),
-                    errorWidget: (_, __, ___) =>
-                        const _GalleryImageFallback(),
+                    errorWidget: (_, __, ___) => const _GalleryImageFallback(),
                   ),
                 )
               : imageUrl.isNotEmpty
@@ -949,6 +953,67 @@ class AboutSection extends StatelessWidget {
   }
 }
 
+class MustKnowSection extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const MustKnowSection({super.key, required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _textItems(trip['must_know']);
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return _PremiumCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeader(
+            icon: Icons.info_outline_rounded,
+            title: 'สิ่งที่ควรรู้ก่อนเดินทาง',
+          ),
+          const SizedBox(height: 16),
+          ...items.map(
+            (item) => _FeatureRow(
+              icon: Icons.priority_high_rounded,
+              title: item,
+              iconColor: const Color(0xFFB45309),
+              iconBackground: const Color(0xFFFFFBEB),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PreparationsSection extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const PreparationsSection({super.key, required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _textItems(trip['preparations']);
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return _PremiumCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeader(
+            icon: Icons.backpack_rounded,
+            title: 'สิ่งที่ควรเตรียม',
+          ),
+          const SizedBox(height: 16),
+          ...items.map(
+            (item) => _FeatureRow(icon: Icons.check_rounded, title: item),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class TravelPlanSelectionSection extends StatelessWidget {
   final List<dynamic> schedules;
   final String? pickupRegionKey;
@@ -1106,7 +1171,9 @@ class TravelPlanSelectionSection extends StatelessWidget {
                   return DropdownMenuItem<int>(
                     value: id,
                     child: _DropdownText(
-                      title: location.isNotEmpty ? location : 'ไม่ระบุจุดขึ้นรถ',
+                      title: location.isNotEmpty
+                          ? location
+                          : 'ไม่ระบุจุดขึ้นรถ',
                       subtitle: price,
                     ),
                   );
@@ -1782,12 +1849,14 @@ class StickyBookingBar extends StatelessWidget {
       selectedSchedule,
       selectedPickupPointId,
     );
+    final joinTripEnabled = _asBool(selectedSchedule['join_trip_enabled']);
+    final joinTripPrice = _asNum(selectedSchedule['join_trip_price']);
     final selectedRegionLabel = _pickupRegionLabel(selectedPickupPoint);
     final priceLabel = selectedRegionLabel.isEmpty
         ? 'ราคาเริ่มต้น'
         : 'ราคาสำหรับ $selectedRegionLabel';
 
-    void openBooking() {
+    void openBooking({bool joinTrip = false}) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -1796,15 +1865,16 @@ class StickyBookingBar extends StatelessWidget {
             schedules: schedules,
             initialScheduleId: selectedScheduleId,
             initialPickupPointId: selectedPickupPointId,
+            initialJoinTrip: joinTrip,
           ),
         ),
       );
     }
 
-    void handleBookingTap() {
+    void handleBookingTap({bool joinTrip = false}) {
       final app = context.read<AppProvider>();
       if (app.isLoggedIn) {
-        openBooking();
+        openBooking(joinTrip: joinTrip);
         return;
       }
 
@@ -1813,7 +1883,7 @@ class StickyBookingBar extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => LoginScreen(
             onLoginSuccess: () {
-              if (context.mounted) openBooking();
+              if (context.mounted) openBooking(joinTrip: joinTrip);
             },
           ),
         ),
@@ -1841,82 +1911,133 @@ class StickyBookingBar extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          priceLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(
-                            fontSize: 12,
-                            color: AppTheme.mutedText(context),
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                          ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              priceLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.anuphan(
+                                fontSize: 12,
+                                color: AppTheme.mutedText(context),
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              _priceText(
+                                trip,
+                                schedule: selectedSchedule,
+                                pickupPoint: selectedPickupPoint,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.anuphan(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: AppTheme.onSurface(context),
+                                height: 1.1,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            if (joinTripEnabled) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'Join Trip ${_priceText(trip, schedule: selectedSchedule, isJoinTrip: true)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.anuphan(
+                                  fontSize: 12,
+                                  color: _softAccent,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        const SizedBox(height: 1),
-                        Text(
-                          _priceText(
-                            trip,
-                            schedule: selectedSchedule,
-                            pickupPoint: selectedPickupPoint,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.onSurface(context),
-                            height: 1.1,
-                            letterSpacing: -0.5,
-                          ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: schedules.isEmpty ? null : handleBookingTap,
+                        style:
+                            ElevatedButton.styleFrom(
+                              elevation: 0,
+                              backgroundColor: _softAccent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ).copyWith(
+                              overlayColor: WidgetStatePropertyAll(
+                                Colors.white.withValues(alpha: 0.1),
+                              ),
+                            ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_month_rounded, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'จองตอนนี้',
+                              style: GoogleFonts.anuphan(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (joinTripEnabled) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: schedules.isEmpty
+                          ? null
+                          : () => handleBookingTap(joinTrip: true),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _softAccent,
+                        side: BorderSide(
+                          color: _softAccent.withValues(alpha: 0.38),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      icon: const Icon(Icons.groups_rounded, size: 20),
+                      label: Text(
+                        joinTripPrice > 0
+                            ? 'จอยทริป ${money(joinTripPrice)} / คน'
+                            : 'จอยทริป',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: schedules.isEmpty ? null : handleBookingTap,
-                    style:
-                        ElevatedButton.styleFrom(
-                          elevation: 0,
-                          backgroundColor: _softAccent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 28),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ).copyWith(
-                          overlayColor: WidgetStatePropertyAll(
-                            Colors.white.withValues(alpha: 0.1),
-                          ),
-                        ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_month_rounded, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'จองตอนนี้',
-                          style: GoogleFonts.anuphan(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                ],
               ],
             ),
           ),
@@ -2450,7 +2571,9 @@ List<_QuickInfoItem> _quickInfoItems(Map<String, dynamic> trip) {
   final typeRaw = textOf(trip['type'] ?? trip['category']).trim();
   final difficultyRaw = textOf(trip['difficulty']).trim();
   final type = typeRaw.isNotEmpty ? _tripTypeLabel(typeRaw) : '';
-  final difficulty = difficultyRaw.isNotEmpty ? _difficultyLabel(difficultyRaw) : '';
+  final difficulty = difficultyRaw.isNotEmpty
+      ? _difficultyLabel(difficultyRaw)
+      : '';
   final items = <_QuickInfoItem>[];
 
   if (duration.isNotEmpty) {
@@ -2530,6 +2653,32 @@ List<_HighlightItem> _highlightItems(dynamic rawHighlights) {
         );
       })
       .where((item) => item.title.trim().isNotEmpty)
+      .toList();
+}
+
+List<String> _textItems(dynamic raw) {
+  if (raw is String) {
+    return raw
+        .split(RegExp(r'[\r\n]+'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  return asList(raw)
+      .map((item) {
+        if (item is String) return item.trim();
+        final data = asMap(item);
+        return textOf(
+          data['title'] ??
+              data['name'] ??
+              data['label'] ??
+              data['description'] ??
+              data['desc'] ??
+              data['text'],
+        ).trim();
+      })
+      .where((item) => item.isNotEmpty)
       .toList();
 }
 
@@ -2898,18 +3047,45 @@ String _priceText(
   Map<String, dynamic> trip, {
   Map<String, dynamic>? schedule,
   Map<String, dynamic>? pickupPoint,
+  bool isJoinTrip = false,
 }) {
   final pickupPrice = num.tryParse(textOf(pickupPoint?['price']));
-  final value = pickupPrice != null && pickupPrice > 0
-      ? pickupPrice
-      : schedule?['effective_price'] ??
-            schedule?['price'] ??
-            trip['price_per_person'] ??
-            trip['price'] ??
-            trip['start_price'];
+  final dynamic value;
+  if (isJoinTrip) {
+    value =
+        schedule?['join_trip_price'] ??
+        schedule?['effective_price'] ??
+        schedule?['price'] ??
+        trip['price_per_person'] ??
+        trip['price'] ??
+        trip['start_price'];
+  } else if (pickupPrice != null && pickupPrice > 0) {
+    value = pickupPrice;
+  } else {
+    value =
+        schedule?['effective_price'] ??
+        schedule?['price'] ??
+        trip['price_per_person'] ??
+        trip['price'] ??
+        trip['start_price'];
+  }
   final number = num.tryParse(textOf(value));
   if (number == null || number <= 0) return 'ดูราคา';
   return '${money(number)} / คน';
+}
+
+bool _asBool(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final normalized = value?.toString().trim().toLowerCase();
+  return normalized == 'true' ||
+      normalized == '1' ||
+      normalized == 'yes' ||
+      normalized == 'y';
+}
+
+num _asNum(dynamic value) {
+  return num.tryParse(value?.toString() ?? '') ?? 0;
 }
 
 String _formatRelativeDate(dynamic value) {

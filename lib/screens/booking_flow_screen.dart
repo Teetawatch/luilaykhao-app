@@ -33,6 +33,7 @@ class BookingFlowScreen extends StatelessWidget {
   final List<dynamic> schedules;
   final int? initialScheduleId;
   final int? initialPickupPointId;
+  final bool initialJoinTrip;
   final List<String> initialSeatIds;
   final bool resumeLockedSeats;
   final bool startAtSeatSelection;
@@ -43,6 +44,7 @@ class BookingFlowScreen extends StatelessWidget {
     required this.schedules,
     this.initialScheduleId,
     this.initialPickupPointId,
+    this.initialJoinTrip = false,
     this.initialSeatIds = const [],
     this.resumeLockedSeats = false,
     this.startAtSeatSelection = false,
@@ -55,6 +57,7 @@ class BookingFlowScreen extends StatelessWidget {
       schedules: schedules,
       initialScheduleId: initialScheduleId,
       initialPickupPointId: initialPickupPointId,
+      initialJoinTrip: initialJoinTrip,
       initialSeatIds: initialSeatIds,
       resumeLockedSeats: resumeLockedSeats,
       startAtSeatSelection: startAtSeatSelection,
@@ -67,6 +70,7 @@ class BookingCheckoutPage extends StatefulWidget {
   final List<dynamic> schedules;
   final int? initialScheduleId;
   final int? initialPickupPointId;
+  final bool initialJoinTrip;
   final List<String> initialSeatIds;
   final bool resumeLockedSeats;
   final bool startAtSeatSelection;
@@ -77,6 +81,7 @@ class BookingCheckoutPage extends StatefulWidget {
     required this.schedules,
     this.initialScheduleId,
     this.initialPickupPointId,
+    this.initialJoinTrip = false,
     this.initialSeatIds = const [],
     this.resumeLockedSeats = false,
     this.startAtSeatSelection = false,
@@ -103,6 +108,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   String? _seatError;
   Map<String, dynamic>? _seatMap;
   int? _seatMapScheduleId;
+  bool _isJoinTrip = false;
   Timer? _seatRefreshTimer;
   final Set<String> _selectedSeatIds = <String>{};
   final Set<String> _lockedSeatIds = <String>{};
@@ -136,11 +142,16 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     schedule: _selectedSchedule,
     pickupPoint: _selectedPickupPoint,
     travelerCount: _passengers.length,
+    isJoinTrip: _isJoinTrip,
   );
 
-  bool get _hasSeatMap => _seatMap?['has_seat_map'] == true;
+  bool get _selectedScheduleAllowsJoinTrip =>
+      _asBool(_selectedSchedule['join_trip_enabled']);
 
-  bool get _usesSeatStep => _seatLoading || _seatMap == null || _hasSeatMap;
+  bool get _hasSeatMap => !_isJoinTrip && _seatMap?['has_seat_map'] == true;
+
+  bool get _usesSeatStep =>
+      !_isJoinTrip && (_seatLoading || _seatMap == null || _hasSeatMap);
 
   List<String> get _stepLabels => _usesSeatStep
       ? const ['จุดขึ้นรถ', 'เลือกที่นั่ง', 'ข้อมูลผู้โดยสาร']
@@ -163,6 +174,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     super.initState();
     final initialSchedule = _initialSchedule();
     _scheduleId = int.tryParse(initialSchedule['id'].toString());
+    _isJoinTrip =
+        widget.initialJoinTrip && _asBool(initialSchedule['join_trip_enabled']);
     _syncPickup(
       initialSchedule,
       preferredPickupPointId: widget.initialPickupPointId,
@@ -181,7 +194,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     if (widget.startAtSeatSelection) {
       _currentStep = _seatStepIndex;
     }
-    _loadSeatMap(preserveSelection: initialSeatIds.isNotEmpty);
+    if (!_isJoinTrip) {
+      _loadSeatMap(preserveSelection: initialSeatIds.isNotEmpty);
+    }
   }
 
   @override
@@ -394,6 +409,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   }
 
   Future<void> _lockSelectedSeatsIfNeeded() async {
+    if (_isJoinTrip) return;
     if (!_hasSeatMap) return;
     if (_scheduleId == null) return;
     if (_selectedSeatIds.isEmpty) {
@@ -439,6 +455,15 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกรอบเดินทาง')));
       return false;
     }
+    if (_isJoinTrip) {
+      if (!_selectedScheduleAllowsJoinTrip) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('รอบนี้ยังไม่เปิดจองแบบ Join Trip')),
+        );
+        return false;
+      }
+      return true;
+    }
     if (_pickupPoints.isNotEmpty &&
         (_pickupRegion == null || _pickupRegion!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -472,12 +497,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
     if (step == 0) {
       if (!_validatePickupStep()) return;
-      final shouldRefreshSeats = _usesSeatStep;
       setState(
         () =>
             _currentStep = _usesSeatStep ? _seatStepIndex : _passengerStepIndex,
       );
-      if (shouldRefreshSeats) _startSeatRealtimeRefresh();
+      if (_usesSeatStep) _startSeatRealtimeRefresh();
       return;
     }
 
@@ -551,6 +575,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         key: const ValueKey('pickup-step'),
         scheduleId: _scheduleId,
         schedules: widget.schedules,
+        isJoinTrip: _isJoinTrip,
         pickupRegion: _pickupRegion,
         pickupPointId: _pickupPointId,
         pickupPoints: _pickupPoints,
@@ -565,9 +590,25 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           _stopSeatRealtimeRefresh();
           setState(() {
             _scheduleId = value;
+            if (_isJoinTrip && !_asBool(nextSchedule['join_trip_enabled'])) {
+              _isJoinTrip = false;
+            }
             _syncPickup(nextSchedule, preferredRegion: _pickupRegion);
           });
           _loadSeatMap();
+        },
+        onJoinTripChanged: (value) {
+          _unlockLockedSeats();
+          _stopSeatRealtimeRefresh();
+          setState(() {
+            _isJoinTrip = value && _selectedScheduleAllowsJoinTrip;
+            if (_isJoinTrip) {
+              _selectedSeatIds.clear();
+              _lockedSeatIds.clear();
+              _seatError = null;
+            }
+          });
+          if (!_isJoinTrip) _loadSeatMap();
         },
         onRegionChanged: (value) {
           final point = _preferredPickupPoint(
@@ -682,6 +723,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
                             schedule: _selectedSchedule,
                             pickupPoint: _selectedPickupPoint,
                             pricePerTraveler: pricing.pricePerTraveler,
+                            isJoinTrip: _isJoinTrip,
                           ),
                           const SizedBox(height: 16),
                           const TrustSignalsSection(),
@@ -724,18 +766,27 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกรอบเดินทาง')));
       return;
     }
-    if (_pickupPoints.isNotEmpty &&
-        (_pickupRegion == null || _pickupRegion!.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณาเลือกภูมิภาคที่จะขึ้นรถ')),
-      );
-      return;
-    }
-    if (_pickupPoints.isNotEmpty && _pickupPointId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถ')));
-      return;
+    if (_isJoinTrip) {
+      if (!_selectedScheduleAllowsJoinTrip) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('รอบนี้ยังไม่เปิดจองแบบ Join Trip')),
+        );
+        return;
+      }
+    } else {
+      if (_pickupPoints.isNotEmpty &&
+          (_pickupRegion == null || _pickupRegion!.isEmpty)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('กรุณาเลือกภูมิภาคที่จะขึ้นรถ')),
+        );
+        return;
+      }
+      if (_pickupPoints.isNotEmpty && _pickupPointId == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถ')));
+        return;
+      }
     }
     if (_hasSeatMap && _selectedSeatIds.isEmpty) {
       ScaffoldMessenger.of(
@@ -750,8 +801,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       await _lockSelectedSeatsIfNeeded();
       final booking = await context.read<AppProvider>().createBooking({
         'schedule_id': _scheduleId,
-        'pickup_point_id': _pickupPointId,
-        'pickup_region': _pickupRegion,
+        'pickup_point_id': _isJoinTrip ? null : _pickupPointId,
+        'pickup_region': _isJoinTrip ? null : _pickupRegion,
         'is_group': _passengers.length > 1,
         'group_name': _passengers.length > 1
             ? 'กลุ่ม ${_passengers.length} คน'
@@ -763,6 +814,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             ? null
             : _promo.text.trim().toUpperCase(),
         'seat_ids': _hasSeatMap ? _selectedSeatList : <String>[],
+        'is_join_trip': _isJoinTrip,
         'passengers': _passengers.map((p) => p.payload()).toList(),
       });
       if (!mounted) return;
@@ -873,6 +925,7 @@ class TripSummaryCard extends StatelessWidget {
   final Map<String, dynamic> schedule;
   final Map<String, dynamic> pickupPoint;
   final num pricePerTraveler;
+  final bool isJoinTrip;
 
   const TripSummaryCard({
     super.key,
@@ -880,6 +933,7 @@ class TripSummaryCard extends StatelessWidget {
     required this.schedule,
     required this.pickupPoint,
     required this.pricePerTraveler,
+    required this.isJoinTrip,
   });
 
   @override
@@ -888,8 +942,12 @@ class TripSummaryCard extends StatelessWidget {
     final image = ApiConfig.mediaUrl(
       trip['thumbnail_image'] ?? trip['cover_image'],
     );
-    final pickupRegionLabel = _pickupRegionLabel(pickupPoint);
-    final pickupLocationLabel = _pickupLocationLabel(pickupPoint);
+    final pickupRegionLabel = isJoinTrip
+        ? 'Join Trip'
+        : _pickupRegionLabel(pickupPoint);
+    final pickupLocationLabel = isJoinTrip
+        ? 'รวมกลุ่มเดินทางตามเงื่อนไขรอบนี้'
+        : _pickupLocationLabel(pickupPoint);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -972,10 +1030,12 @@ class TripSummaryCard extends StatelessWidget {
 class TravelInfoSection extends StatelessWidget {
   final int? scheduleId;
   final List<dynamic> schedules;
+  final bool isJoinTrip;
   final String? pickupRegion;
   final int? pickupPointId;
   final List<dynamic> pickupPoints;
   final ValueChanged<int?> onScheduleChanged;
+  final ValueChanged<bool> onJoinTripChanged;
   final ValueChanged<String?> onRegionChanged;
   final ValueChanged<int?> onPickupChanged;
 
@@ -983,10 +1043,12 @@ class TravelInfoSection extends StatelessWidget {
     super.key,
     required this.scheduleId,
     required this.schedules,
+    required this.isJoinTrip,
     required this.pickupRegion,
     required this.pickupPointId,
     required this.pickupPoints,
     required this.onScheduleChanged,
+    required this.onJoinTripChanged,
     required this.onRegionChanged,
     required this.onPickupChanged,
   });
@@ -1049,6 +1111,8 @@ class TravelInfoSection extends StatelessWidget {
       pickupPointId,
       filteredPickupMaps.map((item) => int.parse(item['id'].toString())),
     );
+    final joinTripEnabled = _asBool(selectedSchedule['join_trip_enabled']);
+    final joinTripPrice = _asNum(selectedSchedule['join_trip_price']);
 
     return _SectionShell(
       title: 'ข้อมูลการเดินทาง',
@@ -1073,7 +1137,21 @@ class TravelInfoSection extends StatelessWidget {
             onChanged: onScheduleChanged,
           ),
           const SizedBox(height: 12),
-          if (pickupMaps.isEmpty)
+          if (joinTripEnabled) ...[
+            _JoinTripSwitch(
+              selected: isJoinTrip,
+              price: joinTripPrice,
+              onChanged: onJoinTripChanged,
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (isJoinTrip)
+            const _CompactNotice(
+              icon: Icons.groups_rounded,
+              text:
+                  'จองแบบ Join Trip ใช้ราคาเหมาร่วมจาก Laravel และไม่ต้องล็อกที่นั่งรถ',
+            )
+          else if (pickupMaps.isEmpty)
             const _CompactNotice(
               icon: Icons.place_outlined,
               text: 'ยังไม่มีจุดรับสำหรับรอบนี้',
@@ -1165,11 +1243,79 @@ class TravelInfoSection extends StatelessWidget {
                   ),
               ],
             ),
-          if (selectedVehicle.isNotEmpty) ...[
+          if (!isJoinTrip && selectedVehicle.isNotEmpty) ...[
             const SizedBox(height: 16),
             _VehiclePhotoPreview(vehicle: selectedVehicle),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _JoinTripSwitch extends StatelessWidget {
+  final bool selected;
+  final num price;
+  final ValueChanged<bool> onChanged;
+
+  const _JoinTripSwitch({
+    required this.selected,
+    required this.price,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!selected),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected
+              ? _softAccent.withValues(alpha: 0.10)
+              : _fieldBackground,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? _softAccent.withValues(alpha: 0.28) : _cardBorder,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: selected ? _softAccent : _mutedText,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Join Trip',
+                    style: GoogleFonts.anuphan(
+                      color: _premiumText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    price > 0 ? '${money(price)} / คน' : 'ใช้ราคาจากรอบเดินทาง',
+                    style: GoogleFonts.anuphan(
+                      color: _mutedText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch.adaptive(value: selected, onChanged: onChanged),
+          ],
+        ),
       ),
     );
   }
@@ -2928,6 +3074,16 @@ class _TravelerCard extends StatelessWidget {
                 autofillHints: const [AutofillHints.telephoneNumber],
                 textInputAction: TextInputAction.next,
               );
+              final emailField = _PremiumTextField(
+                controller: controllers.email,
+                label: 'อีเมลผู้โดยสาร',
+                hint: 'name@example.com',
+                icon: Icons.alternate_email_rounded,
+                keyboardType: TextInputType.emailAddress,
+                validator: _optionalEmailValidator,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
+              );
 
               if (isCompact) {
                 return Column(
@@ -2935,15 +3091,23 @@ class _TravelerCard extends StatelessWidget {
                     nicknameField,
                     const SizedBox(height: 12),
                     phoneField,
+                    const SizedBox(height: 12),
+                    emailField,
                   ],
                 );
               }
 
-              return Row(
+              return Column(
                 children: [
-                  Expanded(child: nicknameField),
-                  const SizedBox(width: 12),
-                  Expanded(child: phoneField),
+                  Row(
+                    children: [
+                      Expanded(child: nicknameField),
+                      const SizedBox(width: 12),
+                      Expanded(child: phoneField),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  emailField,
                 ],
               );
             },
@@ -3027,6 +3191,63 @@ class _TravelerCard extends StatelessWidget {
             icon: Icons.health_and_safety_rounded,
             maxLines: 2,
             textInputAction: TextInputAction.newline,
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 390;
+              final diveCertField = _PremiumTextField(
+                controller: controllers.diveCertLevel,
+                label: 'ระดับใบรับรองดำน้ำ',
+                hint: 'เช่น Open Water',
+                icon: Icons.scuba_diving_rounded,
+                textInputAction: TextInputAction.next,
+              );
+              final certNumberField = _PremiumTextField(
+                controller: controllers.certNumber,
+                label: 'เลขใบรับรอง',
+                hint: 'ถ้ามี',
+                icon: Icons.workspace_premium_rounded,
+                textInputAction: TextInputAction.next,
+              );
+              final weightField = _PremiumTextField(
+                controller: controllers.weight,
+                label: 'น้ำหนัก (กก.)',
+                hint: 'เช่น 65',
+                icon: Icons.monitor_weight_outlined,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
+                textInputAction: TextInputAction.next,
+              );
+
+              if (isCompact) {
+                return Column(
+                  children: [
+                    diveCertField,
+                    const SizedBox(height: 12),
+                    certNumberField,
+                    const SizedBox(height: 12),
+                    weightField,
+                  ],
+                );
+              }
+
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: diveCertField),
+                      const SizedBox(width: 12),
+                      Expanded(child: certNumberField),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  weightField,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
           Text(
@@ -3501,18 +3722,28 @@ class _PricingQuote {
     required Map<String, dynamic> schedule,
     required Map<String, dynamic> pickupPoint,
     required int travelerCount,
+    required bool isJoinTrip,
   }) {
     final basePrice = _asNum(
-      schedule['effective_price'] ??
-          schedule['price'] ??
-          trip['price_per_person'] ??
-          trip['price'] ??
-          trip['start_price'],
+      isJoinTrip
+          ? schedule['join_trip_price'] ??
+                schedule['effective_price'] ??
+                schedule['price'] ??
+                trip['price_per_person'] ??
+                trip['price'] ??
+                trip['start_price']
+          : schedule['effective_price'] ??
+                schedule['price'] ??
+                trip['price_per_person'] ??
+                trip['price'] ??
+                trip['start_price'],
     );
     final pickupPrice = _asNum(pickupPoint['price']);
 
     return _PricingQuote(
-      pricePerTraveler: pickupPrice > 0 ? pickupPrice : basePrice,
+      pricePerTraveler: !isJoinTrip && pickupPrice > 0
+          ? pickupPrice
+          : basePrice,
       travelerCount: travelerCount,
       serviceFee: 0,
       discount: 0,
@@ -3525,12 +3756,16 @@ class _PassengerControllers {
   final name = TextEditingController();
   final nickname = TextEditingController();
   final phone = TextEditingController();
+  final email = TextEditingController();
   final idCard = TextEditingController();
   final bloodGroup = TextEditingController();
   final emergencyContact = TextEditingController();
   final emergencyPhone = TextEditingController();
   final allergies = TextEditingController();
   final healthNotes = TextEditingController();
+  final diveCertLevel = TextEditingController();
+  final certNumber = TextEditingController();
+  final weight = TextEditingController();
   final halalFood = ValueNotifier<bool>(false);
 
   void applyProfile(Map<String, dynamic> user) {
@@ -3538,12 +3773,16 @@ class _PassengerControllers {
     name.text = textOf(user['name']);
     nickname.text = textOf(user['nickname']);
     phone.text = textOf(user['phone']);
+    email.text = textOf(user['email']);
     idCard.text = textOf(user['id_card']);
     bloodGroup.text = _profileBloodGroup(user['blood_group']);
     emergencyContact.text = textOf(user['emergency_contact']);
     emergencyPhone.text = textOf(user['emergency_phone']);
     allergies.text = textOf(user['allergies']);
     healthNotes.text = textOf(user['health_notes']);
+    diveCertLevel.text = textOf(user['dive_cert_level']);
+    certNumber.text = textOf(user['cert_number']);
+    weight.text = textOf(user['weight']);
     halalFood.value = _asBool(
       user['halal_food'] ??
           user['needs_halal_food'] ??
@@ -3556,6 +3795,7 @@ class _PassengerControllers {
     'name': name.text.trim(),
     'nickname': nickname.text.trim().isEmpty ? null : nickname.text.trim(),
     'phone': phone.text.trim(),
+    'email': email.text.trim().isEmpty ? null : email.text.trim(),
     'id_card': idCard.text.trim().isEmpty ? null : idCard.text.trim(),
     'blood_group': bloodGroup.text.trim().isEmpty
         ? null
@@ -3571,6 +3811,13 @@ class _PassengerControllers {
     'health_notes': healthNotes.text.trim().isEmpty
         ? null
         : healthNotes.text.trim(),
+    'dive_cert_level': diveCertLevel.text.trim().isEmpty
+        ? null
+        : diveCertLevel.text.trim(),
+    'cert_number': certNumber.text.trim().isEmpty
+        ? null
+        : certNumber.text.trim(),
+    'weight': weight.text.trim().isEmpty ? null : weight.text.trim(),
   };
 
   void dispose() {
@@ -3578,12 +3825,16 @@ class _PassengerControllers {
     name.dispose();
     nickname.dispose();
     phone.dispose();
+    email.dispose();
     idCard.dispose();
     bloodGroup.dispose();
     emergencyContact.dispose();
     emergencyPhone.dispose();
     allergies.dispose();
     healthNotes.dispose();
+    diveCertLevel.dispose();
+    certNumber.dispose();
+    weight.dispose();
     halalFood.dispose();
   }
 }
@@ -3659,6 +3910,15 @@ String? Function(String?) _phoneValidator(String requiredMessage) {
     lengthMessage: 'เบอร์โทรศัพท์ต้องมี 10 หลัก',
     length: 10,
   );
+}
+
+String? _optionalEmailValidator(String? value) {
+  final email = value?.trim() ?? '';
+  if (email.isEmpty) return null;
+  if (!email.contains('@') || !email.contains('.')) {
+    return 'กรุณากรอกอีเมลให้ถูกต้อง';
+  }
+  return null;
 }
 
 String? Function(String?) _exactDigitsValidator({
