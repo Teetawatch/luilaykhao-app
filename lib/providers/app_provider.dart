@@ -97,9 +97,9 @@ class AppProvider extends ChangeNotifier {
     return setThemeMode(isDarkMode ? ThemeMode.light : ThemeMode.dark);
   }
 
-  Future<void> loadPublicData({String? search}) async {
+  Future<void> loadPublicData({String? search, String? type}) async {
     final results = await Future.wait([
-      api.get('trips', query: {'per_page': 30, 'search': search}),
+      api.get('trips', query: {'per_page': 30, 'search': search, 'type': type}),
       api.get('trips/featured'),
       api.get('categories'),
       api.get('reviews', query: {'per_page': 8}),

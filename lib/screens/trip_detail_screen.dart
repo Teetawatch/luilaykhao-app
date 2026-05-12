@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:luilaykhao_app/providers/app_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/api_config.dart';
 import '../theme/app_theme.dart';
@@ -18,6 +20,7 @@ const Color _mutedText = Color(0xFF64748B);
 const Color _softAccent = Color(0xFF10B981);
 const Color _chipBackground = Color(0xFFECFDF5);
 const double _contentOverlap = 32;
+const String _favoriteTripSlugsKey = 'favorite_trip_slugs';
 
 class TripDetailScreen extends StatefulWidget {
   final String? slug;
@@ -140,12 +143,15 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
   int? _selectedPickupPointId;
   String? _selectedPickupRegionKey;
   bool _hasAppliedInitialSelection = false;
+  bool _isFavorite = false;
+  String? _favoriteSlug;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_handleScroll);
     _syncInitialSelection();
+    _syncFavoriteState();
   }
 
   @override
@@ -153,6 +159,9 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.schedules != widget.schedules) {
       _syncInitialSelection();
+    }
+    if (oldWidget.trip['slug'] != widget.trip['slug']) {
+      _syncFavoriteState();
     }
   }
 
@@ -373,6 +382,69 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     });
   }
 
+  Future<void> _syncFavoriteState() async {
+    final slug = textOf(widget.trip['slug']).trim();
+    if (slug.isEmpty) {
+      if (mounted) setState(() => _isFavorite = false);
+      return;
+    }
+    if (_favoriteSlug == slug) return;
+
+    _favoriteSlug = slug;
+    final prefs = await SharedPreferences.getInstance();
+    final favorites = prefs.getStringList(_favoriteTripSlugsKey) ?? const [];
+    if (!mounted || _favoriteSlug != slug) return;
+
+    setState(() => _isFavorite = favorites.contains(slug));
+  }
+
+  Future<void> _handleShareTrip() async {
+    final slug = textOf(widget.trip['slug']).trim();
+    if (slug.isEmpty) {
+      _showTripDetailMessage(context, 'กำลังโหลดข้อมูลทริป');
+      return;
+    }
+
+    final title = _tripTitle(widget.trip);
+    final url = _tripShareUrl(widget.trip);
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: '$title\n$url', subject: title),
+      );
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: '$title\n$url'));
+      if (!mounted) return;
+      _showTripDetailMessage(context, 'คัดลอกลิงก์ทริปแล้ว');
+    }
+  }
+
+  Future<void> _handleFavoriteTap() async {
+    final slug = textOf(widget.trip['slug']).trim();
+    if (slug.isEmpty) {
+      _showTripDetailMessage(context, 'กำลังโหลดข้อมูลทริป');
+      return;
+    }
+
+    final next = !_isFavorite;
+    setState(() => _isFavorite = next);
+
+    final prefs = await SharedPreferences.getInstance();
+    final favorites = prefs.getStringList(_favoriteTripSlugsKey) ?? <String>[];
+    final updated = favorites.toSet();
+    if (next) {
+      updated.add(slug);
+    } else {
+      updated.remove(slug);
+    }
+    await prefs.setStringList(_favoriteTripSlugsKey, updated.toList());
+
+    if (!mounted) return;
+    _showTripDetailMessage(
+      context,
+      next ? 'บันทึกทริปที่สนใจแล้ว' : 'นำออกจากทริปที่สนใจแล้ว',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final heroHeight = _heroHeight(context);
@@ -393,6 +465,9 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
               isLoading: widget.isLoading,
               isCollapsed: _isCollapsed,
               expandedHeight: heroHeight,
+              isFavorite: _isFavorite,
+              onSharePressed: _handleShareTrip,
+              onFavoritePressed: _handleFavoriteTap,
             ),
             SliverToBoxAdapter(
               child: Transform.translate(
@@ -475,6 +550,9 @@ class TravelSliverAppBar extends StatelessWidget {
   final bool isLoading;
   final bool isCollapsed;
   final double expandedHeight;
+  final bool isFavorite;
+  final VoidCallback onSharePressed;
+  final VoidCallback onFavoritePressed;
 
   const TravelSliverAppBar({
     super.key,
@@ -482,6 +560,9 @@ class TravelSliverAppBar extends StatelessWidget {
     required this.isLoading,
     required this.isCollapsed,
     required this.expandedHeight,
+    required this.isFavorite,
+    required this.onSharePressed,
+    required this.onFavoritePressed,
   });
 
   @override
@@ -525,13 +606,16 @@ class TravelSliverAppBar extends StatelessWidget {
         FloatingActionIconButton(
           icon: Icons.ios_share_rounded,
           isCollapsed: isCollapsed,
-          onPressed: () {},
+          onPressed: onSharePressed,
         ),
         const SizedBox(width: 8),
         FloatingActionIconButton(
-          icon: Icons.favorite_border_rounded,
+          icon: isFavorite
+              ? Icons.favorite_rounded
+              : Icons.favorite_border_rounded,
           isCollapsed: isCollapsed,
-          onPressed: () {},
+          foregroundColor: isFavorite ? const Color(0xFFE11D48) : null,
+          onPressed: onFavoritePressed,
         ),
         const SizedBox(width: 16),
       ],
@@ -701,12 +785,14 @@ class _GalleryImageFallback extends StatelessWidget {
 class FloatingActionIconButton extends StatefulWidget {
   final IconData icon;
   final bool isCollapsed;
+  final Color? foregroundColor;
   final VoidCallback onPressed;
 
   const FloatingActionIconButton({
     super.key,
     required this.icon,
     required this.isCollapsed,
+    this.foregroundColor,
     required this.onPressed,
   });
 
@@ -720,7 +806,9 @@ class _FloatingActionIconButtonState extends State<FloatingActionIconButton> {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = widget.isCollapsed ? _premiumText : Colors.white;
+    final foreground =
+        widget.foregroundColor ??
+        (widget.isCollapsed ? _premiumText : Colors.white);
     final background = widget.isCollapsed
         ? Colors.white.withValues(alpha: 0.94)
         : Colors.white.withValues(alpha: 0.18);
@@ -2544,6 +2632,20 @@ class _ItineraryItem {
 
 String _tripTitle(Map<String, dynamic> trip) {
   return textOf(trip['title'] ?? trip['name'], 'ทริปที่น่าสนใจ');
+}
+
+String _tripShareUrl(Map<String, dynamic> trip) {
+  final slug = Uri.encodeComponent(textOf(trip['slug']).trim());
+  if (slug.isEmpty) return '${ApiConfig.siteUrl}/trips';
+  return '${ApiConfig.siteUrl}/trips/$slug';
+}
+
+void _showTripDetailMessage(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
 }
 
 List<String> _galleryImages(Map<String, dynamic> trip) {

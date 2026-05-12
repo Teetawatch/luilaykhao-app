@@ -1212,7 +1212,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             controller: _emergencyContact,
                             label: 'ผู้ติดต่อฉุกเฉิน',
                             icon: Icons.contact_emergency_outlined,
-                            validator: _required('กรุณากรอกชื่อผู้ติดต่อฉุกเฉิน'),
+                            validator: _required(
+                              'กรุณากรอกชื่อผู้ติดต่อฉุกเฉิน',
+                            ),
                           ),
                           _ProfileTextField(
                             controller: _emergencyPhone,
@@ -1456,7 +1458,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      await context.read<AppProvider>().loadMyReviews();
+      final app = context.read<AppProvider>();
+      await Future.wait([app.loadAccountData(), app.loadMyReviews()]);
     } catch (e) {
       if (mounted) _showError(context, e);
     } finally {
@@ -1474,7 +1477,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
         .toSet();
     final reviewableBookings = app.bookings
         .map(asMap)
-        .where((booking) => _cleanText(booking['status']) == 'confirmed')
+        .where((booking) => _boolValue(booking['can_review']))
         .where((booking) {
           final id = int.tryParse(_cleanText(booking['id']));
           return id != null && !reviewedBookingIds.contains(id);
@@ -2923,6 +2926,13 @@ String? Function(String?) _required(String message) {
 int _numberValue(dynamic value, {int fallback = 0}) {
   final number = num.tryParse(value?.toString() ?? '');
   return number?.round() ?? fallback;
+}
+
+bool _boolValue(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final text = _cleanText(value).toLowerCase();
+  return text == 'true' || text == '1' || text == 'yes';
 }
 
 String _formatCompact(int value) {

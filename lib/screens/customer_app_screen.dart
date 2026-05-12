@@ -49,7 +49,6 @@ class _CustomerAppScreenState extends State<CustomerAppScreen> {
       const ExploreScreen(),
       const AllTripsScreen(),
       const MyBookingsScreen(),
-      const NotificationsScreen(),
       const ProfileScreen(),
       if (showStaffCheckIn) const StaffCheckInScreen(),
     ];
@@ -150,11 +149,6 @@ class CustomBottomNav extends StatelessWidget {
                     icon: Icon(Icons.confirmation_number_outlined),
                     selectedIcon: Icon(Icons.confirmation_number_rounded),
                     label: 'รายการจอง',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.chat_bubble_outline_rounded),
-                    selectedIcon: Icon(Icons.chat_bubble_rounded),
-                    label: 'ข้อความ',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.person_outline),
@@ -280,7 +274,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           app: app,
                           user: app.user,
                           onCategorySelected: (value) =>
-                              app.loadPublicData(search: value),
+                              app.loadPublicData(type: value),
                           onSearch: (value) => app.loadPublicData(
                             search: value.isEmpty ? null : value,
                           ),
@@ -319,25 +313,17 @@ class HeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = ApiConfig.mediaUrl(
-      trip?['cover_image'] ??
-          trip?['thumbnail_image'] ??
-          '/images/khaochangphueak.webp',
-    );
+    final image = ApiConfig.mediaUrl('/images/bgoverlaymobile.png');
     final size = MediaQuery.of(context).size;
     final heroHeight = (size.height * 0.50).clamp(420.0, 540.0);
     final compactWidth = size.width < 390;
     final horizontalPadding = compactWidth ? 18.0 : 24.0;
-    final contentBottom = compactWidth ? 78.0 : 82.0;
+    final contentBottom = compactWidth ? 146.0 : 156.0;
     final contentWidth = (size.width - (horizontalPadding * 2)).clamp(
       260.0,
       680.0,
     );
-    final titleSize = size.width >= 700
-        ? 42.0
-        : compactWidth
-        ? 30.0
-        : 34.0;
+    final titleSize = (size.width * 0.074).clamp(24.0, 36.0).toDouble();
     final subtitleSize = compactWidth ? 14.0 : 16.0;
 
     return SizedBox(
@@ -418,54 +404,13 @@ class HeroHeader extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 9,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF0A3D46,
-                              ).withValues(alpha: 0.58),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.12),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.explore_outlined,
-                                  color: Colors.white,
-                                  size: 17,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'แพลตฟอร์มจองและจัดทริปเที่ยวทั่วไทย',
-                                  style: GoogleFonts.anuphan(
-                                    color: Colors.white,
-                                    fontSize: compactWidth ? 12.0 : 14.0,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
                       Text(
                         'การเที่ยวที่ดี เริ่มจาก\nความรู้สึกที่ดี ตั้งแต่การจอง',
                         textAlign: TextAlign.start,
                         style: GoogleFonts.anuphan(
                           color: Colors.white,
                           fontSize: titleSize,
-                          height: 1.12,
+                          height: 1.24,
                           fontWeight: FontWeight.w900,
                           shadows: [
                             Shadow(
@@ -716,7 +661,7 @@ class _HeroTopBar extends StatelessWidget {
 class _HomeInspiredTopSection extends StatefulWidget {
   final AppProvider app;
   final Map<String, dynamic>? user;
-  final ValueChanged<String> onCategorySelected;
+  final ValueChanged<String?> onCategorySelected;
   final ValueChanged<String> onSearch;
 
   const _HomeInspiredTopSection({
@@ -747,9 +692,6 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
 
   @override
   Widget build(BuildContext context) {
-    final trips = widget.app.trips.map(asMap).toList();
-    final categories = _homeCategories;
-
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -768,24 +710,13 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
-                  itemCount: categories.length,
+                  itemCount: _homeCategories.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 18),
                   itemBuilder: (context, index) {
-                    final category = categories[index];
+                    final category = _homeCategories[index];
                     return _HomeCategoryBubble(
                       category: category,
-                      imageUrl: _categoryImageUrl(trips, category),
-                      onTap: () {
-                        if (category.searchTerm == null) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const AllTripsScreen(),
-                            ),
-                          );
-                        } else {
-                          widget.onCategorySelected(category.searchTerm!);
-                        }
-                      },
+                      onTap: () => widget.onCategorySelected(category.type),
                     );
                   },
                 ),
@@ -833,9 +764,9 @@ class _HeroSearchField extends StatelessWidget {
           height: 76,
           padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF163F49).withValues(alpha: 0.95),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            border: Border.all(color: const Color(0xFFE1E6E6)),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF082A30).withValues(alpha: 0.25),
@@ -848,7 +779,7 @@ class _HeroSearchField extends StatelessWidget {
             children: [
               const Icon(
                 Icons.search_rounded,
-                color: Color(0xFF9FB3B8),
+                color: Color(0xFF111313),
                 size: 34,
               ),
               const SizedBox(width: 14),
@@ -857,9 +788,9 @@ class _HeroSearchField extends StatelessWidget {
                   controller: controller,
                   onSubmitted: onSubmitted,
                   textInputAction: TextInputAction.search,
-                  cursorColor: Colors.white,
+                  cursorColor: const Color(0xFF111313),
                   style: GoogleFonts.anuphan(
-                    color: Colors.white,
+                    color: const Color(0xFF111313),
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
@@ -867,7 +798,7 @@ class _HeroSearchField extends StatelessWidget {
                     isDense: true,
                     hintText: 'ค้นหาปลายทาง กิจกรรม หรือทริปที่ใช่สำหรับคุณ',
                     hintStyle: GoogleFonts.anuphan(
-                      color: const Color(0xFF9FB3B8),
+                      color: const Color(0xFF111313).withValues(alpha: 0.62),
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -884,8 +815,8 @@ class _HeroSearchField extends StatelessWidget {
                 child: IconButton(
                   onPressed: onFilterTap,
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF0B5260),
+                    backgroundColor: const Color(0xFF0B5260),
+                    foregroundColor: Colors.white,
                     shape: const CircleBorder(),
                   ),
                   icon: const Icon(Icons.tune_rounded, size: 31),
@@ -901,12 +832,12 @@ class _HeroSearchField extends StatelessWidget {
 
 class _HomeCategoryData {
   final String label;
-  final String? searchTerm;
+  final String? type;
   final IconData icon;
 
   const _HomeCategoryData({
     required this.label,
-    required this.searchTerm,
+    required this.type,
     required this.icon,
   });
 }
@@ -914,41 +845,36 @@ class _HomeCategoryData {
 const _homeCategories = [
   _HomeCategoryData(
     label: 'เดินป่า',
-    searchTerm: 'trekking',
+    type: 'trekking',
     icon: Icons.hiking_rounded,
   ),
   _HomeCategoryData(
     label: 'ดำน้ำตื้น',
-    searchTerm: 'snorkeling',
+    type: 'snorkeling',
     icon: Icons.scuba_diving_rounded,
   ),
   _HomeCategoryData(
     label: 'เช่ารถตู้',
-    searchTerm: 'van',
+    type: 'van-service',
     icon: Icons.airport_shuttle_rounded,
   ),
   _HomeCategoryData(
     label: 'แคมป์ปิ้ง',
-    searchTerm: 'camping',
+    type: 'camping',
     icon: Icons.cabin_rounded,
   ),
   _HomeCategoryData(
     label: 'ทริปทั้งหมด',
-    searchTerm: null,
-    icon: Icons.waterfall_chart_rounded,
+    type: null,
+    icon: Icons.explore_rounded,
   ),
 ];
 
 class _HomeCategoryBubble extends StatelessWidget {
   final _HomeCategoryData category;
-  final String imageUrl;
   final VoidCallback onTap;
 
-  const _HomeCategoryBubble({
-    required this.category,
-    required this.imageUrl,
-    required this.onTap,
-  });
+  const _HomeCategoryBubble({required this.category, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -972,26 +898,12 @@ class _HomeCategoryBubble extends StatelessWidget {
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: imageUrl.isEmpty
-                    ? Container(
-                        color: const Color(0xFFE5F0EE),
-                        child: Icon(
-                          category.icon,
-                          color: const Color(0xFF0F766E),
-                        ),
-                      )
-                    : CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => Container(
-                          color: const Color(0xFFE5F0EE),
-                          child: Icon(
-                            category.icon,
-                            color: const Color(0xFF0F766E),
-                          ),
-                        ),
-                      ),
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFE5F0EE),
+                ),
+                child: Icon(category.icon, color: Color(0xFF0F766E), size: 31),
               ),
             ),
             const SizedBox(height: 10),
@@ -1018,85 +930,92 @@ class _LicenseAssuranceBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 18, 18, 18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF044C4D), Color(0xFF087C68)],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF044C4D).withValues(alpha: 0.24),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 66,
-            height: 66,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-            ),
-            child: const Icon(
-              Icons.verified_user_outlined,
-              color: Colors.white,
-              size: 44,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'จองมั่นใจ ปลอดภัย',
-                  style: GoogleFonts.anuphan(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'ผู้ประกอบการได้รับใบอนุญาตนำเที่ยว\nเลขที่ 12/03773',
-                  style: GoogleFonts.anuphan(
-                    color: Colors.white.withValues(alpha: 0.82),
-                    fontSize: 13,
-                    height: 1.45,
-                    fontWeight: FontWeight.w700,
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        final narrow = constraints.maxWidth < 430;
+        final padding = compact
+            ? const EdgeInsets.all(14)
+            : const EdgeInsets.fromLTRB(18, 16, 16, 16);
+        final iconBoxSize = compact ? 48.0 : (narrow ? 56.0 : 66.0);
+        final iconSize = compact ? 31.0 : (narrow ? 36.0 : 44.0);
+        final titleSize = compact ? 15.0 : 17.0;
+        final bodySize = compact ? 12.0 : 13.0;
+
+        void showLicenseDialog() {
+          showDialog<void>(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('ใบอนุญาตนำเที่ยว'),
+              content: const Text('เลขที่ 12/03773'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('ตกลง'),
                 ),
               ],
             ),
-          ),
-          TextButton.icon(
-            onPressed: () {
-              showDialog<void>(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: const Text('ใบอนุญาตนำเที่ยว'),
-                  content: const Text('เลขที่ 12/03773'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('ตกลง'),
-                    ),
-                  ],
+          );
+        }
+
+        Widget iconBox() {
+          return Container(
+            width: iconBoxSize,
+            height: iconBoxSize,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(compact ? 14 : 18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+            ),
+            child: Icon(
+              Icons.verified_user_outlined,
+              color: Colors.white,
+              size: iconSize,
+            ),
+          );
+        }
+
+        Widget textContent() {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'จองมั่นใจ ปลอดภัย',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.anuphan(
+                  color: Colors.white,
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w900,
                 ),
-              );
-            },
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'ใบอนุญาตประกอบธุรกิจนำเที่ยว\nเลขที่ 12/03773',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.anuphan(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontSize: bodySize,
+                  height: 1.42,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          );
+        }
+
+        Widget licenseButton() {
+          return TextButton.icon(
+            onPressed: showLicenseDialog,
             style: TextButton.styleFrom(
               foregroundColor: Colors.white,
               backgroundColor: const Color(0xFF083C42).withValues(alpha: 0.62),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 12 : 14,
+                vertical: compact ? 10 : 12,
+              ),
+              minimumSize: narrow ? const Size.fromHeight(42) : null,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
                 side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
@@ -1106,40 +1025,64 @@ class _LicenseAssuranceBanner extends StatelessWidget {
             icon: const Icon(Icons.chevron_right_rounded, size: 22),
             label: Text(
               'ดูใบอนุญาต',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.anuphan(
-                fontSize: 13,
+                fontSize: compact ? 12 : 13,
                 fontWeight: FontWeight.w900,
               ),
             ),
+          );
+        }
+
+        final content = narrow
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      iconBox(),
+                      SizedBox(width: compact ? 12 : 14),
+                      Expanded(child: textContent()),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  licenseButton(),
+                ],
+              )
+            : Row(
+                children: [
+                  iconBox(),
+                  const SizedBox(width: 16),
+                  Expanded(child: textContent()),
+                  const SizedBox(width: 12),
+                  Flexible(flex: 0, child: licenseButton()),
+                ],
+              );
+
+        return Container(
+          width: double.infinity,
+          padding: padding,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xFF044C4D), Color(0xFF087C68)],
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF044C4D).withValues(alpha: 0.24),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-        ],
-      ),
+          child: content,
+        );
+      },
     );
   }
-}
-
-String _categoryImageUrl(
-  List<Map<String, dynamic>> trips,
-  _HomeCategoryData category,
-) {
-  final term = category.searchTerm?.toLowerCase();
-  final match = trips.firstWhere((trip) {
-    if (term == null) return true;
-    final haystack = [
-      trip['type'],
-      trip['category'],
-      trip['category_name'],
-      trip['title'],
-    ].map(textOf).join(' ').toLowerCase();
-    return haystack.contains(term) ||
-        haystack.contains(category.label.toLowerCase());
-  }, orElse: () => trips.isNotEmpty ? trips.first : <String, dynamic>{});
-
-  return ApiConfig.mediaUrl(
-    match['thumbnail_image'] ??
-        match['cover_image'] ??
-        '/images/khaochangphueak.webp',
-  );
 }
 
 class HomeTopSection extends StatefulWidget {
@@ -5057,7 +5000,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     label: const Text('ยกเลิกการจอง'),
                   ),
                 ],
-                if (booking['status'] == 'confirmed')
+                if (_asBool(booking['can_review']))
                   OutlinedButton.icon(
                     onPressed: () => _review(context, booking),
                     icon: const Icon(Icons.rate_review_outlined),
@@ -6033,9 +5976,11 @@ class _PlannerSelectFrame extends StatelessWidget {
 
 String _tripTypeLabel(String type) {
   return switch (type.toLowerCase()) {
+    'all' => 'ทริปทั้งหมด',
     'trekking' => 'เดินป่า',
     'diving' => 'ดำน้ำ',
     'snorkeling' => 'ดำน้ำตื้น',
+    'van' || 'van-service' || 'van_service' => 'เช่ารถตู้',
     'climbing' => 'ปีนเขา',
     'camping' => 'แคมป์ปิ้ง',
     'kayaking' => 'พายเรือคายัค',
