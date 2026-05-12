@@ -13,7 +13,6 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
-import 'booking_lookup_screen.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';
 import 'profile_screen.dart';
@@ -48,8 +47,9 @@ class _CustomerAppScreenState extends State<CustomerAppScreen> {
     final showStaffCheckIn = app.canUseStaffCheckIn;
     final pages = [
       const ExploreScreen(),
+      const AllTripsScreen(),
       const MyBookingsScreen(),
-      BookingLookupScreen(embedded: true, onOpenBookings: () => selectTab(1)),
+      const NotificationsScreen(),
       const ProfileScreen(),
       if (showStaffCheckIn) const StaffCheckInScreen(),
     ];
@@ -83,20 +83,18 @@ class CustomBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(34),
         child: Container(
           decoration: BoxDecoration(
-            color: colorScheme.surface.withValues(alpha: 0.96),
+            color: Colors.white.withValues(alpha: 0.96),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 28,
-                offset: const Offset(0, 10),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.10),
+                blurRadius: 32,
+                offset: const Offset(0, 14),
               ),
             ],
           ),
@@ -105,28 +103,31 @@ class CustomBottomNav extends StatelessWidget {
             minimum: const EdgeInsets.fromLTRB(8, 4, 8, 6),
             child: NavigationBarTheme(
               data: NavigationBarThemeData(
-                height: 64,
+                height: 74,
                 backgroundColor: Colors.transparent,
-                indicatorColor: AppTheme.primaryColor.withValues(alpha: 0.10),
+                indicatorColor: Colors.transparent,
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 iconTheme: WidgetStateProperty.resolveWith((states) {
                   if (states.contains(WidgetState.selected)) {
-                    return IconThemeData(color: colorScheme.primary, size: 24);
+                    return const IconThemeData(
+                      color: Color(0xFF087C68),
+                      size: 30,
+                    );
                   }
-                  return IconThemeData(
-                    color: colorScheme.onSurfaceVariant,
-                    size: 24,
+                  return const IconThemeData(
+                    color: Color(0xFF667577),
+                    size: 27,
                   );
                 }),
                 labelTextStyle: WidgetStateProperty.resolveWith((states) {
                   return GoogleFonts.anuphan(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: states.contains(WidgetState.selected)
-                        ? FontWeight.w800
-                        : FontWeight.w500,
+                        ? FontWeight.w900
+                        : FontWeight.w600,
                     color: states.contains(WidgetState.selected)
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant,
+                        ? const Color(0xFF087C68)
+                        : const Color(0xFF667577),
                   );
                 }),
               ),
@@ -138,17 +139,22 @@ class CustomBottomNav extends StatelessWidget {
                   NavigationDestination(
                     icon: Icon(Icons.home_outlined),
                     selectedIcon: Icon(Icons.home_rounded),
-                    label: 'หน้าแรก',
+                    label: 'หน้าหลัก',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.search_rounded),
+                    selectedIcon: Icon(Icons.search_rounded),
+                    label: 'ค้นหา',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.confirmation_number_outlined),
                     selectedIcon: Icon(Icons.confirmation_number_rounded),
-                    label: 'การจอง',
+                    label: 'รายการจอง',
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.explore_outlined),
-                    selectedIcon: Icon(Icons.explore_rounded),
-                    label: 'ติดตาม',
+                    icon: Icon(Icons.chat_bubble_outline_rounded),
+                    selectedIcon: Icon(Icons.chat_bubble_rounded),
+                    label: 'ข้อความ',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.person_outline),
@@ -205,8 +211,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    final size = MediaQuery.of(context).size;
-    final heroHeight = size.height * 0.55;
 
     final notificationCount = app.notifications
         .where((item) => asMap(item)['is_read'] != true)
@@ -254,7 +258,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: AppTheme.background(context),
+        backgroundColor: Colors.white,
         body: Stack(
           children: [
             RefreshIndicator(
@@ -268,15 +272,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     clipBehavior: Clip.none,
                     children: [
                       HeroHeader(trip: heroTrip),
-                      // Position the card so it overlaps the Hero
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          16,
-                          heroHeight * 0.55 + 20,
-                          16,
-                          0,
-                        ),
-                        child: HomeTopSection(
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: -286,
+                        child: _HomeInspiredTopSection(
                           app: app,
                           user: app.user,
                           onCategorySelected: (value) =>
@@ -288,11 +288,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 318),
                   _PopularTripsSection(trips: showTrips),
-                  _PromotionsSection(
-                    promotions: app.promotions.map(asMap).toList(),
-                  ),
                   const SizedBox(height: 100), // Bottom padding for Nav Bar
                 ],
               ),
@@ -322,41 +319,34 @@ class HeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = ApiConfig.mediaUrl('/images/khaochangphueak.webp');
-    final size = MediaQuery.of(context).size;
-    final safeTop = MediaQuery.paddingOf(context).top;
-    final heroHeight = size.height * 0.55;
-    final compactWidth = size.width < 390;
-    final compactHeight = size.height < 700;
-    final horizontalPadding = compactWidth ? 18.0 : 24.0;
-    final contentTop = safeTop + (compactHeight ? 76.0 : 96.0);
-    final contentBottom = (heroHeight * (compactHeight ? 0.34 : 0.40)).clamp(
-      96.0,
-      220.0,
+    final image = ApiConfig.mediaUrl(
+      trip?['cover_image'] ??
+          trip?['thumbnail_image'] ??
+          '/images/khaochangphueak.webp',
     );
+    final size = MediaQuery.of(context).size;
+    final heroHeight = (size.height * 0.50).clamp(420.0, 540.0);
+    final compactWidth = size.width < 390;
+    final horizontalPadding = compactWidth ? 18.0 : 24.0;
+    final contentBottom = compactWidth ? 78.0 : 82.0;
     final contentWidth = (size.width - (horizontalPadding * 2)).clamp(
       260.0,
       680.0,
     );
     final titleSize = size.width >= 700
-        ? 36.0
+        ? 42.0
         : compactWidth
-        ? 24.0
-        : compactHeight
-        ? 26.0
-        : 28.0;
-    final subtitleSize = compactWidth ? 13.0 : 15.0;
+        ? 30.0
+        : 34.0;
+    final subtitleSize = compactWidth ? 14.0 : 16.0;
 
     return SizedBox(
       height: heroHeight,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Background Image with Gradient Overlay
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(16),
-            ),
+            borderRadius: BorderRadius.zero,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -371,10 +361,12 @@ class HeroHeader extends StatelessWidget {
                     ),
                   )
                 else
-                  Image.network(
-                    image,
+                  CachedNetworkImage(
+                    imageUrl: image,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    placeholder: (context, url) =>
+                        Container(color: const Color(0xFF0A3D46)),
+                    errorWidget: (_, __, ___) => Container(
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
@@ -414,7 +406,7 @@ class HeroHeader extends StatelessWidget {
           Positioned(
             left: horizontalPadding,
             right: horizontalPadding,
-            top: contentTop,
+            top: null,
             bottom: contentBottom,
             child: Center(
               child: FittedBox(
@@ -424,15 +416,56 @@ class HeroHeader extends StatelessWidget {
                   width: contentWidth,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 9,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF0A3D46,
+                              ).withValues(alpha: 0.58),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.12),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.explore_outlined,
+                                  color: Colors.white,
+                                  size: 17,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'แพลตฟอร์มจองและจัดทริปเที่ยวทั่วไทย',
+                                  style: GoogleFonts.anuphan(
+                                    color: Colors.white,
+                                    fontSize: compactWidth ? 12.0 : 14.0,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
                       Text(
                         'การเที่ยวที่ดี เริ่มจาก\nความรู้สึกที่ดี ตั้งแต่การจอง',
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.start,
                         style: GoogleFonts.anuphan(
                           color: Colors.white,
                           fontSize: titleSize,
-                          height: 1.2,
+                          height: 1.12,
                           fontWeight: FontWeight.w900,
                           shadows: [
                             Shadow(
@@ -443,10 +476,10 @@ class HeroHeader extends StatelessWidget {
                           ],
                         ),
                       ),
-                      SizedBox(height: compactHeight ? 8 : 12),
+                      const SizedBox(height: 12),
                       Text(
                         'ค้นหาทริปและประสบการณ์ที่พร้อมเดินทาง',
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.start,
                         style: GoogleFonts.anuphan(
                           color: Colors.white.withValues(alpha: 0.9),
                           fontSize: subtitleSize,
@@ -489,7 +522,7 @@ class _HeroTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatar = ApiConfig.mediaUrl(user?['avatar_url']);
-    final name = textOf(user?['name'], 'ลูกทริปลุยเลเขา');
+    final name = textOf(user?['name'], 'ลุยเลเขา');
     final firstName =
         name.split(' ').where((part) => part.isNotEmpty).firstOrNull ?? name;
     final initial = firstName.characters.first.toUpperCase();
@@ -538,47 +571,95 @@ class _HeroTopBar extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 12),
+              padding: const EdgeInsets.fromLTRB(28, 16, 28, 14),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Colors.white,
-                    backgroundImage: avatar.isEmpty
-                        ? null
-                        : NetworkImage(avatar),
-                    child: avatar.isEmpty
-                        ? Text(
-                            initial,
-                            style: const TextStyle(
-                              color: AppTheme.primaryColor,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'สวัสดี, $firstName',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        shadows: backgroundProgress < 0.45
-                            ? const [
-                                Shadow(
-                                  color: Colors.black38,
-                                  offset: Offset(0, 2),
-                                  blurRadius: 4,
+                  Container(
+                    width: 58,
+                    height: 58,
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.10),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: avatar.isNotEmpty
+                          ? Image.network(avatar, fit: BoxFit.cover)
+                          : Image.asset(
+                              'logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Center(
+                                child: Text(
+                                  initial,
+                                  style: const TextStyle(
+                                    color: AppTheme.primaryColor,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
-                              ]
-                            : null,
-                      ),
+                              ),
+                            ),
                     ),
                   ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'สวัสดี, $firstName',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 22,
+                            height: 1.05,
+                            fontWeight: FontWeight.w900,
+                            shadows: backgroundProgress < 0.45
+                                ? const [
+                                    Shadow(
+                                      color: Colors.black38,
+                                      offset: Offset(0, 2),
+                                      blurRadius: 4,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'พร้อมออกเดินทางครั้งใหม่?',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.anuphan(
+                            color: Color.lerp(
+                              Colors.white.withValues(alpha: 0.88),
+                              AppTheme.textSecondary,
+                              backgroundProgress,
+                            ),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            shadows: backgroundProgress < 0.45
+                                ? const [
+                                    Shadow(
+                                      color: Colors.black38,
+                                      offset: Offset(0, 1),
+                                      blurRadius: 4,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 14),
                   ClipOval(
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
@@ -587,8 +668,8 @@ class _HeroTopBar extends StatelessWidget {
                         children: [
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
-                            width: 44,
-                            height: 44,
+                            width: 54,
+                            height: 54,
                             color: Colors.white.withValues(
                               alpha: 0.20 + (0.58 * backgroundProgress),
                             ),
@@ -630,6 +711,435 @@ class _HeroTopBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HomeInspiredTopSection extends StatefulWidget {
+  final AppProvider app;
+  final Map<String, dynamic>? user;
+  final ValueChanged<String> onCategorySelected;
+  final ValueChanged<String> onSearch;
+
+  const _HomeInspiredTopSection({
+    required this.app,
+    required this.user,
+    required this.onCategorySelected,
+    required this.onSearch,
+  });
+
+  @override
+  State<_HomeInspiredTopSection> createState() =>
+      _HomeInspiredTopSectionState();
+}
+
+class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _submitSearch() {
+    FocusScope.of(context).unfocus();
+    widget.onSearch(_searchController.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final trips = widget.app.trips.map(asMap).toList();
+    final categories = _homeCategories;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(top: 40),
+          padding: const EdgeInsets.fromLTRB(20, 70, 20, 22),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(42)),
+          ),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 102,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: categories.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 18),
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    return _HomeCategoryBubble(
+                      category: category,
+                      imageUrl: _categoryImageUrl(trips, category),
+                      onTap: () {
+                        if (category.searchTerm == null) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AllTripsScreen(),
+                            ),
+                          );
+                        } else {
+                          widget.onCategorySelected(category.searchTerm!);
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 22),
+              const _LicenseAssuranceBanner(),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 28,
+          right: 28,
+          child: _HeroSearchField(
+            controller: _searchController,
+            onSubmitted: (_) => _submitSearch(),
+            onFilterTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const AllTripsScreen())),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroSearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback onFilterTap;
+
+  const _HeroSearchField({
+    required this.controller,
+    required this.onSubmitted,
+    required this.onFilterTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          height: 76,
+          padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF163F49).withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF082A30).withValues(alpha: 0.25),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.search_rounded,
+                color: Color(0xFF9FB3B8),
+                size: 34,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  onSubmitted: onSubmitted,
+                  textInputAction: TextInputAction.search,
+                  cursorColor: Colors.white,
+                  style: GoogleFonts.anuphan(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'ค้นหาปลายทาง กิจกรรม หรือทริปที่ใช่สำหรับคุณ',
+                    hintStyle: GoogleFonts.anuphan(
+                      color: const Color(0xFF9FB3B8),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    border: InputBorder.none,
+                    filled: false,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 60,
+                height: 60,
+                child: IconButton(
+                  onPressed: onFilterTap,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0B5260),
+                    shape: const CircleBorder(),
+                  ),
+                  icon: const Icon(Icons.tune_rounded, size: 31),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeCategoryData {
+  final String label;
+  final String? searchTerm;
+  final IconData icon;
+
+  const _HomeCategoryData({
+    required this.label,
+    required this.searchTerm,
+    required this.icon,
+  });
+}
+
+const _homeCategories = [
+  _HomeCategoryData(
+    label: 'เดินป่า',
+    searchTerm: 'trekking',
+    icon: Icons.hiking_rounded,
+  ),
+  _HomeCategoryData(
+    label: 'ดำน้ำตื้น',
+    searchTerm: 'snorkeling',
+    icon: Icons.scuba_diving_rounded,
+  ),
+  _HomeCategoryData(
+    label: 'เช่ารถตู้',
+    searchTerm: 'van',
+    icon: Icons.airport_shuttle_rounded,
+  ),
+  _HomeCategoryData(
+    label: 'แคมป์ปิ้ง',
+    searchTerm: 'camping',
+    icon: Icons.cabin_rounded,
+  ),
+  _HomeCategoryData(
+    label: 'ทริปทั้งหมด',
+    searchTerm: null,
+    icon: Icons.waterfall_chart_rounded,
+  ),
+];
+
+class _HomeCategoryBubble extends StatelessWidget {
+  final _HomeCategoryData category;
+  final String imageUrl;
+  final VoidCallback onTap;
+
+  const _HomeCategoryBubble({
+    required this.category,
+    required this.imageUrl,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 70,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Column(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: imageUrl.isEmpty
+                    ? Container(
+                        color: const Color(0xFFE5F0EE),
+                        child: Icon(
+                          category.icon,
+                          color: const Color(0xFF0F766E),
+                        ),
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(
+                          color: const Color(0xFFE5F0EE),
+                          child: Icon(
+                            category.icon,
+                            color: const Color(0xFF0F766E),
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              category.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.anuphan(
+                color: const Color(0xFF667577),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LicenseAssuranceBanner extends StatelessWidget {
+  const _LicenseAssuranceBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 18, 18, 18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0xFF044C4D), Color(0xFF087C68)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF044C4D).withValues(alpha: 0.24),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 66,
+            height: 66,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+            ),
+            child: const Icon(
+              Icons.verified_user_outlined,
+              color: Colors.white,
+              size: 44,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'จองมั่นใจ ปลอดภัย',
+                  style: GoogleFonts.anuphan(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'ผู้ประกอบการได้รับใบอนุญาตนำเที่ยว\nเลขที่ 12/03773',
+                  style: GoogleFonts.anuphan(
+                    color: Colors.white.withValues(alpha: 0.82),
+                    fontSize: 13,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () {
+              showDialog<void>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('ใบอนุญาตนำเที่ยว'),
+                  content: const Text('เลขที่ 12/03773'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('ตกลง'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFF083C42).withValues(alpha: 0.62),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+              ),
+            ),
+            iconAlignment: IconAlignment.end,
+            icon: const Icon(Icons.chevron_right_rounded, size: 22),
+            label: Text(
+              'ดูใบอนุญาต',
+              style: GoogleFonts.anuphan(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _categoryImageUrl(
+  List<Map<String, dynamic>> trips,
+  _HomeCategoryData category,
+) {
+  final term = category.searchTerm?.toLowerCase();
+  final match = trips.firstWhere((trip) {
+    if (term == null) return true;
+    final haystack = [
+      trip['type'],
+      trip['category'],
+      trip['category_name'],
+      trip['title'],
+    ].map(textOf).join(' ').toLowerCase();
+    return haystack.contains(term) ||
+        haystack.contains(category.label.toLowerCase());
+  }, orElse: () => trips.isNotEmpty ? trips.first : <String, dynamic>{});
+
+  return ApiConfig.mediaUrl(
+    match['thumbnail_image'] ??
+        match['cover_image'] ??
+        '/images/khaochangphueak.webp',
+  );
 }
 
 class HomeTopSection extends StatefulWidget {
@@ -847,24 +1357,13 @@ class _PopularTripsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 48),
-      padding: const EdgeInsets.fromLTRB(20, 40, 0, 40),
-      decoration: BoxDecoration(
-        color: AppTheme.subtleSurface(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(56)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 20,
-            offset: const Offset(0, -10),
-          ),
-        ],
-      ),
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 0, 0, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(right: 24, left: 4),
+            padding: const EdgeInsets.only(right: 24),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -873,36 +1372,34 @@ class _PopularTripsSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ทริปยอดนิยม',
+                        'ทริปแนะนำ',
                         style: GoogleFonts.anuphan(
-                          color: AppTheme.textMain,
-                          fontSize: 26,
+                          color: const Color(0xFF063F46),
+                          fontSize: 25,
                           height: 1.1,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox.shrink(),
                       Text(
-                        'คัดสรรจุดหมายปลายทางที่ดีที่สุดสำหรับคุณ',
+                        '',
                         style: GoogleFonts.anuphan(
                           color: AppTheme.textSecondary,
-                          fontSize: 13,
+                          fontSize: 0,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
-                TextButton.icon(
+                TextButton(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const AllTripsScreen()),
                   ),
-                  iconAlignment: IconAlignment.end,
-                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                  label: Text(
+                  child: Text(
                     'ดูทั้งหมด',
                     style: GoogleFonts.anuphan(
-                      color: AppTheme.primaryColor,
+                      color: const Color(0xFF063F46),
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                     ),
@@ -911,7 +1408,7 @@ class _PopularTripsSection extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 22),
           if (trips.isEmpty)
             const Padding(
               padding: EdgeInsets.only(right: 20),
@@ -923,16 +1420,16 @@ class _PopularTripsSection extends StatelessWidget {
             )
           else
             SizedBox(
-              height: 320,
+              height: 250,
               child: ListView.separated(
                 clipBehavior: Clip.none,
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.only(right: 20),
-                itemCount: trips.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 20),
+                itemCount: trips.take(6).length,
+                separatorBuilder: (_, __) => const SizedBox(width: 14),
                 itemBuilder: (context, index) => SizedBox(
-                  width: MediaQuery.of(context).size.width > 700 ? 340 : 300,
-                  child: _PopularTripCard(trip: trips[index]),
+                  width: MediaQuery.of(context).size.width > 700 ? 230 : 180,
+                  child: _ReferenceTripCard(trip: trips[index]),
                 ),
               ),
             ),
@@ -944,10 +1441,10 @@ class _PopularTripsSection extends StatelessWidget {
 
 // ─── Promotions Section ──────────────────────────────────────────────────────
 
-class _PromotionsSection extends StatelessWidget {
+class PromotionsSection extends StatelessWidget {
   final List<Map<String, dynamic>> promotions;
 
-  const _PromotionsSection({required this.promotions});
+  const PromotionsSection({required this.promotions});
 
   @override
   Widget build(BuildContext context) {
@@ -2546,10 +3043,10 @@ class _MetaPill extends StatelessWidget {
   }
 }
 
-class _PopularTripCard extends StatelessWidget {
+class PopularTripCardLegacy extends StatelessWidget {
   final Map<String, dynamic> trip;
 
-  const _PopularTripCard({required this.trip});
+  const PopularTripCardLegacy({required this.trip});
 
   @override
   Widget build(BuildContext context) {
@@ -2751,6 +3248,184 @@ class _ParticipantRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ReferenceTripCard extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const _ReferenceTripCard({required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final image = ApiConfig.mediaUrl(
+      trip['thumbnail_image'] ?? trip['cover_image'],
+    );
+    final slug = textOf(trip['slug']);
+    final type = textOf(
+      trip['category_name'] ?? trip['category'] ?? trip['type'],
+      'ทริป',
+    );
+    final title = textOf(trip['title'], '-');
+    final duration = _durationText(trip);
+    final reviewCount = textOf(trip['review_count'], '0');
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: slug.isEmpty
+          ? null
+          : () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => TripDetailScreen(slug: slug)),
+            ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (image.isEmpty)
+              Container(
+                color: const Color(0xFFE5F0EE),
+                child: const Icon(
+                  Icons.landscape_rounded,
+                  color: Color(0xFF0F766E),
+                  size: 42,
+                ),
+              )
+            else
+              CachedNetworkImage(
+                imageUrl: image,
+                fit: BoxFit.cover,
+                placeholder: (context, url) =>
+                    Container(color: const Color(0xFFE5F0EE)),
+                errorWidget: (_, __, ___) => Container(
+                  color: const Color(0xFFE5F0EE),
+                  child: const Icon(
+                    Icons.landscape_rounded,
+                    color: Color(0xFF0F766E),
+                    size: 42,
+                  ),
+                ),
+              ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.05),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.74),
+                  ],
+                  stops: const [0.0, 0.46, 1.0],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 14,
+              left: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.90),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  _tripTypeLabel(type),
+                  style: GoogleFonts.anuphan(
+                    color: const Color(0xFF087C68),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.anuphan(
+                      color: Colors.white,
+                      fontSize: 16,
+                      height: 1.15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    duration,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.anuphan(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: money(
+                                  trip['min_price'] ??
+                                      trip['price_per_person'] ??
+                                      trip['price'],
+                                ),
+                                style: const TextStyle(
+                                  color: Color(0xFFAFC4FF),
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const TextSpan(
+                                text: ' / คน',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.anuphan(fontSize: 14),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFFFB020),
+                        size: 15,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${numberText(trip['rating'], fallback: '4.9')} ($reviewCount รีวิว)',
+                        style: GoogleFonts.anuphan(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -5367,6 +6042,12 @@ String _tripTypeLabel(String type) {
     'cycling' => 'ปั่นจักรยาน',
     _ => type,
   };
+}
+
+String _durationText(Map<String, dynamic> trip) {
+  final days = int.tryParse(textOf(trip['duration_days'], '1')) ?? 1;
+  if (days <= 1) return '1 วัน';
+  return '$days วัน ${days - 1} คืน';
 }
 
 Color _tripTypeColor(String type) {
