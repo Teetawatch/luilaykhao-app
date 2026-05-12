@@ -960,8 +960,9 @@ class MustKnowSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _textItems(trip['must_know']);
-    if (items.isEmpty) return const SizedBox.shrink();
+    final items = _mustKnowItems(trip);
+    final remarks = textOf(asMap(trip['must_know'])['remarks']).trim();
+    if (items.isEmpty && remarks.isEmpty) return const SizedBox.shrink();
 
     return _PremiumCard(
       child: Column(
@@ -975,11 +976,22 @@ class MustKnowSection extends StatelessWidget {
           ...items.map(
             (item) => _FeatureRow(
               icon: Icons.priority_high_rounded,
-              title: item,
+              title: item.price > 0
+                  ? '${item.name} · ${money(item.price)} ${item.priceTypeLabel}'
+                  : item.name,
               iconColor: const Color(0xFFB45309),
               iconBackground: const Color(0xFFFFFBEB),
             ),
           ),
+          if (remarks.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _FeatureRow(
+              icon: Icons.notes_rounded,
+              title: remarks,
+              iconColor: const Color(0xFFB45309),
+              iconBackground: const Color(0xFFFFFBEB),
+            ),
+          ],
         ],
       ),
     );
@@ -2494,6 +2506,21 @@ class _HighlightItem {
   const _HighlightItem({required this.title, this.description, this.icon});
 }
 
+class _MustKnowItem {
+  final String name;
+  final num price;
+  final String priceType;
+
+  const _MustKnowItem({
+    required this.name,
+    required this.price,
+    required this.priceType,
+  });
+
+  String get priceTypeLabel =>
+      priceType == 'per_person' ? 'ต่อคน' : 'ครั้งเดียว';
+}
+
 class _ItinerarySector {
   final String title;
   final List<_ItineraryItem> items;
@@ -2679,6 +2706,48 @@ List<String> _textItems(dynamic raw) {
         ).trim();
       })
       .where((item) => item.isNotEmpty)
+      .toList();
+}
+
+List<_MustKnowItem> _mustKnowItems(Map<String, dynamic> trip) {
+  final raw = trip['must_know'];
+  if (raw is String) {
+    return raw
+        .split(RegExp(r'[\r\n]+'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .map(
+          (name) =>
+              _MustKnowItem(name: name, price: 0, priceType: 'per_booking'),
+        )
+        .toList();
+  }
+
+  final mustKnow = asMap(raw);
+  final rawItems = mustKnow.isNotEmpty
+      ? asList(mustKnow['items'])
+      : asList(raw);
+
+  return rawItems
+      .asMap()
+      .entries
+      .map((entry) {
+        final item = entry.value;
+        final data = asMap(item);
+        final name = item is String
+            ? item.trim()
+            : textOf(data['name'] ?? data['title'] ?? data['label']).trim();
+        if (name.isEmpty) return null;
+
+        return _MustKnowItem(
+          name: name,
+          price: _asNum(data['price']),
+          priceType: data['price_type'] == 'per_person'
+              ? 'per_person'
+              : 'per_booking',
+        );
+      })
+      .whereType<_MustKnowItem>()
       .toList();
 }
 

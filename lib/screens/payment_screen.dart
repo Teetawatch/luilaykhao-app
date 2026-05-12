@@ -353,7 +353,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 16),
               if (status == 'pending') const _PaymentNotice(),
               if (status == 'pending') const SizedBox(height: 10),
-              if (status == 'pending') _PaymentCountdownBanner(booking: booking),
+              if (status == 'pending')
+                _PaymentCountdownBanner(booking: booking),
               if (status == 'pending') const SizedBox(height: 16),
               if (checkInReady) ...[
                 _PaymentCompletedCard(booking: booking),
@@ -479,7 +480,9 @@ class _PaymentCountdownBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final createdAt = DateTime.tryParse(textOf(booking['created_at']))?.toLocal();
+    final createdAt = DateTime.tryParse(
+      textOf(booking['created_at']),
+    )?.toLocal();
     if (createdAt == null) return const SizedBox.shrink();
 
     final deadline = createdAt.add(const Duration(minutes: _kDeadlineMinutes));
@@ -487,8 +490,9 @@ class _PaymentCountdownBanner extends StatelessWidget {
     final expired = remaining.isNegative || remaining.inSeconds <= 0;
     final isUrgent = !expired && remaining.inSeconds <= 120;
 
-    final accent =
-        expired || isUrgent ? AppTheme.errorColor : const Color(0xFF0F8F75);
+    final accent = expired || isUrgent
+        ? AppTheme.errorColor
+        : const Color(0xFF0F8F75);
     final bgColor = accent.withValues(
       alpha: AppTheme.isDark(context) ? 0.15 : 0.08,
     );
@@ -610,28 +614,30 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
 
     setState(() => _busyScheduleId = scheduleId);
     try {
-      final results =
-          await Future.wait([app.trip(slug), app.schedules(slug)]);
+      final results = await Future.wait([app.trip(slug), app.schedules(slug)]);
       if (!mounted) return;
       final seatIds = asList(lock['seat_ids'])
           .map((item) => item?.toString() ?? '')
           .where((id) => id.isNotEmpty)
           .toList();
       final pickupPointId = int.tryParse(textOf(lock['pickup_point_id']));
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => BookingFlowScreen(
-          trip: Map<String, dynamic>.from(results[0] as Map),
-          schedules: List<dynamic>.from(results[1] as List),
-          initialScheduleId: scheduleId,
-          initialPickupPointId: pickupPointId,
-          initialSeatIds: seatIds,
-          resumeLockedSeats: true,
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BookingFlowScreen(
+            trip: Map<String, dynamic>.from(results[0] as Map),
+            schedules: List<dynamic>.from(results[1] as List),
+            initialScheduleId: scheduleId,
+            initialPickupPointId: pickupPointId,
+            initialSeatIds: seatIds,
+            resumeLockedSeats: true,
+          ),
         ),
-      ));
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.maybeOf(context)
-            ?.showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.maybeOf(
+          context,
+        )?.showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _busyScheduleId = null);
@@ -652,26 +658,30 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
 
     setState(() => _busyScheduleId = scheduleId);
     try {
-      final results =
-          await Future.wait([app.trip(slug), app.schedules(slug)]);
+      final results = await Future.wait([app.trip(slug), app.schedules(slug)]);
       await app.cancelActiveSeatLock(scheduleId, seatIds: seatIds);
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('ยกเลิกการจองแล้ว เลือกที่นั่งใหม่ได้เลย')),
-      );
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => BookingFlowScreen(
-          trip: Map<String, dynamic>.from(results[0] as Map),
-          schedules: List<dynamic>.from(results[1] as List),
-          initialScheduleId: scheduleId,
-          initialPickupPointId: pickupPointId,
-          startAtSeatSelection: true,
+        const SnackBar(
+          content: Text('ยกเลิกการจองแล้ว เลือกที่นั่งใหม่ได้เลย'),
         ),
-      ));
+      );
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BookingFlowScreen(
+            trip: Map<String, dynamic>.from(results[0] as Map),
+            schedules: List<dynamic>.from(results[1] as List),
+            initialScheduleId: scheduleId,
+            initialPickupPointId: pickupPointId,
+            startAtSeatSelection: true,
+          ),
+        ),
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.maybeOf(context)
-            ?.showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.maybeOf(
+          context,
+        )?.showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _busyScheduleId = null);
@@ -838,6 +848,9 @@ class _BookingSummaryCard extends StatelessWidget {
     );
     final passengers = asList(booking['passengers']);
     final seats = asList(booking['seats']);
+    final selectedAddons = asList(
+      booking['selected_addons'],
+    ).map(asMap).toList();
     final pickupPoint = asMap(booking['pickup_point']);
     final pickupText = textOf(
       pickupPoint['pickup_location'] ??
@@ -910,6 +923,22 @@ class _BookingSummaryCard extends StatelessWidget {
                   label: 'จุดขึ้นรถ',
                   value: pickupText,
                 ),
+                if (selectedAddons.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  ...selectedAddons.map((addon) {
+                    final quantity = textOf(addon['quantity'], '1');
+                    final name = textOf(addon['name'], 'ตัวเลือกเสริม');
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _SummaryRow(
+                        icon: Icons.add_task_rounded,
+                        label: quantity == '1' ? name : '$name x$quantity',
+                        value: money(addon['total_price']),
+                        valueColor: const Color(0xFFB45309),
+                      ),
+                    );
+                  }),
+                ],
                 const SizedBox(height: 10),
                 _SummaryRow(
                   icon: Icons.receipt_long_outlined,
@@ -1411,8 +1440,10 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
       image.dispose();
       if (byteData == null) throw Exception('ไม่สามารถสร้างรูป QR CODE ได้');
 
-      final safeRef = textOf(widget.booking['booking_ref'], 'checkin')
-          .replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      final safeRef = textOf(
+        widget.booking['booking_ref'],
+        'checkin',
+      ).replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
       final fileName = 'luilaykhao-checkin-$safeRef-qr.png';
       final bytes = byteData.buffer.asUint8List();
 

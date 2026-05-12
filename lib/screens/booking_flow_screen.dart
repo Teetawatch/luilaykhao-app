@@ -112,6 +112,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   Timer? _seatRefreshTimer;
   final Set<String> _selectedSeatIds = <String>{};
   final Set<String> _lockedSeatIds = <String>{};
+  final Set<int> _selectedAddonIndexes = <int>{};
 
   Map<String, dynamic> get _selectedSchedule {
     if (widget.schedules.isEmpty) return <String, dynamic>{};
@@ -143,7 +144,14 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     pickupPoint: _selectedPickupPoint,
     travelerCount: _passengers.length,
     isJoinTrip: _isJoinTrip,
+    selectedAddons: _selectedAddonOptions,
   );
+
+  List<_AddonOption> get _addonOptions => _addonOptionsFrom(widget.trip);
+
+  List<_AddonOption> get _selectedAddonOptions => _addonOptions
+      .where((option) => _selectedAddonIndexes.contains(option.index))
+      .toList(growable: false);
 
   bool get _selectedScheduleAllowsJoinTrip =>
       _asBool(_selectedSchedule['join_trip_enabled']);
@@ -662,6 +670,23 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           onUseProfile: _fillPassengerFromProfile,
         ),
         const SizedBox(height: 24),
+        if (_addonOptions.isNotEmpty) ...[
+          AddonSelectionSection(
+            addons: _addonOptions,
+            selectedIndexes: _selectedAddonIndexes,
+            travelerCount: _passengers.length,
+            onChanged: (index, selected) {
+              setState(() {
+                if (selected) {
+                  _selectedAddonIndexes.add(index);
+                } else {
+                  _selectedAddonIndexes.remove(index);
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 24),
+        ],
         PricingSummaryCard(
           pricing: _pricing,
           promoController: _promo,
@@ -815,6 +840,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             : _promo.text.trim().toUpperCase(),
         'seat_ids': _hasSeatMap ? _selectedSeatList : <String>[],
         'is_join_trip': _isJoinTrip,
+        if (_selectedAddonIndexes.isNotEmpty)
+          'selected_addons': (_selectedAddonIndexes.toList()..sort()),
         'passengers': _passengers.map((p) => p.payload()).toList(),
       });
       if (!mounted) return;
@@ -2562,6 +2589,14 @@ class PricingSummaryCard extends StatelessWidget {
           const SizedBox(height: 10),
           _PriceRow(label: 'ราคาทริป', value: money(pricing.tripSubtotal)),
           const SizedBox(height: 10),
+          if (pricing.addonsTotal > 0) ...[
+            _PriceRow(
+              label: 'ตัวเลือกเสริม',
+              value: money(pricing.addonsTotal),
+              valueColor: const Color(0xFFB45309),
+            ),
+            const SizedBox(height: 10),
+          ],
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 180),
             crossFadeState: expanded
@@ -2626,6 +2661,117 @@ class PricingSummaryCard extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class AddonSelectionSection extends StatelessWidget {
+  final List<_AddonOption> addons;
+  final Set<int> selectedIndexes;
+  final int travelerCount;
+  final void Function(int index, bool selected) onChanged;
+
+  const AddonSelectionSection({
+    super.key,
+    required this.addons,
+    required this.selectedIndexes,
+    required this.travelerCount,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedTotal = addons
+        .where((addon) => selectedIndexes.contains(addon.index))
+        .fold<num>(0, (sum, addon) => sum + addon.totalFor(travelerCount));
+
+    return _SectionShell(
+      title: 'ตัวเลือกเสริม',
+      icon: Icons.add_task_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (selectedTotal > 0) ...[
+            _PriceRow(
+              label: 'รายการเสริมที่เลือก',
+              value: money(selectedTotal),
+              valueColor: const Color(0xFFB45309),
+            ),
+            const SizedBox(height: 12),
+          ],
+          ...addons.map((addon) {
+            final selected = selectedIndexes.contains(addon.index);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () => onChanged(addon.index, !selected),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? const Color(0xFFFFFBEB)
+                        : AppTheme.fieldSurface(context),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: selected
+                          ? const Color(0xFFF59E0B)
+                          : AppTheme.border(context),
+                      width: selected ? 1.4 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: selected,
+                        activeColor: const Color(0xFFF59E0B),
+                        onChanged: (value) =>
+                            onChanged(addon.index, value ?? false),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              addon.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.anuphan(
+                                color: AppTheme.onSurface(context),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${money(addon.price)} ${addon.priceTypeLabel}',
+                              style: GoogleFonts.anuphan(
+                                color: AppTheme.mutedText(context),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '+${money(addon.totalFor(travelerCount))}',
+                        style: GoogleFonts.anuphan(
+                          color: const Color(0xFFB45309),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -3700,12 +3846,14 @@ class _CheckoutValidationException implements Exception {
 class _PricingQuote {
   final num pricePerTraveler;
   final int travelerCount;
+  final num addonsTotal;
   final num serviceFee;
   final num discount;
 
   const _PricingQuote({
     required this.pricePerTraveler,
     required this.travelerCount,
+    required this.addonsTotal,
     required this.serviceFee,
     required this.discount,
   });
@@ -3713,7 +3861,7 @@ class _PricingQuote {
   num get tripSubtotal => pricePerTraveler * travelerCount;
 
   num get total {
-    final value = tripSubtotal + serviceFee - discount;
+    final value = tripSubtotal + addonsTotal + serviceFee - discount;
     return value < 0 ? 0 : value;
   }
 
@@ -3723,6 +3871,7 @@ class _PricingQuote {
     required Map<String, dynamic> pickupPoint,
     required int travelerCount,
     required bool isJoinTrip,
+    List<_AddonOption> selectedAddons = const [],
   }) {
     final basePrice = _asNum(
       isJoinTrip
@@ -3745,10 +3894,34 @@ class _PricingQuote {
           ? pickupPrice
           : basePrice,
       travelerCount: travelerCount,
+      addonsTotal: selectedAddons.fold<num>(
+        0,
+        (sum, addon) => sum + addon.totalFor(travelerCount),
+      ),
       serviceFee: 0,
       discount: 0,
     );
   }
+}
+
+class _AddonOption {
+  final int index;
+  final String name;
+  final num price;
+  final String priceType;
+
+  const _AddonOption({
+    required this.index,
+    required this.name,
+    required this.price,
+    required this.priceType,
+  });
+
+  bool get isPerPerson => priceType == 'per_person';
+
+  String get priceTypeLabel => isPerPerson ? 'ต่อคน' : 'ครั้งเดียว';
+
+  num totalFor(int travelerCount) => price * (isPerPerson ? travelerCount : 1);
 }
 
 class _PassengerControllers {
@@ -3963,6 +4136,37 @@ bool _asBool(dynamic value) {
       normalized == '1' ||
       normalized == 'yes' ||
       normalized == 'y';
+}
+
+List<_AddonOption> _addonOptionsFrom(Map<String, dynamic> trip) {
+  final mustKnow = asMap(trip['must_know']);
+  final rawItems = mustKnow.isNotEmpty
+      ? asList(mustKnow['items'])
+      : asList(trip['must_know']);
+  final options = <_AddonOption>[];
+
+  for (var i = 0; i < rawItems.length; i++) {
+    final item = rawItems[i];
+    final data = asMap(item);
+    final name = item is String
+        ? item.trim()
+        : textOf(data['name'] ?? data['title'] ?? data['label']).trim();
+    final price = _asNum(data['price']);
+    if (name.isEmpty || price <= 0) continue;
+
+    options.add(
+      _AddonOption(
+        index: i,
+        name: name,
+        price: price,
+        priceType: data['price_type'] == 'per_person'
+            ? 'per_person'
+            : 'per_booking',
+      ),
+    );
+  }
+
+  return options;
 }
 
 int? _validDropdownValue(int? selected, Iterable<int> values) {
