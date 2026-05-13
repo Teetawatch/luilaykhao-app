@@ -535,7 +535,7 @@ class QuickActionsSection extends StatelessWidget {
       _QuickAction(
         icon: Icons.directions_bus_filled_outlined,
         label: 'ติดตามรถ',
-        onTap: () => _pushPremium(context, const TrackingScreen()),
+        onTap: () => _pushPremium(context, const BookingLookupScreen()),
       ),
       _QuickAction(
         icon: Icons.rate_review_outlined,
@@ -1473,11 +1473,12 @@ class _BookingSummaryCard extends StatelessWidget {
                   onTap: () =>
                       _pushPremium(context, PaymentScreen(bookingRef: ref)),
                 ),
-              _SmallActionButton(
-                icon: Icons.route_outlined,
-                label: 'ติดตามรถ',
-                onTap: () => _openTrackingForBooking(context, booking),
-              ),
+              if (_isTripToday(booking))
+                _SmallActionButton(
+                  icon: Icons.route_outlined,
+                  label: 'ติดตามรถ',
+                  onTap: () => _openTrackingForBooking(context, booking),
+                ),
               if (status == 'pending' || status == 'confirmed')
                 _SmallActionButton(
                   icon: Icons.cancel_outlined,
@@ -3043,6 +3044,20 @@ String _formatCompact(int value) {
   return value.toString();
 }
 
+bool _isTripToday(Map<String, dynamic> booking) {
+  final status = _cleanText(booking['status']).toLowerCase();
+  if (status == 'cancelled' || status == 'refunded' || status == 'completed') {
+    return false;
+  }
+  final schedule = asMap(booking['schedule']);
+  final rawDate = _cleanText(schedule['departure_date']);
+  final date = DateTime.tryParse(rawDate);
+  if (date == null) return false;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  return DateTime(date.year, date.month, date.day) == today;
+}
+
 bool _isUpcomingBooking(Map<String, dynamic> booking) {
   final status = _cleanText(booking['status']).toLowerCase();
   if (status == 'cancelled' || status == 'refunded' || status == 'completed') {
@@ -3311,7 +3326,7 @@ Future<void> _openTrackingForBooking(
     return;
   }
 
-  _pushPremium(context, const TrackingScreen());
+  _pushPremium(context, const TrackingMapPage());
 }
 
 String? _trackingUnavailableMessage(dynamic booking) {
