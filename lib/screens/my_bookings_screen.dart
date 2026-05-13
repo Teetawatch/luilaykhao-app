@@ -225,6 +225,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Check-in Card (shown inside ReservationCard & BookingDetailSheet)
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _BookingCheckInCard extends StatelessWidget {
   final Map<String, dynamic> booking;
   final bool compact;
@@ -239,45 +243,60 @@ class _BookingCheckInCard extends StatelessWidget {
 
     final bookingRef = textOf(booking['booking_ref'], '-');
     final checkInCode = textOf(booking['qr_code']).trim();
+    final isDark = AppTheme.isDark(context);
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 14 : 18),
+      padding: EdgeInsets.all(compact ? 14 : 20),
       decoration: BoxDecoration(
-        color: AppTheme.selectedTint(context),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  AppTheme.primaryColor.withValues(alpha: 0.22),
+                  AppTheme.accentColor.withValues(alpha: 0.10),
+                ]
+              : [
+                  AppTheme.primaryColor.withValues(alpha: 0.08),
+                  AppTheme.accentColor.withValues(alpha: 0.04),
+                ],
+        ),
         borderRadius: BorderRadius.circular(compact ? 22 : 28),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.14),
+          color: AppTheme.primaryColor.withValues(alpha: compact ? 0.14 : 0.18),
         ),
       ),
       child: compact
           ? Row(
               children: [
                 _CheckInQrBox(code: checkInCode, size: 74, padding: 7),
-                const SizedBox(width: 12),
-                Expanded(child: _CheckInTextBlock(bookingRef: bookingRef)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _CheckInTextBlock(bookingRef: bookingRef),
+                ),
               ],
             )
           : Column(
               children: [
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
-                    color: AppTheme.selectedTint(context),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.check_circle_rounded,
+                    Icons.how_to_reg_rounded,
                     color: AppTheme.primaryColor,
-                    size: 30,
+                    size: 28,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 const _CheckInTextBlock(bookingRef: null),
                 if (checkInCode.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  _CheckInQrBox(code: checkInCode, size: 172, padding: 12),
+                  const SizedBox(height: 20),
+                  _CheckInQrBox(code: checkInCode, size: 180, padding: 14),
                 ],
                 const SizedBox(height: 16),
                 _BookingReferencePanel(bookingRef: bookingRef),
@@ -294,40 +313,53 @@ class _CheckInTextBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final centered = bookingRef == null;
     return Column(
-      crossAxisAlignment: bookingRef == null
-          ? CrossAxisAlignment.center
-          : CrossAxisAlignment.start,
+      crossAxisAlignment:
+          centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       children: [
-        Text(
-          'พร้อมสำหรับเช็คอิน',
-          textAlign: bookingRef == null ? TextAlign.center : TextAlign.start,
-          style: const TextStyle(
-            color: Color(0xFF111313),
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-          ),
+        Row(
+          mainAxisAlignment:
+              centered ? MainAxisAlignment.center : MainAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.verified_rounded,
+              size: 16,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'พร้อมสำหรับเช็คอิน',
+              textAlign: centered ? TextAlign.center : TextAlign.start,
+              style: GoogleFonts.anuphan(
+                color: AppTheme.onSurface(context),
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
         Text(
           'โปรดแสดงรหัสนี้แก่เจ้าหน้าที่เมื่อถึงจุดนัดหมาย',
-          textAlign: bookingRef == null ? TextAlign.center : TextAlign.start,
-          style: const TextStyle(
-            color: Color(0xFF687272),
+          textAlign: centered ? TextAlign.center : TextAlign.start,
+          style: GoogleFonts.anuphan(
+            color: AppTheme.mutedText(context),
             fontSize: 12,
-            height: 1.35,
-            fontWeight: FontWeight.w700,
+            height: 1.4,
+            fontWeight: FontWeight.w600,
           ),
         ),
         if (bookingRef != null) ...[
           const SizedBox(height: 8),
           SelectableText(
             bookingRef!,
-            style: const TextStyle(
+            style: GoogleFonts.anuphan(
               color: AppTheme.primaryColor,
               fontSize: 14,
               fontWeight: FontWeight.w900,
-              letterSpacing: 0.2,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -358,9 +390,10 @@ class _CheckInQrBox extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppTheme.border(context)),
         ),
-        child: const Icon(
+        child: Icon(
           Icons.qr_code_2_rounded,
-          color: AppTheme.textSecondary,
+          color: AppTheme.mutedText(context),
+          size: size * 0.45,
         ),
       );
     }
@@ -368,9 +401,18 @@ class _CheckInQrBox extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: AppTheme.surface(context),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.border(context)),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.15),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: QrImageView(
         data: code,
@@ -392,20 +434,20 @@ class _BookingReferencePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.12),
+          color: AppTheme.primaryColor.withValues(alpha: 0.15),
         ),
       ),
       child: Column(
         children: [
-          const Text(
+          Text(
             'รหัสการจอง',
-            style: TextStyle(
-              color: Color(0xFF687272),
+            style: GoogleFonts.anuphan(
+              color: AppTheme.mutedText(context),
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
@@ -414,11 +456,11 @@ class _BookingReferencePanel extends StatelessWidget {
           SelectableText(
             bookingRef,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: GoogleFonts.anuphan(
               color: AppTheme.primaryColor,
               fontSize: 20,
               fontWeight: FontWeight.w900,
-              letterSpacing: 0.2,
+              letterSpacing: 0.3,
             ),
           ),
         ],

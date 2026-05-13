@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
+import '../providers/tracking_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
@@ -110,11 +111,19 @@ class ProfileHeader extends StatelessWidget {
 
   const ProfileHeader({super.key, required this.user});
 
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'อรุณสวัสดิ์';
+    if (hour < 17) return 'สวัสดีตอนบ่าย';
+    return 'สวัสดีตอนเย็น';
+  }
+
   @override
   Widget build(BuildContext context) {
     final name = _cleanText(user['name'], fallback: 'ลุยเลเขา');
     final avatar = ApiConfig.mediaUrl(_cleanText(user['avatar_url']));
     final location = _cleanLocation(user['location']);
+    final email = _cleanText(user['email']);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -151,7 +160,7 @@ class ProfileHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'สวัสดี, $name',
+                        '${_greeting()}, $name',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.anuphan(
@@ -163,7 +172,7 @@ class ProfileHeader extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'พร้อมออกผจญภัยครั้งต่อไปไหม?',
+                        email.isNotEmpty ? email : 'พร้อมออกผจญภัยครั้งต่อไปไหม?',
                         style: GoogleFonts.anuphan(
                           fontSize: 14,
                           height: 1.45,
@@ -295,7 +304,11 @@ class ProfileStatsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trips = app.bookings.length;
+    final trips = app.bookings.map(asMap).where((b) {
+      final s = _cleanText(b['status']).toLowerCase();
+      return s != 'cancelled' && s != 'refunded';
+    }).length;
+    final tier = _cleanText(loyalty['tier'] ?? loyalty['level']);
     final points = _numberValue(loyalty['points']);
     final nextLevelPoints = _numberValue(
       loyalty['next_level_points'],
@@ -324,6 +337,26 @@ class ProfileStatsSection extends StatelessWidget {
                   ),
                 ),
               ),
+              if (tier.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF059669), Color(0xFF047857)],
+                    ),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    tier,
+                    style: GoogleFonts.anuphan(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -728,7 +761,7 @@ class SettingsMenu extends StatelessWidget {
               title: 'ตั้งค่าแอป',
               icon: Icons.tune_outlined,
               body:
-                  'การตั้งค่าหลักของแอปใช้ค่าที่เหมาะกับการจองและติดตามรถแบบเรียลไทม์อยู่แล้ว',
+                  'แอปนี้ออกแบบมาให้ใช้งานได้ทันที ไม่จำเป็นต้องตั้งค่าเพิ่มเติม',
             ),
           ),
         ),
@@ -887,6 +920,28 @@ class LogoutSection extends StatelessWidget {
 
   const LogoutSection({super.key, required this.onLogout});
 
+  Future<void> _confirmLogout(BuildContext context, VoidCallback onLogout) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('ออกจากระบบ', style: GoogleFonts.anuphan(fontWeight: FontWeight.w900)),
+        content: Text('คุณต้องการออกจากระบบใช่หรือไม่?', style: GoogleFonts.anuphan()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
+            child: const Text('ออกจากระบบ'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) onLogout();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -898,7 +953,7 @@ class LogoutSection extends StatelessWidget {
             icon: Icons.logout,
             label: 'ออกจากระบบ',
             color: AppTheme.errorColor,
-            onTap: onLogout,
+            onTap: () => _confirmLogout(context, onLogout),
           ),
         ],
       ),
@@ -1337,7 +1392,7 @@ class _ProfileBookingsScreenState extends State<ProfileBookingsScreen> {
                         icon: Icons.confirmation_number_outlined,
                         title: 'ยังไม่มีรายการ',
                         body:
-                            'เมื่อมีการจอง ระบบจะแสดงข้อมูลล่าสุดจาก Laravel ที่หน้านี้',
+                            'เมื่อคุณจองทริป รายการจะแสดงที่หน้านี้',
                       )
                     : Column(
                         children: [
@@ -1421,7 +1476,7 @@ class _BookingSummaryCard extends StatelessWidget {
               _SmallActionButton(
                 icon: Icons.route_outlined,
                 label: 'ติดตามรถ',
-                onTap: () => _pushPremium(context, const BookingLookupScreen()),
+                onTap: () => _openTrackingForBooking(context, booking),
               ),
               if (status == 'pending' || status == 'confirmed')
                 _SmallActionButton(
@@ -1568,7 +1623,7 @@ class PaymentMethodsScreen extends StatelessWidget {
                     icon: Icons.receipt_long_outlined,
                     title: 'แนบสลิปโอนเงิน',
                     body:
-                        'หลังโอนเงินแล้ว กรุณาแนบสลิปในหน้าชำระเงิน ระบบ Laravel จะบันทึกหลักฐานไว้กับเลขการจอง',
+                        'หลังโอนเงินแล้ว กรุณาแนบสลิปในหน้าชำระเงิน ระบบจะบันทึกหลักฐานไว้กับเลขการจอง',
                   ),
                   SizedBox(height: 12),
                   _PaymentMethodCard(
@@ -1731,7 +1786,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         icon: Icons.notifications_none_outlined,
                         title: 'ยังไม่มีการแจ้งเตือน',
                         body:
-                            'เมื่อ Laravel ส่งการแจ้งเตือน ระบบจะแสดงรายการล่าสุดที่นี่',
+                            'เมื่อมีการแจ้งเตือนใหม่ จะแสดงที่นี่',
                       )
                     else
                       for (final notification in notifications) ...[
@@ -1925,7 +1980,7 @@ class HelpCenterScreen extends StatelessWidget {
                   _HelpTile(
                     icon: Icons.support_agent_outlined,
                     title: 'ติดต่อทีมงาน',
-                    body: 'ส่งข้อความถึงทีมงานผ่านระบบ Laravel',
+                    body: 'ส่งข้อความถึงทีมงานลุยเลเขา เราจะตอบกลับโดยเร็วที่สุด',
                     onTap: () => _pushPremium(context, const ContactUsScreen()),
                   ),
                 ],
@@ -1967,10 +2022,26 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
     final name = _cleanText(user['name']);
     final phone = _cleanText(user['phone']);
     if (name.isEmpty || phone.isEmpty) {
-      _showError(
-        context,
-        'กรุณาเพิ่มชื่อและเบอร์โทรศัพท์ในโปรไฟล์ก่อนติดต่อทีมงาน',
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('ข้อมูลไม่ครบ', style: GoogleFonts.anuphan(fontWeight: FontWeight.w900)),
+          content: Text(
+            'กรุณาเพิ่มชื่อและเบอร์โทรศัพท์ในโปรไฟล์ก่อนติดต่อทีมงาน',
+            style: GoogleFonts.anuphan(),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ปิด')),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('แก้ไขโปรไฟล์'),
+            ),
+          ],
+        ),
       );
+      if (go == true && context.mounted) {
+        _pushPremium(context, EditProfileScreen(initialUser: app.user ?? {}));
+      }
       return;
     }
 
@@ -2017,7 +2088,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                     children: [
                       _FormCard(
                         title: 'ข้อมูลติดต่อ',
-                        subtitle: 'ระบบจะส่งข้อมูลนี้ไปยัง Laravel contacts',
+                        subtitle: 'ข้อมูลนี้จะถูกส่งพร้อมคำถามของคุณ',
                         children: [
                           _InfoLine(
                             icon: Icons.person_outline,
@@ -2134,7 +2205,7 @@ class _IdentityPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.74),
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.14)),
       ),
@@ -2169,9 +2240,10 @@ class _SectionHeading extends StatelessWidget {
       child: Text(
         title,
         style: GoogleFonts.anuphan(
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: FontWeight.w900,
           color: AppTheme.textMain,
+          letterSpacing: 0.1,
         ),
       ),
     );
@@ -2382,7 +2454,7 @@ class _AvatarSourceTile extends StatelessWidget {
   }
 }
 
-class _ProfileTextField extends StatelessWidget {
+class _ProfileTextField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
   final IconData icon;
@@ -2404,17 +2476,33 @@ class _ProfileTextField extends StatelessWidget {
   });
 
   @override
+  State<_ProfileTextField> createState() => _ProfileTextFieldState();
+}
+
+class _ProfileTextFieldState extends State<_ProfileTextField> {
+  bool _visible = false;
+
+  @override
   Widget build(BuildContext context) {
     return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      maxLines: obscureText ? 1 : maxLines,
-      obscureText: obscureText,
-      validator: validator,
-      maxLength: maxLength,
+      controller: widget.controller,
+      keyboardType: widget.keyboardType,
+      maxLines: widget.obscureText ? 1 : widget.maxLines,
+      obscureText: widget.obscureText && !_visible,
+      validator: widget.validator,
+      maxLength: widget.maxLength,
       decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 20),
+        labelText: widget.label,
+        prefixIcon: Icon(widget.icon, size: 20),
+        suffixIcon: widget.obscureText
+            ? IconButton(
+                icon: Icon(
+                  _visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  size: 20,
+                ),
+                onPressed: () => setState(() => _visible = !_visible),
+              )
+            : null,
         filled: true,
         fillColor: AppTheme.fieldSurface(context),
         border: OutlineInputBorder(
@@ -2641,20 +2729,19 @@ class _ReviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            _cleanText(review['trip_title'], fallback: 'ทริปของคุณ'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.anuphan(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.textMain,
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  _cleanText(review['trip_title'], fallback: 'ทริปของคุณ'),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    color: AppTheme.textMain,
-                  ),
-                ),
-              ),
               Row(
                 children: List.generate(
                   5,
@@ -2663,6 +2750,15 @@ class _ReviewCard extends StatelessWidget {
                     color: AppTheme.warningColor,
                     size: 18,
                   ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                dateText(review['created_at']),
+                style: GoogleFonts.anuphan(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary,
                 ),
               ),
             ],
@@ -3122,7 +3218,10 @@ Future<void> _showReviewDialog(
                 child: const Text('ยกเลิก'),
               ),
               FilledButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () {
+                  if (comment.text.trim().isEmpty) return; // don't dismiss if empty
+                  Navigator.pop(context, true);
+                },
                 child: const Text('ส่งรีวิว'),
               ),
             ],
@@ -3178,19 +3277,80 @@ void _pushPremium(BuildContext context, Widget screen) {
   );
 }
 
+Future<void> _openTrackingForBooking(
+  BuildContext context,
+  Map<String, dynamic> booking,
+) async {
+  final ref = _cleanText(booking['booking_ref']);
+  if (ref.isEmpty) {
+    _showError(context, 'ไม่พบเลขการจองสำหรับติดตามรถ');
+    return;
+  }
+
+  final app = context.read<AppProvider>();
+  final provider = context.read<TrackingProvider>();
+
+  provider.stopTracking();
+  await provider.startTracking(ref, authToken: app.token);
+  if (!context.mounted) return;
+
+  if (provider.errorMessage.isNotEmpty || provider.booking == null) {
+    _showError(
+      context,
+      provider.errorMessage.isNotEmpty
+          ? provider.errorMessage
+          : 'ไม่พบข้อมูลติดตามรถของการจองนี้',
+    );
+    return;
+  }
+
+  final unavailableMessage = _trackingUnavailableMessage(provider.booking);
+  if (unavailableMessage != null) {
+    provider.stopTracking();
+    _showError(context, unavailableMessage);
+    return;
+  }
+
+  _pushPremium(context, const TrackingScreen());
+}
+
+String? _trackingUnavailableMessage(dynamic booking) {
+  final status = booking.status.toString().toLowerCase();
+  if (status == 'completed' || status == 'cancelled' || status == 'refunded') {
+    return 'การติดตามรถของทริปนี้สิ้นสุดแล้ว';
+  }
+
+  final tripDate = DateTime.tryParse(booking.departureDate.toString());
+  if (tripDate == null) return null;
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final date = DateTime(tripDate.year, tripDate.month, tripDate.day);
+  if (date.isAfter(today)) return 'สามารถติดตามรถได้ในวันเดินทาง';
+  if (date.isBefore(today)) return 'การติดตามรถของทริปนี้สิ้นสุดแล้ว';
+  return null;
+}
+
 void _showSuccess(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-  );
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      content: Text(message, style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    ));
 }
 
 void _showError(BuildContext context, Object error) {
   final message = error is ApiException ? error.message : error.toString();
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      content: Text(message, style: GoogleFonts.anuphan(fontWeight: FontWeight.w600, color: Colors.white)),
       behavior: SnackBarBehavior.floating,
       backgroundColor: AppTheme.errorColor,
-    ),
-  );
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    ));
 }

@@ -12,14 +12,17 @@ import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
 import 'payment_screen.dart';
 
-const Color _premiumText = Color(0xFF111827);
-const Color _mutedText = Color(0xFF6B7280);
-const Color _softAccent = Color(0xFF0F8F75);
-const Color _cardBorder = Color(0xFFEAEAEA);
-const Color _fieldBackground = Color(0xFFF7F8F7);
+// _softAccent is the booking-flow brand tint (slightly deeper than AppTheme.primaryColor for contrast on light bg)
+const Color _softAccent = Color(0xFF059669); // matches AppTheme.primaryColor
 const List<String> _titleOptions = ['นาย', 'นาง', 'นางสาว'];
 const List<String> _bloodGroupOptions = ['A', 'B', 'O', 'AB'];
 const Duration _seatRefreshInterval = Duration(seconds: 5);
+
+Color _premiumText(BuildContext context) => AppTheme.onSurface(context);
+Color _mutedTextColor(BuildContext context) => AppTheme.mutedText(context);
+Color _cardBorder(BuildContext context) =>
+    AppTheme.border(context).withValues(alpha: 0.70);
+Color _fieldBackground(BuildContext context) => AppTheme.fieldSurface(context);
 
 class _ImageCacheSize {
   final int width;
@@ -571,8 +574,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   IconData get _primaryActionIcon {
     final step = _safeCurrentStep;
     if (step == 0) return Icons.arrow_forward_rounded;
-    if (_usesSeatStep && step == _seatStepIndex) return Icons.lock_rounded;
-    return Icons.lock_rounded;
+    if (_usesSeatStep && step == _seatStepIndex) return Icons.event_seat_rounded;
+    return Icons.payment_rounded;
   }
 
   Widget _buildCurrentStepContent() {
@@ -877,6 +880,8 @@ class BookingProgressStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final borderColor = AppTheme.border(context).withValues(alpha: 0.5);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: _premiumDecoration(context, radius: 24),
@@ -884,22 +889,34 @@ class BookingProgressStepper extends StatelessWidget {
         children: List.generate(steps.length, (index) {
           final isActive = index == currentStep;
           final isDone = index < currentStep;
+          final isConnectorDone = index < currentStep - 1 ||
+              (index == currentStep - 1 && index < steps.length - 1);
 
           return Expanded(
             child: Row(
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: isActive || isDone ? _softAccent : _fieldBackground,
+                    color: isActive || isDone
+                        ? _softAccent
+                        : _fieldBackground(context),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isActive || isDone
-                          ? _softAccent
-                          : const Color(0xFFE4E7E5),
+                      color: isActive || isDone ? _softAccent : borderColor,
                     ),
+                    boxShadow: isActive
+                        ? [
+                            BoxShadow(
+                              color: _softAccent.withValues(alpha: 0.28),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Center(
                     child: isDone
@@ -911,32 +928,40 @@ class BookingProgressStepper extends StatelessWidget {
                         : Text(
                             '${index + 1}',
                             style: GoogleFonts.anuphan(
-                              color: isActive ? Colors.white : _mutedText,
+                              color: isActive
+                                  ? Colors.white
+                                  : _mutedTextColor(context),
                               fontWeight: FontWeight.w800,
                               fontSize: 13,
                             ),
                           ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     steps[index],
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(
-                      color: isActive ? _premiumText : _mutedText,
+                      color: isActive
+                          ? _premiumText(context)
+                          : _mutedTextColor(context),
                       fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
                       fontSize: 12,
                     ),
                   ),
                 ),
                 if (index != steps.length - 1)
-                  Container(
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
                     width: 18,
-                    height: 1,
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    color: const Color(0xFFE4E7E5),
+                    height: 2,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isConnectorDone ? _softAccent : borderColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
               ],
             ),
@@ -1012,7 +1037,7 @@ class TripSummaryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ทริปที่เลือก', style: _labelStyle()),
+                Text('ทริปที่เลือก', style: _labelStyle(context)),
                 const SizedBox(height: 4),
                 Text(
                   textOf(trip['title'], '-'),
@@ -1022,7 +1047,7 @@ class TripSummaryCard extends StatelessWidget {
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     height: 1.25,
-                    color: _premiumText,
+                    color: _premiumText(context),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -1225,7 +1250,7 @@ class TravelInfoSection extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
                             style: GoogleFonts.anuphan(
-                              color: _premiumText,
+                              color: _premiumText(context),
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1249,7 +1274,7 @@ class TravelInfoSection extends StatelessWidget {
                               style: GoogleFonts.anuphan(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: _premiumText,
+                                color: _premiumText(context),
                               ),
                             ),
                             Text(
@@ -1259,7 +1284,7 @@ class TravelInfoSection extends StatelessWidget {
                               style: GoogleFonts.anuphan(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: _mutedText,
+                                color: _mutedTextColor(context),
                               ),
                             ),
                           ],
@@ -1301,10 +1326,10 @@ class _JoinTripSwitch extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? _softAccent.withValues(alpha: 0.10)
-              : _fieldBackground,
+              : _fieldBackground(context),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? _softAccent.withValues(alpha: 0.28) : _cardBorder,
+            color: selected ? _softAccent.withValues(alpha: 0.28) : _cardBorder(context),
           ),
         ),
         child: Row(
@@ -1313,7 +1338,7 @@ class _JoinTripSwitch extends StatelessWidget {
               selected
                   ? Icons.check_circle_rounded
                   : Icons.radio_button_unchecked_rounded,
-              color: selected ? _softAccent : _mutedText,
+              color: selected ? _softAccent : _mutedTextColor(context),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1323,7 +1348,7 @@ class _JoinTripSwitch extends StatelessWidget {
                   Text(
                     'Join Trip',
                     style: GoogleFonts.anuphan(
-                      color: _premiumText,
+                      color: _premiumText(context),
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1332,7 +1357,7 @@ class _JoinTripSwitch extends StatelessWidget {
                   Text(
                     price > 0 ? '${money(price)} / คน' : 'ใช้ราคาจากรอบเดินทาง',
                     style: GoogleFonts.anuphan(
-                      color: _mutedText,
+                      color: _mutedTextColor(context),
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1411,9 +1436,9 @@ class _VehiclePhotoPreviewState extends State<_VehiclePhotoPreview> {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: _fieldBackground,
+        color: _fieldBackground(context),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _cardBorder),
+        border: Border.all(color: _cardBorder(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1555,14 +1580,14 @@ class _VehiclePhotoPreviewState extends State<_VehiclePhotoPreview> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('รถประจำรอบนี้', style: _labelStyle()),
+                      Text('รถประจำรอบนี้', style: _labelStyle(context)),
                       const SizedBox(height: 3),
                       Text(
                         name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.anuphan(
-                          color: _premiumText,
+                          color: _premiumText(context),
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                           height: 1.25,
@@ -1622,7 +1647,7 @@ class _VehicleInfoPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: _mutedText, size: 14),
+          Icon(icon, color: _mutedTextColor(context), size: 14),
           const SizedBox(width: 5),
           Text(
             text,
@@ -1743,7 +1768,7 @@ class SeatSelectionSection extends StatelessWidget {
                     'ที่นั่งว่าง ${textOf(map['available_seats'], '0')} / ${textOf(map['total_seats'], '0')}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.anuphan(
-                      color: _mutedText,
+                      color: _mutedTextColor(context),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1903,7 +1928,7 @@ class _SeatStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final textColor = color.computeLuminance() < 0.5
         ? Colors.white
-        : _premiumText;
+        : _premiumText(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -1955,7 +1980,7 @@ class _SeatLegend extends StatelessWidget {
             Text(
               item.label,
               style: GoogleFonts.anuphan(
-                color: _mutedText,
+                color: _mutedTextColor(context),
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -1989,9 +2014,9 @@ class _VehicleSeatMap extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _fieldBackground,
+        color: _fieldBackground(context),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _cardBorder),
+        border: Border.all(color: _cardBorder(context)),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -2144,10 +2169,10 @@ class _SeatButton extends StatelessWidget {
     final seatColor = muted ? color.withValues(alpha: 0.55) : color;
     final foregroundColor = selected || status == 'booked'
         ? Colors.white
-        : _mutedText.withValues(alpha: muted ? 0.62 : 1);
+        : _mutedTextColor(context).withValues(alpha: muted ? 0.62 : 1);
     final labelColor = selected
         ? _softAccent
-        : _mutedText.withValues(alpha: muted ? 0.62 : 1);
+        : _mutedTextColor(context).withValues(alpha: muted ? 0.62 : 1);
 
     return Tooltip(
       message: _seatTooltip(seat, id, selected: selected),
@@ -2198,7 +2223,7 @@ class _SeatButton extends StatelessWidget {
                           selected ? Icons.check_circle : Icons.timer_rounded,
                           color: selected
                               ? Colors.white
-                              : _premiumText.withValues(alpha: 0.72),
+                              : _premiumText(context).withValues(alpha: 0.72),
                           size: 11,
                         ),
                       ),
@@ -2245,9 +2270,9 @@ class _DriverBlock extends StatelessWidget {
               color: const Color(0xFFE5E7EB),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.drive_eta_rounded,
-              color: _mutedText,
+              color: _mutedTextColor(context),
               size: 20,
             ),
           ),
@@ -2255,7 +2280,7 @@ class _DriverBlock extends StatelessWidget {
           Text(
             'คนขับ',
             style: GoogleFonts.anuphan(
-              color: _mutedText,
+              color: _mutedTextColor(context),
               fontSize: 10,
               fontWeight: FontWeight.w800,
             ),
@@ -2279,12 +2304,12 @@ class _VehicleLabel extends StatelessWidget {
       decoration: BoxDecoration(
         color: muted ? Colors.white : _softAccent.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: muted ? _cardBorder : Colors.transparent),
+        border: Border.all(color: muted ? _cardBorder(context) : Colors.transparent),
       ),
       child: Text(
         text,
         style: GoogleFonts.anuphan(
-          color: muted ? _mutedText : _softAccent,
+          color: muted ? _mutedTextColor(context) : _softAccent,
           fontSize: 11,
           fontWeight: FontWeight.w900,
         ),
@@ -2301,7 +2326,7 @@ class _SeatLoadingState extends StatelessWidget {
     return Container(
       height: 148,
       decoration: BoxDecoration(
-        color: _fieldBackground,
+        color: _fieldBackground(context),
         borderRadius: BorderRadius.circular(22),
       ),
       child: const Center(child: CircularProgressIndicator(color: _softAccent)),
@@ -2437,7 +2462,7 @@ class TravelerCounter extends StatelessWidget {
       height: 48,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: _fieldBackground,
+        color: _fieldBackground(context),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: const Color(0xFFE5E7E5)),
       ),
@@ -2462,7 +2487,7 @@ class TravelerCounter extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     fontWeight: FontWeight.w900,
                     fontSize: 17,
-                    color: _premiumText,
+                    color: _premiumText(context),
                   ),
                 ),
               ),
@@ -2643,7 +2668,7 @@ class PricingSummaryCard extends StatelessWidget {
               ),
             ),
           ),
-          const Divider(height: 24, color: _cardBorder),
+          Divider(height: 24, color: _cardBorder(context)),
           _PriceRow(
             label: 'รวมทั้งหมด',
             value: money(pricing.total),
@@ -2655,7 +2680,7 @@ class PricingSummaryCard extends StatelessWidget {
             child: Text(
               'โค้ดส่วนลดจะถูกตรวจสอบเมื่อส่งข้อมูลการจอง',
               style: GoogleFonts.anuphan(
-                color: _mutedText,
+                color: _mutedTextColor(context),
                 fontSize: 12,
                 height: 1.35,
               ),
@@ -2870,7 +2895,7 @@ class StickyCheckoutBar extends StatelessWidget {
                   Text(
                     'รวมทั้งหมด',
                     style: GoogleFonts.anuphan(
-                      color: _mutedText,
+                      color: _mutedTextColor(context),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -2879,7 +2904,7 @@ class StickyCheckoutBar extends StatelessWidget {
                   Text(
                     money(total),
                     style: GoogleFonts.anuphan(
-                      color: _premiumText,
+                      color: _premiumText(context),
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                     ),
@@ -2895,9 +2920,9 @@ class StickyCheckoutBar extends StatelessWidget {
                 child: IconButton(
                   onPressed: isSubmitting ? null : onBack,
                   style: IconButton.styleFrom(
-                    backgroundColor: _fieldBackground,
-                    foregroundColor: _premiumText,
-                    disabledForegroundColor: _mutedText.withValues(alpha: 0.4),
+                    backgroundColor: _fieldBackground(context),
+                    foregroundColor: _premiumText(context),
+                    disabledForegroundColor: _mutedTextColor(context).withValues(alpha: 0.4),
                     shape: const CircleBorder(),
                   ),
                   icon: const Icon(Icons.arrow_back_rounded),
@@ -2979,7 +3004,7 @@ class _SectionShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: _premiumDecoration(context, radius: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2987,29 +3012,34 @@ class _SectionShell extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: _softAccent.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: _softAccent, size: 19),
+                child: Icon(icon, color: _softAccent, size: 20),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
                   style: GoogleFonts.anuphan(
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.w900,
-                    color: _premiumText,
+                    color: _premiumText(context),
                   ),
                 ),
               ),
               if (trailing != null) trailing!,
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+          Divider(
+            height: 1,
+            color: AppTheme.border(context).withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 14),
           child,
         ],
       ),
@@ -3076,8 +3106,8 @@ class _TravelerCard extends StatelessWidget {
               Container(
                 width: 28,
                 height: 28,
-                decoration: const BoxDecoration(
-                  color: _premiumText,
+                decoration: BoxDecoration(
+                  color: _premiumText(context),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -3097,7 +3127,7 @@ class _TravelerCard extends StatelessWidget {
                   'ผู้เดินทาง',
                   style: GoogleFonts.anuphan(
                     fontWeight: FontWeight.w800,
-                    color: _premiumText,
+                    color: _premiumText(context),
                     fontSize: 15,
                   ),
                 ),
@@ -3109,14 +3139,14 @@ class _TravelerCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: _fieldBackground,
+                    color: _fieldBackground(context),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: _cardBorder),
+                    border: Border.all(color: _cardBorder(context)),
                   ),
                   child: Text(
                     'ที่นั่ง $seatId',
                     style: GoogleFonts.anuphan(
-                      color: _mutedText,
+                      color: _mutedTextColor(context),
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
@@ -3399,7 +3429,7 @@ class _TravelerCard extends StatelessWidget {
           Text(
             'ผู้ติดต่อฉุกเฉิน',
             style: GoogleFonts.anuphan(
-              color: _premiumText,
+              color: _premiumText(context),
               fontWeight: FontWeight.w800,
               fontSize: 14,
             ),
@@ -3452,9 +3482,9 @@ class _TravelerCard extends StatelessWidget {
             },
           ),
           if (!isLast)
-            const Padding(
-              padding: EdgeInsets.only(top: 16),
-              child: Divider(height: 1, color: _cardBorder),
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Divider(height: 1, color: _cardBorder(context)),
             ),
         ],
       ),
@@ -3476,7 +3506,7 @@ class _HalalFoodSelector extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ต้องการอาหารฮาลาล', style: _labelStyle()),
+            Text('ต้องการอาหารฮาลาล', style: _labelStyle(context)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -3531,17 +3561,17 @@ class _HalalChoiceButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? _softAccent.withValues(alpha: 0.10)
-              : _fieldBackground,
+              : _fieldBackground(context),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: selected ? _softAccent : _cardBorder,
+            color: selected ? _softAccent : _cardBorder(context),
             width: selected ? 1.4 : 1,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: selected ? _softAccent : _mutedText, size: 18),
+            Icon(icon, color: selected ? _softAccent : _mutedTextColor(context), size: 18),
             const SizedBox(width: 7),
             Flexible(
               child: Text(
@@ -3549,7 +3579,7 @@ class _HalalChoiceButton extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.anuphan(
-                  color: selected ? _softAccent : _mutedText,
+                  color: selected ? _softAccent : _mutedTextColor(context),
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
@@ -3587,7 +3617,7 @@ class _PremiumDropdown<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: _labelStyle()),
+        Text(label, style: _labelStyle(context)),
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
           initialValue: value,
@@ -3599,7 +3629,7 @@ class _PremiumDropdown<T> extends StatelessWidget {
             hint: label,
           ),
           style: GoogleFonts.anuphan(
-            color: _premiumText,
+            color: _premiumText(context),
             fontSize: 14,
             fontWeight: FontWeight.w700,
           ),
@@ -3647,7 +3677,7 @@ class _PremiumTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: _labelStyle()),
+        Text(label, style: _labelStyle(context)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -3665,7 +3695,7 @@ class _PremiumTextField extends StatelessWidget {
             hint: hint,
           ),
           style: GoogleFonts.anuphan(
-            color: _premiumText,
+            color: _premiumText(context),
             fontSize: 14,
             fontWeight: FontWeight.w700,
           ),
@@ -3696,8 +3726,8 @@ class _CounterButton extends StatelessWidget {
         style: IconButton.styleFrom(
           backgroundColor: isPrimary ? _softAccent : Colors.white,
           disabledBackgroundColor: Colors.white.withValues(alpha: 0.62),
-          foregroundColor: isPrimary ? Colors.white : _premiumText,
-          disabledForegroundColor: _mutedText.withValues(alpha: 0.35),
+          foregroundColor: isPrimary ? Colors.white : _premiumText(context),
+          disabledForegroundColor: _mutedTextColor(context).withValues(alpha: 0.35),
           shape: const CircleBorder(),
           padding: EdgeInsets.zero,
         ),
@@ -3718,7 +3748,7 @@ class _SummaryMeta extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: _mutedText, size: 16),
+        Icon(icon, color: _mutedTextColor(context), size: 15),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
@@ -3726,7 +3756,7 @@ class _SummaryMeta extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.anuphan(
-              color: _mutedText,
+              color: _mutedTextColor(context),
               fontSize: 12.5,
               height: 1.35,
               fontWeight: FontWeight.w600,
@@ -3759,7 +3789,7 @@ class _PriceRow extends StatelessWidget {
           child: Text(
             label,
             style: GoogleFonts.anuphan(
-              color: isTotal ? _premiumText : _mutedText,
+              color: isTotal ? _premiumText(context) : _mutedTextColor(context),
               fontSize: isTotal ? 16 : 14,
               fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
             ),
@@ -3768,7 +3798,7 @@ class _PriceRow extends StatelessWidget {
         Text(
           value,
           style: GoogleFonts.anuphan(
-            color: valueColor ?? _premiumText,
+            color: valueColor ?? _premiumText(context),
             fontSize: isTotal ? 20 : 14,
             fontWeight: isTotal ? FontWeight.w900 : FontWeight.w800,
           ),
@@ -3789,19 +3819,19 @@ class _CompactNotice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _fieldBackground,
+        color: _fieldBackground(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _cardBorder),
+        border: Border.all(color: _cardBorder(context)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: _mutedText, size: 18),
+          Icon(icon, color: _mutedTextColor(context), size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               style: GoogleFonts.anuphan(
-                color: _mutedText,
+                color: _mutedTextColor(context),
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
@@ -4035,11 +4065,11 @@ InputDecoration _fieldDecoration({
     prefixIconConstraints: const BoxConstraints(minWidth: 44),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: _cardBorder),
+      borderSide: BorderSide(color: _cardBorder(context)),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: _cardBorder),
+      borderSide: BorderSide(color: _cardBorder(context)),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
@@ -4054,16 +4084,16 @@ InputDecoration _fieldDecoration({
       borderSide: const BorderSide(color: AppTheme.errorColor, width: 1.4),
     ),
     hintStyle: GoogleFonts.anuphan(
-      color: _mutedText.withValues(alpha: 0.62),
+      color: _mutedTextColor(context).withValues(alpha: 0.62),
       fontSize: 14,
       fontWeight: FontWeight.w500,
     ),
   );
 }
 
-TextStyle _labelStyle() {
+TextStyle _labelStyle(BuildContext context) {
   return GoogleFonts.anuphan(
-    color: _mutedText,
+    color: _mutedTextColor(context),
     fontSize: 12,
     fontWeight: FontWeight.w800,
     height: 1.2,

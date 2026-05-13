@@ -15,7 +15,7 @@ import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';
-import 'profile_screen.dart';
+import 'profile_screen.dart' show ProfileScreen, ContactUsScreen, NotificationsScreen;
 import 'staff_check_in_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 
@@ -284,6 +284,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
                   const SizedBox(height: 318),
                   _PopularTripsSection(trips: showTrips),
+                  PromotionsSection(
+                    promotions: app.promotions
+                        .map(asMap)
+                        .where((p) => p.isNotEmpty)
+                        .toList(),
+                  ),
                   const SizedBox(height: 100), // Bottom padding for Nav Bar
                 ],
               ),
@@ -3474,25 +3480,6 @@ class FeaturedTripCard extends StatelessWidget {
               ),
             ),
             Positioned(
-              top: 16,
-              right: 16,
-              child: ClipOval(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    color: Colors.white.withValues(alpha: 0.20),
-                    child: const Icon(
-                      Icons.favorite_border,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
               left: 24,
               right: 24,
               bottom: 24,
@@ -3981,16 +3968,16 @@ class ReservationSegmentTabs extends StatelessWidget {
                     size: 17,
                     color: selected == tab.$1
                         ? Colors.white
-                        : const Color(0xFF687272),
+                        : AppTheme.mutedText(context),
                   ),
                   label: Text('${tab.$2} ${counts[tab.$1] ?? 0}'),
-                  selectedColor: const Color(0xFF111313),
+                  selectedColor: AppTheme.primaryColor,
                   backgroundColor: Colors.transparent,
                   side: BorderSide.none,
                   labelStyle: TextStyle(
                     color: selected == tab.$1
                         ? Colors.white
-                        : const Color(0xFF687272),
+                        : AppTheme.mutedText(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),
@@ -4173,8 +4160,8 @@ class BookingSection extends StatelessWidget {
                 children: [
                   Text(
                     eyebrow,
-                    style: const TextStyle(
-                      color: Color(0xFF8A9494),
+                    style: TextStyle(
+                      color: AppTheme.mutedText(context),
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
                     ),
@@ -4182,8 +4169,8 @@ class BookingSection extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Color(0xFF111313),
+                    style: TextStyle(
+                      color: AppTheme.onSurface(context),
                       fontSize: 21,
                       fontWeight: FontWeight.w900,
                     ),
@@ -4334,8 +4321,8 @@ class ReservationCard extends StatelessWidget {
                           textOf(trip['title'], 'การจอง'),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF111313),
+                          style: TextStyle(
+                            color: AppTheme.onSurface(context),
                             fontSize: 20,
                             height: 1.22,
                             fontWeight: FontWeight.w900,
@@ -4382,8 +4369,8 @@ class ReservationCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'หมายเลขการจอง $bookingRef',
-                    style: const TextStyle(
-                      color: Color(0xFF687272),
+                    style: TextStyle(
+                      color: AppTheme.mutedText(context),
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -4422,10 +4409,10 @@ class ReservationCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'ยอดรวม',
                               style: TextStyle(
-                                color: Color(0xFF8A9494),
+                                color: AppTheme.mutedText(context),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -4433,8 +4420,8 @@ class ReservationCard extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               money(booking['total_amount']),
-                              style: const TextStyle(
-                                color: Color(0xFF111313),
+                              style: TextStyle(
+                                color: AppTheme.onSurface(context),
                                 fontSize: 24,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -4623,7 +4610,7 @@ class _ReservationMetaPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE7ECEC)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4636,8 +4623,8 @@ class _ReservationMetaPill extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Color(0xFF8A9494),
+                  style: TextStyle(
+                    color: AppTheme.mutedText(context),
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                   ),
@@ -4647,8 +4634,8 @@ class _ReservationMetaPill extends StatelessWidget {
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF111313),
+                  style: TextStyle(
+                    color: AppTheme.onSurface(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -4701,7 +4688,10 @@ class BookingQuickActions extends StatelessWidget {
         _ActionChipButton(
           icon: Icons.support_agent_rounded,
           label: 'ติดต่อทีมงานลุยเลเขา',
-          onPressed: () => showSnack(context, 'ติดต่อทีมงานผ่านหน้าติดต่อเรา'),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ContactUsScreen()),
+          ),
         ),
         _ActionChipButton(
           icon: Icons.download_rounded,
@@ -4728,20 +4718,25 @@ class _ActionChipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final filledBg = AppTheme.onSurface(context);
+    final outlinedBg = AppTheme.surface(context);
+    final outlinedFg = AppTheme.onSurface(context);
     return ActionChip(
       avatar: Icon(
         icon,
         size: 17,
-        color: filled ? Colors.white : const Color(0xFF111313),
+        color: filled ? AppTheme.surface(context) : outlinedFg,
       ),
       label: Text(label),
       onPressed: onPressed,
-      backgroundColor: filled ? const Color(0xFF111313) : Colors.white,
+      backgroundColor: filled ? filledBg : outlinedBg,
       side: BorderSide(
-        color: filled ? const Color(0xFF111313) : const Color(0xFFE1E6E6),
+        color: filled
+            ? filledBg
+            : AppTheme.border(context),
       ),
       labelStyle: TextStyle(
-        color: filled ? Colors.white : const Color(0xFF111313),
+        color: filled ? AppTheme.surface(context) : outlinedFg,
         fontSize: 12,
         fontWeight: FontWeight.w900,
       ),
@@ -4788,20 +4783,20 @@ class EmptyStateWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 22),
-          const Text(
+          Text(
             'ยังไม่มีการจอง',
             style: TextStyle(
-              color: Color(0xFF111313),
+              color: AppTheme.onSurface(context),
               fontSize: 22,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'เริ่มออกผจญภัยครั้งใหม่กันเลย',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF687272),
+              color: AppTheme.mutedText(context),
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -4877,43 +4872,57 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
               ? 'installment'
               : 'full';
           return Container(
-            decoration: const BoxDecoration(
-              color: AppTheme.bgLight,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: AppTheme.background(context),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
             ),
             child: ListView(
               controller: controller,
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 40),
               children: [
+                // Handle bar
                 Center(
                   child: Container(
                     width: 42,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.outlineColor,
+                      color: AppTheme.border(context),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
+
+                // Check-in card (confirmed only)
                 if (textOf(booking['status']) == 'confirmed') ...[
                   _BookingCheckInCard(booking: booking),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
                 ],
+
+                // Trip title + booking ref
                 Text(
                   textOf(trip['title'], 'รายละเอียดการจอง'),
-                  style: const TextStyle(
+                  style: GoogleFonts.anuphan(
                     color: AppTheme.primaryColor,
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
+                    height: 1.25,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   textOf(booking['booking_ref']),
-                  style: const TextStyle(color: AppTheme.textSecondary),
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.mutedText(context),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
+
+                // Status chips
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -4923,39 +4932,166 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     _Chip(money(booking['total_amount'])),
                   ],
                 ),
-                const SizedBox(height: 18),
-                const _SectionTitle('ผู้เดินทาง'),
+                const SizedBox(height: 20),
+
+                // Passengers section
+                _SheetSectionTitle(
+                  icon: Icons.people_alt_rounded,
+                  title: 'ผู้เดินทาง',
+                ),
+                const SizedBox(height: 10),
                 ...passengers.map((item) {
                   final p = asMap(item);
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.person_outline),
-                    title: Text(
-                      '${textOf(p['title'])} ${textOf(p['name'])}'.trim(),
+                  final name =
+                      '${textOf(p['title'])} ${textOf(p['name'])}'.trim();
+                  final phone = textOf(p['phone'], 'ไม่มีเบอร์โทร');
+                  final seat = textOf(p['seat_id']);
+                  final halal = p['halal_food'] == true;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.subtleSurface(context),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: AppTheme.border(context).withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: AppTheme.primaryColor.withValues(
+                              alpha: 0.10,
+                            ),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              color: AppTheme.primaryColor,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name.isEmpty ? '-' : name,
+                                  style: GoogleFonts.anuphan(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                    color: AppTheme.onSurface(context),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  phone,
+                                  style: GoogleFonts.anuphan(
+                                    fontSize: 12,
+                                    color: AppTheme.mutedText(context),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (seat.isNotEmpty || halal) ...[
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 6,
+                                    children: [
+                                      if (seat.isNotEmpty)
+                                        _InlineBadge('ที่นั่ง $seat'),
+                                      if (halal)
+                                        _InlineBadge('อาหารฮาลาล'),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    subtitle: Text(textOf(p['phone'], 'ไม่มีเบอร์โทร')),
                   );
                 }),
+
+                // Installments section
                 if (installments.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const _SectionTitle('งวดชำระ'),
+                  const SizedBox(height: 16),
+                  _SheetSectionTitle(
+                    icon: Icons.receipt_long_rounded,
+                    title: 'งวดชำระ',
+                  ),
+                  const SizedBox(height: 10),
                   ...installments.map((item) {
-                    final installment = asMap(item);
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        'งวด ${textOf(installment['installment_no'])} - ${money(installment['amount'])}',
-                      ),
-                      subtitle: Text(
-                        'ครบกำหนด ${dateText(installment['due_date'])}',
-                      ),
-                      trailing: _StatusChip(
-                        status: textOf(installment['status']),
+                    final inst = asMap(item);
+                    final instStatus = textOf(inst['status']);
+                    final isPaid = instStatus == 'paid';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isPaid
+                              ? AppTheme.primaryColor.withValues(alpha: 0.06)
+                              : AppTheme.subtleSurface(context),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: isPaid
+                                ? AppTheme.primaryColor.withValues(alpha: 0.16)
+                                : AppTheme.border(context).withValues(
+                                    alpha: 0.6,
+                                  ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isPaid
+                                  ? Icons.check_circle_rounded
+                                  : Icons.schedule_rounded,
+                              color: isPaid
+                                  ? AppTheme.primaryColor
+                                  : AppTheme.warningColor,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'งวดที่ ${textOf(inst['installment_no'])}  ·  ${money(inst['amount'])}',
+                                    style: GoogleFonts.anuphan(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 13,
+                                      color: AppTheme.onSurface(context),
+                                    ),
+                                  ),
+                                  Text(
+                                    'ครบกำหนด ${dateText(inst['due_date'])}',
+                                    style: GoogleFonts.anuphan(
+                                      fontSize: 12,
+                                      color: AppTheme.mutedText(context),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _StatusChip(status: instStatus),
+                          ],
+                        ),
                       ),
                     );
                   }),
                 ],
-                const SizedBox(height: 18),
+
+                const SizedBox(height: 20),
+
+                // Payment actions (pending status)
                 if (booking['status'] == 'pending') ...[
                   if (installmentAvailable) ...[
                     DropdownButtonFormField<String>(
@@ -4976,36 +5112,56 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                       onChanged: (value) =>
                           setState(() => _paymentType = value ?? 'full'),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                   ],
-                  FilledButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PaymentScreen(
-                            bookingRef: widget.bookingRef,
-                            initialPaymentType: paymentType,
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PaymentScreen(
+                              bookingRef: widget.bookingRef,
+                              initialPaymentType: paymentType,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.payments_outlined),
-                    label: const Text('ไปหน้าชำระเงิน'),
+                        );
+                      },
+                      icon: const Icon(Icons.payments_outlined),
+                      label: const Text('ไปหน้าชำระเงิน'),
+                    ),
                   ),
-                  TextButton.icon(
-                    onPressed: () => _cancel(context),
-                    icon: const Icon(Icons.cancel_outlined),
-                    label: const Text('ยกเลิกการจอง'),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _cancel(context),
+                      icon: const Icon(Icons.cancel_outlined),
+                      label: const Text('ยกเลิกการจอง'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.errorColor,
+                        side: BorderSide(
+                          color: AppTheme.errorColor.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
-                if (_asBool(booking['can_review']))
-                  OutlinedButton.icon(
-                    onPressed: () => _review(context, booking),
-                    icon: const Icon(Icons.rate_review_outlined),
-                    label: const Text('รีวิวทริป'),
+
+                // Review CTA
+                if (_asBool(booking['can_review'])) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _review(context, booking),
+                      icon: const Icon(Icons.star_rounded),
+                      label: const Text('รีวิวทริป'),
+                    ),
                   ),
+                ],
               ],
             ),
           );
@@ -5036,22 +5192,103 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
     BuildContext context,
     Map<String, dynamic> booking,
   ) async {
-    final comment = await promptText(
-      context,
-      title: 'รีวิวทริป',
-      hint: 'เล่าประสบการณ์ของคุณ',
+    final result = await showDialog<(int, String)>(
+      context: context,
+      builder: (_) => const _ReviewDialog(),
     );
-    if (comment == null) return;
+    if (result == null) return;
+    final (rating, comment) = result;
     try {
       await context.read<AppProvider>().submitReview(
         bookingId: int.parse(booking['id'].toString()),
-        rating: 5,
+        rating: rating,
         comment: comment,
       );
-      if (context.mounted) showSnack(context, 'ส่งรีวิวแล้ว');
+      if (context.mounted) showSnack(context, 'ส่งรีวิวแล้ว ขอบคุณที่ช่วยแชร์ประสบการณ์');
     } catch (e) {
       if (context.mounted) showSnack(context, e.toString());
     }
+  }
+}
+
+class _ReviewDialog extends StatefulWidget {
+  const _ReviewDialog();
+
+  @override
+  State<_ReviewDialog> createState() => _ReviewDialogState();
+}
+
+class _ReviewDialogState extends State<_ReviewDialog> {
+  int _rating = 5;
+  final _commentController = TextEditingController();
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('รีวิวทริป'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'คะแนน',
+            style: GoogleFonts.anuphan(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final star = i + 1;
+              return IconButton(
+                onPressed: () => setState(() => _rating = star),
+                icon: Icon(
+                  star <= _rating ? Icons.star_rounded : Icons.star_border_rounded,
+                  color: star <= _rating ? const Color(0xFFFFB020) : AppTheme.textSecondary,
+                  size: 36,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _commentController,
+            decoration: InputDecoration(
+              hintText: 'เล่าประสบการณ์ของคุณ',
+              hintStyle: GoogleFonts.anuphan(color: AppTheme.textSecondary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            maxLines: 4,
+            style: GoogleFonts.anuphan(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('ยกเลิก'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final comment = _commentController.text.trim();
+            if (comment.isEmpty) return;
+            Navigator.pop(context, (_rating, comment));
+          },
+          child: const Text('ส่งรีวิว'),
+        ),
+      ],
+    );
   }
 }
 
@@ -6308,20 +6545,6 @@ String _regionLabel(String region) {
   };
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String text;
-
-  const _SectionTitle(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-    );
-  }
-}
-
 class _Chip extends StatelessWidget {
   final String text;
 
@@ -6503,4 +6726,61 @@ Future<String?> promptText(
   );
   controller.dispose();
   return result == null || result.isEmpty ? null : result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sheet helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SheetSectionTitle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+
+  const _SheetSectionTitle({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppTheme.primaryColor),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: GoogleFonts.anuphan(
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            color: AppTheme.onSurface(context),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InlineBadge extends StatelessWidget {
+  final String text;
+
+  const _InlineBadge(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.6),
+        ),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.anuphan(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.mutedText(context),
+        ),
+      ),
+    );
+  }
 }

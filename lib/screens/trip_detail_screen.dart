@@ -60,10 +60,16 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       setState(() => _trip = tripData);
     }
 
-    final schedules = await app.schedules(slug);
-    final reviews = await app.tripReviews(tripData['id'] ?? 0);
+    final tripId = int.tryParse(tripData['id']?.toString() ?? '') ?? 0;
+    final results = await Future.wait([
+      app.schedules(slug),
+      if (tripId > 0) app.tripReviews(tripId) else Future.value(<dynamic>[]),
+    ]);
 
-    return <String, dynamic>{'schedules': schedules, 'reviews': reviews};
+    return <String, dynamic>{
+      'schedules': results[0],
+      'reviews': results[1],
+    };
   }
 
   @override
@@ -75,14 +81,81 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             snapshot.connectionState == ConnectionState.waiting &&
             _trip == null;
 
-        if (snapshot.hasError) {
+        if (snapshot.hasError && _trip == null) {
           return Scaffold(
             backgroundColor: AppTheme.background(context),
+            appBar: AppBar(
+              backgroundColor: AppTheme.surface(context),
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                onPressed: () => Navigator.maybePop(context),
+              ),
+            ),
             body: Center(
-              child: Text(
-                'เกิดข้อผิดพลาด: ${snapshot.error}',
-                style: GoogleFonts.anuphan(color: _premiumText),
-                textAlign: TextAlign.center,
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Icon(
+                        Icons.wifi_off_rounded,
+                        size: 36,
+                        color: Color(0xFFEF4444),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'โหลดข้อมูลไม่สำเร็จ',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: _premiumText,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต\nแล้วลองใหม่อีกครั้ง',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 14,
+                        color: _mutedText,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    FilledButton.icon(
+                      onPressed: () {
+                        setState(() => _future = _loadData());
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _softAccent,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: Text(
+                        'ลองใหม่',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -448,7 +521,10 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
   @override
   Widget build(BuildContext context) {
     final heroHeight = _heroHeight(context);
-    final bottomBarHeight = widget.isLoading ? 0.0 : 112.0;
+    final selectedSchedule = _selectedSchedule;
+    final joinTripEnabled = selectedSchedule != null &&
+        _asBool(selectedSchedule['join_trip_enabled']);
+    final bottomBarHeight = widget.isLoading ? 0.0 : (joinTripEnabled ? 172.0 : 112.0);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: _isCollapsed
@@ -575,7 +651,9 @@ class TravelSliverAppBar extends StatelessWidget {
       expandedHeight: expandedHeight,
       elevation: 0,
       scrolledUnderElevation: 0,
-      backgroundColor: isCollapsed ? Colors.white : Colors.transparent,
+      backgroundColor: isCollapsed
+          ? AppTheme.surface(context)
+          : Colors.transparent,
       surfaceTintColor: Colors.transparent,
       shadowColor: Colors.black.withValues(alpha: 0.08),
       title: AnimatedOpacity(
@@ -808,12 +886,12 @@ class _FloatingActionIconButtonState extends State<FloatingActionIconButton> {
   Widget build(BuildContext context) {
     final foreground =
         widget.foregroundColor ??
-        (widget.isCollapsed ? _premiumText : Colors.white);
+        (widget.isCollapsed ? AppTheme.onSurface(context) : Colors.white);
     final background = widget.isCollapsed
-        ? Colors.white.withValues(alpha: 0.94)
+        ? AppTheme.surface(context).withValues(alpha: 0.94)
         : Colors.white.withValues(alpha: 0.18);
     final border = widget.isCollapsed
-        ? Colors.black.withValues(alpha: 0.06)
+        ? AppTheme.border(context)
         : Colors.white.withValues(alpha: 0.30);
 
     return GestureDetector(
@@ -887,11 +965,17 @@ class DestinationInfoSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _RatingSummary(trip: trip, reviews: reviews),
-              if (trip['category_name'] != null)
-                _InfoChip(
-                  icon: Icons.tag_rounded,
-                  label: textOf(trip['category_name']),
-                ),
+              Builder(
+              builder: (_) {
+                final catLabel = textOf(
+                  trip['category_name'] ??
+                      asMap(trip['category'])['name'] ??
+                      trip['type'],
+                ).trim();
+                if (catLabel.isEmpty) return const SizedBox.shrink();
+                return _InfoChip(icon: Icons.tag_rounded, label: catLabel);
+              },
+            ),
             ],
           ),
           const SizedBox(height: 18),
@@ -907,35 +991,56 @@ class DestinationInfoSection extends StatelessWidget {
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.location_on_rounded,
-                size: 18,
-                color: _softAccent,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  textOf(trip['location'], 'ประเทศไทย'),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
-                    fontSize: 14,
-                    color: _mutedText,
-                    height: 1.45,
-                    fontWeight: FontWeight.w600,
-                  ),
+          Builder(
+            builder: (context) {
+              final location = textOf(
+                trip['location'] ?? trip['destination'],
+              ).trim();
+              if (location.isEmpty) return const SizedBox(height: 10);
+              return Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 18,
+                      color: _softAccent,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        location,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 14,
+                          color: _mutedText,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              );
+            },
           ),
-          const SizedBox(height: 24),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          const SizedBox(height: 20),
-          QuickInfoChips(trip: trip),
+          Builder(
+            builder: (_) {
+              final chips = _quickInfoItems(trip);
+              if (chips.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  const SizedBox(height: 20),
+                  QuickInfoChips(trip: trip),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
@@ -950,6 +1055,7 @@ class QuickInfoChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chips = _quickInfoItems(trip);
+    if (chips.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
       spacing: 8,
@@ -994,7 +1100,8 @@ class AboutSection extends StatelessWidget {
       );
     }
 
-    final description = textOf(trip['description'], 'ไม่มีคำอธิบาย');
+    final description = textOf(trip['description']).trim();
+    if (description.isEmpty) return const SizedBox.shrink();
 
     return _PremiumCard(
       child: Column(
@@ -2069,41 +2176,9 @@ class StickyBookingBar extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: schedules.isEmpty ? null : handleBookingTap,
-                        style:
-                            ElevatedButton.styleFrom(
-                              elevation: 0,
-                              backgroundColor: _softAccent,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 28,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ).copyWith(
-                              overlayColor: WidgetStatePropertyAll(
-                                Colors.white.withValues(alpha: 0.1),
-                              ),
-                            ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.calendar_month_rounded, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'จองตอนนี้',
-                              style: GoogleFonts.anuphan(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    _BookingButton(
+                      enabled: schedules.isNotEmpty,
+                      onPressed: handleBookingTap,
                     ),
                   ],
                 ),
@@ -2140,6 +2215,80 @@ class StickyBookingBar extends StatelessWidget {
                 ],
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingButton extends StatefulWidget {
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  const _BookingButton({required this.enabled, required this.onPressed});
+
+  @override
+  State<_BookingButton> createState() => _BookingButtonState();
+}
+
+class _BookingButtonState extends State<_BookingButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        if (widget.enabled) widget.onPressed();
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            gradient: widget.enabled
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF059669), Color(0xFF047857)],
+                  )
+                : null,
+            color: widget.enabled ? null : const Color(0xFFD1D5DB),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: widget.enabled
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF059669).withValues(alpha: 0.32),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.calendar_month_rounded,
+                size: 20,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'จองตอนนี้',
+                style: GoogleFonts.anuphan(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2703,37 +2852,31 @@ List<_QuickInfoItem> _quickInfoItems(Map<String, dynamic> trip) {
   final difficulty = difficultyRaw.isNotEmpty
       ? _difficultyLabel(difficultyRaw)
       : '';
+  final maxPax = int.tryParse(trip['max_participants']?.toString() ?? '');
   final items = <_QuickInfoItem>[];
 
   if (duration.isNotEmpty) {
     items.add(_QuickInfoItem(icon: Icons.schedule_rounded, label: duration));
-  } else {
+  }
+
+  if (type.isNotEmpty) {
+    items.add(_QuickInfoItem(icon: Icons.hiking_rounded, label: type));
+  }
+
+  if (difficulty.isNotEmpty) {
     items.add(
-      const _QuickInfoItem(
-        icon: Icons.schedule_rounded,
-        label: 'ระยะเวลา 4 ชม.',
-      ),
+      _QuickInfoItem(icon: Icons.family_restroom_rounded, label: difficulty),
     );
   }
 
-  items.add(
-    _QuickInfoItem(
-      icon: Icons.hiking_rounded,
-      label: type.isNotEmpty ? type : 'เดินป่า',
-    ),
-  );
-  items.add(
-    _QuickInfoItem(
-      icon: Icons.family_restroom_rounded,
-      label: difficulty.isNotEmpty ? difficulty : 'เหมาะกับครอบครัว',
-    ),
-  );
-  items.add(
-    const _QuickInfoItem(
-      icon: Icons.photo_camera_outlined,
-      label: 'จุดถ่ายรูป',
-    ),
-  );
+  if (maxPax != null && maxPax > 0) {
+    items.add(
+      _QuickInfoItem(
+        icon: Icons.group_rounded,
+        label: 'สูงสุด $maxPax คน',
+      ),
+    );
+  }
 
   final rating = _ratingValue(trip);
   final reviewCount = _reviewCount(trip, const []);

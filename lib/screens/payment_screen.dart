@@ -20,14 +20,14 @@ import '../widgets/active_seat_lock_overlay.dart';
 import '../widgets/travel_widgets.dart';
 import 'booking_flow_screen.dart';
 
-const Color _text = Color(0xFF111827);
-const Color _muted = Color(0xFF6B7280);
-const Color _accent = Color(0xFF0F8F75);
-const Color _border = Color(0xFFEAEAEA);
-const Color _field = Color(0xFFF7F8F7);
+const Color _accent = Color(0xFF059669);
 const String _promptPayId = '004999239362071';
 const String _displayPromptPayId = '004-99923936-2071';
 const String _bankAccount = '230-139095-8';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PaymentScreen
+// ─────────────────────────────────────────────────────────────────────────────
 
 class PaymentScreen extends StatefulWidget {
   final String bookingRef;
@@ -134,30 +134,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       showDragHandle: true,
+      backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) => SafeArea(
+      builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library_rounded),
-                title: Text(
-                  'เลือกรูปจากเครื่อง',
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
-                ),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              _SourceTile(
+                icon: Icons.photo_library_rounded,
+                label: 'เลือกรูปจากเครื่อง',
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
-              ListTile(
-                leading: const Icon(Icons.photo_camera_rounded),
-                title: Text(
-                  'ถ่ายรูปสลิป',
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
-                ),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
+              const SizedBox(height: 8),
+              _SourceTile(
+                icon: Icons.photo_camera_rounded,
+                label: 'ถ่ายรูปสลิป',
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
             ],
           ),
@@ -178,6 +174,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
+    HapticFeedback.mediumImpact();
     setState(() => _paying = true);
     try {
       final paymentType = _normalizePaymentType(booking, _paymentType);
@@ -193,30 +190,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
         slipImagePath: _slipImage!.path,
       );
       if (!mounted) return;
+      HapticFeedback.heavyImpact();
       await showDialog<void>(
         context: context,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: Text(
-            'แจ้งชำระเงินสำเร็จ',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
-          ),
-          content: Text(
-            'ระบบบันทึกข้อมูลการชำระเงินและยืนยันการจองแล้ว',
-            style: GoogleFonts.anuphan(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'ตกลง',
-                style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ],
-        ),
+        builder: (_) => _SuccessDialog(amount: amount),
       );
       _reload();
     } catch (e) {
@@ -228,6 +205,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   void _copy(String value, String message) {
     Clipboard.setData(ClipboardData(text: value));
+    HapticFeedback.selectionClick();
     _showSnack(message);
   }
 
@@ -237,21 +215,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _downloadPromptPayQr() async {
     if (_downloadingQr) return;
-
     setState(() => _downloadingQr = true);
     try {
       final renderObject = _promptPayQrKey.currentContext?.findRenderObject();
       if (renderObject is! RenderRepaintBoundary) {
         throw Exception('ไม่พบ QR CODE สำหรับดาวน์โหลด');
       }
-
       final image = await renderObject.toImage(pixelRatio: 3);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
-      if (byteData == null) {
-        throw Exception('ไม่สามารถสร้างรูป QR CODE ได้');
-      }
-
+      if (byteData == null) throw Exception('ไม่สามารถสร้างรูป QR CODE ได้');
       final file = await _saveQrImage(byteData.buffer.asUint8List());
       if (!mounted) return;
       _showSnack('ดาวน์โหลด QR CODE แล้ว: ${file.path}');
@@ -263,37 +236,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<File> _saveQrImage(Uint8List bytes) async {
-    final safeBookingRef = widget.bookingRef.replaceAll(
-      RegExp(r'[^A-Za-z0-9_-]'),
-      '_',
-    );
-    final fileName = 'luilaykhao-payment-$safeBookingRef-qr.png';
+    final safeRef = widget.bookingRef.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    final fileName = 'luilaykhao-payment-$safeRef-qr.png';
     final directories = <Directory>[];
-
     if (Platform.isAndroid) {
       directories.add(Directory('/storage/emulated/0/Download'));
     }
-
-    final downloadsDirectory = await _safeDownloadsDirectory();
-    if (downloadsDirectory != null) directories.add(downloadsDirectory);
+    final dl = await _safeDownloadsDirectory();
+    if (dl != null) directories.add(dl);
     directories.add(await getApplicationDocumentsDirectory());
     directories.add(Directory.systemTemp);
 
     Object? lastError;
-    for (final directory in directories) {
+    for (final dir in directories) {
       try {
-        if (!await directory.exists()) {
-          await directory.create(recursive: true);
-        }
-        final file = File(
-          '${directory.path}${Platform.pathSeparator}$fileName',
-        );
-        return file.writeAsBytes(bytes, flush: true);
+        if (!await dir.exists()) await dir.create(recursive: true);
+        return File('${dir.path}${Platform.pathSeparator}$fileName')
+            .writeAsBytes(bytes, flush: true);
       } catch (e) {
         lastError = e;
       }
     }
-
     throw FileSystemException(
       'ไม่สามารถบันทึกไฟล์ QR CODE ได้',
       lastError?.toString(),
@@ -319,8 +282,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
-        backgroundColor: AppTheme.surface(context),
+        backgroundColor: AppTheme.background(context).withValues(alpha: 0.95),
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         foregroundColor: AppTheme.onSurface(context),
         title: Text(
           'ชำระเงิน',
@@ -331,7 +296,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const _LoadingState();
           }
           if (!snapshot.hasData) {
             return _PaymentEmptyState(onRetry: _reload);
@@ -347,15 +312,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
           final qrPayload = _buildPromptPayPayload(_promptPayId, amountDue);
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
             children: [
-              const _PaymentProgress(),
-              const SizedBox(height: 16),
-              if (status == 'pending') const _PaymentNotice(),
-              if (status == 'pending') const SizedBox(height: 10),
-              if (status == 'pending')
+              _PaymentProgress(status: status),
+              const SizedBox(height: 20),
+              if (status == 'pending') ...[
+                _PaymentNotice(),
+                const SizedBox(height: 10),
                 _PaymentCountdownBanner(booking: booking),
-              if (status == 'pending') const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
               if (checkInReady) ...[
                 _PaymentCompletedCard(booking: booking),
                 const SizedBox(height: 16),
@@ -372,7 +338,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   _PaymentTypeSection(
                     booking: booking,
                     value: paymentType,
-                    onChanged: (value) => setState(() => _paymentType = value),
+                    onChanged: (v) => setState(() => _paymentType = v),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -382,7 +348,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   qrPayload: qrPayload,
                   qrKey: _promptPayQrKey,
                   downloadingQr: _downloadingQr,
-                  onChanged: (value) => setState(() => _paymentMethod = value),
+                  onChanged: (v) => setState(() => _paymentMethod = v),
                   onDownloadQr: _downloadPromptPayQr,
                   onCopyAmount: () =>
                       _copy(amountDue.toStringAsFixed(2), 'คัดลอกยอดชำระแล้ว'),
@@ -406,63 +372,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   onPickDate: _pickTransferDate,
                   onPickTime: _pickTransferTime,
                 ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  height: 56,
-                  child: FilledButton.icon(
-                    onPressed: _paying ? null : () => _submit(booking),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _accent,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFFC8D5D1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                    ),
-                    icon: _paying
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.verified_user_rounded),
-                    label: Text(
-                      _paying
-                          ? 'กำลังบันทึก...'
-                          : 'ยืนยันการชำระ ${money(amountDue)}',
-                      style: GoogleFonts.anuphan(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: 24),
+                _SubmitButton(
+                  paying: _paying,
+                  amount: amountDue,
+                  onPressed: () => _submit(booking),
                 ),
               ],
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: _goHome,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _accent,
-                    side: BorderSide(color: _accent.withValues(alpha: 0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(26),
-                    ),
-                  ),
-                  icon: const Icon(Icons.home_rounded),
-                  label: Text(
-                    'กลับหน้าหลัก',
-                    style: GoogleFonts.anuphan(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 12),
+              _HomeButton(onPressed: _goHome),
             ],
           );
         },
@@ -471,12 +389,257 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 }
 
-// ─── Payment countdown banner ───────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Loading / Empty states
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(color: _accent),
+          const SizedBox(height: 16),
+          Text(
+            'กำลังโหลดข้อมูลการจอง...',
+            style: GoogleFonts.anuphan(
+              color: AppTheme.mutedText(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentEmptyState extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _PaymentEmptyState({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppTheme.subtleSurface(context),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 38,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'ไม่พบข้อมูลการจอง',
+              style: GoogleFonts.anuphan(
+                color: AppTheme.onSurface(context),
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'กรุณาลองใหม่อีกครั้ง',
+              style: GoogleFonts.anuphan(
+                color: AppTheme.mutedText(context),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onRetry,
+              style: FilledButton.styleFrom(
+                backgroundColor: _accent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(
+                'ลองใหม่',
+                style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Progress stepper
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PaymentProgress extends StatelessWidget {
+  final String status;
+
+  const _PaymentProgress({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = [
+      (icon: Icons.search_rounded, label: 'เลือกทริป', done: true),
+      (icon: Icons.edit_note_rounded, label: 'รายละเอียด', done: true),
+      (
+        icon: Icons.payments_rounded,
+        label: 'ชำระเงิน',
+        done: status == 'confirmed',
+      ),
+    ];
+
+    return Row(
+      children: List.generate(steps.length, (i) {
+        final step = steps[i];
+        final isActive = i == 2;
+        final isDone = step.done;
+        final color = isDone || isActive ? _accent : AppTheme.border(context);
+
+        return Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 240),
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: isDone || isActive
+                            ? _accent
+                            : AppTheme.subtleSurface(context),
+                        shape: BoxShape.circle,
+                        boxShadow: isDone || isActive
+                            ? [
+                                BoxShadow(
+                                  color: _accent.withValues(alpha: 0.30),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Icon(
+                        isDone ? Icons.check_rounded : step.icon,
+                        color: isDone || isActive
+                            ? Colors.white
+                            : AppTheme.mutedText(context),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      step.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        color: isActive
+                            ? _accent
+                            : AppTheme.mutedText(context),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (i != steps.length - 1)
+                Container(
+                  width: 28,
+                  height: 2.5,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Payment notice banner
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PaymentNotice extends StatelessWidget {
+  const _PaymentNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.warningTint(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppTheme.warningColor.withValues(alpha: 0.30),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.warningColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.priority_high_rounded,
+              color: AppTheme.warningColor,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'กรุณาชำระเงินและระบุเวลาโอนตามสลิป เพื่อยืนยันสิทธิ์การเดินทาง',
+              style: GoogleFonts.anuphan(
+                color: isDark
+                    ? const Color(0xFFFCD34D)
+                    : const Color(0xFF92400E),
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Countdown banner
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _PaymentCountdownBanner extends StatelessWidget {
   final Map<String, dynamic> booking;
-  const _PaymentCountdownBanner({required this.booking});
 
   static const _kDeadlineMinutes = 10;
+
+  const _PaymentCountdownBanner({required this.booking});
 
   @override
   Widget build(BuildContext context) {
@@ -490,10 +653,8 @@ class _PaymentCountdownBanner extends StatelessWidget {
     final expired = remaining.isNegative || remaining.inSeconds <= 0;
     final isUrgent = !expired && remaining.inSeconds <= 120;
 
-    final accent = expired || isUrgent
-        ? AppTheme.errorColor
-        : const Color(0xFF0F8F75);
-    final bgColor = accent.withValues(
+    final color = expired || isUrgent ? AppTheme.errorColor : _accent;
+    final bgColor = color.withValues(
       alpha: AppTheme.isDark(context) ? 0.15 : 0.08,
     );
 
@@ -507,24 +668,24 @@ class _PaymentCountdownBanner extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.withValues(alpha: 0.22)),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(13),
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
               expired ? Icons.timer_off_rounded : Icons.timer_rounded,
-              color: accent,
+              color: color,
               size: 22,
             ),
           ),
@@ -536,7 +697,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
                 Text(
                   expired ? 'หมดเวลาชำระเงิน' : 'เหลือเวลาชำระเงิน',
                   style: GoogleFonts.anuphan(
-                    color: accent,
+                    color: color,
                     fontWeight: FontWeight.w900,
                     fontSize: 13.5,
                   ),
@@ -550,6 +711,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
                     color: AppTheme.mutedText(context),
                     fontWeight: FontWeight.w600,
                     fontSize: 11.5,
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -559,7 +721,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
           Text(
             timeText,
             style: GoogleFonts.anuphan(
-              color: accent,
+              color: color,
               fontWeight: FontWeight.w900,
               fontSize: expired ? 13 : 22,
               fontFeatures: const [ui.FontFeature.tabularFigures()],
@@ -571,7 +733,10 @@ class _PaymentCountdownBanner extends StatelessWidget {
   }
 }
 
-// ─── Active seat lock section ───────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Seat lock section
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _SeatLockSection extends StatefulWidget {
   const _SeatLockSection();
 
@@ -586,9 +751,10 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
   @override
   void initState() {
     super.initState();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
+    _ticker = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) { if (mounted) setState(() {}); },
+    );
   }
 
   @override
@@ -635,9 +801,8 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.maybeOf(
-          context,
-        )?.showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.maybeOf(context)
+            ?.showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _busyScheduleId = null);
@@ -662,9 +827,7 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
       await app.cancelActiveSeatLock(scheduleId, seatIds: seatIds);
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text('ยกเลิกการจองแล้ว เลือกที่นั่งใหม่ได้เลย'),
-        ),
+        const SnackBar(content: Text('ยกเลิกการจองแล้ว เลือกที่นั่งใหม่ได้เลย')),
       );
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -679,9 +842,8 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.maybeOf(
-          context,
-        )?.showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.maybeOf(context)
+            ?.showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _busyScheduleId = null);
@@ -709,7 +871,7 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
             style: GoogleFonts.anuphan(
               fontSize: 15,
               fontWeight: FontWeight.w900,
-              color: _text,
+              color: AppTheme.onSurface(context),
             ),
           ),
         ),
@@ -732,103 +894,9 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
   }
 }
 
-class _PaymentProgress extends StatelessWidget {
-  const _PaymentProgress();
-
-  @override
-  Widget build(BuildContext context) {
-    const steps = ['เลือกทริป', 'รายละเอียด', 'ชำระเงิน'];
-    return Row(
-      children: List.generate(steps.length, (index) {
-        final active = index == 2;
-        final done = index < 2;
-        return Expanded(
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: active || done
-                            ? _accent
-                            : _accent.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        done ? Icons.check_rounded : Icons.payments_rounded,
-                        color: active || done ? Colors.white : _accent,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      steps[index],
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
-                        color: active ? _accent : _muted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (index != steps.length - 1)
-                Container(
-                  width: 24,
-                  height: 2,
-                  color: done ? _accent : _border,
-                ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-}
-
-class _PaymentNotice extends StatelessWidget {
-  const _PaymentNotice();
-
-  @override
-  Widget build(BuildContext context) {
-    return _SectionCard(
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppTheme.warningTint(context),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.priority_high_rounded,
-              color: AppTheme.warningColor,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'กรุณาชำระเงินและระบุเวลาโอนตามสลิป เพื่อยืนยันสิทธิ์การเดินทาง',
-              style: GoogleFonts.anuphan(
-                color: AppTheme.isDark(context)
-                    ? const Color(0xFFFCD34D)
-                    : const Color(0xFF92400E),
-                fontWeight: FontWeight.w800,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Booking summary card
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _BookingSummaryCard extends StatelessWidget {
   final Map<String, dynamic> booking;
@@ -848,9 +916,7 @@ class _BookingSummaryCard extends StatelessWidget {
     );
     final passengers = asList(booking['passengers']);
     final seats = asList(booking['seats']);
-    final selectedAddons = asList(
-      booking['selected_addons'],
-    ).map(asMap).toList();
+    final selectedAddons = asList(booking['selected_addons']).map(asMap).toList();
     final pickupPoint = asMap(booking['pickup_point']);
     final pickupText = textOf(
       pickupPoint['pickup_location'] ??
@@ -858,65 +924,118 @@ class _BookingSummaryCard extends StatelessWidget {
           booking['pickup_region'],
       'ระบุก่อนเดินทาง',
     );
+    final statusText = _statusLabel(textOf(booking['status']));
+    final statusColor = _statusColor(textOf(booking['status']));
 
     return _SectionCard(
       padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Trip hero image
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             child: AspectRatio(
               aspectRatio: 16 / 8,
               child: image.isEmpty
                   ? Container(
-                      color: _field,
+                      color: AppTheme.subtleSurface(context),
                       child: const Icon(
                         Icons.landscape_rounded,
                         color: _accent,
-                        size: 42,
+                        size: 48,
                       ),
                     )
-                  : CachedNetworkImage(imageUrl: image, fit: BoxFit.cover),
+                  : Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CachedNetworkImage(imageUrl: image, fit: BoxFit.cover),
+                        // gradient overlay for status badge readability
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.90),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                statusText,
+                                style: GoogleFonts.anuphan(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Trip title + status (no image case)
+                if (image.isEmpty)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: _StatusBadge(
+                      label: statusText,
+                      color: statusColor,
+                    ),
+                  ),
                 Text(
                   textOf(trip['title'], 'รายละเอียดการจอง'),
                   style: GoogleFonts.anuphan(
-                    color: _text,
+                    color: AppTheme.onSurface(context),
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                     height: 1.25,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
+                // Info pills
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
                     _InfoPill(
-                      Icons.confirmation_number_outlined,
-                      textOf(booking['booking_ref']),
+                      context: context,
+                      icon: Icons.confirmation_number_outlined,
+                      text: textOf(booking['booking_ref']),
                     ),
                     _InfoPill(
-                      Icons.calendar_today_rounded,
-                      dateText(schedule['departure_date']),
+                      context: context,
+                      icon: Icons.calendar_today_rounded,
+                      text: dateText(schedule['departure_date']),
                     ),
-                    _InfoPill(Icons.group_rounded, '${passengers.length} ท่าน'),
+                    _InfoPill(
+                      context: context,
+                      icon: Icons.group_rounded,
+                      text: '${passengers.length} ท่าน',
+                    ),
                     if (seats.isNotEmpty)
                       _InfoPill(
-                        Icons.airline_seat_recline_extra_rounded,
-                        seats
-                            .map((seat) => textOf(asMap(seat)['seat_id']))
+                        context: context,
+                        icon: Icons.airline_seat_recline_extra_rounded,
+                        text: seats
+                            .map((s) => textOf(asMap(s)['seat_id']))
                             .join(', '),
                       ),
                   ],
                 ),
+                const SizedBox(height: 14),
+                const _Divider(),
                 const SizedBox(height: 12),
                 _SummaryRow(
                   icon: Icons.location_on_outlined,
@@ -924,27 +1043,63 @@ class _BookingSummaryCard extends StatelessWidget {
                   value: pickupText,
                 ),
                 if (selectedAddons.isNotEmpty) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   ...selectedAddons.map((addon) {
-                    final quantity = textOf(addon['quantity'], '1');
+                    final qty = textOf(addon['quantity'], '1');
                     final name = textOf(addon['name'], 'ตัวเลือกเสริม');
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: _SummaryRow(
                         icon: Icons.add_task_rounded,
-                        label: quantity == '1' ? name : '$name x$quantity',
+                        label: qty == '1' ? name : '$name ×$qty',
                         value: money(addon['total_price']),
-                        valueColor: const Color(0xFFB45309),
+                        valueColor: AppTheme.warningColor,
                       ),
                     );
                   }),
                 ],
-                const SizedBox(height: 10),
-                _SummaryRow(
-                  icon: Icons.receipt_long_outlined,
-                  label: 'ยอดรวมทั้งหมด',
-                  value: money(booking['total_amount']),
-                  valueColor: _accent,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _accent.withValues(
+                      alpha: AppTheme.isDark(context) ? 0.15 : 0.07,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _accent.withValues(alpha: 0.20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        color: _accent,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'ยอดรวมทั้งหมด',
+                        style: GoogleFonts.anuphan(
+                          color: AppTheme.mutedText(context),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        money(booking['total_amount']),
+                        style: GoogleFonts.anuphan(
+                          color: _accent,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -954,6 +1109,10 @@ class _BookingSummaryCard extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Payment type section
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _PaymentTypeSection extends StatelessWidget {
   final Map<String, dynamic> booking;
@@ -998,15 +1157,19 @@ class _PaymentTypeSection extends StatelessWidget {
           ),
           if (value == 'installment') ...[
             const SizedBox(height: 14),
-            ..._installmentSchedule(
-              booking,
-            ).map((row) => _InstallmentRow(row: row)),
+            ..._installmentSchedule(booking).map(
+              (row) => _InstallmentRow(row: row),
+            ),
           ],
         ],
       ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Payment method section
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _PaymentMethodSection extends StatelessWidget {
   final String value;
@@ -1067,91 +1230,16 @@ class _PaymentMethodSection extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           if (value == 'promptpay')
-            Center(
-              child: Column(
-                children: [
-                  RepaintBoundary(
-                    key: qrKey,
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppTheme.border(context)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: QrImageView(
-                        data: qrPayload,
-                        version: QrVersions.auto,
-                        size: 220,
-                        backgroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: 220,
-                    height: 44,
-                    child: OutlinedButton.icon(
-                      onPressed: downloadingQr ? null : onDownloadQr,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _accent,
-                        side: BorderSide(
-                          color: _accent.withValues(alpha: 0.28),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                      ),
-                      icon: downloadingQr
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.download_rounded, size: 20),
-                      label: Text(
-                        downloadingQr ? 'กำลังดาวน์โหลด' : 'ดาวน์โหลด QR CODE',
-                        style: GoogleFonts.anuphan(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'พร้อมเพย์ / e-Wallet $_displayPromptPayId',
-                    style: GoogleFonts.anuphan(
-                      color: _muted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
+            _PromptPayPanel(
+              qrPayload: qrPayload,
+              qrKey: qrKey,
+              downloadingQr: downloadingQr,
+              onDownload: onDownloadQr,
             )
           else
-            Column(
-              children: [
-                _BankInfoRow(label: 'ธนาคาร', value: 'กสิกรไทย (KBANK)'),
-                const SizedBox(height: 8),
-                _BankInfoRow(
-                  label: 'ชื่อบัญชี',
-                  value: 'นายธีร์ธวัช พิพัฒน์เดชธน',
-                ),
-                const SizedBox(height: 8),
-                _BankInfoRow(label: 'เลขที่บัญชี', value: _bankAccount),
-              ],
-            ),
+            _BankTransferPanel(),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -1179,6 +1267,134 @@ class _PaymentMethodSection extends StatelessWidget {
     );
   }
 }
+
+class _PromptPayPanel extends StatelessWidget {
+  final String qrPayload;
+  final GlobalKey qrKey;
+  final bool downloadingQr;
+  final VoidCallback onDownload;
+
+  const _PromptPayPanel({
+    required this.qrPayload,
+    required this.qrKey,
+    required this.downloadingQr,
+    required this.onDownload,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        children: [
+          RepaintBoundary(
+            key: qrKey,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: _accent.withValues(alpha: 0.18),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _accent.withValues(alpha: 0.12),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: QrImageView(
+                data: qrPayload,
+                version: QrVersions.auto,
+                size: 200,
+                backgroundColor: Colors.white,
+                errorCorrectionLevel: QrErrorCorrectLevel.M,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'พร้อมเพย์ / e-Wallet',
+            style: GoogleFonts.anuphan(
+              color: AppTheme.mutedText(context),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            _displayPromptPayId,
+            style: GoogleFonts.anuphan(
+              color: AppTheme.onSurface(context),
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: 220,
+            height: 44,
+            child: OutlinedButton.icon(
+              onPressed: downloadingQr ? null : onDownload,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _accent,
+                side: BorderSide(color: _accent.withValues(alpha: 0.30)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                ),
+              ),
+              icon: downloadingQr
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: _accent,
+                      ),
+                    )
+                  : const Icon(Icons.download_rounded, size: 20),
+              label: Text(
+                downloadingQr ? 'กำลังดาวน์โหลด' : 'ดาวน์โหลด QR CODE',
+                style: GoogleFonts.anuphan(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BankTransferPanel extends StatelessWidget {
+  const _BankTransferPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _BankInfoRow(label: 'ธนาคาร', value: 'กสิกรไทย (KBANK)'),
+        const SizedBox(height: 8),
+        _BankInfoRow(label: 'ชื่อบัญชี', value: 'นายธีร์ธวัช พิพัฒน์เดชธน'),
+        const SizedBox(height: 8),
+        _BankInfoRow(label: 'เลขที่บัญชี', value: _bankAccount),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Transfer time section
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _TransferTimeSection extends StatelessWidget {
   final DateTime? date;
@@ -1213,6 +1429,7 @@ class _TransferTimeSection extends StatelessWidget {
                   value: date == null
                       ? 'เลือกวันที่'
                       : DateFormat('d MMM yyyy', 'th_TH').format(date!),
+                  filled: date != null,
                   onTap: onPickDate,
                 ),
               ),
@@ -1222,6 +1439,7 @@ class _TransferTimeSection extends StatelessWidget {
                   icon: Icons.schedule_rounded,
                   label: 'เวลาที่โอน',
                   value: time == null ? 'เลือกเวลา' : time!.format(context),
+                  filled: time != null,
                   onTap: onPickTime,
                 ),
               ),
@@ -1231,9 +1449,10 @@ class _TransferTimeSection extends StatelessWidget {
           Text(
             'กรอกวันและเวลาตามสลิปโอนเงิน เพื่อให้ทีมงานตรวจสอบได้รวดเร็ว',
             style: GoogleFonts.anuphan(
-              color: _muted,
+              color: AppTheme.mutedText(context),
               fontSize: 12,
-              height: 1.35,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
             ),
           ),
         ],
@@ -1241,6 +1460,10 @@ class _TransferTimeSection extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slip upload section
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _SlipUploadSection extends StatelessWidget {
   final XFile? image;
@@ -1262,37 +1485,13 @@ class _SlipUploadSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _SectionTitle(
                   icon: Icons.upload_file_rounded,
                   title: 'แนบรูปภาพสลิป',
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: hasImage
-                      ? _accent.withValues(alpha: 0.10)
-                      : const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: hasImage
-                        ? _accent.withValues(alpha: 0.18)
-                        : const Color(0xFFFDE68A),
-                  ),
-                ),
-                child: Text(
-                  hasImage ? 'แนบแล้ว' : 'จำเป็น',
-                  style: GoogleFonts.anuphan(
-                    color: hasImage ? _accent : const Color(0xFF92400E),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
+              _RequiredBadge(done: hasImage),
             ],
           ),
           const SizedBox(height: 14),
@@ -1300,15 +1499,17 @@ class _SlipUploadSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             onTap: onPick,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              height: hasImage ? 260 : 150,
+              duration: const Duration(milliseconds: 200),
+              height: hasImage ? 280 : 160,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: hasImage ? Colors.black : _field,
+                color: hasImage ? Colors.black : AppTheme.fieldSurface(context),
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
-                  color: hasImage ? _accent : _border,
-                  width: hasImage ? 1.4 : 1,
+                  color: hasImage
+                      ? _accent
+                      : AppTheme.border(context),
+                  width: hasImage ? 1.5 : 1,
                 ),
               ),
               child: hasImage
@@ -1373,12 +1574,14 @@ class _SlipUploadSection extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 54,
-                          height: 54,
+                          width: 56,
+                          height: 56,
                           decoration: BoxDecoration(
-                            color: AppTheme.surface(context),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: AppTheme.border(context)),
+                            color: _accent.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: _accent.withValues(alpha: 0.20),
+                            ),
                           ),
                           child: const Icon(
                             Icons.cloud_upload_rounded,
@@ -1399,7 +1602,7 @@ class _SlipUploadSection extends StatelessWidget {
                         Text(
                           'ต้องแนบทุกครั้งก่อนยืนยันการชำระเงิน',
                           style: GoogleFonts.anuphan(
-                            color: _muted,
+                            color: AppTheme.mutedText(context),
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1414,6 +1617,10 @@ class _SlipUploadSection extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Completed / check-in card
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _PaymentCompletedCard extends StatefulWidget {
   final Map<String, dynamic> booking;
 
@@ -1423,27 +1630,45 @@ class _PaymentCompletedCard extends StatefulWidget {
   State<_PaymentCompletedCard> createState() => _PaymentCompletedCardState();
 }
 
-class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
+class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
+    with SingleTickerProviderStateMixin {
   final GlobalKey _qrKey = GlobalKey();
   bool _downloadingQr = false;
+  late AnimationController _anim;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _scale = CurvedAnimation(parent: _anim, curve: Curves.elasticOut);
+    _anim.forward();
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
 
   Future<void> _downloadQr() async {
     if (_downloadingQr) return;
     setState(() => _downloadingQr = true);
     try {
-      final renderObject = _qrKey.currentContext?.findRenderObject();
-      if (renderObject is! RenderRepaintBoundary) {
+      final ro = _qrKey.currentContext?.findRenderObject();
+      if (ro is! RenderRepaintBoundary) {
         throw Exception('ไม่พบ QR CODE สำหรับดาวน์โหลด');
       }
-      final image = await renderObject.toImage(pixelRatio: 3);
+      final image = await ro.toImage(pixelRatio: 3);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
       if (byteData == null) throw Exception('ไม่สามารถสร้างรูป QR CODE ได้');
 
-      final safeRef = textOf(
-        widget.booking['booking_ref'],
-        'checkin',
-      ).replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      final safeRef = textOf(widget.booking['booking_ref'], 'checkin')
+          .replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
       final fileName = 'luilaykhao-checkin-$safeRef-qr.png';
       final bytes = byteData.buffer.asUint8List();
 
@@ -1494,29 +1719,55 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
   Widget build(BuildContext context) {
     final bookingRef = textOf(widget.booking['booking_ref'], '-');
     final checkInCode = textOf(widget.booking['qr_code']).trim();
+    final isDark = AppTheme.isDark(context);
 
-    return _SectionCard(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  _accent.withValues(alpha: 0.22),
+                  const Color(0xFF059669).withValues(alpha: 0.08),
+                ]
+              : [
+                  _accent.withValues(alpha: 0.09),
+                  _accent.withValues(alpha: 0.04),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: _accent.withValues(alpha: 0.22)),
+      ),
+      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              color: AppTheme.selectedTint(context),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.check_circle_rounded,
-              color: _accent,
-              size: 34,
+          ScaleTransition(
+            scale: _scale,
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: _accent.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: _accent.withValues(alpha: 0.28),
+                  width: 2,
+                ),
+              ),
+              child: const Icon(
+                Icons.verified_rounded,
+                color: _accent,
+                size: 36,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             'พร้อมสำหรับเช็คอิน',
             style: GoogleFonts.anuphan(
-              color: _text,
-              fontSize: 18,
+              color: AppTheme.onSurface(context),
+              fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1525,31 +1776,39 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
             'โปรดแสดงรหัสนี้แก่เจ้าหน้าที่เมื่อถึงจุดนัดหมาย',
             textAlign: TextAlign.center,
             style: GoogleFonts.anuphan(
-              color: _muted,
+              color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
           ),
           if (checkInCode.isNotEmpty) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
             RepaintBoundary(
               key: _qrKey,
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface(context),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: AppTheme.border(context)),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: _accent.withValues(alpha: 0.18)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _accent.withValues(alpha: 0.14),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
                 child: QrImageView(
                   data: checkInCode,
                   version: QrVersions.auto,
-                  size: 176,
+                  size: 180,
                   backgroundColor: Colors.white,
                   errorCorrectionLevel: QrErrorCorrectLevel.M,
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             SizedBox(
               width: 220,
               height: 44,
@@ -1557,7 +1816,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
                 onPressed: _downloadingQr ? null : _downloadQr,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _accent,
-                  side: BorderSide(color: _accent.withValues(alpha: 0.28)),
+                  side: BorderSide(color: _accent.withValues(alpha: 0.30)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(22),
                   ),
@@ -1566,7 +1825,10 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _accent,
+                        ),
                       )
                     : const Icon(Icons.download_rounded, size: 20),
                 label: Text(
@@ -1582,18 +1844,18 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: AppTheme.selectedTint(context),
+              color: AppTheme.surface(context),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: _accent.withValues(alpha: 0.14)),
+              border: Border.all(color: _accent.withValues(alpha: 0.18)),
             ),
             child: Column(
               children: [
                 Text(
                   'รหัสการจอง',
                   style: GoogleFonts.anuphan(
-                    color: _muted,
+                    color: AppTheme.mutedText(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1604,9 +1866,9 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.anuphan(
                     color: _accent,
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 0.2,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ],
@@ -1618,34 +1880,159 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard> {
   }
 }
 
-class _PaymentEmptyState extends StatelessWidget {
-  final VoidCallback onRetry;
+// ─────────────────────────────────────────────────────────────────────────────
+// Submit / home buttons
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const _PaymentEmptyState({required this.onRetry});
+class _SubmitButton extends StatelessWidget {
+  final bool paying;
+  final num amount;
+  final VoidCallback onPressed;
+
+  const _SubmitButton({
+    required this.paying,
+    required this.amount,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return SizedBox(
+      height: 58,
+      child: FilledButton.icon(
+        onPressed: paying ? null : onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: _accent,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: _accent.withValues(alpha: 0.40),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.70),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          elevation: paying ? 0 : 2,
+          shadowColor: _accent.withValues(alpha: 0.40),
+        ),
+        icon: paying
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.verified_user_rounded, size: 22),
+        label: Text(
+          paying ? 'กำลังบันทึก...' : 'ยืนยันการชำระ ${money(amount)}',
+          style: GoogleFonts.anuphan(
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _HomeButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _accent,
+          side: BorderSide(color: _accent.withValues(alpha: 0.32)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(26),
+          ),
+        ),
+        icon: const Icon(Icons.home_rounded),
+        label: Text(
+          'กลับหน้าหลัก',
+          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900, fontSize: 15),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Success dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SuccessDialog extends StatelessWidget {
+  final num amount;
+
+  const _SuccessDialog({required this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      backgroundColor: AppTheme.surface(context),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.receipt_long_outlined, size: 54, color: _muted),
-            const SizedBox(height: 10),
-            Text(
-              'ไม่พบข้อมูลการจอง',
-              style: GoogleFonts.anuphan(
-                color: _text,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: _accent.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: _accent,
+                size: 38,
               ),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('ลองใหม่'),
+            const SizedBox(height: 16),
+            Text(
+              'แจ้งชำระเงินสำเร็จ',
+              style: GoogleFonts.anuphan(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'ระบบบันทึกข้อมูลการชำระเงิน ${money(amount)} แล้ว\nทีมงานจะตรวจสอบและยืนยันการจองให้เร็วๆ นี้',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.anuphan(
+                color: AppTheme.mutedText(context),
+                fontWeight: FontWeight.w600,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _accent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                child: Text(
+                  'ตกลง',
+                  style: GoogleFonts.anuphan(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -1654,13 +2041,17 @@ class _PaymentEmptyState extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared small widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _SectionCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
 
   const _SectionCard({
     required this.child,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(18),
   });
 
   @override
@@ -1687,14 +2078,24 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: _accent, size: 20),
-        const SizedBox(width: 8),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: _accent.withValues(
+              alpha: AppTheme.isDark(context) ? 0.18 : 0.10,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: _accent, size: 18),
+        ),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
             title,
             style: GoogleFonts.anuphan(
-              color: _text,
-              fontSize: 17,
+              color: AppTheme.onSurface(context),
+              fontSize: 16,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1738,7 +2139,7 @@ class _ChoiceTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected ? _accent : AppTheme.border(context),
-            width: selected ? 1.4 : 1,
+            width: selected ? 1.5 : 1,
           ),
         ),
         child: Row(
@@ -1758,7 +2159,9 @@ class _ChoiceTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(
-                      color: selected ? _accent : AppTheme.onSurface(context),
+                      color: selected
+                          ? _accent
+                          : AppTheme.onSurface(context),
                       fontWeight: FontWeight.w900,
                       fontSize: compact ? 12.5 : 14,
                     ),
@@ -1789,27 +2192,32 @@ class _ChoiceTile extends StatelessWidget {
 class _InfoPill extends StatelessWidget {
   final IconData icon;
   final String text;
+  final BuildContext context;
 
-  const _InfoPill(this.icon, this.text);
+  const _InfoPill({
+    required this.context,
+    required this.icon,
+    required this.text,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext _) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: _field,
+        color: AppTheme.fieldSurface(context),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: _border),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: _muted),
+          Icon(icon, size: 14, color: AppTheme.mutedText(context)),
           const SizedBox(width: 5),
           Text(
             text,
             style: GoogleFonts.anuphan(
-              color: _muted,
+              color: AppTheme.mutedText(context),
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
             ),
@@ -1835,46 +2243,36 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: Row(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Icon(icon, color: _muted, size: 18),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    label,
-                    style: GoogleFonts.anuphan(
-                      color: _muted,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
+    return Row(
+      children: [
+        Icon(icon, color: AppTheme.mutedText(context), size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.anuphan(
+              color: AppTheme.mutedText(context),
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
           ),
-          const SizedBox(width: 12),
-          Flexible(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                value,
-                textAlign: TextAlign.right,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
-                  color: valueColor ?? _text,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          flex: 2,
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.anuphan(
+              color: valueColor ?? AppTheme.onSurface(context),
+              fontWeight: FontWeight.w900,
+              fontSize: 13,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1886,45 +2284,75 @@ class _InstallmentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isFirst = row.no == 1;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: row.no == 1
+        color: isFirst
             ? AppTheme.warningTint(context)
             : AppTheme.fieldSurface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: row.no == 1
+          color: isFirst
               ? AppTheme.warningColor.withValues(alpha: 0.35)
               : AppTheme.border(context),
         ),
       ),
       child: Row(
         children: [
-          Text(
-            'งวด ${row.no}',
-            style: GoogleFonts.anuphan(
-              color: AppTheme.onSurface(context),
-              fontWeight: FontWeight.w900,
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: isFirst
+                  ? AppTheme.warningColor.withValues(alpha: 0.15)
+                  : AppTheme.subtleSurface(context),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '${row.no}',
+                style: GoogleFonts.anuphan(
+                  color: isFirst
+                      ? AppTheme.warningColor
+                      : AppTheme.mutedText(context),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              dateText(row.dueDate),
-              style: GoogleFonts.anuphan(
-                color: AppTheme.mutedText(context),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'งวดที่ ${row.no}',
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.onSurface(context),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  dateText(row.dueDate),
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.mutedText(context),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
           Text(
             money(row.amount),
             style: GoogleFonts.anuphan(
-              color: row.no == 1 ? AppTheme.warningColor : _text,
+              color: isFirst ? AppTheme.warningColor : _accent,
               fontWeight: FontWeight.w900,
+              fontSize: 14,
             ),
           ),
         ],
@@ -1942,18 +2370,18 @@ class _BankInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: _field,
+        color: AppTheme.fieldSurface(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         children: [
           Text(
             label,
             style: GoogleFonts.anuphan(
-              color: _muted,
+              color: AppTheme.mutedText(context),
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -1962,7 +2390,7 @@ class _BankInfoRow extends StatelessWidget {
           Text(
             value,
             style: GoogleFonts.anuphan(
-              color: _text,
+              color: AppTheme.onSurface(context),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1996,8 +2424,10 @@ class _CopyButton extends StatelessWidget {
       ),
       style: OutlinedButton.styleFrom(
         foregroundColor: _accent,
-        side: const BorderSide(color: _border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        side: BorderSide(color: AppTheme.border(context)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
     );
@@ -2008,6 +2438,7 @@ class _PickerTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final bool filled;
   final VoidCallback onTap;
 
   const _PickerTile({
@@ -2015,6 +2446,7 @@ class _PickerTile extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onTap,
+    this.filled = false,
   });
 
   @override
@@ -2022,16 +2454,28 @@ class _PickerTile extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _field,
+          color: filled
+              ? _accent.withValues(
+                  alpha: AppTheme.isDark(context) ? 0.16 : 0.07,
+                )
+              : AppTheme.fieldSurface(context),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _border),
+          border: Border.all(
+            color: filled ? _accent : AppTheme.border(context),
+            width: filled ? 1.4 : 1,
+          ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: _accent, size: 18),
+            Icon(
+              icon,
+              color: filled ? _accent : AppTheme.mutedText(context),
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -2040,7 +2484,7 @@ class _PickerTile extends StatelessWidget {
                   Text(
                     label,
                     style: GoogleFonts.anuphan(
-                      color: _muted,
+                      color: AppTheme.mutedText(context),
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
@@ -2051,7 +2495,7 @@ class _PickerTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(
-                      color: _text,
+                      color: filled ? _accent : AppTheme.onSurface(context),
                       fontWeight: FontWeight.w900,
                       fontSize: 13,
                     ),
@@ -2066,6 +2510,132 @@ class _PickerTile extends StatelessWidget {
   }
 }
 
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.anuphan(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _RequiredBadge extends StatelessWidget {
+  final bool done;
+
+  const _RequiredBadge({required this.done});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: done
+            ? _accent.withValues(alpha: 0.10)
+            : AppTheme.warningTint(context),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: done
+              ? _accent.withValues(alpha: 0.20)
+              : AppTheme.warningColor.withValues(alpha: 0.30),
+        ),
+      ),
+      child: Text(
+        done ? 'แนบแล้ว' : 'จำเป็น',
+        style: GoogleFonts.anuphan(
+          color: done ? _accent : AppTheme.warningColor,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _SourceTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _SourceTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppTheme.fieldSurface(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.border(context)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _accent.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: _accent, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: GoogleFonts.anuphan(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  const _Divider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: AppTheme.border(context).withValues(alpha: 0.50),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Data model
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _InstallmentPreview {
   final int no;
   final String dueDate;
@@ -2077,6 +2647,10 @@ class _InstallmentPreview {
     required this.amount,
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pure helper functions
+// ─────────────────────────────────────────────────────────────────────────────
 
 num _amountDue(Map<String, dynamic> booking, String paymentType) {
   if (_normalizePaymentType(booking, paymentType) == 'installment') {
@@ -2094,8 +2668,8 @@ String _normalizePaymentType(Map<String, dynamic> booking, String paymentType) {
 
 bool _installmentAvailable(Map<String, dynamic> booking) {
   final schedule = asMap(booking['schedule']);
-  final enabled = _asBool(schedule['installment_enabled']);
-  return enabled && _installmentCount(booking) > 1;
+  return _asBool(schedule['installment_enabled']) &&
+      _installmentCount(booking) > 1;
 }
 
 num _installmentAmount(Map<String, dynamic> booking) {
@@ -2143,6 +2717,21 @@ List<_InstallmentPreview> _installmentSchedule(Map<String, dynamic> booking) {
     );
   });
 }
+
+String _statusLabel(String status) => switch (status) {
+  'pending' => 'รอชำระเงิน',
+  'confirmed' => 'ยืนยันแล้ว',
+  'cancelled' => 'ยกเลิกแล้ว',
+  'pending_review' => 'รอตรวจสอบ',
+  _ => status,
+};
+
+Color _statusColor(String status) => switch (status) {
+  'confirmed' => _accent,
+  'cancelled' => AppTheme.errorColor,
+  'pending' => AppTheme.warningColor,
+  _ => AppTheme.warningColor,
+};
 
 num _asNum(dynamic value) => num.tryParse(value?.toString() ?? '') ?? 0;
 
