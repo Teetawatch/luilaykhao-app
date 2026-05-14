@@ -811,20 +811,7 @@ class _BookingHeaderCard extends StatelessWidget {
                 // Customer info
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: isDark
-                          ? AppTheme.primaryColor.withValues(alpha: 0.18)
-                          : AppTheme.primaryColor.withValues(alpha: 0.12),
-                      child: Text(
-                        _initials(textOf(user['name'])),
-                        style: GoogleFonts.anuphan(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ),
+                    _UserAvatar(user: user, isDark: isDark),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -901,6 +888,18 @@ class _BookingHeaderCard extends StatelessWidget {
     );
   }
 
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User Avatar
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _UserAvatar extends StatelessWidget {
+  final Map<String, dynamic> user;
+  final bool isDark;
+
+  const _UserAvatar({required this.user, required this.isDark});
+
   String _initials(String name) {
     if (name.isEmpty) return '?';
     final parts = name.trim().split(' ');
@@ -908,6 +907,37 @@ class _BookingHeaderCard extends StatelessWidget {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
     return name[0].toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = textOf(user['profile_image'] ?? user['avatar']);
+    final backgroundColor = isDark
+        ? AppTheme.primaryColor.withValues(alpha: 0.18)
+        : AppTheme.primaryColor.withValues(alpha: 0.12);
+
+    if (imageUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 22,
+        backgroundColor: backgroundColor,
+        backgroundImage: NetworkImage(imageUrl),
+        onBackgroundImageError: (_, __) {},
+        child: null,
+      );
+    }
+
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: backgroundColor,
+      child: Text(
+        _initials(textOf(user['name'])),
+        style: GoogleFonts.anuphan(
+          fontSize: 15,
+          fontWeight: FontWeight.w900,
+          color: AppTheme.primaryColor,
+        ),
+      ),
+    );
   }
 }
 
