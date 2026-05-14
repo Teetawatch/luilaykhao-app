@@ -160,12 +160,21 @@ class ProfileHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${_greeting()}, $name',
-                        maxLines: 1,
+                        '${_greeting()} 👋',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        name,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.anuphan(
-                          fontSize: 24,
-                          height: 1.16,
+                          fontSize: 22,
+                          height: 1.2,
                           fontWeight: FontWeight.w900,
                           color: AppTheme.onSurface(context),
                         ),
@@ -548,7 +557,7 @@ class QuickActionsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeading('ทางลัด'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         LayoutBuilder(
           builder: (context, constraints) {
             final columns = constraints.maxWidth >= 560 ? 4 : 2;
@@ -2955,12 +2964,15 @@ String _cleanText(dynamic value, {String fallback = ''}) {
 IconData _notificationIcon(String type) {
   return switch (type) {
     'seat_alert' => Icons.local_fire_department_rounded,
-    'booking_reminder' => Icons.calendar_month_rounded,
+    'booking_reminder' || 'trip_reminder' => Icons.calendar_month_rounded,
     'promo' => Icons.card_giftcard_rounded,
     'system' => Icons.info_outline_rounded,
     'loyalty' => Icons.star_rounded,
-    'payment' => Icons.payments_rounded,
-    'booking' => Icons.confirmation_number_rounded,
+    'payment' || 'payment_confirmed' || 'payment_rejected' =>
+      Icons.payments_rounded,
+    'installment_due' => Icons.schedule_rounded,
+    'booking' || 'booking_confirmed' => Icons.confirmation_number_rounded,
+    'booking_cancelled' => Icons.cancel_rounded,
     _ => Icons.notifications_none_rounded,
   };
 }
@@ -2968,12 +2980,14 @@ IconData _notificationIcon(String type) {
 Color _notificationColor(String type) {
   return switch (type) {
     'seat_alert' => AppTheme.errorColor,
-    'booking_reminder' => const Color(0xFF2563EB),
+    'booking_reminder' || 'trip_reminder' => const Color(0xFF2563EB),
     'promo' => AppTheme.warningColor,
     'system' => AppTheme.textSecondary,
     'loyalty' => const Color(0xFFEA580C),
-    'payment' => AppTheme.primaryColor,
-    'booking' => AppTheme.primaryColor,
+    'payment' || 'payment_confirmed' => AppTheme.primaryColor,
+    'payment_rejected' || 'booking_cancelled' => AppTheme.errorColor,
+    'installment_due' => const Color(0xFFD97706),
+    'booking' || 'booking_confirmed' => AppTheme.primaryColor,
     _ => AppTheme.primaryColor,
   };
 }

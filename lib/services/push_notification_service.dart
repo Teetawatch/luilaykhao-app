@@ -24,6 +24,22 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
+/// Callback fired when the user taps a notification (foreground banner or system tray).
+/// [type] is the notification type string (e.g. 'payment', 'booking_reminder').
+/// [data] is the full FCM data payload map.
+typedef NotificationTapCallback = void Function(
+  String type,
+  Map<String, dynamic> data,
+);
+
+/// Callback fired when a foreground FCM message arrives, for showing an in-app banner.
+typedef ForegroundNotificationCallback = void Function(
+  String title,
+  String body,
+  String type,
+  Map<String, dynamic> data,
+);
+
 class PushNotificationService {
   PushNotificationService._();
 
@@ -46,10 +62,22 @@ class PushNotificationService {
   Future<void>? _initFuture;
   ApiClient? _api;
   VoidCallback? _onRefreshRequested;
+  NotificationTapCallback? _onNotificationTap;
+  ForegroundNotificationCallback? _onForegroundNotification;
 
-  Future<void> initialize({VoidCallback? onRefreshRequested}) async {
+  Future<void> initialize({
+    VoidCallback? onRefreshRequested,
+    NotificationTapCallback? onNotificationTap,
+    ForegroundNotificationCallback? onForegroundNotification,
+  }) async {
     if (onRefreshRequested != null) {
       _onRefreshRequested = onRefreshRequested;
+    }
+    if (onNotificationTap != null) {
+      _onNotificationTap = onNotificationTap;
+    }
+    if (onForegroundNotification != null) {
+      _onForegroundNotification = onForegroundNotification;
     }
     if (_initialized) return;
     if (_initFuture != null) {
@@ -60,7 +88,6 @@ class PushNotificationService {
   }
 
   Future<void> _doInitialize() async {
-
     try {
       final options = FirebaseConfig.options;
       if (!_firebaseReady) {
@@ -81,10 +108,12 @@ class PushNotificationService {
 
       FirebaseMessaging.onMessage.listen((message) {
         _showForegroundNotification(message);
+        _fireForegroundCallback(message);
         _onRefreshRequested?.call();
       });
 
       FirebaseMessaging.onMessageOpenedApp.listen((message) {
+        _handleNotificationTap(message.data);
         _onRefreshRequested?.call();
       });
 
@@ -92,11 +121,27 @@ class PushNotificationService {
 
       final initialMessage = await _messaging.getInitialMessage();
       if (initialMessage != null) {
+        _handleNotificationTap(initialMessage.data);
         _onRefreshRequested?.call();
       }
     } catch (e) {
       debugPrint('Push notifications disabled: $e');
     }
+  }
+
+  void _handleNotificationTap(Map<String, dynamic> data) {
+    final type = data['type']?.toString() ?? '';
+    _onNotificationTap?.call(type, data);
+  }
+
+  void _fireForegroundCallback(RemoteMessage message) {
+    final notification = message.notification;
+    if (notification == null) return;
+    final title = notification.title ?? '';
+    final body = notification.body ?? '';
+    if (title.isEmpty && body.isEmpty) return;
+    final type = message.data['type']?.toString() ?? '';
+    _onForegroundNotification?.call(title, body, type, message.data);
   }
 
   Future<void> syncToken(ApiClient api) async {
@@ -149,7 +194,17 @@ class PushNotificationService {
 
     await _localNotifications.initialize(
       settings: settings,
-      onDidReceiveNotificationResponse: (_) => _onRefreshRequested?.call(),
+      onDidReceiveNotificationResponse: (response) {
+        if (response.payload != null) {
+          try {
+            final data = Map<String, dynamic>.from(
+              jsonDecode(response.payload!) as Map,
+            );
+            _handleNotificationTap(data);
+          } catch (_) {}
+        }
+        _onRefreshRequested?.call();
+      },
     );
 
     await _localNotifications

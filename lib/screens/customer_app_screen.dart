@@ -11,6 +11,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
+import '../services/notification_navigator.dart';
+import '../services/push_notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
 import 'login_screen.dart';
@@ -33,8 +35,61 @@ class CustomerAppScreen extends StatefulWidget {
 class _CustomerAppScreenState extends State<CustomerAppScreen> {
   int _index = 0;
 
+  // In-app foreground notification banner state.
+  OverlayEntry? _bannerEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationNavigator.registerTabSwitcher((index) => selectTab(index));
+    PushNotificationService.instance.initialize(
+      onNotificationTap: (type, data) {
+        NotificationNavigator.handle(type, data);
+      },
+      onForegroundNotification: (title, body, type, data) {
+        _showInAppBanner(
+          _InAppNotification(
+            title: title,
+            body: body,
+            type: type,
+            data: data,
+          ),
+        );
+      },
+    );
+  }
+
   void selectTab(int value) {
     setState(() => _index = value);
+  }
+
+  void _showInAppBanner(_InAppNotification notification) {
+    _bannerEntry?.remove();
+    _bannerEntry = OverlayEntry(
+      builder: (_) => _InAppNotificationBanner(
+        notification: notification,
+        onTap: () {
+          _dismissBanner();
+          NotificationNavigator.handle(notification.type, notification.data);
+        },
+        onDismiss: _dismissBanner,
+      ),
+    );
+    Overlay.of(context, rootOverlay: true).insert(_bannerEntry!);
+
+    // Auto-dismiss after 5 seconds.
+    Future.delayed(const Duration(seconds: 5), _dismissBanner);
+  }
+
+  void _dismissBanner() {
+    _bannerEntry?.remove();
+    _bannerEntry = null;
+  }
+
+  @override
+  void dispose() {
+    _bannerEntry?.remove();
+    super.dispose();
   }
 
   @override
@@ -53,6 +108,10 @@ class _CustomerAppScreenState extends State<CustomerAppScreen> {
       if (showStaffCheckIn) const StaffCheckInScreen(),
     ];
 
+    final unreadCount = app.notifications
+        .where((n) => (n as Map?)?['is_read'] != true)
+        .length;
+
     return Scaffold(
       extendBody: true,
       body: IndexedStack(
@@ -62,6 +121,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen> {
       bottomNavigationBar: CustomBottomNav(
         index: _index >= pages.length ? pages.length - 1 : _index,
         showStaffCheckIn: showStaffCheckIn,
+        unreadNotificationCount: unreadCount,
         onChanged: selectTab,
       ),
     );
@@ -71,6 +131,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen> {
 class CustomBottomNav extends StatefulWidget {
   final int index;
   final bool showStaffCheckIn;
+  final int unreadNotificationCount;
   final ValueChanged<int> onChanged;
 
   const CustomBottomNav({
@@ -78,6 +139,7 @@ class CustomBottomNav extends StatefulWidget {
     required this.index,
     required this.showStaffCheckIn,
     required this.onChanged,
+    this.unreadNotificationCount = 0,
   });
 
   @override
@@ -175,6 +237,10 @@ class _CustomBottomNavState extends State<CustomBottomNav>
                             activeIcon: items[i].activeIcon,
                             label: items[i].label,
                             isSelected: widget.index == i,
+                            // Profile tab (index 3) shows unread notification badge.
+                            badge: i == 3
+                                ? widget.unreadNotificationCount
+                                : 0,
                             onTap: () {
                               HapticFeedback.selectionClick();
                               widget.onChanged(i);
@@ -239,6 +305,7 @@ class _NavItem extends StatefulWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final int badge;
 
   const _NavItem({
     required this.icon,
@@ -246,6 +313,7 @@ class _NavItem extends StatefulWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.badge = 0,
   });
 
   @override
@@ -314,6 +382,7 @@ class _NavItemState extends State<_NavItem>
               builder: (context, child) {
                 return Stack(
                   alignment: Alignment.center,
+                  clipBehavior: Clip.none,
                   children: [
                     // pill indicator
                     Container(
@@ -339,6 +408,42 @@ class _NavItemState extends State<_NavItem>
                         ),
                       ),
                     ),
+                    // unread badge
+                    if (widget.badge > 0)
+                      Positioned(
+                        top: -2,
+                        right: -4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.errorColor,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isDark
+                                  ? AppTheme.surfaceDark
+                                  : Colors.white,
+                              width: 1.5,
+                            ),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            widget.badge > 99 ? '99+' : '${widget.badge}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              height: 1.1,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
                   ],
                 );
               },
@@ -941,7 +1046,7 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
   }
 }
 
-class _HeroSearchField extends StatelessWidget {
+class _HeroSearchField extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String> onSubmitted;
   final VoidCallback onFilterTap;
@@ -953,76 +1058,149 @@ class _HeroSearchField extends StatelessWidget {
   });
 
   @override
+  State<_HeroSearchField> createState() => _HeroSearchFieldState();
+}
+
+class _HeroSearchFieldState extends State<_HeroSearchField> {
+  final _focusNode = FocusNode();
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (mounted) setState(() => _focused = _focusNode.hasFocus);
+    });
+    widget.controller.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          height: 76,
-          padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE1E6E6)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF082A30).withValues(alpha: 0.25),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.search_rounded,
-                color: Color(0xFF111313),
-                size: 34,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  onSubmitted: onSubmitted,
-                  textInputAction: TextInputAction.search,
-                  cursorColor: const Color(0xFF111313),
-                  style: GoogleFonts.anuphan(
-                    color: const Color(0xFF111313),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    hintText: 'ค้นหาปลายทาง กิจกรรม หรือทริปที่ใช่สำหรับคุณ',
-                    hintStyle: GoogleFonts.anuphan(
-                      color: const Color(0xFF111313).withValues(alpha: 0.62),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    border: InputBorder.none,
-                    filled: false,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 60,
-                height: 60,
-                child: IconButton(
-                  onPressed: onFilterTap,
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFF0B5260),
-                    foregroundColor: Colors.white,
-                    shape: const CircleBorder(),
-                  ),
-                  icon: const Icon(Icons.tune_rounded, size: 31),
-                ),
-              ),
-            ],
-          ),
+    final hasText = widget.controller.text.isNotEmpty;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _focused
+              ? const Color(0xFF0B8A6E)
+              : const Color(0xFFDDE4E4),
+          width: _focused ? 1.5 : 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: _focused
+                ? const Color(0xFF0B8A6E).withValues(alpha: 0.18)
+                : const Color(0xFF082A30).withValues(alpha: 0.18),
+            blurRadius: _focused ? 20 : 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 18),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: Icon(
+              Icons.search_rounded,
+              key: ValueKey(_focused),
+              color: _focused
+                  ? const Color(0xFF0B8A6E)
+                  : const Color(0xFF8A9FA0),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              onSubmitted: widget.onSubmitted,
+              textInputAction: TextInputAction.search,
+              cursorColor: const Color(0xFF0B8A6E),
+              style: GoogleFonts.anuphan(
+                color: const Color(0xFF111313),
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'ค้นหาทริป ปลายทาง หรือกิจกรรม',
+                hintStyle: GoogleFonts.anuphan(
+                  color: const Color(0xFF111313).withValues(alpha: 0.40),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                border: InputBorder.none,
+                filled: false,
+                contentPadding: const EdgeInsets.symmetric(vertical: 20),
+              ),
+            ),
+          ),
+          if (hasText)
+            GestureDetector(
+              onTap: () {
+                widget.controller.clear();
+                _focusNode.unfocus();
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEEF2F2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 16,
+                  color: Color(0xFF6B8080),
+                ),
+              ),
+            ),
+          const SizedBox(width: 8),
+          // Filter button
+          GestureDetector(
+            onTap: widget.onFilterTap,
+            child: Container(
+              margin: const EdgeInsets.all(8),
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF0E7A62), Color(0xFF0B5260)],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0B5260).withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.tune_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1143,15 +1321,123 @@ class _LicenseAssuranceBanner extends StatelessWidget {
         void showLicenseDialog() {
           showDialog<void>(
             context: context,
-            builder: (_) => AlertDialog(
-              title: const Text('ใบอนุญาตนำเที่ยว'),
-              content: const Text('เลขที่ 12/03773'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('ตกลง'),
+            builder: (dialogContext) => Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 40,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  color: Colors.white,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF044C4D), Color(0xFF087C68)],
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.verified_user_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'ใบอนุญาตประกอบธุรกิจนำเที่ยว',
+                                style: GoogleFonts.anuphan(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(dialogContext),
+                              icon: const Icon(
+                                Icons.close_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              style: IconButton.styleFrom(
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Image
+                      InteractiveViewer(
+                        minScale: 0.8,
+                        maxScale: 4.0,
+                        child: Image.network(
+                          '${ApiConfig.siteUrl}/images/cer.jpg',
+                          fit: BoxFit.contain,
+                          loadingBuilder: (_, child, progress) {
+                            if (progress == null) return child;
+                            return SizedBox(
+                              height: 260,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: progress.expectedTotalBytes != null
+                                      ? progress.cumulativeBytesLoaded /
+                                          progress.expectedTotalBytes!
+                                      : null,
+                                  color: const Color(0xFF087C68),
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (_, __, ___) => SizedBox(
+                            height: 200,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 48,
+                                    color: Color(0xFFB0BFBF),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'ไม่สามารถโหลดรูปได้',
+                                    style: GoogleFonts.anuphan(
+                                      color: const Color(0xFF8A9FA0),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Footer
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                        child: Text(
+                          'เลขที่ใบอนุญาต 12/03773',
+                          style: GoogleFonts.anuphan(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF6B8080),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           );
         }
@@ -6971,6 +7257,226 @@ class _InlineBadge extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: AppTheme.mutedText(context),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// In-app foreground notification banner
+// ---------------------------------------------------------------------------
+
+class _InAppNotification {
+  final String title;
+  final String body;
+  final String type;
+  final Map<String, dynamic> data;
+
+  const _InAppNotification({
+    required this.title,
+    required this.body,
+    required this.type,
+    required this.data,
+  });
+}
+
+class _InAppNotificationBanner extends StatefulWidget {
+  final _InAppNotification notification;
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  const _InAppNotificationBanner({
+    required this.notification,
+    required this.onTap,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_InAppNotificationBanner> createState() =>
+      _InAppNotificationBannerState();
+}
+
+class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slide;
+  late Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -1.2),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _fade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _dismiss() async {
+    await _controller.reverse();
+    widget.onDismiss();
+  }
+
+  IconData _icon() {
+    return switch (widget.notification.type) {
+      'payment' || 'payment_confirmed' || 'installment_due' =>
+        Icons.payments_rounded,
+      'payment_rejected' => Icons.money_off_rounded,
+      'booking' || 'booking_confirmed' => Icons.confirmation_number_rounded,
+      'booking_cancelled' => Icons.cancel_rounded,
+      'booking_reminder' || 'trip_reminder' => Icons.calendar_month_rounded,
+      'seat_alert' => Icons.local_fire_department_rounded,
+      'promo' => Icons.card_giftcard_rounded,
+      'loyalty' => Icons.star_rounded,
+      _ => Icons.notifications_rounded,
+    };
+  }
+
+  Color _accentColor(bool isDark) {
+    return switch (widget.notification.type) {
+      'seat_alert' || 'payment_rejected' || 'booking_cancelled' =>
+        AppTheme.errorColor,
+      'booking_reminder' || 'trip_reminder' => const Color(0xFF2563EB),
+      'promo' => AppTheme.warningColor,
+      'loyalty' => const Color(0xFFEA580C),
+      'installment_due' => const Color(0xFFD97706),
+      _ => AppTheme.primaryColor,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    final accent = _accentColor(isDark);
+    final mediaQuery = MediaQuery.of(context);
+
+    return Positioned(
+      top: mediaQuery.padding.top + 8,
+      left: 16,
+      right: 16,
+      child: FadeTransition(
+        opacity: _fade,
+        child: SlideTransition(
+          position: _slide,
+          child: Dismissible(
+            key: UniqueKey(),
+            direction: DismissDirection.up,
+            onDismissed: (_) => widget.onDismiss(),
+            child: GestureDetector(
+              onTap: () async {
+                await _controller.reverse();
+                widget.onTap();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppTheme.surfaceDark.withValues(alpha: 0.97)
+                      : Colors.white.withValues(alpha: 0.97),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.25),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: isDark ? 0.45 : 0.12,
+                      ),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                    BoxShadow(
+                      color: accent.withValues(alpha: isDark ? 0.12 : 0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(_icon(), color: accent, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.notification.title.isNotEmpty)
+                            Text(
+                              widget.notification.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.anuphan(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: isDark
+                                    ? Colors.white
+                                    : AppTheme.textMain,
+                              ),
+                            ),
+                          if (widget.notification.body.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              widget.notification.body,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.anuphan(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textSecondary,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: _dismiss,
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
