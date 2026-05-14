@@ -18,7 +18,6 @@ import 'login_screen.dart';
 const Color _premiumText = Color(0xFF0F172A);
 const Color _mutedText = Color(0xFF64748B);
 const Color _softAccent = Color(0xFF10B981);
-const Color _chipBackground = Color(0xFFECFDF5);
 const double _contentOverlap = 32;
 const String _favoriteTripSlugsKey = 'favorite_trip_slugs';
 
@@ -938,109 +937,133 @@ class DestinationInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+
     if (isLoading) {
       return _PremiumCard(
         padding: const EdgeInsets.all(24),
         child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Skeleton(width: 120, height: 26, radius: 13),
-            SizedBox(height: 16),
-            Skeleton(width: double.infinity, height: 34, radius: 12),
-            SizedBox(height: 10),
-            Skeleton(width: 220, height: 18, radius: 9),
-            SizedBox(height: 20),
-            Skeleton(width: double.infinity, height: 40, radius: 20),
+            Row(children: [
+              Skeleton(width: 110, height: 28, radius: 14),
+              Spacer(),
+              Skeleton(width: 80, height: 28, radius: 14),
+            ]),
+            SizedBox(height: 18),
+            Skeleton(width: double.infinity, height: 36, radius: 12),
+            SizedBox(height: 8),
+            Skeleton(width: 220, height: 36, radius: 12),
+            SizedBox(height: 14),
+            Skeleton(width: 180, height: 18, radius: 9),
+            SizedBox(height: 24),
+            Skeleton(width: double.infinity, height: 88, radius: 20),
           ],
         ),
       );
     }
 
+    final chips = _quickInfoItems(trip);
+    final location = textOf(trip['location'] ?? trip['destination']).trim();
+    final catLabel = textOf(
+      trip['category_name'] ??
+          asMap(trip['category'])['name'] ??
+          trip['type'],
+    ).trim();
+
     return _PremiumCard(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _RatingSummary(trip: trip, reviews: reviews),
-              Builder(
-              builder: (_) {
-                final catLabel = textOf(
-                  trip['category_name'] ??
-                      asMap(trip['category'])['name'] ??
-                      trip['type'],
-                ).trim();
-                if (catLabel.isEmpty) return const SizedBox.shrink();
-                return _InfoChip(icon: Icons.tag_rounded, label: catLabel);
-              },
-            ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            _tripTitle(trip),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: _premiumText,
-              height: 1.15,
-              letterSpacing: -0.5,
+          // ── top badge row ──────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            child: Row(
+              children: [
+                _RatingSummary(trip: trip, reviews: reviews),
+                const Spacer(),
+                if (catLabel.isNotEmpty)
+                  _InfoChip(icon: Icons.tag_rounded, label: catLabel),
+              ],
             ),
           ),
-          Builder(
-            builder: (context) {
-              final location = textOf(
-                trip['location'] ?? trip['destination'],
-              ).trim();
-              if (location.isEmpty) return const SizedBox(height: 10);
-              return Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
+          const SizedBox(height: 16),
+          // ── title ──────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              _tripTitle(trip),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.anuphan(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : _premiumText,
+                height: 1.2,
+                letterSpacing: -0.4,
+              ),
+            ),
+          ),
+          // ── location ───────────────────────────────────────────────
+          if (location.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: _softAccent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
                       Icons.location_on_rounded,
-                      size: 18,
+                      size: 13,
                       color: _softAccent,
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        location,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(
-                          fontSize: 14,
-                          color: _mutedText,
-                          height: 1.45,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      location,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 13,
+                        color: _mutedText,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
-          Builder(
-            builder: (_) {
-              final chips = _quickInfoItems(trip);
-              if (chips.isEmpty) return const SizedBox.shrink();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 24),
-                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                  const SizedBox(height: 20),
-                  QuickInfoChips(trip: trip),
+                  ),
                 ],
-              );
-            },
-          ),
+              ),
+            ),
+          ],
+          // ── stats grid ─────────────────────────────────────────────
+          if (chips.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.04)
+                    : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : const Color(0xFFE9F5F1),
+                ),
+              ),
+              child: QuickInfoChips(trip: trip),
+            ),
+          ] else
+            const SizedBox(height: 24),
         ],
       ),
     );
@@ -1057,12 +1080,111 @@ class QuickInfoChips extends StatelessWidget {
     final chips = _quickInfoItems(trip);
     if (chips.isEmpty) return const SizedBox.shrink();
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: chips
-          .map((chip) => _InfoChip(icon: chip.icon, label: chip.label))
-          .toList(),
+    // 2-column grid layout
+    final rows = <List<_QuickInfoItem>>[];
+    for (var i = 0; i < chips.length; i += 2) {
+      rows.add([
+        chips[i],
+        if (i + 1 < chips.length) chips[i + 1],
+      ]);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Column(
+        children: rows.asMap().entries.map((entry) {
+          final isLast = entry.key == rows.length - 1;
+          final row = entry.value;
+          return Column(
+            children: [
+              Row(
+                children: row.asMap().entries.map((e) {
+                  final isLastInRow = e.key == row.length - 1;
+                  final chip = e.value;
+                  return Expanded(
+                    child: _StatTile(
+                      icon: chip.icon,
+                      label: chip.label,
+                      showRightBorder: !isLastInRow && row.length > 1,
+                      showBottomBorder: !isLast,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool showRightBorder;
+  final bool showBottomBorder;
+
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    this.showRightBorder = false,
+    this.showBottomBorder = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    final dividerColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : const Color(0xFFE9F5F1);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        border: Border(
+          right: showRightBorder
+              ? BorderSide(color: dividerColor)
+              : BorderSide.none,
+          bottom: showBottomBorder
+              ? BorderSide(color: dividerColor)
+              : BorderSide.none,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _softAccent.withValues(alpha: 0.18),
+                  _softAccent.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 16, color: _softAccent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.anuphan(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white.withValues(alpha: 0.85) : _premiumText,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1158,35 +1280,105 @@ class MustKnowSection extends StatelessWidget {
     final items = _mustKnowItems(trip);
     final remarks = textOf(asMap(trip['must_know'])['remarks']).trim();
     if (items.isEmpty && remarks.isEmpty) return const SizedBox.shrink();
+    final isDark = AppTheme.isDark(context);
 
     return _PremiumCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeader(
-            icon: Icons.info_outline_rounded,
-            title: 'สิ่งที่ควรรู้ก่อนเดินทาง',
-          ),
-          const SizedBox(height: 16),
-          ...items.map(
-            (item) => _FeatureRow(
-              icon: Icons.priority_high_rounded,
-              title: item.price > 0
-                  ? '${item.name} · ${money(item.price)} ${item.priceTypeLabel}'
-                  : item.name,
-              iconColor: const Color(0xFFB45309),
-              iconBackground: const Color(0xFFFFFBEB),
+          // amber accent header
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFFB45309).withValues(alpha: 0.12)
+                  : const Color(0xFFFFFBEB),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark
+                      ? const Color(0xFFB45309).withValues(alpha: 0.18)
+                      : const Color(0xFFFDE68A),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFFB45309).withValues(alpha: 0.2)
+                        : const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.info_outline_rounded,
+                    size: 20,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'สิ่งที่ควรรู้ก่อนเดินทาง',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: isDark
+                              ? const Color(0xFFF59E0B)
+                              : const Color(0xFF92400E),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      Text(
+                        'อ่านก่อนทำการจอง',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 11.5,
+                          color: isDark
+                              ? const Color(0xFFD97706)
+                              : const Color(0xFFB45309),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          if (remarks.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _FeatureRow(
-              icon: Icons.notes_rounded,
-              title: remarks,
-              iconColor: const Color(0xFFB45309),
-              iconBackground: const Color(0xFFFFFBEB),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              children: [
+                ...items.map(
+                  (item) => _FeatureRow(
+                    icon: Icons.error_outline_rounded,
+                    title: item.price > 0
+                        ? '${item.name} · ${money(item.price)} ${item.priceTypeLabel}'
+                        : item.name,
+                    iconColor: const Color(0xFFD97706),
+                    iconBackground: const Color(0xFFFEF3C7),
+                  ),
+                ),
+                if (remarks.isNotEmpty)
+                  _FeatureRow(
+                    icon: Icons.notes_rounded,
+                    title: remarks,
+                    iconColor: const Color(0xFFD97706),
+                    iconBackground: const Color(0xFFFEF3C7),
+                  ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -1202,6 +1394,7 @@ class PreparationsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = _textItems(trip['preparations']);
     if (items.isEmpty) return const SizedBox.shrink();
+    final isDark = AppTheme.isDark(context);
 
     return _PremiumCard(
       child: Column(
@@ -1210,11 +1403,59 @@ class PreparationsSection extends StatelessWidget {
           const _SectionHeader(
             icon: Icons.backpack_rounded,
             title: 'สิ่งที่ควรเตรียม',
+            subtitle: 'เตรียมตัวก่อนออกเดินทาง',
           ),
-          const SizedBox(height: 16),
-          ...items.map(
-            (item) => _FeatureRow(icon: Icons.check_rounded, title: item),
-          ),
+          const SizedBox(height: 20),
+          // checklist with sequential numbers
+          ...items.asMap().entries.map((entry) {
+            final i = entry.key;
+            final text = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF059669), Color(0xFF10B981)],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${i + 1}',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        text,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.85)
+                              : _premiumText,
+                          height: 1.45,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -1296,98 +1537,134 @@ class TravelPlanSelectionSection extends StatelessWidget {
     );
 
     return _PremiumCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeader(
-            icon: Icons.event_available_outlined,
-            title: 'เลือกแผนการเดินทาง',
-          ),
-          const SizedBox(height: 16),
-          // 1. ภูมิภาคที่จะขึ้นรถ
-          if (regionMap.isEmpty)
-            _EmptySelectionNotice(
-              icon: Icons.map_outlined,
-              text: 'ยังไม่มีภูมิภาคสำหรับทริปนี้',
-            )
-          else
-            _PremiumDropdown<String>(
-              key: ValueKey('region-$regionValue'),
-              label: 'ภูมิภาคที่จะขึ้นรถ',
-              icon: Icons.map_outlined,
-              value: regionValue,
-              items: regionMap.entries.map((e) {
-                return DropdownMenuItem<String>(
-                  value: e.key,
-                  child: _DropdownText(title: e.value, subtitle: ''),
-                );
-              }).toList(),
-              onChanged: onRegionChanged,
-            ),
-          const SizedBox(height: 12),
-          // 2. วันเดินทาง
-          if (scheduleMaps.isEmpty)
-            _EmptySelectionNotice(
-              icon: Icons.calendar_month_outlined,
-              text: 'ยังไม่มีวันเดินทางที่เปิดจอง',
-            )
-          else ...[
-            _PremiumDropdown<int>(
-              key: ValueKey('schedule-$scheduleValue'),
-              label: 'วันเดินทาง',
-              icon: Icons.calendar_month_rounded,
-              value: scheduleValue,
-              items: scheduleMaps.map((schedule) {
-                final id = int.parse(schedule['id'].toString());
-                final seats = textOf(schedule['available_seats'], '0');
-                final regionSummary = _regionSummary(
-                  schedule,
-                  regionKey: regionKey,
-                );
-
-                return DropdownMenuItem<int>(
-                  value: id,
-                  child: _DropdownText(
-                    title: _scheduleTravelDateText(schedule),
-                    subtitle: regionSummary.isEmpty
-                        ? 'เหลือ $seats ที่'
-                        : 'เหลือ $seats ที่ • $regionSummary',
-                  ),
-                );
-              }).toList(),
-              onChanged: onScheduleChanged,
-            ),
-            const SizedBox(height: 12),
-            // 3. จุดที่จะขึ้นรถ
-            if (pickupMaps.isEmpty)
-              _EmptySelectionNotice(
-                icon: Icons.place_outlined,
-                text: 'ยังไม่มีจุดขึ้นรถสำหรับรอบนี้',
-              )
-            else
-              _PremiumDropdown<int>(
-                key: ValueKey('pickup-$pickupValue'),
-                label: 'จุดที่จะขึ้นรถ',
-                icon: Icons.place_rounded,
-                value: pickupValue,
-                items: pickupMaps.map((point) {
-                  final id = int.parse(point['id'].toString());
-                  final location = textOf(point['pickup_location']).trim();
-                  final price = _pickupPriceText(point['price']);
-
-                  return DropdownMenuItem<int>(
-                    value: id,
-                    child: _DropdownText(
-                      title: location.isNotEmpty
-                          ? location
-                          : 'ไม่ระบุจุดขึ้นรถ',
-                      subtitle: price,
-                    ),
-                  );
-                }).toList(),
-                onChanged: onPickupChanged,
+          // header with gradient accent
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _softAccent.withValues(alpha: 0.10),
+                  _softAccent.withValues(alpha: 0.03),
+                ],
               ),
-          ],
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(32),
+              ),
+              border: Border(
+                bottom: BorderSide(color: _softAccent.withValues(alpha: 0.12)),
+              ),
+            ),
+            child: const _SectionHeader(
+              icon: Icons.event_available_outlined,
+              title: 'เลือกแผนการเดินทาง',
+              subtitle: 'เลือกวันและจุดขึ้นรถที่ต้องการ',
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // Step 1 — region
+                _StepDropdownRow(
+                  step: '1',
+                  label: 'ภูมิภาคที่ขึ้นรถ',
+                  child: regionMap.isEmpty
+                      ? _EmptySelectionNotice(
+                          icon: Icons.map_outlined,
+                          text: 'ยังไม่มีภูมิภาคสำหรับทริปนี้',
+                        )
+                      : _PremiumDropdown<String>(
+                          key: ValueKey('region-$regionValue'),
+                          label: 'เลือกภูมิภาค',
+                          icon: Icons.map_outlined,
+                          value: regionValue,
+                          items: regionMap.entries.map((e) {
+                            return DropdownMenuItem<String>(
+                              value: e.key,
+                              child: _DropdownText(title: e.value, subtitle: ''),
+                            );
+                          }).toList(),
+                          onChanged: onRegionChanged,
+                        ),
+                ),
+                const SizedBox(height: 14),
+                // Step 2 — schedule
+                _StepDropdownRow(
+                  step: '2',
+                  label: 'วันเดินทาง',
+                  child: scheduleMaps.isEmpty
+                      ? _EmptySelectionNotice(
+                          icon: Icons.calendar_month_outlined,
+                          text: 'ยังไม่มีวันเดินทางที่เปิดจอง',
+                        )
+                      : _PremiumDropdown<int>(
+                          key: ValueKey('schedule-$scheduleValue'),
+                          label: 'เลือกวันเดินทาง',
+                          icon: Icons.calendar_month_rounded,
+                          value: scheduleValue,
+                          items: scheduleMaps.map((schedule) {
+                            final id = int.parse(schedule['id'].toString());
+                            final seats =
+                                textOf(schedule['available_seats'], '0');
+                            final regionSummary =
+                                _regionSummary(schedule, regionKey: regionKey);
+                            return DropdownMenuItem<int>(
+                              value: id,
+                              child: _DropdownText(
+                                title: _scheduleTravelDateText(schedule),
+                                subtitle: regionSummary.isEmpty
+                                    ? 'เหลือ $seats ที่นั่ง'
+                                    : 'เหลือ $seats ที่ • $regionSummary',
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: onScheduleChanged,
+                        ),
+                ),
+                if (scheduleMaps.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  // Step 3 — pickup
+                  _StepDropdownRow(
+                    step: '3',
+                    label: 'จุดขึ้นรถ',
+                    child: pickupMaps.isEmpty
+                        ? _EmptySelectionNotice(
+                            icon: Icons.place_outlined,
+                            text: 'ยังไม่มีจุดขึ้นรถสำหรับรอบนี้',
+                          )
+                        : _PremiumDropdown<int>(
+                            key: ValueKey('pickup-$pickupValue'),
+                            label: 'เลือกจุดขึ้นรถ',
+                            icon: Icons.place_rounded,
+                            value: pickupValue,
+                            items: pickupMaps.map((point) {
+                              final id = int.parse(point['id'].toString());
+                              final location =
+                                  textOf(point['pickup_location']).trim();
+                              final price = _pickupPriceText(point['price']);
+                              return DropdownMenuItem<int>(
+                                value: id,
+                                child: _DropdownText(
+                                  title: location.isNotEmpty
+                                      ? location
+                                      : 'ไม่ระบุจุดขึ้นรถ',
+                                  subtitle: price,
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: onPickupChanged,
+                          ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1515,15 +1792,17 @@ class ItinerarySection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeader(
+          _SectionHeader(
             icon: Icons.route_rounded,
             title: 'แผนการเดินทาง',
+            subtitle: '${sectors.fold(0, (sum, s) => sum + s.items.length)} กิจกรรม',
           ),
           const SizedBox(height: 20),
           ...sectors.asMap().entries.map(
             (entry) => _ItinerarySectorTile(
               sector: entry.value,
               index: entry.key,
+              total: sectors.length,
               initiallyExpanded: sectors.length == 1,
             ),
           ),
@@ -1536,16 +1815,28 @@ class ItinerarySection extends StatelessWidget {
 class _ItinerarySectorTile extends StatelessWidget {
   final _ItinerarySector sector;
   final int index;
+  final int total;
   final bool initiallyExpanded;
 
   const _ItinerarySectorTile({
     required this.sector,
     required this.index,
+    required this.total,
     required this.initiallyExpanded,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    // gradient color cycle per sector
+    final gradients = [
+      [const Color(0xFF059669), const Color(0xFF10B981)],
+      [const Color(0xFF0891B2), const Color(0xFF06B6D4)],
+      [const Color(0xFF7C3AED), const Color(0xFF8B5CF6)],
+      [const Color(0xFFD97706), const Color(0xFFF59E0B)],
+    ];
+    final grad = gradients[index % gradients.length];
+
     return Container(
       margin: EdgeInsets.only(top: index == 0 ? 0 : 10),
       decoration: BoxDecoration(
@@ -1557,30 +1848,37 @@ class _ItinerarySectorTile extends StatelessWidget {
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          tilePadding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           iconColor: _softAccent,
           collapsedIconColor: _mutedText,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          collapsedShape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          collapsedShape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           leading: Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: AppTheme.surface(context),
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: AppTheme.border(context)),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: grad,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: grad[0].withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Center(
               child: Text(
                 '${index + 1}',
                 style: GoogleFonts.anuphan(
-                  color: _softAccent,
-                  fontSize: 13,
+                  color: Colors.white,
+                  fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1591,24 +1889,36 @@ class _ItinerarySectorTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.anuphan(
-              color: _premiumText,
+              color: isDark ? Colors.white : _premiumText,
               fontSize: 15,
               fontWeight: FontWeight.w900,
             ),
           ),
-          subtitle: Text(
-            '${sector.items.length} รายการ',
-            style: GoogleFonts.anuphan(
-              color: _mutedText,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
+          subtitle: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: grad[0].withValues(alpha: isDark ? 0.2 : 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${sector.items.length} รายการ',
+                  style: GoogleFonts.anuphan(
+                    color: grad[0],
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
           children: [
             ...sector.items.asMap().entries.map(
               (entry) => _ItineraryTimelineItem(
                 item: entry.value,
                 isLast: entry.key == sector.items.length - 1,
+                accentColor: grad[0],
               ),
             ),
           ],
@@ -1621,82 +1931,105 @@ class _ItinerarySectorTile extends StatelessWidget {
 class _ItineraryTimelineItem extends StatelessWidget {
   final _ItineraryItem item;
   final bool isLast;
+  final Color accentColor;
 
-  const _ItineraryTimelineItem({required this.item, required this.isLast});
+  const _ItineraryTimelineItem({
+    required this.item,
+    required this.isLast,
+    this.accentColor = _softAccent,
+  });
 
   @override
   Widget build(BuildContext context) {
     final marker = item.day.isNotEmpty ? item.day : '${item.index}';
+    final isDark = AppTheme.isDark(context);
 
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppTheme.surface(context),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: _softAccent, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _softAccent.withValues(alpha: 0.15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+          // timeline column
+          SizedBox(
+            width: 36,
+            child: Column(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        accentColor,
+                        accentColor.withValues(alpha: 0.7),
+                      ],
                     ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    marker,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
-                      color: _softAccent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      marker,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(1),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            accentColor.withValues(alpha: 0.4),
+                            accentColor.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(1),
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     item.title,
                     style: GoogleFonts.anuphan(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: _premiumText,
-                      height: 1.3,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : _premiumText,
+                      height: 1.35,
                     ),
                   ),
                   if (item.description.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       item.description,
                       style: GoogleFonts.anuphan(
-                        fontSize: 14,
+                        fontSize: 13.5,
                         color: _mutedText,
                         height: 1.65,
                         fontWeight: FontWeight.w500,
@@ -1934,43 +2267,87 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
     final user = asMap(review['user']);
     final rating = _ratingValue(review).round().clamp(0, 5);
     final comment = textOf(review['comment']).trim();
     final name = textOf(user['name'], 'ผู้ใช้ทั่วไป');
     final avatarUrl = textOf(user['avatar_url']);
     final date = _formatRelativeDate(review['created_at']);
+    final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    // avatar background color cycle
+    final colors = [
+      [const Color(0xFF059669), const Color(0xFF6EE7B7)],
+      [const Color(0xFF0891B2), const Color(0xFF67E8F9)],
+      [const Color(0xFF7C3AED), const Color(0xFFC4B5FD)],
+      [const Color(0xFFD97706), const Color(0xFFFDE68A)],
+    ];
+    final colorPair = colors[(initials.codeUnitAt(0)) % colors.length];
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFF1F5F4)),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : const Color(0xFFEEF2F7),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: const Color(0xFFE5F0EE),
-                  backgroundImage: avatarUrl.isNotEmpty
-                      ? CachedNetworkImageProvider(avatarUrl)
-                      : null,
-                  child: avatarUrl.isEmpty
-                      ? Text(
-                          name.isNotEmpty ? name[0].toUpperCase() : '?',
-                          style: GoogleFonts.anuphan(
-                            color: _softAccent,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
+                // avatar
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: avatarUrl.isEmpty
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: colorPair,
+                          )
+                        : null,
+                    shape: BoxShape.circle,
+                  ),
+                  child: avatarUrl.isNotEmpty
+                      ? ClipOval(
+                          child: CachedNetworkImage(
+                            imageUrl: avatarUrl,
+                            width: 42,
+                            height: 42,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Center(
+                              child: Text(
+                                initials,
+                                style: GoogleFonts.anuphan(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 17,
+                                ),
+                              ),
+                            ),
                           ),
                         )
-                      : null,
+                      : Center(
+                          child: Text(
+                            initials,
+                            style: GoogleFonts.anuphan(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 17,
+                            ),
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1984,27 +2361,33 @@ class _ReviewCard extends StatelessWidget {
                         style: GoogleFonts.anuphan(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
-                          color: _premiumText,
+                          color: isDark ? Colors.white : _premiumText,
                         ),
                       ),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
                           ...List.generate(
                             5,
                             (i) => Icon(
-                              Icons.star_rounded,
-                              size: 13,
+                              i < rating
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              size: 14,
                               color: i < rating
-                                  ? const Color(0xFFE8A117)
-                                  : const Color(0xFFE5E7EB),
+                                  ? const Color(0xFFF59E0B)
+                                  : const Color(0xFFD1D5DB),
                             ),
                           ),
+                          const SizedBox(width: 6),
+                          Container(width: 3, height: 3, decoration: BoxDecoration(color: _mutedText.withValues(alpha: 0.4), shape: BoxShape.circle)),
                           const SizedBox(width: 6),
                           Text(
                             date,
                             style: GoogleFonts.anuphan(
-                              fontSize: 11,
+                              fontSize: 11.5,
                               color: _mutedText,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -2012,16 +2395,58 @@ class _ReviewCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                // rating badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, size: 12, color: Color(0xFFF59E0B)),
+                      const SizedBox(width: 3),
+                      Text(
+                        '$rating.0',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF92400E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
             if (comment.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                comment,
-                style: GoogleFonts.anuphan(
-                  fontSize: 14,
-                  color: const Color(0xFF374151),
-                  height: 1.6,
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Text(
+                  comment,
+                  style: GoogleFonts.anuphan(
+                    fontSize: 13.5,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.75)
+                        : const Color(0xFF374151),
+                    height: 1.65,
+                  ),
                 ),
               ),
             ],
@@ -2097,123 +2522,182 @@ class StickyBookingBar extends StatelessWidget {
       );
     }
 
+    final isDark = AppTheme.isDark(context);
+    final priceValue = _priceText(
+      trip,
+      schedule: selectedSchedule,
+      pickupPoint: selectedPickupPoint,
+    );
+
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.surface(context).withValues(alpha: 0.90),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: AppTheme.border(context), width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.12),
-                  blurRadius: 32,
-                  offset: const Offset(0, -8),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppTheme.surfaceDark.withValues(alpha: 0.95)
+                    : Colors.white.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark
+                      ? AppTheme.outlineDark.withValues(alpha: 0.5)
+                      : const Color(0xFFE2E8F0),
                 ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              priceLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.anuphan(
-                                fontSize: 12,
-                                color: AppTheme.mutedText(context),
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.2,
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.4)
+                        : const Color(0xFF0F172A).withValues(alpha: 0.10),
+                    blurRadius: 32,
+                    offset: const Offset(0, -6),
+                  ),
+                  if (!isDark)
+                    BoxShadow(
+                      color: _softAccent.withValues(alpha: 0.06),
+                      blurRadius: 20,
+                      offset: const Offset(0, -4),
+                    ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── price + book row ──────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // price section
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: _softAccent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    priceLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.anuphan(
+                                      fontSize: 11.5,
+                                      color: AppTheme.mutedText(context),
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              _priceText(
-                                trip,
-                                schedule: selectedSchedule,
-                                pickupPoint: selectedPickupPoint,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.anuphan(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                color: AppTheme.onSurface(context),
-                                height: 1.1,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            if (joinTripEnabled) ...[
                               const SizedBox(height: 2),
                               Text(
-                                'Join Trip ${_priceText(trip, schedule: selectedSchedule, isJoinTrip: true)}',
+                                priceValue,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.anuphan(
-                                  fontSize: 12,
-                                  color: _softAccent,
-                                  fontWeight: FontWeight.w800,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? Colors.white : _premiumText,
+                                  height: 1.1,
+                                  letterSpacing: -0.6,
                                 ),
                               ),
+                              if (joinTripEnabled) ...[
+                                const SizedBox(height: 3),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _softAccent.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Join Trip ${_priceText(trip, schedule: selectedSchedule, isJoinTrip: true)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.anuphan(
+                                      fontSize: 11,
+                                      color: _softAccent,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    _BookingButton(
-                      enabled: schedules.isNotEmpty,
-                      onPressed: handleBookingTap,
-                    ),
-                  ],
-                ),
-                if (joinTripEnabled) ...[
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      onPressed: schedules.isEmpty
-                          ? null
-                          : () => handleBookingTap(joinTrip: true),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _softAccent,
-                        side: BorderSide(
-                          color: _softAccent.withValues(alpha: 0.38),
+                        const SizedBox(width: 14),
+                        // book button
+                        _BookingButton(
+                          enabled: schedules.isNotEmpty,
+                          onPressed: handleBookingTap,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                      icon: const Icon(Icons.groups_rounded, size: 20),
-                      label: Text(
-                        joinTripPrice > 0
-                            ? 'จอยทริป ${money(joinTripPrice)} / คน'
-                            : 'จอยทริป',
-                        style: GoogleFonts.anuphan(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
+                      ],
                     ),
                   ),
+                  // ── join trip button ──────────────────────────────
+                  if (joinTripEnabled) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                _softAccent.withValues(alpha: 0.12),
+                                _softAccent.withValues(alpha: 0.06),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: _softAccent.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: TextButton.icon(
+                            onPressed: schedules.isEmpty
+                                ? null
+                                : () => handleBookingTap(joinTrip: true),
+                            style: TextButton.styleFrom(
+                              foregroundColor: _softAccent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                            icon: const Icon(Icons.groups_rounded, size: 20),
+                            label: Text(
+                              joinTripPrice > 0
+                                  ? 'จอยทริป · ${money(joinTripPrice)} / คน'
+                                  : 'จอยทริป',
+                              style: GoogleFonts.anuphan(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -2245,27 +2729,33 @@ class _BookingButtonState extends State<_BookingButton> {
         if (widget.enabled) widget.onPressed();
       },
       child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 110),
+        scale: _pressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutBack,
         child: Container(
           height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 22),
           decoration: BoxDecoration(
             gradient: widget.enabled
                 ? const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF059669), Color(0xFF047857)],
+                    colors: [Color(0xFF059669), Color(0xFF065F46)],
                   )
                 : null,
             color: widget.enabled ? null : const Color(0xFFD1D5DB),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(22),
             boxShadow: widget.enabled
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF059669).withValues(alpha: 0.32),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+                      color: const Color(0xFF059669).withValues(alpha: 0.40),
+                      blurRadius: 18,
+                      offset: const Offset(0, 7),
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFF059669).withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ]
                 : null,
@@ -2273,14 +2763,10 @@ class _BookingButtonState extends State<_BookingButton> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.calendar_month_rounded,
-                size: 20,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 8),
+              const Icon(Icons.bolt_rounded, size: 20, color: Colors.white),
+              const SizedBox(width: 6),
               Text(
-                'จองตอนนี้',
+                'จองเลย',
                 style: GoogleFonts.anuphan(
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
@@ -2324,43 +2810,70 @@ class _PremiumCard extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String? subtitle;
 
-  const _SectionHeader({required this.icon, required this.title});
+  const _SectionHeader({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // colored icon box
         Container(
-          width: 38,
-          height: 38,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                _softAccent.withValues(alpha: 0.12),
-                _softAccent.withValues(alpha: 0.04),
-              ],
+              colors: [Color(0xFF059669), Color(0xFF10B981)],
             ),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _softAccent.withValues(alpha: 0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: _softAccent.withValues(alpha: 0.28),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: Icon(icon, size: 20, color: _softAccent),
+          child: Icon(icon, size: 20, color: Colors.white),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 14),
         Expanded(
-          child: Text(
-            title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: _premiumText,
-              height: 1.25,
-              letterSpacing: -0.2,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.anuphan(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : _premiumText,
+                  height: 1.2,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              if (subtitle != null && subtitle!.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: GoogleFonts.anuphan(
+                    fontSize: 12,
+                    color: _mutedText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -2380,54 +2893,59 @@ class _FeatureRow extends StatelessWidget {
     required this.title,
     this.description,
     this.iconColor = _softAccent,
-    this.iconBackground = const Color(0xFFF7FAF9),
+    this.iconBackground = const Color(0xFFECFDF5),
   });
 
   @override
   Widget build(BuildContext context) {
     if (title.trim().isEmpty) return const SizedBox.shrink();
+    final isDark = AppTheme.isDark(context);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 30,
-            height: 30,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: iconBackground,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+              color: isDark
+                  ? iconColor.withValues(alpha: 0.15)
+                  : iconBackground,
+              borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(icon, color: iconColor, size: 17),
+            child: Icon(icon, color: iconColor, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.anuphan(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: _premiumText,
-                    height: 1.45,
-                  ),
-                ),
-                if (description != null && description!.trim().isNotEmpty) ...[
-                  const SizedBox(height: 3),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    description!,
+                    title,
                     style: GoogleFonts.anuphan(
-                      fontSize: 13,
-                      color: _mutedText,
-                      height: 1.55,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white.withValues(alpha: 0.9) : _premiumText,
+                      height: 1.4,
                     ),
                   ),
+                  if (description != null && description!.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      description!,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 13,
+                        color: _mutedText,
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ],
@@ -2444,18 +2962,23 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: _chipBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _softAccent.withValues(alpha: 0.12)),
+        color: isDark
+            ? _softAccent.withValues(alpha: 0.15)
+            : const Color(0xFFECFDF5),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: _softAccent.withValues(alpha: isDark ? 0.25 : 0.2),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: _softAccent),
-          const SizedBox(width: 8),
+          Icon(icon, size: 13, color: _softAccent),
+          const SizedBox(width: 6),
           Flexible(
             child: Text(
               label,
@@ -2463,13 +2986,88 @@ class _InfoChip extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.anuphan(
                 fontSize: 12,
-                color: _softAccent,
+                color: isDark ? _softAccent : const Color(0xFF047857),
                 fontWeight: FontWeight.w800,
+                letterSpacing: 0.1,
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StepDropdownRow extends StatelessWidget {
+  final String step;
+  final String label;
+  final Widget child;
+
+  const _StepDropdownRow({
+    required this.step,
+    required this.label,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // step badge
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF059669), Color(0xFF10B981)],
+              ),
+              borderRadius: BorderRadius.circular(9),
+              boxShadow: [
+                BoxShadow(
+                  color: _softAccent.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                step,
+                style: GoogleFonts.anuphan(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6, left: 2),
+                child: Text(
+                  label,
+                  style: GoogleFonts.anuphan(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? _mutedText : const Color(0xFF64748B),
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+              child,
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2492,26 +3090,37 @@ class _PremiumDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border(context)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? AppTheme.border(context)
+              : const Color(0xFFD1FAE5),
+          width: 1.5,
+        ),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButtonFormField<T>(
           initialValue: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: _softAccent,
+            size: 20,
+          ),
           decoration: InputDecoration(
             labelText: label,
             border: InputBorder.none,
-            prefixIcon: Icon(icon, color: _softAccent, size: 21),
-            prefixIconConstraints: const BoxConstraints(minWidth: 42),
+            prefixIcon: Icon(icon, color: _softAccent, size: 19),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40),
             labelStyle: GoogleFonts.anuphan(
               color: AppTheme.mutedText(context),
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
           ),
           style: GoogleFonts.anuphan(
