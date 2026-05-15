@@ -1,22 +1,46 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/api_config.dart';
+import '../config/api_endpoints.dart';
+import '../services/analytics_service.dart';
 import '../services/api_client.dart';
+import '../services/connectivity_service.dart';
+import '../services/notification_navigator.dart';
+import '../services/offline_cache.dart';
 import '../services/push_notification_service.dart';
+import '../services/rating_prompt_service.dart';
+import '../services/realtime_service.dart';
+import '../services/secure_storage.dart';
+import '../services/version_gate_service.dart';
 
 class AppProvider extends ChangeNotifier {
   static const _tokenKey = 'auth_token';
   static const _themeModeKey = 'theme_mode';
+  static const _localeKey = 'app_locale';
 
   final ApiClient api = ApiClient();
+  final RealtimeService realtime = RealtimeService.instance;
+  VoidCallback? _userChannelDisposer;
+  VoidCallback? _onSessionExpired;
+  bool _handlingUnauthorized = false;
+  VersionGateResult _versionGate = VersionGateResult.ok;
+  VersionGateResult get versionGate => _versionGate;
 
   ThemeMode _themeMode = ThemeMode.light;
+  Locale _locale = const Locale('th');
+  Locale get locale => _locale;
   bool booting = true;
   bool busy = false;
   String? error;
   Map<String, dynamic>? user;
+
+  StreamSubscription<Uri>? _deepLinkSub;
+  String? _pendingSocialError;
 
   List<dynamic> trips = [];
   List<dynamic> featuredTrips = [];
@@ -37,6 +61,7 @@ class AppProvider extends ChangeNotifier {
   bool get isLoggedIn => api.token != null && api.token!.isNotEmpty;
   String? get token => api.token;
   ThemeMode get themeMode => _themeMode;
+  String? get pendingSocialError => _pendingSocialError;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
   List<String> get roleNames {
     final roles = user?['roles'];
@@ -58,10 +83,50 @@ class AppProvider extends ChangeNotifier {
         roles.contains('admin');
   }
 
+  void setOnSessionExpired(VoidCallback callback) {
+    _onSessionExpired = callback;
+  }
+
+  Future<void> _handleUnauthorized() async {
+    if (_handlingUnauthorized) return;
+    if (!isLoggedIn) return;
+    _handlingUnauthorized = true;
+    try {
+      await AnalyticsService.instance.log('session_expired_auto_logout');
+      await logout();
+      _onSessionExpired?.call();
+    } finally {
+      _handlingUnauthorized = false;
+    }
+  }
+
   Future<void> boot() async {
     final prefs = await SharedPreferences.getInstance();
-    api.token = prefs.getString(_tokenKey);
+    final secureToken = await SecureStorage.instance.readToken();
+    api.token = secureToken ?? prefs.getString(_tokenKey);
+    if (secureToken == null && api.token != null && api.token!.isNotEmpty) {
+      // Migrate legacy plaintext token to secure storage.
+      await SecureStorage.instance.writeToken(api.token!);
+      await prefs.remove(_tokenKey);
+    }
+    api.onUnauthorized = () {
+      // Defer so the current request returns its error first.
+      Future.microtask(_handleUnauthorized);
+    };
     _themeMode = _themeModeFromStorage(prefs.getString(_themeModeKey));
+    _locale = _localeFromStorage(prefs.getString(_localeKey));
+    realtime.attachApi(api);
+    unawaited(ConnectivityService.instance.initialize());
+    unawaited(
+      VersionGateService.instance.check(api).then((result) {
+        _versionGate = result;
+        notifyListeners();
+      }),
+    );
+    await OfflineCache.instance.load();
+    _hydrateFromCache();
+    notifyListeners();
+    _initDeepLinks();
     await PushNotificationService.instance.initialize(
       onRefreshRequested: () {
         if (isLoggedIn) loadAccountData();
@@ -74,6 +139,7 @@ class AppProvider extends ChangeNotifier {
         await loadActiveSeatLocks();
         startActiveSeatLockPolling();
         await PushNotificationService.instance.syncToken(api);
+        await _bindUserChannel();
       }
     } catch (e) {
       error = e.toString();
@@ -81,6 +147,125 @@ class AppProvider extends ChangeNotifier {
       booting = false;
       notifyListeners();
     }
+  }
+
+  void _hydrateFromCache() {
+    final cache = OfflineCache.instance;
+    trips = List<dynamic>.from(cache.readPublic<List>('trips') ?? const []);
+    featuredTrips = List<dynamic>.from(
+      cache.readPublic<List>('featured') ?? const [],
+    );
+    categories = List<dynamic>.from(
+      cache.readPublic<List>('categories') ?? const [],
+    );
+    reviews = List<dynamic>.from(cache.readPublic<List>('reviews') ?? const []);
+    promotions = List<dynamic>.from(
+      cache.readPublic<List>('promotions') ?? const [],
+    );
+    stats = Map<String, dynamic>.from(
+      cache.readPublic<Map>('stats') ?? const {},
+    );
+
+    if (isLoggedIn) {
+      final cachedUser = cache.readAccount<Map>('user');
+      if (cachedUser != null) user = Map<String, dynamic>.from(cachedUser);
+      bookings = List<dynamic>.from(
+        cache.readAccount<List>('bookings') ?? const [],
+      );
+      notifications = List<dynamic>.from(
+        cache.readAccount<List>('notifications') ?? const [],
+      );
+      final cachedLoyalty = cache.readAccount<Map>('loyalty');
+      loyalty = cachedLoyalty == null
+          ? null
+          : Map<String, dynamic>.from(cachedLoyalty);
+      rewards = List<dynamic>.from(
+        cache.readAccount<List>('rewards') ?? const [],
+      );
+      coupons = List<dynamic>.from(
+        cache.readAccount<List>('coupons') ?? const [],
+      );
+      myReviews = List<dynamic>.from(
+        cache.readAccount<List>('myReviews') ?? const [],
+      );
+    }
+  }
+
+  Future<void> _bindUserChannel() async {
+    final userId = user?['id']?.toString();
+    if (userId == null || userId.isEmpty) return;
+    _userChannelDisposer?.call();
+    _userChannelDisposer = await realtime.subscribe(
+      channel: 'private-user.$userId',
+      event: 'PaymentConfirmed',
+      handler: (_) => loadAccountData(),
+    );
+  }
+
+  Future<void> _unbindUserChannel() async {
+    _userChannelDisposer?.call();
+    _userChannelDisposer = null;
+    await realtime.disconnect();
+  }
+
+  void _initDeepLinks() {
+    final appLinks = AppLinks();
+    _deepLinkSub?.cancel();
+    _deepLinkSub = appLinks.uriLinkStream.listen(
+      _dispatchDeepLink,
+      onError: (_) {},
+    );
+    appLinks.getInitialLink().then((uri) {
+      if (uri != null) _dispatchDeepLink(uri);
+    });
+  }
+
+  Future<void> _dispatchDeepLink(Uri uri) async {
+    // Trip/booking links take precedence; fall through to social auth flow.
+    if (NotificationNavigator.handleDeepLink(uri)) return;
+    await _handleSocialDeepLink(uri);
+  }
+
+  Future<void> _handleSocialDeepLink(Uri uri) async {
+    if (uri.scheme != 'luilaykhao' ||
+        uri.host != 'auth' ||
+        uri.path != '/social/callback') {
+      return;
+    }
+
+    final params = uri.queryParameters;
+    final errorMsg = params['error'];
+    if (errorMsg != null && errorMsg.isNotEmpty) {
+      final message = params['message']?.isNotEmpty == true
+          ? params['message']!
+          : 'เข้าสู่ระบบผ่าน Social ไม่สำเร็จ';
+      _pendingSocialError = message;
+      notifyListeners();
+      return;
+    }
+
+    final token = params['token'];
+    final userParam = params['user'];
+    if (token == null || token.isEmpty || userParam == null) {
+      _pendingSocialError = 'ไม่พบข้อมูลเข้าสู่ระบบจาก Social';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final decodedUser = jsonDecode(userParam);
+      await completeSocialLogin(
+        token: token,
+        user: Map<String, dynamic>.from(decodedUser as Map),
+      );
+    } catch (e) {
+      _pendingSocialError = e.toString();
+      notifyListeners();
+    }
+  }
+
+  void clearPendingSocialError() {
+    _pendingSocialError = null;
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -97,14 +282,22 @@ class AppProvider extends ChangeNotifier {
     return setThemeMode(isDarkMode ? ThemeMode.light : ThemeMode.dark);
   }
 
+  Future<void> setLocale(Locale locale) async {
+    if (_locale == locale) return;
+    _locale = locale;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_localeKey, locale.languageCode);
+  }
+
   Future<void> loadPublicData({String? search, String? type}) async {
     final results = await Future.wait([
-      api.get('trips', query: {'per_page': 30, 'search': search, 'type': type}),
-      api.get('trips/featured'),
-      api.get('categories'),
-      api.get('reviews', query: {'per_page': 8}),
-      api.get('stats'),
-      api.get('promotions/active'),
+      api.get(ApiEndpoints.trips, query: {'per_page': 30, 'search': search, 'type': type}),
+      api.get(ApiEndpoints.tripsFeatured),
+      api.get(ApiEndpoints.categories),
+      api.get(ApiEndpoints.reviews, query: {'per_page': 8}),
+      api.get(ApiEndpoints.stats),
+      api.get(ApiEndpoints.promotionsActive),
     ]);
     trips = List<dynamic>.from(api.data(results[0]) ?? []);
     featuredTrips = List<dynamic>.from(api.data(results[1]) ?? []);
@@ -112,6 +305,13 @@ class AppProvider extends ChangeNotifier {
     reviews = List<dynamic>.from(api.data(results[3]) ?? []);
     stats = Map<String, dynamic>.from(api.data(results[4]) ?? {});
     promotions = List<dynamic>.from(api.data(results[5]) ?? []);
+    final cache = OfflineCache.instance;
+    cache.writePublic('trips', trips);
+    cache.writePublic('featured', featuredTrips);
+    cache.writePublic('categories', categories);
+    cache.writePublic('reviews', reviews);
+    cache.writePublic('stats', stats);
+    cache.writePublic('promotions', promotions);
     notifyListeners();
   }
 
@@ -139,7 +339,7 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<List<dynamic>> fetchActiveSeatLocks() async {
-    final response = await api.get('seat-locks/active');
+    final response = await api.get(ApiEndpoints.seatLocksActive);
     return List<dynamic>.from(api.data(response) ?? []);
   }
 
@@ -161,8 +361,11 @@ class AppProvider extends ChangeNotifier {
   void startActiveSeatLockPolling() {
     _activeSeatLockTimer?.cancel();
     if (!isLoggedIn) return;
+    final interval = ApiConfig.hasRealtimeConfig
+        ? const Duration(seconds: 30)
+        : const Duration(seconds: 5);
     _activeSeatLockTimer = Timer.periodic(
-      const Duration(seconds: 5),
+      interval,
       (_) => loadActiveSeatLocks(silent: true),
     );
   }
@@ -182,7 +385,7 @@ class AppProvider extends ChangeNotifier {
       'schedules/$scheduleId/seats/lock',
       body: {
         'seat_ids': seatIds,
-        if (pickupPointId != null) 'pickup_point_id': pickupPointId,
+        'pickup_point_id': ?pickupPointId,
         if (pickupRegion != null && pickupRegion.isNotEmpty)
           'pickup_region': pickupRegion,
       },
@@ -214,12 +417,14 @@ class AppProvider extends ChangeNotifier {
   Future<void> login(String email, String password) async {
     await _auth(
       () =>
-          api.post('auth/login', body: {'email': email, 'password': password}),
+          api.post(ApiEndpoints.authLogin, body: {'email': email, 'password': password}),
     );
+    await AnalyticsService.instance.logLogin('password');
   }
 
   Future<void> register(Map<String, dynamic> payload) async {
-    await _auth(() => api.post('auth/register', body: payload));
+    await _auth(() => api.post(ApiEndpoints.authRegister, body: payload));
+    await AnalyticsService.instance.logSignUp('password');
   }
 
   Future<void> completeSocialLogin({
@@ -232,12 +437,16 @@ class AppProvider extends ChangeNotifier {
     try {
       api.token = token;
       this.user = user;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_tokenKey, token);
+      await SecureStorage.instance.writeToken(token);
       await loadAccountData();
       await loadActiveSeatLocks();
       startActiveSeatLockPolling();
       await PushNotificationService.instance.syncToken(api);
+      await _bindUserChannel();
+      await AnalyticsService.instance.setUser(
+        id: this.user?['id']?.toString(),
+        email: this.user?['email']?.toString(),
+      );
     } catch (e) {
       error = e.toString();
       rethrow;
@@ -256,12 +465,18 @@ class AppProvider extends ChangeNotifier {
       final data = Map<String, dynamic>.from(api.data(response) as Map);
       api.token = data['token']?.toString();
       user = Map<String, dynamic>.from(data['user'] as Map);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_tokenKey, api.token ?? '');
+      if (api.token != null && api.token!.isNotEmpty) {
+        await SecureStorage.instance.writeToken(api.token!);
+      }
       await loadAccountData();
       await loadActiveSeatLocks();
       startActiveSeatLockPolling();
       await PushNotificationService.instance.syncToken(api);
+      await _bindUserChannel();
+      await AnalyticsService.instance.setUser(
+        id: user?['id']?.toString(),
+        email: user?['email']?.toString(),
+      );
     } catch (e) {
       error = e.toString();
       rethrow;
@@ -272,7 +487,7 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> refreshMe() async {
-    final response = await api.get('auth/me');
+    final response = await api.get(ApiEndpoints.authMe);
     user = Map<String, dynamic>.from(api.data(response) as Map);
     notifyListeners();
   }
@@ -286,7 +501,7 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final response = avatarImagePath == null
-          ? await api.post('auth/profile', body: payload)
+          ? await api.post(ApiEndpoints.authProfile, body: payload)
           : await api.postMultipart(
               'auth/profile',
               fields: payload,
@@ -305,14 +520,18 @@ class AppProvider extends ChangeNotifier {
   Future<void> logout() async {
     try {
       await PushNotificationService.instance.unregisterToken();
-      if (isLoggedIn) await api.post('auth/logout');
+      if (isLoggedIn) await api.post(ApiEndpoints.authLogout);
     } catch (_) {
       // Keep local logout responsive even if token is already expired.
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
+    await SecureStorage.instance.deleteToken();
     api.token = null;
     user = null;
+    await OfflineCache.instance.clearAccount();
+    await _unbindUserChannel();
+    await AnalyticsService.instance.setUser(id: null);
     stopActiveSeatLockPolling();
     bookings = [];
     notifications = [];
@@ -327,23 +546,34 @@ class AppProvider extends ChangeNotifier {
   @override
   void dispose() {
     stopActiveSeatLockPolling();
+    _deepLinkSub?.cancel();
     super.dispose();
   }
 
   Future<void> loadAccountData() async {
     if (!isLoggedIn) return;
     final results = await Future.wait([
-      api.get('bookings'),
-      api.get('notifications', query: {'per_page': 20}),
-      api.get('loyalty/account'),
-      api.get('loyalty/rewards'),
-      api.get('loyalty/coupons'),
+      api.get(ApiEndpoints.bookings),
+      api.get(ApiEndpoints.notifications, query: {'per_page': 20}),
+      api.get(ApiEndpoints.loyaltyAccount),
+      api.get(ApiEndpoints.loyaltyRewards),
+      api.get(ApiEndpoints.loyaltyCoupons),
+      api.get(ApiEndpoints.reviewsMy),
     ]);
     bookings = List<dynamic>.from(api.data(results[0]) ?? []);
     notifications = List<dynamic>.from(api.data(results[1]) ?? []);
     loyalty = Map<String, dynamic>.from(api.data(results[2]) ?? {});
     rewards = List<dynamic>.from(api.data(results[3]) ?? []);
     coupons = List<dynamic>.from(api.data(results[4]) ?? []);
+    myReviews = List<dynamic>.from(api.data(results[5]) ?? []);
+    final cache = OfflineCache.instance;
+    if (user != null) cache.writeAccount('user', user);
+    cache.writeAccount('bookings', bookings);
+    cache.writeAccount('notifications', notifications);
+    cache.writeAccount('loyalty', loyalty);
+    cache.writeAccount('rewards', rewards);
+    cache.writeAccount('coupons', coupons);
+    cache.writeAccount('myReviews', myReviews);
     notifyListeners();
   }
 
@@ -371,16 +601,25 @@ class AppProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> createBooking(
     Map<String, dynamic> payload,
   ) async {
-    final response = await api.post('bookings', body: payload);
+    final response = await api.post(ApiEndpoints.bookings, body: payload);
     final booking = Map<String, dynamic>.from(api.data(response) as Map);
     await loadAccountData();
     await loadActiveSeatLocks(silent: true);
+    final amountRaw = booking['total_amount'];
+    final amount = amountRaw is num
+        ? amountRaw
+        : num.tryParse(amountRaw?.toString() ?? '');
+    await AnalyticsService.instance.logBookingCreated(
+      tripSlug: payload['trip_slug']?.toString() ?? '',
+      amount: amount,
+    );
     return booking;
   }
 
   Future<void> cancelBooking(String ref, String reason) async {
     await api.post('bookings/$ref/cancel', body: {'reason': reason});
     await loadAccountData();
+    await AnalyticsService.instance.logBookingCancelled(ref);
   }
 
   Future<Map<String, dynamic>> paymentStatus(String ref) async {
@@ -404,8 +643,8 @@ class AppProvider extends ChangeNotifier {
         'amount': amount,
         'payment_type': paymentType,
         'payment_method': paymentMethod,
-        if (transferDate != null) 'transfer_date': transferDate,
-        if (transferTime != null) 'transfer_time': transferTime,
+        'transfer_date': ?transferDate,
+        'transfer_time': ?transferTime,
       },
       files: {'slip_image': slipImagePath},
     );
@@ -425,7 +664,7 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> markAllNotificationsRead() async {
-    await api.put('notifications/read-all');
+    await api.put(ApiEndpoints.notificationsReadAll);
     await loadNotifications();
   }
 
@@ -461,7 +700,7 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> redeemReward(int rewardId) async {
-    await api.post('loyalty/redeem', body: {'reward_id': rewardId});
+    await api.post(ApiEndpoints.loyaltyRedeem, body: {'reward_id': rewardId});
     await loadAccountData();
   }
 
@@ -476,17 +715,21 @@ class AppProvider extends ChangeNotifier {
     );
     await loadPublicData();
     await loadMyReviews();
+    await AnalyticsService.instance.logReviewSubmitted(bookingId, rating);
+    if (rating >= 4) {
+      unawaited(RatingPromptService.instance.maybeRequest());
+    }
   }
 
   Future<void> loadMyReviews() async {
     if (!isLoggedIn) return;
-    final response = await api.get('reviews/my');
+    final response = await api.get(ApiEndpoints.reviewsMy);
     myReviews = List<dynamic>.from(api.data(response) ?? []);
     notifyListeners();
   }
 
   Future<void> sendContact(Map<String, dynamic> payload) async {
-    await api.post('contacts', body: payload);
+    await api.post(ApiEndpoints.contacts, body: payload);
   }
 }
 
@@ -500,5 +743,12 @@ ThemeMode _themeModeFromStorage(String? value) {
   return switch (value) {
     'dark' => ThemeMode.dark,
     _ => ThemeMode.light,
+  };
+}
+
+Locale _localeFromStorage(String? value) {
+  return switch (value) {
+    'en' => const Locale('en'),
+    _ => const Locale('th'),
   };
 }

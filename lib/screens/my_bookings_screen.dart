@@ -212,12 +212,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       hint: 'ระบุเหตุผล',
     );
     if (reason == null) return;
+    if (!mounted) return;
 
+    final app = context.read<AppProvider>();
     try {
-      await context.read<AppProvider>().cancelBooking(
-        textOf(booking['booking_ref']),
-        reason,
-      );
+      await app.cancelBooking(textOf(booking['booking_ref']), reason);
       if (mounted) showSnack(context, 'ยกเลิกการจองสำเร็จ');
     } catch (e) {
       if (mounted) showSnack(context, e.toString());
@@ -323,7 +322,7 @@ class _CheckInTextBlock extends StatelessWidget {
               centered ? MainAxisAlignment.center : MainAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.verified_rounded,
               size: 16,
               color: AppTheme.primaryColor,

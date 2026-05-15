@@ -473,7 +473,7 @@ class _CheckInButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.check_circle_rounded,
               color: AppTheme.primaryColor,
               size: 22,
@@ -510,7 +510,7 @@ class _CheckInButton extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.warning_amber_rounded,
                   color: AppTheme.warningColor,
                   size: 18,
@@ -862,7 +862,7 @@ class _BookingHeaderCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.event_available_rounded,
                           size: 16,
                           color: AppTheme.primaryColor,
@@ -921,7 +921,7 @@ class _UserAvatar extends StatelessWidget {
         radius: 22,
         backgroundColor: backgroundColor,
         backgroundImage: NetworkImage(imageUrl),
-        onBackgroundImageError: (_, __) {},
+        onBackgroundImageError: (_, _) {},
         child: null,
       );
     }
@@ -1023,7 +1023,7 @@ class _StaffQrScannerScreenState extends State<_StaffQrScannerScreen> {
           ),
 
           // Scan frame
-          Center(
+          const Center(
             child: _ScanFrame(size: 248),
           ),
 
@@ -1103,7 +1103,7 @@ class _ScanFrame extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(
+      child: const CustomPaint(
         painter: _CornerPainter(
           stroke: stroke,
           cornerLength: cornerLength,

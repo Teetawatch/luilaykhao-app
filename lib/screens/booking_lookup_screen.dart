@@ -179,7 +179,7 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 360),
         reverseTransitionDuration: const Duration(milliseconds: 260),
-        pageBuilder: (_, animation, __) =>
+        pageBuilder: (_, animation, _) =>
             FadeTransition(opacity: animation, child: const TrackingMapPage()),
       ),
     );
@@ -406,7 +406,7 @@ class _MiniMapPreview extends StatelessWidget {
           children: [
             Container(color: const Color(0xFFEFF3F1)),
             CustomPaint(painter: _MapPreviewPainter()),
-            Positioned(
+            const Positioned(
               left: 26,
               bottom: 28,
               child: _PreviewPin(
@@ -414,11 +414,11 @@ class _MiniMapPreview extends StatelessWidget {
                 icon: Icons.location_on_rounded,
               ),
             ),
-            Positioned(
+            const Positioned(
               right: 30,
               top: 24,
               child: _PreviewPin(
-                color: const Color(0xFF111111),
+                color: Color(0xFF111111),
                 icon: Icons.flag_rounded,
               ),
             ),
@@ -1180,10 +1180,12 @@ class _BookingCodeFormatter extends TextInputFormatter {
         .toUpperCase();
     final limited = compact.length > 15 ? compact.substring(0, 15) : compact;
     final parts = <String>[];
-    if (limited.isNotEmpty)
+    if (limited.isNotEmpty) {
       parts.add(limited.substring(0, limited.length.clamp(0, 3)));
-    if (limited.length > 3)
+    }
+    if (limited.length > 3) {
       parts.add(limited.substring(3, limited.length.clamp(3, 11)));
+    }
     if (limited.length > 11) parts.add(limited.substring(11));
     final text = parts.join('-');
     return TextEditingValue(

@@ -159,7 +159,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
   final VoidCallback onContinue;
   final VoidCallback onCancel;
 
-  const ActiveSeatLockBanner({
+  const ActiveSeatLockBanner({super.key, 
     required this.lock,
     required this.extraCount,
     required this.busy,

@@ -135,7 +135,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 28),
 
                       // ── Section: ข้อมูลส่วนตัว ──────────────────────────
-                      _SectionHeader(
+                      const _SectionHeader(
                         icon: Icons.person_rounded,
                         title: 'ข้อมูลส่วนตัว',
                         subtitle: 'ใช้ตรงตามบัตรประชาชน',
@@ -193,7 +193,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 24),
                       // ── Section: ข้อมูลติดต่อ ──────────────────────────
-                      _SectionHeader(
+                      const _SectionHeader(
                         icon: Icons.contact_phone_rounded,
                         title: 'ข้อมูลติดต่อ',
                         subtitle: 'สำหรับการแจ้งข่าวสารและนัดหมาย',
@@ -229,7 +229,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 24),
                       // ── Section: ผู้ติดต่อฉุกเฉิน ──────────────────────
-                      _SectionHeader(
+                      const _SectionHeader(
                         icon: Icons.emergency_rounded,
                         title: 'ผู้ติดต่อฉุกเฉิน',
                         subtitle: 'จำเป็นสำหรับความปลอดภัยระหว่างการเดินทาง',
@@ -255,11 +255,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 24),
                       // ── Section: ข้อมูลสุขภาพ ──────────────────────────
-                      _SectionHeader(
+                      const _SectionHeader(
                         icon: Icons.health_and_safety_rounded,
                         title: 'ข้อมูลสุขภาพ',
                         subtitle: 'ช่วยให้ทีมงานดูแลคุณได้ดียิ่งขึ้น',
-                        accentColor: const Color(0xFF0891B2),
+                        accentColor: Color(0xFF0891B2),
                       ),
                       const SizedBox(height: 14),
                       _RegisterInput(
@@ -278,7 +278,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 24),
                       // ── Section: รหัสผ่าน ──────────────────────────────
-                      _SectionHeader(
+                      const _SectionHeader(
                         icon: Icons.lock_rounded,
                         title: 'ตั้งรหัสผ่าน',
                         subtitle: 'ใช้ตัวอักษร ตัวเลข ผสมกัน อย่างน้อย 8 ตัว',
@@ -375,7 +375,7 @@ class _RegisterHeader extends StatelessWidget {
           CachedNetworkImage(
             imageUrl: ApiConfig.mediaUrl('/images/register_page.png'),
             fit: BoxFit.cover,
-            placeholder: (_, __) => Container(
+            placeholder: (_, _) => Container(
               color: AppTheme.subtleSurface(context),
               child: const Center(
                 child: CircularProgressIndicator(
@@ -384,7 +384,7 @@ class _RegisterHeader extends StatelessWidget {
                 ),
               ),
             ),
-            errorWidget: (_, __, ___) => Container(
+            errorWidget: (_, _, _) => Container(
               color: AppTheme.subtleSurface(context),
               child: const Icon(
                 Icons.landscape_rounded,

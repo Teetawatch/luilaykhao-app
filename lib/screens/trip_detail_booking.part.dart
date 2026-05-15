@@ -1,0 +1,326 @@
+part of 'trip_detail_screen.dart';
+
+class StickyBookingBar extends StatelessWidget {
+  final Map<String, dynamic> trip;
+  final List<dynamic> schedules;
+  final int? selectedScheduleId;
+  final int? selectedPickupPointId;
+
+  const StickyBookingBar({
+    super.key,
+    required this.trip,
+    required this.schedules,
+    this.selectedScheduleId,
+    this.selectedPickupPointId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedSchedule = _selectedScheduleFor(
+      schedules,
+      selectedScheduleId,
+    );
+    final selectedPickupPoint = _selectedPickupPointFor(
+      selectedSchedule,
+      selectedPickupPointId,
+    );
+    final joinTripEnabled = _asBool(selectedSchedule['join_trip_enabled']);
+    final joinTripPrice = _asNum(selectedSchedule['join_trip_price']);
+    final selectedRegionLabel = _pickupRegionLabel(selectedPickupPoint);
+    final priceLabel = selectedRegionLabel.isEmpty
+        ? 'ราคาเริ่มต้น'
+        : 'ราคาสำหรับ $selectedRegionLabel';
+
+    void openBooking({bool joinTrip = false}) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookingFlowScreen(
+            trip: trip,
+            schedules: schedules,
+            initialScheduleId: selectedScheduleId,
+            initialPickupPointId: selectedPickupPointId,
+            initialJoinTrip: joinTrip,
+          ),
+        ),
+      );
+    }
+
+    void handleBookingTap({bool joinTrip = false}) {
+      final app = context.read<AppProvider>();
+      if (app.isLoggedIn) {
+        openBooking(joinTrip: joinTrip);
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LoginScreen(
+            onLoginSuccess: () {
+              if (context.mounted) openBooking(joinTrip: joinTrip);
+            },
+          ),
+        ),
+      );
+    }
+
+    final isDark = AppTheme.isDark(context);
+    final priceValue = _priceText(
+      trip,
+      schedule: selectedSchedule,
+      pickupPoint: selectedPickupPoint,
+    );
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppTheme.surfaceDark.withValues(alpha: 0.95)
+                    : Colors.white.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: isDark
+                      ? AppTheme.outlineDark.withValues(alpha: 0.5)
+                      : const Color(0xFFE2E8F0),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.4)
+                        : const Color(0xFF0F172A).withValues(alpha: 0.10),
+                    blurRadius: 32,
+                    offset: const Offset(0, -6),
+                  ),
+                  if (!isDark)
+                    BoxShadow(
+                      color: _softAccent.withValues(alpha: 0.06),
+                      blurRadius: 20,
+                      offset: const Offset(0, -4),
+                    ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── price + book row ──────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // price section
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: _softAccent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    priceLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.anuphan(
+                                      fontSize: 11.5,
+                                      color: AppTheme.mutedText(context),
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                priceValue,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.anuphan(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? Colors.white : _premiumText,
+                                  height: 1.1,
+                                  letterSpacing: -0.6,
+                                ),
+                              ),
+                              if (joinTripEnabled) ...[
+                                const SizedBox(height: 3),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _softAccent.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Join Trip ${_priceText(trip, schedule: selectedSchedule, isJoinTrip: true)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.anuphan(
+                                      fontSize: 11,
+                                      color: _softAccent,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        // book button
+                        _BookingButton(
+                          enabled: schedules.isNotEmpty,
+                          onPressed: handleBookingTap,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // ── join trip button ──────────────────────────────
+                  if (joinTripEnabled) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                _softAccent.withValues(alpha: 0.12),
+                                _softAccent.withValues(alpha: 0.06),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: _softAccent.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: TextButton.icon(
+                            onPressed: schedules.isEmpty
+                                ? null
+                                : () => handleBookingTap(joinTrip: true),
+                            style: TextButton.styleFrom(
+                              foregroundColor: _softAccent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                            icon: const Icon(Icons.groups_rounded, size: 20),
+                            label: Text(
+                              joinTripPrice > 0
+                                  ? 'จอยทริป · ${money(joinTripPrice)} / คน'
+                                  : 'จอยทริป',
+                              style: GoogleFonts.anuphan(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingButton extends StatefulWidget {
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  const _BookingButton({required this.enabled, required this.onPressed});
+
+  @override
+  State<_BookingButton> createState() => _BookingButtonState();
+}
+
+class _BookingButtonState extends State<_BookingButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        if (widget.enabled) widget.onPressed();
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutBack,
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          decoration: BoxDecoration(
+            gradient: widget.enabled
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF059669), Color(0xFF065F46)],
+                  )
+                : null,
+            color: widget.enabled ? null : const Color(0xFFD1D5DB),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: widget.enabled
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF059669).withValues(alpha: 0.40),
+                      blurRadius: 18,
+                      offset: const Offset(0, 7),
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFF059669).withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.bolt_rounded, size: 20, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(
+                'จองเลย',
+                style: GoogleFonts.anuphan(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

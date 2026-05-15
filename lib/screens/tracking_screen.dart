@@ -229,8 +229,8 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
     final destination =
         widget.tracking?.destinationPoint ?? widget.booking?.destinationPoint;
     final route = <LatLng>[
-      if (vehicle != null) vehicle,
-      if (pickup != null) pickup,
+      ?vehicle,
+      ?pickup,
       if (destination != null && !_samePoint(destination, pickup)) destination,
     ];
     if (route.length < 2) return const [];

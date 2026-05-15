@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../main.dart' show appNavigatorKey;
+import '../providers/app_provider.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
+import '../screens/trip_detail_screen.dart' show TripDetailScreen;
 
 /// Maps notification type + data payload to the correct in-app screen.
 ///
@@ -51,8 +54,8 @@ class NotificationNavigator {
     Future.delayed(const Duration(milliseconds: 280), () {
       _nav?.push(
         PageRouteBuilder<void>(
-          pageBuilder: (_, anim, __) => const NotificationsScreen(),
-          transitionsBuilder: (_, anim, __, child) {
+          pageBuilder: (_, anim, _) => const NotificationsScreen(),
+          transitionsBuilder: (_, anim, _, child) {
             final curved = CurvedAnimation(
               parent: anim,
               curve: Curves.easeOutCubic,
@@ -79,4 +82,54 @@ class NotificationNavigator {
 
   // ignore: prefer_function_declarations_over_variables
   static void Function(int) _switchTab = (_) {};
+
+  /// Route a deep link like `luilaykhao://trip/koh-tao` or
+  /// `luilaykhao://booking/TRD-20250101-0001` to the matching screen.
+  ///
+  /// Returns true when the link was recognised so the caller can swallow
+  /// it; unrecognised links fall through to the social-login handler.
+  static bool handleDeepLink(Uri uri) {
+    if (uri.scheme != 'luilaykhao') return false;
+
+    switch (uri.host) {
+      case 'trip':
+        final slug = _firstSegment(uri.pathSegments);
+        if (slug == null) return false;
+        _openTrip(slug);
+        return true;
+      case 'booking':
+        final ref = _firstSegment(uri.pathSegments);
+        if (ref == null) return false;
+        _openBookingByRef(ref);
+        return true;
+    }
+    return false;
+  }
+
+  static String? _firstSegment(List<String> segments) {
+    if (segments.isEmpty) return null;
+    final first = segments.first.trim();
+    return first.isEmpty ? null : first;
+  }
+
+  static void _openTrip(String slug) {
+    final nav = _nav;
+    if (nav == null) return;
+    nav.push(
+      MaterialPageRoute(builder: (_) => TripDetailScreen(slug: slug)),
+    );
+  }
+
+  static void _openBookingByRef(String ref) {
+    final nav = _nav;
+    if (nav == null) return;
+    final ctx = nav.context;
+    // Best-effort: refresh bookings then drop the user on the Bookings tab.
+    // Surfacing the specific booking sheet would require deeper plumbing
+    // into MyBookingsScreen state — out of scope for v1.
+    try {
+      ctx.read<AppProvider>().loadAccountData();
+    } catch (_) {}
+    _switchTab(2);
+  }
 }

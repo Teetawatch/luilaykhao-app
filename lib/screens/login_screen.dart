@@ -1,8 +1,5 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:ui';
 
-import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -35,14 +32,12 @@ class _LoginScreenState extends State<LoginScreen>
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   String? _socialLoadingProvider;
-  StreamSubscription<Uri>? _linkSubscription;
 
   bool get _isSocialLoading => _socialLoadingProvider != null;
 
   @override
   void initState() {
     super.initState();
-    _initSocialDeepLinks();
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -60,23 +55,10 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   void dispose() {
-    _linkSubscription?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _animController.dispose();
     super.dispose();
-  }
-
-  Future<void> _initSocialDeepLinks() async {
-    final appLinks = AppLinks();
-    _linkSubscription = appLinks.uriLinkStream.listen(
-      (uri) => _handleSocialCallback(uri),
-      onError: (_) {
-        if (mounted) setState(() => _socialLoadingProvider = null);
-      },
-    );
-    final initialLink = await appLinks.getInitialLink();
-    if (initialLink != null) await _handleSocialCallback(initialLink);
   }
 
   Future<void> _handleSocialLogin(String provider) async {
@@ -104,49 +86,6 @@ class _LoginScreenState extends State<LoginScreen>
       if (mounted) setState(() => _socialLoadingProvider = null);
     }
   }
-
-  Future<void> _handleSocialCallback(Uri uri) async {
-    if (!_isSocialCallback(uri) || !mounted) return;
-
-    final params = uri.queryParameters;
-    final error = params['error'];
-    if (error != null && error.isNotEmpty) {
-      final message = params['message']?.isNotEmpty == true
-          ? params['message']!
-          : 'เข้าสู่ระบบผ่าน Social ไม่สำเร็จ';
-      _showSnack(message);
-      setState(() => _socialLoadingProvider = null);
-      return;
-    }
-
-    final token = params['token'];
-    final userParam = params['user'];
-    if (token == null || token.isEmpty || userParam == null) {
-      _showSnack('ไม่พบข้อมูลเข้าสู่ระบบจาก Social');
-      setState(() => _socialLoadingProvider = null);
-      return;
-    }
-
-    setState(() => _socialLoadingProvider = 'callback');
-    try {
-      final decodedUser = jsonDecode(userParam);
-      await context.read<AppProvider>().completeSocialLogin(
-        token: token,
-        user: Map<String, dynamic>.from(decodedUser as Map),
-      );
-      if (!mounted) return;
-      _finishLogin();
-    } catch (e) {
-      if (mounted) _showSnack(e.toString());
-    } finally {
-      if (mounted) setState(() => _socialLoadingProvider = null);
-    }
-  }
-
-  bool _isSocialCallback(Uri uri) =>
-      uri.scheme == 'luilaykhao' &&
-      uri.host == 'auth' &&
-      uri.path == '/social/callback';
 
   void _finishLogin() {
     final onLoginSuccess = widget.onLoginSuccess;
@@ -186,6 +125,30 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppProvider>();
+
+    // Social login completed via deep link handled in AppProvider.
+    if (app.isLoggedIn && _isSocialLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _socialLoadingProvider = null);
+          _finishLogin();
+        }
+      });
+    }
+
+    // Show error surfaced from AppProvider deep link handler.
+    final socialError = app.pendingSocialError;
+    if (socialError != null) {
+      app.clearPendingSocialError();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _socialLoadingProvider = null);
+          _showSnack(socialError);
+        }
+      });
+    }
+
     final size = MediaQuery.sizeOf(context);
     final padding = MediaQuery.paddingOf(context);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
@@ -279,7 +242,7 @@ class _HeroBg extends StatelessWidget {
                 imageUrl,
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,

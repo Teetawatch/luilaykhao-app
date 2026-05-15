@@ -18,7 +18,11 @@ class ApiException implements Exception {
 class ApiClient {
   String? token;
 
-  ApiClient({this.token});
+  /// Invoked whenever the server returns 401. Use this to wipe local credentials
+  /// and route the user back to the login screen.
+  void Function()? onUnauthorized;
+
+  ApiClient({this.token, this.onUnauthorized});
 
   Map<String, String> _headers({bool json = true}) {
     return {
@@ -109,6 +113,9 @@ class ApiClient {
 
   dynamic _handleResponse(http.Response response) {
     final decoded = _decode(response.body);
+    if (response.statusCode == 401) {
+      onUnauthorized?.call();
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
         _message(decoded) ?? 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์',
@@ -127,8 +134,9 @@ class ApiClient {
   }
 
   dynamic data(dynamic response) {
-    if (response is Map && response.containsKey('data'))
+    if (response is Map && response.containsKey('data')) {
       return response['data'];
+    }
     return response;
   }
 
