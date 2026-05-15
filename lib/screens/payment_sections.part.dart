@@ -231,6 +231,10 @@ class _PaymentTypeSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final count = _installmentCount(booking);
     final perInstallment = _installmentAmount(booking);
+    final installmentOn = _installmentAvailable(booking);
+    final depositOn = _depositAvailable(booking);
+    final deposit = _depositAmount(booking);
+    final balance = _balanceAmount(booking);
 
     return _SectionCard(
       child: Column(
@@ -248,21 +252,242 @@ class _PaymentTypeSection extends StatelessWidget {
             subtitle: 'ยอดชำระ ${money(booking['total_amount'])}',
             onTap: () => onChanged('full'),
           ),
-          const SizedBox(height: 10),
-          _ChoiceTile(
-            selected: value == 'installment',
-            icon: Icons.calendar_month_rounded,
-            title: 'ผ่อนชำระ $count งวด',
-            subtitle:
-                'งวดแรก ${money(perInstallment)} · ทุก ${_installmentInterval(booking)} วัน',
-            onTap: () => onChanged('installment'),
-          ),
+          if (depositOn) ...[
+            const SizedBox(height: 10),
+            _ChoiceTile(
+              selected: value == 'deposit',
+              icon: Icons.savings_rounded,
+              title: 'จ่ายมัดจำ ${money(deposit)}',
+              subtitle: 'ส่วนที่เหลือ ${money(balance)} · ก่อนเดินทาง 15 วัน',
+              onTap: () => onChanged('deposit'),
+            ),
+          ],
+          if (installmentOn) ...[
+            const SizedBox(height: 10),
+            _ChoiceTile(
+              selected: value == 'installment',
+              icon: Icons.calendar_month_rounded,
+              title: 'ผ่อนชำระ $count งวด',
+              subtitle:
+                  'งวดแรก ${money(perInstallment)} · ทุก ${_installmentInterval(booking)} วัน',
+              onTap: () => onChanged('installment'),
+            ),
+          ],
           if (value == 'installment') ...[
             const SizedBox(height: 14),
             ..._installmentSchedule(booking).map(
               (row) => _InstallmentRow(row: row),
             ),
           ],
+          if (value == 'deposit') ...[
+            const SizedBox(height: 14),
+            _DepositBreakdown(booking: booking),
+            const SizedBox(height: 12),
+            _DepositCancellationClause(booking: booking),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DepositBreakdown extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _DepositBreakdown({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = booking['total_amount'];
+    final deposit = _depositAmount(booking);
+    final balance = _balanceAmount(booking);
+    final dueText = _balanceDueDateText(booking);
+    final percent = _depositPercentApprox(booking);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _accent.withValues(
+          alpha: AppTheme.isDark(context) ? 0.14 : 0.06,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _accent.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _DepositBreakdownRow(
+            step: '1',
+            label: 'ยอดรวมทั้งหมด',
+            value: money(total),
+            highlight: false,
+          ),
+          const SizedBox(height: 8),
+          _DepositBreakdownRow(
+            step: '2',
+            label: 'ชำระมัดจำตอนนี้${percent > 0 ? ' (~$percent%)' : ''}',
+            value: money(deposit),
+            highlight: true,
+          ),
+          const SizedBox(height: 8),
+          _DepositBreakdownRow(
+            step: '3',
+            label: 'ส่วนที่เหลือ · ภายใน $dueText',
+            value: money(balance),
+            highlight: false,
+            warn: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DepositBreakdownRow extends StatelessWidget {
+  final String step;
+  final String label;
+  final String value;
+  final bool highlight;
+  final bool warn;
+
+  const _DepositBreakdownRow({
+    required this.step,
+    required this.label,
+    required this.value,
+    required this.highlight,
+    this.warn = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = warn ? AppTheme.warningColor : _accent;
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: highlight ? _accent : accent.withValues(alpha: 0.18),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            step,
+            style: GoogleFonts.anuphan(
+              color: highlight ? Colors.white : accent,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.anuphan(
+              color: AppTheme.mutedText(context),
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.anuphan(
+            color: highlight
+                ? _accent
+                : (warn ? AppTheme.warningColor : AppTheme.onSurface(context)),
+            fontSize: highlight ? 16 : 14,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DepositCancellationClause extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _DepositCancellationClause({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final dueText = _balanceDueDateText(booking);
+    const danger = AppTheme.errorColor;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: danger.withValues(
+          alpha: AppTheme.isDark(context) ? 0.18 : 0.06,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: danger.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: danger,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.gavel_rounded, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'เงื่อนไขสำคัญ · กรุณาอ่าน',
+                  style: GoogleFonts.anuphan(
+                    color: danger,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'กรณีขอยกเลิกการเดินทาง ทางทริปขอสงวนสิทธิ์ไม่คืนเงินมัดจำทุกกรณี '
+                  'เนื่องจากมีการนำไปสำรองจ่ายค่าอุทยานและยานพาหนะล่วงหน้า',
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.onSurface(context),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface(context),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: danger.withValues(alpha: 0.18)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule_rounded, color: danger, size: 16),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'ต้องชำระยอดส่วนที่เหลือก่อนเดินทาง 15 วัน (ภายใน $dueText)',
+                          style: GoogleFonts.anuphan(
+                            color: AppTheme.onSurface(context),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

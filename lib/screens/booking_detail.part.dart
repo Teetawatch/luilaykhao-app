@@ -37,10 +37,22 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
           final passengers = asList(booking['passengers']);
           final installments = asList(booking['installment_payments']);
           final installmentAvailable = _scheduleInstallmentAvailable(schedule);
-          final paymentType =
-              installmentAvailable && _paymentType == 'installment'
-              ? 'installment'
-              : 'full';
+          final depositAvailable = _scheduleDepositAvailable(schedule) &&
+              !_asBool(booking['is_join_trip']);
+          final paymentType = () {
+            if (_paymentType == 'installment' && installmentAvailable) {
+              return 'installment';
+            }
+            if (_paymentType == 'deposit' && depositAvailable) {
+              return 'deposit';
+            }
+            return 'full';
+          }();
+          final bookingPaymentType = textOf(booking['payment_type']);
+          final balanceUnpaid = bookingPaymentType == 'deposit' &&
+              textOf(booking['balance_paid_at']).isEmpty &&
+              (num.tryParse(booking['balance_amount']?.toString() ?? '0') ?? 0) >
+                  0;
           return Container(
             decoration: BoxDecoration(
               color: AppTheme.background(context),
@@ -261,23 +273,54 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
 
                 const SizedBox(height: 20),
 
+                // Deposit balance summary (confirmed booking with unpaid balance)
+                if (balanceUnpaid) ...[
+                  _BookingDepositSummary(booking: booking),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PaymentScreen(
+                              bookingRef: widget.bookingRef,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.payments_outlined),
+                      label: const Text('ชำระยอดส่วนที่เหลือ'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
                 // Payment actions (pending status)
                 if (booking['status'] == 'pending') ...[
-                  if (installmentAvailable) ...[
+                  if (installmentAvailable || depositAvailable) ...[
                     DropdownButtonFormField<String>(
                       initialValue: paymentType,
                       decoration: const InputDecoration(
                         labelText: 'รูปแบบชำระเงิน',
                       ),
-                      items: const [
-                        DropdownMenuItem(
+                      items: [
+                        const DropdownMenuItem(
                           value: 'full',
                           child: Text('จ่ายเต็ม'),
                         ),
-                        DropdownMenuItem(
-                          value: 'installment',
-                          child: Text('ผ่อนชำระ'),
-                        ),
+                        if (depositAvailable)
+                          const DropdownMenuItem(
+                            value: 'deposit',
+                            child: Text('จ่ายมัดจำ'),
+                          ),
+                        if (installmentAvailable)
+                          const DropdownMenuItem(
+                            value: 'installment',
+                            child: Text('ผ่อนชำระ'),
+                          ),
                       ],
                       onChanged: (value) =>
                           setState(() => _paymentType = value ?? 'full'),
@@ -381,6 +424,130 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
     } catch (e) {
       if (context.mounted) showSnack(context, e.toString());
     }
+  }
+}
+
+class _BookingDepositSummary extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _BookingDepositSummary({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = booking['total_amount'];
+    final deposit = booking['deposit_amount'];
+    final balance = booking['balance_amount'];
+    final dueRaw = booking['balance_due_at']?.toString() ?? '';
+    final dueDate = DateTime.tryParse(dueRaw);
+    final dueText = dueDate == null
+        ? '-'
+        : DateFormat('d MMM yyyy', 'th_TH').format(dueDate);
+    const warning = AppTheme.warningColor;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: warning.withValues(
+          alpha: AppTheme.isDark(context) ? 0.18 : 0.08,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: warning.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.savings_rounded, color: warning, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'จ่ายมัดจำแล้ว · มียอดส่วนที่เหลือต้องชำระ',
+                style: GoogleFonts.anuphan(
+                  color: warning,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _BookingDepositRow(label: 'ยอดรวมทั้งหมด', value: money(total)),
+          const SizedBox(height: 6),
+          _BookingDepositRow(label: 'มัดจำที่ชำระแล้ว', value: money(deposit)),
+          const SizedBox(height: 6),
+          _BookingDepositRow(
+            label: 'ส่วนที่เหลือต้องชำระ',
+            value: money(balance),
+            highlight: true,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.surface(context),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: warning.withValues(alpha: 0.18)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.schedule_rounded, color: warning, size: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'ครบกำหนดชำระภายใน $dueText',
+                    style: GoogleFonts.anuphan(
+                      color: AppTheme.onSurface(context),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingDepositRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool highlight;
+
+  const _BookingDepositRow({
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.anuphan(
+              color: AppTheme.mutedText(context),
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.anuphan(
+            color: highlight
+                ? AppTheme.warningColor
+                : AppTheme.onSurface(context),
+            fontSize: highlight ? 15 : 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    );
   }
 }
 

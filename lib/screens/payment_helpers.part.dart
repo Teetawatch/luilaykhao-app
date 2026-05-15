@@ -17,15 +17,18 @@ class _InstallmentPreview {
 // ─────────────────────────────────────────────────────────────────────────────
 
 num _amountDue(Map<String, dynamic> booking, String paymentType) {
-  if (_normalizePaymentType(booking, paymentType) == 'installment') {
-    return _installmentAmount(booking);
-  }
+  final type = _normalizePaymentType(booking, paymentType);
+  if (type == 'installment') return _installmentAmount(booking);
+  if (type == 'deposit') return _depositAmount(booking);
   return _asNum(booking['total_amount']);
 }
 
 String _normalizePaymentType(Map<String, dynamic> booking, String paymentType) {
   if (paymentType == 'installment' && _installmentAvailable(booking)) {
     return 'installment';
+  }
+  if (paymentType == 'deposit' && _depositAvailable(booking)) {
+    return 'deposit';
   }
   return 'full';
 }
@@ -34,6 +37,78 @@ bool _installmentAvailable(Map<String, dynamic> booking) {
   final schedule = asMap(booking['schedule']);
   return _asBool(schedule['installment_enabled']) &&
       _installmentCount(booking) > 1;
+}
+
+bool _depositAvailable(Map<String, dynamic> booking) {
+  final schedule = asMap(booking['schedule']);
+  if (!_asBool(schedule['deposit_enabled'])) return false;
+  if (_asBool(booking['is_join_trip'])) return false;
+  return _depositAmount(booking) > 0;
+}
+
+num _depositAmount(Map<String, dynamic> booking) {
+  final schedule = asMap(booking['schedule']);
+  final total = _asNum(booking['total_amount']);
+  if (total <= 0) return 0;
+
+  final stored = _asNum(booking['deposit_amount']);
+  if (stored > 0) return stored;
+
+  final type = textOf(schedule['deposit_type']);
+  if (type == 'percent') {
+    final percent = _asNum(schedule['deposit_percent']);
+    if (percent <= 0) return 0;
+    final amount = ((total * percent) / 100).round();
+    return amount > total ? total : amount;
+  }
+  if (type == 'amount') {
+    final amount = _asNum(schedule['deposit_amount']);
+    if (amount <= 0) return 0;
+    return amount > total ? total : amount;
+  }
+  return 0;
+}
+
+num _balanceAmount(Map<String, dynamic> booking) {
+  final stored = _asNum(booking['balance_amount']);
+  if (stored > 0) return stored;
+  final total = _asNum(booking['total_amount']);
+  final deposit = _depositAmount(booking);
+  final balance = total - deposit;
+  return balance < 0 ? 0 : balance;
+}
+
+DateTime? _balanceDueDate(Map<String, dynamic> booking) {
+  final stored = textOf(booking['balance_due_at']);
+  if (stored.isNotEmpty) {
+    final parsed = DateTime.tryParse(stored);
+    if (parsed != null) return parsed;
+  }
+  final schedule = asMap(booking['schedule']);
+  final dep = textOf(schedule['departure_date']);
+  final depDate = DateTime.tryParse(dep);
+  if (depDate == null) return null;
+  return depDate.subtract(const Duration(days: 15));
+}
+
+String _balanceDueDateText(Map<String, dynamic> booking) {
+  final date = _balanceDueDate(booking);
+  if (date == null) return '-';
+  return DateFormat('d MMM yyyy', 'th_TH').format(date);
+}
+
+int _depositPercentApprox(Map<String, dynamic> booking) {
+  final total = _asNum(booking['total_amount']);
+  if (total <= 0) return 0;
+  final deposit = _depositAmount(booking);
+  return ((deposit / total) * 100).round();
+}
+
+/// True when the booking is on a deposit plan and the balance has not been paid yet.
+bool _balanceUnpaid(Map<String, dynamic> booking) {
+  if (textOf(booking['payment_type']) != 'deposit') return false;
+  if (textOf(booking['balance_paid_at']).isNotEmpty) return false;
+  return _asNum(booking['balance_amount']) > 0;
 }
 
 num _installmentAmount(Map<String, dynamic> booking) {

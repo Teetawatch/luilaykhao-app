@@ -266,16 +266,23 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
 class _SubmitButton extends StatelessWidget {
   final bool paying;
   final num amount;
+  final String? label;
   final VoidCallback onPressed;
 
   const _SubmitButton({
     required this.paying,
     required this.amount,
     required this.onPressed,
+    this.label,
   });
 
   @override
   Widget build(BuildContext context) {
+    final labelText = paying
+        ? 'กำลังบันทึก...'
+        : (label != null
+              ? '$label ${money(amount)}'
+              : 'ยืนยันการชำระ ${money(amount)}');
     return SizedBox(
       height: 58,
       child: FilledButton.icon(
@@ -302,7 +309,7 @@ class _SubmitButton extends StatelessWidget {
               )
             : const Icon(Icons.verified_user_rounded, size: 22),
         label: Text(
-          paying ? 'กำลังบันทึก...' : 'ยืนยันการชำระ ${money(amount)}',
+          labelText,
           style: GoogleFonts.anuphan(
             fontWeight: FontWeight.w900,
             fontSize: 16,

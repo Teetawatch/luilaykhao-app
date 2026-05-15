@@ -64,9 +64,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   void initState() {
     super.initState();
-    _paymentType = widget.initialPaymentType == 'installment'
-        ? 'installment'
-        : 'full';
+    _paymentType = switch (widget.initialPaymentType) {
+      'installment' => 'installment',
+      'deposit' => 'deposit',
+      _ => 'full',
+    };
     _future = _loadBooking();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
@@ -89,10 +91,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
       widget.bookingRef,
     );
     final currentType = textOf(booking['payment_type'], 'full');
-    _paymentType = _normalizePaymentType(
-      booking,
-      currentType == 'installment' ? 'installment' : _paymentType,
-    );
+    // If booking already has a confirmed payment_type, respect it.
+    // Otherwise keep the user-selected choice and let normalize fall back to 'full' if unsupported.
+    final preferred = (currentType == 'installment' || currentType == 'deposit')
+        ? currentType
+        : _paymentType;
+    _paymentType = _normalizePaymentType(booking, preferred);
     return booking;
   }
 
@@ -169,8 +173,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (source != null) await _pickSlip(source);
   }
 
-  Future<void> _submit(Map<String, dynamic> booking) async {
-    if (textOf(booking['status']) != 'pending') return;
+  Future<void> _submit(
+    Map<String, dynamic> booking, {
+    bool payingBalance = false,
+  }) async {
+    if (!payingBalance && textOf(booking['status']) != 'pending') return;
+    if (payingBalance && !_balanceUnpaid(booking)) return;
     if (_transferDate == null || _transferTime == null) {
       _showSnack('กรุณาระบุวันที่และเวลาที่โอนเงินตามสลิป');
       return;
@@ -183,24 +191,45 @@ class _PaymentScreenState extends State<PaymentScreen> {
     HapticFeedback.mediumImpact();
     setState(() => _paying = true);
     try {
-      final paymentType = _normalizePaymentType(booking, _paymentType);
-      final amount = _amountDue(booking, paymentType);
-      await context.read<AppProvider>().confirmPayment(
-        bookingRef: widget.bookingRef,
-        amount: amount,
-        paymentType: paymentType,
-        paymentMethod: _paymentMethod,
-        transferDate: DateFormat('yyyy-MM-dd').format(_transferDate!),
-        transferTime:
-            '${_transferTime!.hour.toString().padLeft(2, '0')}:${_transferTime!.minute.toString().padLeft(2, '0')}',
-        slipImagePath: _slipImage!.path,
-      );
+      final transferDateStr = DateFormat('yyyy-MM-dd').format(_transferDate!);
+      final transferTimeStr =
+          '${_transferTime!.hour.toString().padLeft(2, '0')}:${_transferTime!.minute.toString().padLeft(2, '0')}';
+      final num amount;
+      if (payingBalance) {
+        amount = _balanceAmount(booking);
+        await context.read<AppProvider>().chargeBalance(
+          bookingRef: widget.bookingRef,
+          paymentMethod: _paymentMethod,
+          transferDate: transferDateStr,
+          transferTime: transferTimeStr,
+          slipImagePath: _slipImage!.path,
+        );
+      } else {
+        final paymentType = _normalizePaymentType(booking, _paymentType);
+        amount = _amountDue(booking, paymentType);
+        await context.read<AppProvider>().confirmPayment(
+          bookingRef: widget.bookingRef,
+          amount: amount,
+          paymentType: paymentType,
+          paymentMethod: _paymentMethod,
+          transferDate: transferDateStr,
+          transferTime: transferTimeStr,
+          slipImagePath: _slipImage!.path,
+        );
+      }
       if (!mounted) return;
       HapticFeedback.heavyImpact();
       await showDialog<void>(
         context: context,
         builder: (_) => _SuccessDialog(amount: amount),
       );
+      // Reset form fields between submissions so a follow-up balance payment
+      // does not reuse the previous slip.
+      setState(() {
+        _slipImage = null;
+        _transferDate = null;
+        _transferTime = null;
+      });
       _reload();
     } catch (e) {
       if (mounted) _showSnack(e.toString());
@@ -312,10 +341,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
           final schedule = asMap(booking['schedule']);
           final trip = asMap(schedule['trip']);
           final status = textOf(booking['status']);
-          final checkInReady = status == 'confirmed';
-          final paymentType = _normalizePaymentType(booking, _paymentType);
-          final amountDue = _amountDue(booking, paymentType);
+          final balanceUnpaid = _balanceUnpaid(booking);
+          // When the booking is on a deposit plan with an unpaid balance, we
+          // collect the balance from this screen even though status is "confirmed".
+          final collectingBalance = status == 'confirmed' && balanceUnpaid;
+          final checkInReady = status == 'confirmed' && !balanceUnpaid;
+          final paymentType = collectingBalance
+              ? 'balance'
+              : _normalizePaymentType(booking, _paymentType);
+          final amountDue = collectingBalance
+              ? _balanceAmount(booking)
+              : _amountDue(booking, paymentType);
           final qrPayload = _buildPromptPayPayload(_promptPayId, amountDue);
+          final pendingFormVisible = status == 'pending' || collectingBalance;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
@@ -326,6 +364,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 const _PaymentNotice(),
                 const SizedBox(height: 10),
                 _PaymentCountdownBanner(booking: booking),
+                const SizedBox(height: 16),
+              ],
+              if (collectingBalance) ...[
+                _BalanceDueBanner(booking: booking),
                 const SizedBox(height: 16),
               ],
               if (checkInReady) ...[
@@ -339,8 +381,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               const SizedBox(height: 16),
               const _SeatLockSection(),
-              if (status == 'pending') ...[
-                if (_installmentAvailable(booking)) ...[
+              if (pendingFormVisible) ...[
+                if (!collectingBalance &&
+                    (_installmentAvailable(booking) ||
+                        _depositAvailable(booking))) ...[
                   _PaymentTypeSection(
                     booking: booking,
                     value: paymentType,
@@ -382,7 +426,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 _SubmitButton(
                   paying: _paying,
                   amount: amountDue,
-                  onPressed: () => _submit(booking),
+                  label: collectingBalance ? 'ชำระยอดส่วนที่เหลือ' : null,
+                  onPressed: () => _submit(
+                    booking,
+                    payingBalance: collectingBalance,
+                  ),
                 ),
               ],
               const SizedBox(height: 12),

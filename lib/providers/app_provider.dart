@@ -652,6 +652,28 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// Pay the remaining balance for a deposit booking.
+  Future<Map<String, dynamic>> chargeBalance({
+    required String bookingRef,
+    String paymentMethod = 'promptpay',
+    String? transferDate,
+    String? transferTime,
+    required String slipImagePath,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.paymentsChargeBalance,
+      fields: {
+        'booking_ref': bookingRef,
+        'payment_method': paymentMethod,
+        'transfer_date': ?transferDate,
+        'transfer_time': ?transferTime,
+      },
+      files: {'slip_image': slipImagePath},
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   Future<Map<String, dynamic>> validatePromotion(
     String code,
     int tripId,

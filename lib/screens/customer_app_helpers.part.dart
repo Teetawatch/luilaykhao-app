@@ -134,6 +134,20 @@ bool _scheduleInstallmentAvailable(Map<String, dynamic> schedule) {
   return _asBool(schedule['installment_enabled']);
 }
 
+bool _scheduleDepositAvailable(Map<String, dynamic> schedule) {
+  if (!_asBool(schedule['deposit_enabled'])) return false;
+  final type = (schedule['deposit_type']?.toString() ?? '').toLowerCase();
+  if (type == 'percent') {
+    final percent = num.tryParse(schedule['deposit_percent']?.toString() ?? '0') ?? 0;
+    return percent > 0;
+  }
+  if (type == 'amount') {
+    final amount = num.tryParse(schedule['deposit_amount']?.toString() ?? '0') ?? 0;
+    return amount > 0;
+  }
+  return false;
+}
+
 bool _asBool(dynamic value) {
   if (value is bool) return value;
   final normalized = value?.toString().trim().toLowerCase();

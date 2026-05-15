@@ -238,6 +238,98 @@ class _PaymentNotice extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Balance-due banner (shown after deposit is paid, while balance is unpaid)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BalanceDueBanner extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _BalanceDueBanner({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final balance = _balanceAmount(booking);
+    final dueText = _balanceDueDateText(booking);
+    final dueDate = _balanceDueDate(booking);
+    final daysLeft = dueDate
+        ?.difference(DateTime(
+          DateTime.now().year,
+          DateTime.now().month,
+          DateTime.now().day,
+        ))
+        .inDays;
+    final isOverdue = daysLeft != null && daysLeft < 0;
+    const warn = AppTheme.warningColor;
+    const danger = AppTheme.errorColor;
+    final color = isOverdue ? danger : warn;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: AppTheme.isDark(context) ? 0.22 : 0.10),
+            color.withValues(alpha: AppTheme.isDark(context) ? 0.10 : 0.04),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              isOverdue ? Icons.warning_amber_rounded : Icons.schedule_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isOverdue ? 'เลยกำหนดชำระยอดส่วนที่เหลือ' : 'ครบกำหนดชำระยอดส่วนที่เหลือ',
+                  style: GoogleFonts.anuphan(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  daysLeft == null
+                      ? 'กรุณาชำระ ${money(balance)} ภายในวันที่ $dueText'
+                      : (isOverdue
+                            ? 'กรุณาชำระ ${money(balance)} โดยด่วน (เกินกำหนด ${-daysLeft} วัน)'
+                            : 'กรุณาชำระ ${money(balance)} ภายในวันที่ $dueText (อีก $daysLeft วัน)'),
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.onSurface(context),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Countdown banner
 // ─────────────────────────────────────────────────────────────────────────────
 
