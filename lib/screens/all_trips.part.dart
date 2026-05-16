@@ -285,10 +285,10 @@ class _AllTripsHero extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         Text(
-          'กิจกรรมและ\nทริปทั้งหมด',
+          'กิจกรรมและทริปทั้งหมด',
           style: GoogleFonts.anuphan(
             color: AppTheme.textMain,
-            fontSize: 36,
+            fontSize: 32,
             height: 1.12,
             fontWeight: FontWeight.w900,
           ),

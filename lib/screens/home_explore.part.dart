@@ -10,6 +10,8 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> {
   late final ScrollController _scrollController;
   double _topBarProgress = 0;
+  String? _activeSearch;
+  String? _activeType;
 
   @override
   void initState() {
@@ -42,10 +44,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
         (app.featuredTrips.isNotEmpty ? app.featuredTrips : app.trips)
             .map(asMap)
             .firstOrNull;
-    final showTrips =
-        (app.featuredTrips.isNotEmpty ? app.featuredTrips : app.trips)
-            .map(asMap)
-            .toList();
+    final hasFilter = _activeSearch != null || _activeType != null;
+    final showTrips = (hasFilter
+            ? app.trips
+            : (app.featuredTrips.isNotEmpty ? app.featuredTrips : app.trips))
+        .map(asMap)
+        .toList();
 
     Future<void> openNotifications() async {
       if (!app.isLoggedIn) {
@@ -93,15 +97,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 children: [
                   HeroHeader(trip: heroTrip),
                   Transform.translate(
-                    offset: const Offset(0, -42),
+                    offset: const Offset(0, -64),
                     child: _HomeInspiredTopSection(
                       app: app,
                       user: app.user,
-                      onCategorySelected: (value) =>
-                          app.loadPublicData(type: value),
-                      onSearch: (value) => app.loadPublicData(
-                        search: value.isEmpty ? null : value,
-                      ),
+                      onCategorySelected: (value) {
+                        setState(() {
+                          _activeType = value;
+                          _activeSearch = null;
+                        });
+                        app.loadPublicData(type: value);
+                      },
+                      onSearch: (value) {
+                        setState(() {
+                          _activeSearch = value.isEmpty ? null : value;
+                          _activeType = null;
+                        });
+                        app.loadPublicData(
+                          search: value.isEmpty ? null : value,
+                        );
+                      },
                     ),
                   ),
                   _PopularTripsSection(trips: showTrips),
@@ -145,12 +160,12 @@ class HeroHeader extends StatelessWidget {
     final heroHeight = (size.height * 0.50).clamp(420.0, 540.0);
     final compactWidth = size.width < 390;
     final horizontalPadding = compactWidth ? 18.0 : 24.0;
-    final contentBottom = compactWidth ? 146.0 : 156.0;
+    final contentBottom = compactWidth ? 148.0 : 158.0;
     final contentWidth = (size.width - (horizontalPadding * 2)).clamp(
       260.0,
       680.0,
     );
-    final titleSize = (size.width * 0.074).clamp(24.0, 36.0).toDouble();
+    final titleSize = (size.width * 0.060).clamp(20.0, 28.0).toDouble();
     final subtitleSize = compactWidth ? 14.0 : 16.0;
 
     return SizedBox(
@@ -505,6 +520,7 @@ class _HomeInspiredTopSection extends StatefulWidget {
 
 class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
   final _searchController = TextEditingController();
+  int? _selectedCategoryIndex;
 
   @override
   void dispose() {
@@ -526,9 +542,16 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
           width: double.infinity,
           margin: const EdgeInsets.only(top: 40),
           padding: const EdgeInsets.fromLTRB(20, 70, 20, 22),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(42)),
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
           child: Column(
             children: [
@@ -544,7 +567,11 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
                     final category = _homeCategories[index];
                     return _HomeCategoryBubble(
                       category: category,
-                      onTap: () => widget.onCategorySelected(category.type),
+                      isSelected: _selectedCategoryIndex == index,
+                      onTap: () {
+                        setState(() => _selectedCategoryIndex = index);
+                        widget.onCategorySelected(category.type);
+                      },
                     );
                   },
                 ),
@@ -635,16 +662,21 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
       ),
       child: Row(
         children: [
-          const SizedBox(width: 18),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: Icon(
-              Icons.search_rounded,
-              key: ValueKey(_focused),
-              color: _focused
-                  ? const Color(0xFF0B8A6E)
-                  : const Color(0xFF8A9FA0),
-              size: 22,
+          GestureDetector(
+            onTap: () => widget.onSubmitted(widget.controller.text),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 0, 0),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: Icon(
+                  Icons.search_rounded,
+                  key: ValueKey(_focused),
+                  color: _focused
+                      ? const Color(0xFF0B8A6E)
+                      : const Color(0xFF8A9FA0),
+                  size: 22,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -781,8 +813,13 @@ const _homeCategories = [
 class _HomeCategoryBubble extends StatefulWidget {
   final _HomeCategoryData category;
   final VoidCallback onTap;
+  final bool isSelected;
 
-  const _HomeCategoryBubble({required this.category, required this.onTap});
+  const _HomeCategoryBubble({
+    required this.category,
+    required this.onTap,
+    this.isSelected = false,
+  });
 
   @override
   State<_HomeCategoryBubble> createState() => _HomeCategoryBubbleState();
@@ -807,25 +844,35 @@ class _HomeCategoryBubbleState extends State<_HomeCategoryBubble> {
           scale: _pressed ? 0.94 : 1.0,
           child: Column(
             children: [
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(18),
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: category.gradient,
                   ),
                   boxShadow: [
+                    if (widget.isSelected)
+                      BoxShadow(
+                        color: category.gradient.last.withValues(alpha: 0.55),
+                        blurRadius: 0,
+                        spreadRadius: 3,
+                      ),
                     BoxShadow(
-                      color: category.gradient.last.withValues(alpha: 0.32),
-                      blurRadius: 16,
+                      color: category.gradient.last.withValues(
+                        alpha: widget.isSelected ? 0.45 : 0.28,
+                      ),
+                      blurRadius: widget.isSelected ? 22 : 14,
                       offset: const Offset(0, 8),
                     ),
                   ],
                 ),
-                child: Icon(category.icon, color: Colors.white, size: 30),
+                child: Icon(category.icon, color: Colors.white, size: 28),
               ),
               const SizedBox(height: 10),
               Text(
@@ -834,9 +881,12 @@ class _HomeCategoryBubbleState extends State<_HomeCategoryBubble> {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.anuphan(
-                  color: const Color(0xFF1F2937),
+                  color: widget.isSelected
+                      ? category.gradient.first
+                      : const Color(0xFF1F2937),
                   fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
+                  fontWeight:
+                      widget.isSelected ? FontWeight.w900 : FontWeight.w700,
                 ),
               ),
             ],
