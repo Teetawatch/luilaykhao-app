@@ -36,6 +36,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
+    final heroHeight = (MediaQuery.sizeOf(context).height * 0.50).clamp(420.0, 540.0);
 
     final notificationCount = app.notifications
         .where((item) => asMap(item)['is_read'] != true)
@@ -95,26 +96,33 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 padding: EdgeInsets.zero,
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  HeroHeader(trip: heroTrip),
-                  _HomeInspiredTopSection(
-                    app: app,
-                    user: app.user,
-                    onCategorySelected: (value) {
-                      setState(() {
-                        _activeType = value;
-                        _activeSearch = null;
-                      });
-                      app.loadPublicData(type: value);
-                    },
-                    onSearch: (value) {
-                      setState(() {
-                        _activeSearch = value.isEmpty ? null : value;
-                        _activeType = null;
-                      });
-                      app.loadPublicData(
-                        search: value.isEmpty ? null : value,
-                      );
-                    },
+                  Stack(
+                    children: [
+                      HeroHeader(trip: heroTrip),
+                      Container(
+                        margin: EdgeInsets.only(top: heroHeight - 64),
+                        child: _HomeInspiredTopSection(
+                          app: app,
+                          user: app.user,
+                          onCategorySelected: (value) {
+                            setState(() {
+                              _activeType = value;
+                              _activeSearch = null;
+                            });
+                            app.loadPublicData(type: value);
+                          },
+                          onSearch: (value) {
+                            setState(() {
+                              _activeSearch = value.isEmpty ? null : value;
+                              _activeType = null;
+                            });
+                            app.loadPublicData(
+                              search: value.isEmpty ? null : value,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   _PopularTripsSection(trips: showTrips),
                   PromotionsSection(
@@ -154,12 +162,10 @@ class HeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final image = ApiConfig.mediaUrl('/images/bgoverlaymobile.png');
     final size = MediaQuery.of(context).size;
-    // Trimmed by 64px so the search card below can overlap it without a
-    // Transform across ListView items — keeping the field hit-testable.
-    final heroHeight = (size.height * 0.50).clamp(420.0, 540.0) - 64;
+    final heroHeight = (size.height * 0.50).clamp(420.0, 540.0);
     final compactWidth = size.width < 390;
     final horizontalPadding = compactWidth ? 18.0 : 24.0;
-    final contentBottom = compactWidth ? 84.0 : 94.0;
+    final contentBottom = compactWidth ? 148.0 : 158.0;
     final contentWidth = (size.width - (horizontalPadding * 2)).clamp(
       260.0,
       680.0,
@@ -543,7 +549,7 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
           padding: const EdgeInsets.fromLTRB(20, 70, 20, 22),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),
