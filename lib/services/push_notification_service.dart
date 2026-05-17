@@ -106,6 +106,13 @@ class PushNotificationService {
       await _initializeLocalNotifications();
       await _requestPermission();
 
+      // iOS: show alert/badge/sound banners while the app is in the foreground
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       FirebaseMessaging.onMessage.listen((message) {
         _showForegroundNotification(message);
         _fireForegroundCallback(message);
@@ -149,6 +156,20 @@ class PushNotificationService {
     if (!_firebaseReady || api.token == null || api.token!.isEmpty) return;
 
     try {
+      // On iOS, Firebase requires an APNs token before it can issue an FCM token.
+      // Poll briefly since APNs registration completes asynchronously after launch.
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        String? apns;
+        for (var i = 0; i < 5 && apns == null; i++) {
+          apns = await _messaging.getAPNSToken();
+          if (apns == null) await Future.delayed(const Duration(seconds: 1));
+        }
+        if (apns == null) {
+          debugPrint('FCM: APNs token unavailable — push disabled for this session');
+          return;
+        }
+      }
+
       final token = await _messaging.getToken();
       if (token != null && token.isNotEmpty) {
         await _registerToken(token);
