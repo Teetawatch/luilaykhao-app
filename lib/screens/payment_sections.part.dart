@@ -232,9 +232,13 @@ class _PaymentTypeSection extends StatelessWidget {
     final count = _installmentCount(booking);
     final perInstallment = _installmentAmount(booking);
     final installmentOn = _installmentAvailable(booking);
+    final installmentBlocked = _installmentNotAvailable(booking);
     final depositOn = _depositAvailable(booking);
     final deposit = _depositAmount(booking);
     final balance = _balanceAmount(booking);
+    final days = _daysUntilTrip(booking);
+    final interval = _installmentInterval(booking);
+    final maxAllowed = _maxAllowedInstallmentCount(booking);
 
     return _SectionCard(
       child: Column(
@@ -262,18 +266,25 @@ class _PaymentTypeSection extends StatelessWidget {
               onTap: () => onChanged('deposit'),
             ),
           ],
-          if (installmentOn) ...[
+          // Show installment tile: enabled when available, disabled-with-banner when blocked
+          if (installmentOn || installmentBlocked) ...[
             const SizedBox(height: 10),
-            _ChoiceTile(
-              selected: value == 'installment',
-              icon: Icons.calendar_month_rounded,
-              title: 'ผ่อนชำระ $count งวด',
-              subtitle:
-                  'งวดแรก ${money(perInstallment)} · ทุก ${_installmentInterval(booking)} วัน',
-              onTap: () => onChanged('installment'),
-            ),
+            if (installmentBlocked)
+              _DisabledInstallmentTile(
+                days: days,
+                interval: interval,
+              )
+            else
+              _ChoiceTile(
+                selected: value == 'installment',
+                icon: Icons.calendar_month_rounded,
+                title: 'ผ่อนชำระ ${maxAllowed < count ? maxAllowed : count} งวด',
+                subtitle:
+                    'งวดแรก ${money(perInstallment)} · ทุก $interval วัน',
+                onTap: () => onChanged('installment'),
+              ),
           ],
-          if (value == 'installment') ...[
+          if (value == 'installment' && !installmentBlocked) ...[
             const SizedBox(height: 14),
             ..._installmentSchedule(booking).map(
               (row) => _InstallmentRow(row: row),
@@ -285,6 +296,124 @@ class _PaymentTypeSection extends StatelessWidget {
             const SizedBox(height: 12),
             _DepositCancellationClause(booking: booking),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DisabledInstallmentTile extends StatelessWidget {
+  final int days;
+  final int interval;
+
+  const _DisabledInstallmentTile({required this.days, required this.interval});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.calendar_month_rounded,
+                    size: 20,
+                    color: Color(0xFF94A3B8),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'ผ่อนชำระ',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'ไม่พร้อมใช้',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF92400E),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'ระยะเวลาไม่เพียงพอสำหรับการผ่อน',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFCBD5E1),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: Color(0xFFD97706),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'ทริปจะเริ่มในอีก $days วัน ต้องมีอย่างน้อย ${interval + 1} วันขึ้นไปจึงจะผ่อนได้ขั้นต่ำ 2 งวด',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF92400E),
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

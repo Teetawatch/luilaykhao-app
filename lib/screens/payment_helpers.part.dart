@@ -24,7 +24,9 @@ num _amountDue(Map<String, dynamic> booking, String paymentType) {
 }
 
 String _normalizePaymentType(Map<String, dynamic> booking, String paymentType) {
-  if (paymentType == 'installment' && _installmentAvailable(booking)) {
+  if (paymentType == 'installment' &&
+      _installmentAvailable(booking) &&
+      _availableInstallmentCounts(booking).isNotEmpty) {
     return 'installment';
   }
   if (paymentType == 'deposit' && _depositAvailable(booking)) {
@@ -35,8 +37,43 @@ String _normalizePaymentType(Map<String, dynamic> booking, String paymentType) {
 
 bool _installmentAvailable(Map<String, dynamic> booking) {
   final schedule = asMap(booking['schedule']);
-  return _asBool(schedule['installment_enabled']) &&
-      _installmentCount(booking) > 1;
+  if (!_asBool(schedule['installment_enabled'])) return false;
+  if (_installmentCount(booking) <= 1) return false;
+  return true;
+}
+
+int _daysUntilTrip(Map<String, dynamic> booking) {
+  final schedule = asMap(booking['schedule']);
+  final dep = DateTime.tryParse(textOf(schedule['departure_date']));
+  if (dep == null) return 9999;
+  final today = DateTime.now();
+  final todayDate = DateTime(today.year, today.month, today.day);
+  final depDate = DateTime(dep.year, dep.month, dep.day);
+  final diff = depDate.difference(todayDate).inDays;
+  return diff < 0 ? 0 : diff;
+}
+
+int _maxAllowedInstallmentCount(Map<String, dynamic> booking) {
+  final days = _daysUntilTrip(booking);
+  final interval = _installmentInterval(booking);
+  if (days <= 0) return 1;
+  return (days / interval).floor() + 1;
+}
+
+/// Returns the feasible installment counts (2..min(scheduleMax, timeBased)).
+List<int> _availableInstallmentCounts(Map<String, dynamic> booking) {
+  final scheduleMax = _installmentCount(booking);
+  final maxAllowed = _maxAllowedInstallmentCount(booking);
+  final max = scheduleMax < maxAllowed ? scheduleMax : maxAllowed;
+  if (max < 2) return [];
+  return List.generate(max - 1, (i) => i + 2);
+}
+
+/// True when installment is enabled by schedule but no feasible count exists due to departure proximity.
+bool _installmentNotAvailable(Map<String, dynamic> booking) {
+  final schedule = asMap(booking['schedule']);
+  if (!_asBool(schedule['installment_enabled'])) return false;
+  return _availableInstallmentCounts(booking).isEmpty;
 }
 
 bool _depositAvailable(Map<String, dynamic> booking) {
