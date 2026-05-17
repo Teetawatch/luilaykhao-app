@@ -90,21 +90,27 @@ class PushNotificationService {
 
   Future<void> _doInitialize() async {
     try {
+      debugPrint('[FCM] starting initialization...');
       final options = FirebaseConfig.options;
       if (!_firebaseReady) {
         if (Firebase.apps.isNotEmpty) {
           _firebaseReady = true;
+          debugPrint('[FCM] Firebase already initialized');
         } else if (options == null) {
           await Firebase.initializeApp();
           _firebaseReady = true;
+          debugPrint('[FCM] Firebase initialized from GoogleService-Info.plist');
         } else {
           await Firebase.initializeApp(options: options);
           _firebaseReady = true;
+          debugPrint('[FCM] Firebase initialized from dart-defines');
         }
       }
 
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      debugPrint('[FCM] initializing local notifications...');
       await _initializeLocalNotifications();
+      debugPrint('[FCM] requesting permission...');
       await _requestPermission();
 
       // iOS: show alert/badge/sound banners while the app is in the foreground
@@ -113,6 +119,7 @@ class PushNotificationService {
         badge: true,
         sound: true,
       );
+      debugPrint('[FCM] foreground presentation options set');
 
       FirebaseMessaging.onMessage.listen((message) {
         _showForegroundNotification(message);
@@ -126,6 +133,7 @@ class PushNotificationService {
       });
 
       _initialized = true;
+      debugPrint('[FCM] initialization complete ✓');
 
       final initialMessage = await _messaging.getInitialMessage();
       if (initialMessage != null) {
@@ -213,7 +221,17 @@ class PushNotificationService {
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
-    const settings = InitializationSettings(android: androidSettings);
+    // iOS: permission is requested separately via firebase_messaging,
+    // so all request* flags are false here.
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    const settings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
 
     await _localNotifications.initialize(
       settings: settings,
@@ -240,7 +258,12 @@ class PushNotificationService {
   }
 
   Future<void> _requestPermission() async {
-    await _messaging.requestPermission(alert: true, badge: true, sound: true);
+    final settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    debugPrint('[FCM] authorization status: ${settings.authorizationStatus}');
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
