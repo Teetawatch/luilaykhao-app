@@ -96,28 +96,25 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
                   HeroHeader(trip: heroTrip),
-                  Transform.translate(
-                    offset: const Offset(0, -64),
-                    child: _HomeInspiredTopSection(
-                      app: app,
-                      user: app.user,
-                      onCategorySelected: (value) {
-                        setState(() {
-                          _activeType = value;
-                          _activeSearch = null;
-                        });
-                        app.loadPublicData(type: value);
-                      },
-                      onSearch: (value) {
-                        setState(() {
-                          _activeSearch = value.isEmpty ? null : value;
-                          _activeType = null;
-                        });
-                        app.loadPublicData(
-                          search: value.isEmpty ? null : value,
-                        );
-                      },
-                    ),
+                  _HomeInspiredTopSection(
+                    app: app,
+                    user: app.user,
+                    onCategorySelected: (value) {
+                      setState(() {
+                        _activeType = value;
+                        _activeSearch = null;
+                      });
+                      app.loadPublicData(type: value);
+                    },
+                    onSearch: (value) {
+                      setState(() {
+                        _activeSearch = value.isEmpty ? null : value;
+                        _activeType = null;
+                      });
+                      app.loadPublicData(
+                        search: value.isEmpty ? null : value,
+                      );
+                    },
                   ),
                   _PopularTripsSection(trips: showTrips),
                   PromotionsSection(
@@ -157,10 +154,12 @@ class HeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final image = ApiConfig.mediaUrl('/images/bgoverlaymobile.png');
     final size = MediaQuery.of(context).size;
-    final heroHeight = (size.height * 0.50).clamp(420.0, 540.0);
+    // Trimmed by 64px so the search card below can overlap it without a
+    // Transform across ListView items — keeping the field hit-testable.
+    final heroHeight = (size.height * 0.50).clamp(420.0, 540.0) - 64;
     final compactWidth = size.width < 390;
     final horizontalPadding = compactWidth ? 18.0 : 24.0;
-    final contentBottom = compactWidth ? 148.0 : 158.0;
+    final contentBottom = compactWidth ? 84.0 : 94.0;
     final contentWidth = (size.width - (horizontalPadding * 2)).clamp(
       260.0,
       680.0,
