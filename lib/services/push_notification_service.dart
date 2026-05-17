@@ -80,7 +80,8 @@ class PushNotificationService {
       _onForegroundNotification = onForegroundNotification;
     }
     if (_initialized) return;
-    if (_initFuture != null) {
+    // If a previous attempt failed, allow a retry.
+    if (_initFuture != null && _firebaseReady) {
       return _initFuture;
     }
     _initFuture = _doInitialize();
@@ -131,8 +132,9 @@ class PushNotificationService {
         _handleNotificationTap(initialMessage.data);
         _onRefreshRequested?.call();
       }
-    } catch (e) {
-      debugPrint('Push notifications disabled: $e');
+    } catch (e, st) {
+      _initFuture = null; // allow retry on next initialize() call
+      debugPrint('[PushNotificationService] init failed: $e\n$st');
     }
   }
 
