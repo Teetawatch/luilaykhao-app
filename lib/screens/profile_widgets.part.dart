@@ -774,6 +774,7 @@ IconData _notificationIcon(String type) {
     'installment_due' => Icons.schedule_rounded,
     'booking' || 'booking_confirmed' => Icons.confirmation_number_rounded,
     'booking_cancelled' => Icons.cancel_rounded,
+    'vehicle_approaching' => Icons.directions_bus_rounded,
     _ => Icons.notifications_none_rounded,
   };
 }
@@ -789,6 +790,7 @@ Color _notificationColor(String type) {
     'payment_rejected' || 'booking_cancelled' => AppTheme.errorColor,
     'installment_due' => const Color(0xFFD97706),
     'booking' || 'booking_confirmed' => AppTheme.primaryColor,
+    'vehicle_approaching' => const Color(0xFF2563EB),
     _ => AppTheme.primaryColor,
   };
 }

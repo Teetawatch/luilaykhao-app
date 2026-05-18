@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/tracking_model.dart';
@@ -62,6 +63,30 @@ class _TrackingScreenState extends State<TrackingScreen>
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
+  Future<void> _shareTracking(BookingInfo? booking) async {
+    final url = booking?.shareUrl;
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'ยังไม่มีลิงก์ติดตามสำหรับการจองนี้',
+            style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    HapticFeedback.selectionClick();
+    final trip = booking?.tripTitle ?? 'ทริปของเรา';
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'ติดตามตำแหน่งรถ "$trip" แบบเรียลไทม์ได้ที่นี่เลย\n$url',
+        subject: 'ติดตามรถ - ลุยเลเขา',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<TrackingProvider>(
@@ -95,6 +120,7 @@ class _TrackingScreenState extends State<TrackingScreen>
                     provider.stopTracking();
                     Navigator.pop(context);
                   },
+                  onShare: () => _shareTracking(booking),
                 ),
                 if (!_isFollowing)
                   Positioned(
@@ -308,12 +334,14 @@ class TrackingTopBar extends StatelessWidget {
   final ETAResult? eta;
   final VehicleTracking? tracking;
   final VoidCallback onBack;
+  final VoidCallback onShare;
 
   const TrackingTopBar({
     super.key,
     required this.eta,
     required this.tracking,
     required this.onBack,
+    required this.onShare,
   });
 
   @override
@@ -392,6 +420,12 @@ class TrackingTopBar extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+          const SizedBox(width: 12),
+          _FloatingAction(
+            icon: Icons.ios_share_rounded,
+            label: 'แชร์ตำแหน่งรถ',
+            onTap: onShare,
           ),
         ],
       ),

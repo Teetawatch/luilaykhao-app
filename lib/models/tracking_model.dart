@@ -71,6 +71,7 @@ class BookingInfo {
   final String? driverName;
   final String? driverPhone;
   final String? licensePlate;
+  final String? shareUrl;
 
   const BookingInfo({
     required this.bookingRef,
@@ -85,6 +86,7 @@ class BookingInfo {
     this.driverName,
     this.driverPhone,
     this.licensePlate,
+    this.shareUrl,
   });
 
   factory BookingInfo.fromJson(Map<String, dynamic> json) {
@@ -115,6 +117,7 @@ class BookingInfo {
       driverName: json['driver_name']?.toString(),
       driverPhone: json['driver_phone']?.toString(),
       licensePlate: json['license_plate']?.toString(),
+      shareUrl: json['share_url']?.toString(),
     );
   }
 }

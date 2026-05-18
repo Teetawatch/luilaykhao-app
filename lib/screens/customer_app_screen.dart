@@ -21,6 +21,7 @@ import 'login_screen.dart';
 import 'refund_status_screen.dart';
 import 'payment_screen.dart';
 import 'profile_screen.dart' show ProfileScreen, ContactUsScreen, NotificationsScreen;
+import 'guest_booking_lookup_screen.dart';
 import 'staff_check_in_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 

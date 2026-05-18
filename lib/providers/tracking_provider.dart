@@ -35,6 +35,65 @@ class TrackingProvider extends ChangeNotifier {
   bool get locationPermissionDenied => _locationPermissionDenied;
   String? get locationError => _locationError;
 
+  /// เริ่มติดตามสำหรับ guest ที่ผ่านการ verify แล้ว — ข้าม fetchBookingInfo เพราะมีข้อมูลครบแล้ว
+  Future<void> startTrackingAsGuest(BookingInfo bookingInfo) async {
+    _isLoading = true;
+    _errorMessage = '';
+    _service.authToken = null;
+    notifyListeners();
+
+    _booking = bookingInfo;
+    _cachedDriverName = bookingInfo.driverName;
+    _cachedDriverPhone = bookingInfo.driverPhone;
+
+    final initial = await _service.fetchVehicleLocation(bookingInfo.vehicleId);
+    _handleNewTracking(initial);
+
+    _isLoading = false;
+    _isTracking = true;
+    notifyListeners();
+
+    _locationService.startTracking(
+      onLocation: (loc) {
+        _customerLocation = loc;
+        _recomputeETA();
+        notifyListeners();
+      },
+      onError: (err) {
+        _locationError = err;
+        _locationPermissionDenied = true;
+        notifyListeners();
+      },
+    );
+
+    _service.startAdaptivePolling(
+      vehicleId: bookingInfo.vehicleId,
+      initialPhase: _phase,
+      onData: (tracking) {
+        _handleNewTracking(tracking);
+        if (_booking != null && tracking != null && _eta != null) {
+          _service.updatePhase(
+            newPhase: _eta!.phase,
+            vehicleId: bookingInfo.vehicleId,
+            onData: (t) {
+              _handleNewTracking(t);
+              notifyListeners();
+            },
+            onPhaseChange: (p) {
+              _phase = p;
+              notifyListeners();
+            },
+          );
+        }
+        notifyListeners();
+      },
+      onPhaseChange: (p) {
+        _phase = p;
+        notifyListeners();
+      },
+    );
+  }
+
   Future<void> startTracking(String bookingRef, {String? authToken}) async {
     _isLoading = true;
     _errorMessage = '';

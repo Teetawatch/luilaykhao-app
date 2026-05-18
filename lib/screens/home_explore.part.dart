@@ -583,6 +583,8 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
               ),
               const SizedBox(height: 22),
               const _LicenseAssuranceBanner(),
+              const SizedBox(height: 14),
+              const _GuestBookingBanner(),
             ],
           ),
         ),
@@ -1780,6 +1782,82 @@ class PromotionsScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GuestBookingBanner extends StatelessWidget {
+  const _GuestBookingBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const GuestBookingLookupScreen(),
+          ),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppTheme.primaryColor.withValues(alpha: 0.18),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.confirmation_number_outlined,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'มีรหัสการจองอยู่แล้ว?',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    Text(
+                      'ดู QR เช็คอิน และติดตามรถได้เลย ไม่ต้องสมัครสมาชิก',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.primaryColor.withValues(alpha: 0.75),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: AppTheme.primaryColor.withValues(alpha: 0.6),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
