@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/api_config.dart';
 import '../config/api_endpoints.dart';
+import '../models/sos_alert.dart';
 import '../services/analytics_service.dart';
 import '../services/api_client.dart';
 import '../services/connectivity_service.dart';
@@ -580,6 +581,37 @@ class AppProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> booking(String ref) async {
     final response = await api.get('bookings/$ref');
     return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<SosAlert> triggerSos({
+    required int scheduleId,
+    double? latitude,
+    double? longitude,
+    String? message,
+  }) async {
+    final response = await api.post(
+      'sos',
+      body: {
+        'schedule_id': scheduleId,
+        'latitude': ?latitude,
+        'longitude': ?longitude,
+        if (message != null && message.isNotEmpty) 'message': message,
+      },
+    );
+    return SosAlert.fromJson(Map<String, dynamic>.from(api.data(response) as Map));
+  }
+
+  Future<List<SosAlert>> activeSosAlerts() async {
+    final response = await api.get('sos/active');
+    final list = api.data(response);
+    if (list is! List) return const [];
+    return list
+        .map((e) => SosAlert.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  Future<void> resolveSos(int id) async {
+    await api.post('sos/$id/resolve');
   }
 
   Future<Map<String, dynamic>> lookupStaffCheckIn(String qrCode) async {

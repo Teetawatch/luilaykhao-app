@@ -83,6 +83,16 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 20),
                 ],
 
+                // SOS button — confirmed bookings, only during the trip window
+                if (textOf(booking['status']) == 'confirmed' &&
+                    _isWithinTripWindow(schedule)) ...[
+                  _SosButton(
+                    scheduleId:
+                        int.tryParse(textOf(schedule['id'])) ?? 0,
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
                 // Trip title + booking ref
                 Text(
                   textOf(trip['title'], 'รายละเอียดการจอง'),
@@ -628,6 +638,239 @@ class _ReviewDialogState extends State<_ReviewDialog> {
           child: const Text('ส่งรีวิว'),
         ),
       ],
+    );
+  }
+}
+
+/// True when today falls between the schedule's departure and return dates
+/// (inclusive). The SOS button is only shown inside this window.
+bool _isWithinTripWindow(Map<String, dynamic> schedule) {
+  final dep = DateTime.tryParse(textOf(schedule['departure_date']));
+  if (dep == null) return false;
+  final ret = DateTime.tryParse(textOf(schedule['return_date'])) ?? dep;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final start = DateTime(dep.year, dep.month, dep.day);
+  final end = DateTime(ret.year, ret.month, ret.day);
+  return !today.isBefore(start) && !today.isAfter(end);
+}
+
+class _SosButton extends StatefulWidget {
+  final int scheduleId;
+
+  const _SosButton({required this.scheduleId});
+
+  @override
+  State<_SosButton> createState() => _SosButtonState();
+}
+
+class _SosButtonState extends State<_SosButton> {
+  static const _sosRed = Color(0xFFE11D48);
+  bool _sending = false;
+
+  Future<void> _onPressed() async {
+    if (_sending || widget.scheduleId == 0) return;
+
+    final message = await _confirmDialog();
+    if (message == null || !mounted) return;
+
+    setState(() => _sending = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<AppProvider>();
+
+    double? lat;
+    double? lng;
+    try {
+      final pos = await _currentPosition();
+      lat = pos?.latitude;
+      lng = pos?.longitude;
+    } catch (_) {}
+
+    try {
+      await provider.triggerSos(
+        scheduleId: widget.scheduleId,
+        latitude: lat,
+        longitude: lng,
+        message: message.isEmpty ? null : message,
+      );
+      if (!mounted) return;
+      await _successDialog(hasLocation: lat != null);
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('ส่ง SOS ไม่สำเร็จ: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<String?> _confirmDialog() {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.sos_rounded, color: _sosRed),
+            const SizedBox(width: 8),
+            Text(
+              'ส่งสัญญาณ SOS',
+              style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ระบบจะแจ้งเตือนสตาฟและเพื่อนร่วมทริปทุกคนทันที พร้อมส่งตำแหน่ง GPS ของคุณ '
+              'ใช้เฉพาะกรณีฉุกเฉินจริงเท่านั้น',
+              style: GoogleFonts.anuphan(fontSize: 13, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLength: 255,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'ข้อความเพิ่มเติม (ไม่บังคับ)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _sosRed),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('ส่งสัญญาณ SOS'),
+          ),
+        ],
+      ),
+    ).whenComplete(controller.dispose);
+  }
+
+  Future<void> _successDialog({required bool hasLocation}) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded,
+                color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              'ส่ง SOS แล้ว',
+              style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
+        content: Text(
+          hasLocation
+              ? 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนพร้อมตำแหน่งของคุณแล้ว'
+              : 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนแล้ว '
+                  '(ไม่สามารถระบุตำแหน่ง GPS ได้)',
+          style: GoogleFonts.anuphan(fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ตกลง'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<Position?> _currentPosition() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return null;
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return null;
+    }
+
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _sending ? null : _onPressed,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: _sosRed.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _sosRed.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  color: _sosRed,
+                  shape: BoxShape.circle,
+                ),
+                child: _sending
+                    ? const Padding(
+                        padding: EdgeInsets.all(13),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.sos_rounded,
+                        color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ขอความช่วยเหลือฉุกเฉิน',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: _sosRed,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'แจ้งเตือนสตาฟและเพื่อนร่วมทริปทันที',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 12,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: _sosRed.withValues(alpha: 0.7)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

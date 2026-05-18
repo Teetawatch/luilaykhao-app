@@ -333,6 +333,7 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
       'booking_cancelled' => Icons.cancel_rounded,
       'booking_reminder' || 'trip_reminder' => Icons.calendar_month_rounded,
       'seat_alert' => Icons.local_fire_department_rounded,
+      'sos_alert' => Icons.sos_rounded,
       'promo' => Icons.card_giftcard_rounded,
       'loyalty' => Icons.star_rounded,
       _ => Icons.notifications_rounded,
@@ -341,7 +342,8 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
 
   Color _accentColor(bool isDark) {
     return switch (widget.notification.type) {
-      'seat_alert' || 'payment_rejected' || 'booking_cancelled' =>
+      'seat_alert' || 'payment_rejected' || 'booking_cancelled' ||
+      'sos_alert' =>
         AppTheme.errorColor,
       'booking_reminder' || 'trip_reminder' => const Color(0xFF2563EB),
       'promo' => AppTheme.warningColor,

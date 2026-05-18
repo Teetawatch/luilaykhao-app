@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../main.dart' show appNavigatorKey;
+import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
+import '../screens/sos_alert_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
 
 /// Maps notification type + data payload to the correct in-app screen.
@@ -28,6 +30,8 @@ class NotificationNavigator {
         _openBookingDetail(data);
       case 'seat_alert':
         _switchTab(2);
+      case 'sos_alert':
+        _openSosAlert(data);
       case 'promo':
         _switchTab(1);
       case 'loyalty':
@@ -47,6 +51,16 @@ class NotificationNavigator {
       return;
     }
     _switchTab(2);
+  }
+
+  static void _openSosAlert(Map<String, dynamic> data) {
+    final nav = _nav;
+    if (nav == null) return;
+    nav.push(
+      MaterialPageRoute(
+        builder: (_) => SosAlertScreen(alert: SosAlert.fromNotificationData(data)),
+      ),
+    );
   }
 
   static void _openNotifications() {
