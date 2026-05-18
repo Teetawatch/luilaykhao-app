@@ -316,9 +316,9 @@ int? _scheduleId(Map<String, dynamic> lock) {
 int _remainingSeconds(Map<String, dynamic> lock) {
   final lockedUntil = DateTime.tryParse(textOf(lock['locked_until']));
   if (lockedUntil != null) {
-    return lockedUntil.difference(DateTime.now()).inSeconds.clamp(0, 600);
+    return lockedUntil.difference(DateTime.now()).inSeconds.clamp(0, 86400);
   }
-  return (int.tryParse(textOf(lock['locked_ttl_seconds'])) ?? 0).clamp(0, 600);
+  return (int.tryParse(textOf(lock['locked_ttl_seconds'])) ?? 0).clamp(0, 86400);
 }
 
 String _remainingText(int seconds) {

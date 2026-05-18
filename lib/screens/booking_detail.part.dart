@@ -694,6 +694,8 @@ class _SosButtonState extends State<_SosButton> {
         message: message.isEmpty ? null : message,
       );
       if (!mounted) return;
+      HapticFeedback.heavyImpact();
+      await SystemSound.play(SystemSoundType.alert);
       await _successDialog(hasLocation: lat != null);
     } catch (e) {
       messenger.showSnackBar(
@@ -705,53 +707,12 @@ class _SosButtonState extends State<_SosButton> {
   }
 
   Future<String?> _confirmDialog() {
-    final controller = TextEditingController();
-    return showDialog<String>(
+    return showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.sos_rounded, color: _sosRed),
-            const SizedBox(width: 8),
-            Text(
-              'ส่งสัญญาณ SOS',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ระบบจะแจ้งเตือนสตาฟและเพื่อนร่วมทริปทุกคนทันที พร้อมส่งตำแหน่ง GPS ของคุณ '
-              'ใช้เฉพาะกรณีฉุกเฉินจริงเท่านั้น',
-              style: GoogleFonts.anuphan(fontSize: 13, height: 1.5),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              maxLength: 255,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: 'ข้อความเพิ่มเติม (ไม่บังคับ)',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _sosRed),
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('ส่งสัญญาณ SOS'),
-          ),
-        ],
-      ),
-    ).whenComplete(controller.dispose);
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => const _SosMessageSheet(),
+    );
   }
 
   Future<void> _successDialog({required bool hasLocation}) {
@@ -870,6 +831,268 @@ class _SosButtonState extends State<_SosButton> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── SOS message bottom sheet ──────────────────────────────────────────────────
+
+class _SosOption {
+  final String value;
+  final String label;
+  final String emoji;
+  const _SosOption(this.value, this.label, this.emoji);
+}
+
+class _SosMessageSheet extends StatefulWidget {
+  const _SosMessageSheet();
+
+  @override
+  State<_SosMessageSheet> createState() => _SosMessageSheetState();
+}
+
+class _SosMessageSheetState extends State<_SosMessageSheet> {
+  static const _sosRed = Color(0xFFE11D48);
+
+  static const _options = [
+    _SosOption('ช่วยด้วย', 'ช่วยด้วย', '🆘'),
+    _SosOption('ฉันหลงทาง', 'ฉันหลงทาง', '🗺️'),
+    _SosOption('ฉันกังวล', 'ฉันกังวล', '😟'),
+    _SosOption('ฉันรู้สึกไม่ปลอดภัย', 'ฉันรู้สึกไม่ปลอดภัย', '⚠️'),
+    _SosOption('other', 'อื่น ๆ', '💬'),
+  ];
+
+  String? _selected;
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _canSend {
+    if (_selected == null) return false;
+    if (_selected == 'other') return _controller.text.trim().isNotEmpty;
+    return true;
+  }
+
+  String get _message =>
+      _selected == 'other' ? _controller.text.trim() : (_selected ?? '');
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Title
+          Row(
+            children: [
+              const Icon(Icons.sos_rounded, color: _sosRed, size: 26),
+              const SizedBox(width: 10),
+              Text(
+                'ขอความช่วยเหลือ SOS',
+                style: GoogleFonts.anuphan(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: _sosRed,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'เลือกข้อความที่ต้องการส่งให้สตาฟและผู้ร่วมทริป',
+            style: GoogleFonts.anuphan(
+              fontSize: 13,
+              color: Colors.grey.shade600,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Option grid
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.4,
+            children: _options.map((opt) {
+              final selected = _selected == opt.value;
+              return GestureDetector(
+                onTap: () => setState(() {
+                  _selected = opt.value;
+                  if (opt.value != 'other') _controller.clear();
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? _sosRed.withValues(alpha: 0.08)
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: selected
+                          ? _sosRed
+                          : Colors.grey.shade200,
+                      width: selected ? 2 : 1,
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    children: [
+                      Text(opt.emoji, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          opt.label,
+                          style: GoogleFonts.anuphan(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? _sosRed : Colors.grey.shade800,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+
+          // Custom text field (shown when "อื่น ๆ" selected)
+          if (_selected == 'other') ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: _controller,
+              maxLength: 255,
+              maxLines: 2,
+              onChanged: (_) => setState(() {}),
+              style: GoogleFonts.anuphan(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'อธิบายสถานการณ์โดยย่อ...',
+                hintStyle: GoogleFonts.anuphan(color: Colors.grey.shade400),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: _sosRed, width: 2),
+                ),
+                contentPadding: const EdgeInsets.all(14),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+
+          // Info note
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline_rounded,
+                    size: 15, color: Colors.grey.shade500),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'สตาฟและผู้โดยสารในทริปจะได้รับการแจ้งเตือนพร้อมตำแหน่ง GPS ทันที',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: BorderSide(color: Colors.grey.shade300),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    'ยกเลิก',
+                    style: GoogleFonts.anuphan(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: _canSend
+                      ? () => Navigator.pop(context, _message)
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _sosRed,
+                    disabledBackgroundColor: Colors.grey.shade200,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(Icons.sos_rounded, size: 20),
+                  label: Text(
+                    'ส่งสัญญาณ SOS',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

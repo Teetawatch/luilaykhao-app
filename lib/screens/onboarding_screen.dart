@@ -37,7 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _OnboardingSlide(
       icon: Icons.event_seat_rounded,
       title: 'เลือกที่นั่งได้แบบ Real-time',
-      body: 'เลือกที่นั่งบนรถตู้ได้ทันที พร้อมล็อกที่นั่ง 10 นาทีระหว่างชำระเงิน',
+      body: 'เลือกที่นั่งบนรถตู้ได้ทันที พร้อมล็อกที่นั่งชั่วคราวระหว่างชำระเงิน',
     ),
     _OnboardingSlide(
       icon: Icons.location_on_rounded,

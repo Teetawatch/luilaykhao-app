@@ -490,7 +490,7 @@ class _SeatRealtimeSummary extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'อัปเดตสถานะที่นั่งทุก ${refreshInterval.inSeconds} วินาที ล็อกที่นั่งชั่วคราวได้ไม่เกิน 10 นาที',
+                  'อัปเดตสถานะที่นั่งทุก ${refreshInterval.inSeconds} วินาที ล็อกที่นั่งชั่วคราวตามจำนวนที่นั่งที่เลือก',
                   style: GoogleFonts.anuphan(
                     color: const Color(0xFF126B5B),
                     fontWeight: FontWeight.w800,
