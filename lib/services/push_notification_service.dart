@@ -273,6 +273,8 @@ class PushNotificationService {
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {
+    // iOS already shows the banner via setForegroundNotificationPresentationOptions.
+    if (defaultTargetPlatform == TargetPlatform.iOS) return;
     if (!_localReady) return;
 
     final notification = message.notification;
