@@ -209,6 +209,17 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   );
                 }),
 
+                // Assigned staff section
+                if (asList(booking['assigned_staff']).isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const _SheetSectionTitle(
+                    icon: Icons.badge_rounded,
+                    title: 'สตาฟ / ไกด์ประจำรอบ',
+                  ),
+                  const SizedBox(height: 10),
+                  _AssignedStaffList(staffList: asList(booking['assigned_staff'])),
+                ],
+
                 // Installments section
                 if (installments.isNotEmpty) ...[
                   const SizedBox(height: 16),
@@ -1098,3 +1109,159 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
   }
 }
 
+// ─── Assigned Staff List ─────────────────────────────────────────────────────
+
+class _AssignedStaffList extends StatelessWidget {
+  final List<dynamic> staffList;
+
+  const _AssignedStaffList({required this.staffList});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: staffList.map((item) {
+        final staff = asMap(item);
+        final name = textOf(staff['name']);
+        final nickname = textOf(staff['nickname']);
+        final phone = textOf(staff['phone']);
+        final avatarUrl = textOf(staff['avatar_url']);
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.subtleSurface(context),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.15),
+              ),
+            ),
+            child: Row(
+              children: [
+                _StaffAvatar(url: avatarUrl, name: name),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              name.isEmpty ? '-' : name,
+                              style: GoogleFonts.anuphan(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                                color: AppTheme.onSurface(context),
+                              ),
+                            ),
+                          ),
+                          if (nickname.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(left: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor
+                                    .withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                nickname,
+                                style: GoogleFonts.anuphan(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (phone.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        GestureDetector(
+                          onTap: () async {
+                            final uri = Uri(scheme: 'tel', path: phone);
+                            if (await canLaunchUrl(uri)) await launchUrl(uri);
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.call_rounded,
+                                size: 14,
+                                color: AppTheme.primaryColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                phone,
+                                style: GoogleFonts.anuphan(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primaryColor,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: AppTheme.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _StaffAvatar extends StatelessWidget {
+  final String url;
+  final String name;
+
+  const _StaffAvatar({required this.url, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CachedNetworkImage(
+          imageUrl: url,
+          width: 44,
+          height: 44,
+          fit: BoxFit.cover,
+          errorWidget: (context, e, s) => _fallback(context),
+        ),
+      );
+    }
+    return _fallback(context);
+  }
+
+  Widget _fallback(BuildContext context) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: GoogleFonts.anuphan(
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
