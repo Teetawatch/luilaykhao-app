@@ -103,6 +103,7 @@ class BookingCheckoutPage extends StatefulWidget {
 
 class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   final _formKey = GlobalKey<FormState>();
+  final _travelerFormKey = GlobalKey();
   final _promo = TextEditingController();
   final _groupNotes = TextEditingController();
   final List<_PassengerControllers> _passengers = [_PassengerControllers()];
@@ -713,6 +714,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       key: const ValueKey('passenger-step'),
       children: [
         TravelerFormSection(
+          key: _travelerFormKey,
           passengers: _passengers,
           groupNotes: _groupNotes,
           isSeatSelectionMode: _hasSeatMap,
@@ -871,7 +873,23 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกที่นั่ง')));
       return;
     }
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      final ctx = _travelerFormKey.currentContext;
+      if (ctx != null) {
+        await Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 380),
+          curve: Curves.easeOutCubic,
+          alignment: 0.0,
+        );
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบถ้วนก่อนดำเนินการ')),
+        );
+      }
+      return;
+    }
 
     setState(() => _submitting = true);
     final app = context.read<AppProvider>();

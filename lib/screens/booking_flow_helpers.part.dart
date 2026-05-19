@@ -109,9 +109,6 @@ class _PassengerControllers {
   final emergencyPhone = TextEditingController();
   final allergies = TextEditingController();
   final healthNotes = TextEditingController();
-  final diveCertLevel = TextEditingController();
-  final certNumber = TextEditingController();
-  final weight = TextEditingController();
   final halalFood = ValueNotifier<bool>(false);
 
   void applyProfile(Map<String, dynamic> user) {
@@ -126,9 +123,6 @@ class _PassengerControllers {
     emergencyPhone.text = textOf(user['emergency_phone']);
     allergies.text = textOf(user['allergies']);
     healthNotes.text = textOf(user['health_notes']);
-    diveCertLevel.text = textOf(user['dive_cert_level']);
-    certNumber.text = textOf(user['cert_number']);
-    weight.text = textOf(user['weight']);
     halalFood.value = _asBool(
       user['halal_food'] ??
           user['needs_halal_food'] ??
@@ -157,13 +151,6 @@ class _PassengerControllers {
     'health_notes': healthNotes.text.trim().isEmpty
         ? null
         : healthNotes.text.trim(),
-    'dive_cert_level': diveCertLevel.text.trim().isEmpty
-        ? null
-        : diveCertLevel.text.trim(),
-    'cert_number': certNumber.text.trim().isEmpty
-        ? null
-        : certNumber.text.trim(),
-    'weight': weight.text.trim().isEmpty ? null : weight.text.trim(),
   };
 
   void dispose() {
@@ -178,9 +165,6 @@ class _PassengerControllers {
     emergencyPhone.dispose();
     allergies.dispose();
     healthNotes.dispose();
-    diveCertLevel.dispose();
-    certNumber.dispose();
-    weight.dispose();
     halalFood.dispose();
   }
 }
@@ -515,9 +499,9 @@ String _seatLockRemainingText(Map<String, dynamic> seat) {
 
 Color _seatColor({required String status, required bool selected}) {
   if (selected) return _softAccent;
-  if (status == 'booked') return const Color(0xFF6B7280);
-  if (status == 'locked') return const Color(0xFFCBD5D1);
-  return const Color(0xFFE5E7EB);
+  if (status == 'booked') return const Color(0xFFEF4444);
+  if (status == 'locked') return const Color(0xFFF59E0B);
+  return const Color(0xFFBBF7D0);
 }
 
 Map<String, dynamic>? _seatById(Map<String, dynamic> seatMap, String id) {

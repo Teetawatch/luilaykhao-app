@@ -428,117 +428,135 @@ class StickyCheckoutBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: BoxDecoration(
-          color: AppTheme.surface(context),
-          border: Border(top: BorderSide(color: AppTheme.border(context))),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 24,
-              offset: const Offset(0, -8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 360;
+          final vPad = isNarrow ? 8.0 : 10.0;
+          final hPad = isNarrow ? 12.0 : 14.0;
+          final btnHeight = isNarrow ? 42.0 : 46.0;
+          final backSize = isNarrow ? 38.0 : 42.0;
+          final priceFontSize = isNarrow ? 15.0 : 17.0;
+          final labelFontSize = isNarrow ? 10.0 : 11.0;
+          final btnFontSize = isNarrow ? 12.0 : 13.0;
+          final iconSize = isNarrow ? 15.0 : 16.0;
+
+          return Container(
+            padding: EdgeInsets.fromLTRB(hPad, vPad, hPad, vPad),
+            decoration: BoxDecoration(
+              color: AppTheme.surface(context),
+              border: Border(top: BorderSide(color: AppTheme.border(context))),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.07),
+                  blurRadius: 16,
+                  offset: const Offset(0, -6),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'รวมทั้งหมด',
-                    style: GoogleFonts.anuphan(
-                      color: _mutedTextColor(context),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'รวมทั้งหมด',
+                        style: GoogleFonts.anuphan(
+                          color: _mutedTextColor(context),
+                          fontSize: labelFontSize,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        money(total),
+                        style: GoogleFonts.anuphan(
+                          color: _premiumText(context),
+                          fontSize: priceFontSize,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                if (canGoBack) ...[
+                  SizedBox(
+                    width: backSize,
+                    height: backSize,
+                    child: IconButton(
+                      onPressed: isSubmitting ? null : onBack,
+                      padding: EdgeInsets.zero,
+                      style: IconButton.styleFrom(
+                        backgroundColor: _fieldBackground(context),
+                        foregroundColor: _premiumText(context),
+                        disabledForegroundColor:
+                            _mutedTextColor(context).withValues(alpha: 0.4),
+                        shape: const CircleBorder(),
+                      ),
+                      icon: Icon(Icons.arrow_back_rounded, size: iconSize + 2),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    money(total),
-                    style: GoogleFonts.anuphan(
-                      color: _premiumText(context),
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+                  const SizedBox(width: 8),
                 ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            if (canGoBack) ...[
-              SizedBox(
-                width: 52,
-                height: 52,
-                child: IconButton(
-                  onPressed: isSubmitting ? null : onBack,
-                  style: IconButton.styleFrom(
-                    backgroundColor: _fieldBackground(context),
-                    foregroundColor: _premiumText(context),
-                    disabledForegroundColor: _mutedTextColor(context).withValues(alpha: 0.4),
-                    shape: const CircleBorder(),
-                  ),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
-            Flexible(
-              flex: 2,
-              child: SizedBox(
-                height: 56,
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: onPressed,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _softAccent,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: const Color(0xFFC8D5D1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                  ),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 160),
-                    child: isSubmitting
-                        ? const SizedBox(
-                            key: ValueKey('loading'),
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Row(
-                            key: ValueKey(primaryLabel),
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(primaryIcon, size: 18),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  primaryLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.anuphan(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 15,
-                                  ),
+                Flexible(
+                  flex: 2,
+                  child: SizedBox(
+                    height: btnHeight,
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: onPressed,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _softAccent,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFFC8D5D1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(btnHeight / 2),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isNarrow ? 12 : 16,
+                        ),
+                      ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 160),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                key: ValueKey('loading'),
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  color: Colors.white,
                                 ),
+                              )
+                            : Row(
+                                key: ValueKey(primaryLabel),
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(primaryIcon, size: iconSize),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      primaryLabel,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.anuphan(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: btnFontSize,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -923,63 +941,6 @@ class _TravelerCard extends StatelessWidget {
             icon: Icons.health_and_safety_rounded,
             maxLines: 2,
             textInputAction: TextInputAction.newline,
-          ),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 390;
-              final diveCertField = _PremiumTextField(
-                controller: controllers.diveCertLevel,
-                label: 'ระดับใบรับรองดำน้ำ',
-                hint: 'เช่น Open Water',
-                icon: Icons.scuba_diving_rounded,
-                textInputAction: TextInputAction.next,
-              );
-              final certNumberField = _PremiumTextField(
-                controller: controllers.certNumber,
-                label: 'เลขใบรับรอง',
-                hint: 'ถ้ามี',
-                icon: Icons.workspace_premium_rounded,
-                textInputAction: TextInputAction.next,
-              );
-              final weightField = _PremiumTextField(
-                controller: controllers.weight,
-                label: 'น้ำหนัก (กก.)',
-                hint: 'เช่น 65',
-                icon: Icons.monitor_weight_outlined,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                ],
-                textInputAction: TextInputAction.next,
-              );
-
-              if (isCompact) {
-                return Column(
-                  children: [
-                    diveCertField,
-                    const SizedBox(height: 12),
-                    certNumberField,
-                    const SizedBox(height: 12),
-                    weightField,
-                  ],
-                );
-              }
-
-              return Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: diveCertField),
-                      const SizedBox(width: 12),
-                      Expanded(child: certNumberField),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  weightField,
-                ],
-              );
-            },
           ),
           const SizedBox(height: 16),
           Text(

@@ -383,9 +383,9 @@ class SeatSelectionSection extends StatelessWidget {
                     counts: statusCounts,
                     refreshInterval: _seatRefreshInterval,
                   ),
-                  const SizedBox(height: 14),
-                  const _SeatLegend(),
                   const SizedBox(height: 16),
+                  const Center(child: _SeatLegend()),
+                  const SizedBox(height: 18),
                   _VehicleSeatMap(
                     seatMap: map,
                     selectedSeatIds: selectedSeatIds,
@@ -507,17 +507,20 @@ class _SeatRealtimeSummary extends StatelessWidget {
             runSpacing: 8,
             children: [
               _SeatStatusPill(
-                color: const Color(0xFFE5E7EB),
+                color: const Color(0xFFBBF7D0),
+                textColor: const Color(0xFF065F46),
                 label: 'ว่าง',
                 value: counts.available,
               ),
               _SeatStatusPill(
-                color: const Color(0xFFCBD5D1),
+                color: const Color(0xFFF59E0B),
+                textColor: const Color(0xFF78350F),
                 label: 'กำลังจอง',
                 value: counts.locked,
               ),
               _SeatStatusPill(
-                color: const Color(0xFF6B7280),
+                color: const Color(0xFFEF4444),
+                textColor: Colors.white,
                 label: 'จองแล้ว',
                 value: counts.booked,
               ),
@@ -543,33 +546,31 @@ class _SeatRealtimeSummary extends StatelessWidget {
 
 class _SeatStatusPill extends StatelessWidget {
   final Color color;
+  final Color textColor;
   final String label;
   final int value;
 
   const _SeatStatusPill({
     required this.color,
+    required this.textColor,
     required this.label,
     required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
-    final textColor = color.computeLuminance() < 0.5
-        ? Colors.white
-        : _premiumText(context);
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
       ),
       child: Text(
         '$label $value',
         style: GoogleFonts.anuphan(
           color: textColor,
-          fontSize: 11.5,
+          fontSize: 12,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -583,10 +584,10 @@ class _SeatLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      _SeatLegendItem(Color(0xFFE5E7EB), 'ว่าง'),
+      _SeatLegendItem(Color(0xFFBBF7D0), 'ว่าง'),
       _SeatLegendItem(_softAccent, 'กำลังเลือก'),
-      _SeatLegendItem(Color(0xFFCBD5D1), 'ล็อคอยู่'),
-      _SeatLegendItem(Color(0xFF6B7280), 'จองแล้ว'),
+      _SeatLegendItem(Color(0xFFF59E0B), 'กำลังจอง'),
+      _SeatLegendItem(Color(0xFFEF4444), 'จองแล้ว'),
     ];
 
     return Wrap(
@@ -640,17 +641,18 @@ class _VehicleSeatMap extends StatelessWidget {
     final rows = _seatRows(seatMap);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: _fieldBackground(context),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: _cardBorder(context)),
       ),
-      child: SingleChildScrollView(
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 300),
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
           child: Column(
             children: [
               Row(
@@ -701,6 +703,7 @@ class _VehicleSeatMap extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -797,9 +800,13 @@ class _SeatButton extends StatelessWidget {
     final seatColor = muted ? color.withValues(alpha: 0.55) : color;
     final foregroundColor = selected || status == 'booked'
         ? Colors.white
-        : _mutedTextColor(context).withValues(alpha: muted ? 0.62 : 1);
+        : status == 'locked'
+        ? const Color(0xFF78350F)
+        : const Color(0xFF065F46);
     final labelColor = selected
         ? _softAccent
+        : status == 'locked'
+        ? const Color(0xFF92400E).withValues(alpha: muted ? 0.62 : 1)
         : _mutedTextColor(context).withValues(alpha: muted ? 0.62 : 1);
 
     return Tooltip(
@@ -843,15 +850,19 @@ class _SeatButton extends StatelessWidget {
                       color: foregroundColor,
                       size: 20,
                     ),
-                    if (selected || status == 'locked')
+                    if (selected || status == 'locked' || status == 'booked')
                       Positioned(
                         top: 3,
                         right: 3,
                         child: Icon(
-                          selected ? Icons.check_circle : Icons.timer_rounded,
-                          color: selected
+                          selected
+                              ? Icons.check_circle
+                              : status == 'booked'
+                              ? Icons.lock_rounded
+                              : Icons.timer_rounded,
+                          color: selected || status == 'booked'
                               ? Colors.white
-                              : _premiumText(context).withValues(alpha: 0.72),
+                              : const Color(0xFF78350F),
                           size: 11,
                         ),
                       ),
