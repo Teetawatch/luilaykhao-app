@@ -54,6 +54,8 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> coupons = [];
   List<dynamic> promotions = [];
   List<dynamic> activeSeatLocks = [];
+  List<dynamic> staffSchedules = [];
+  Map<String, dynamic> staffSummary = {};
   Map<String, dynamic>? loyalty;
   Map<String, dynamic>? stats;
   Timer? _activeSeatLockTimer;
@@ -565,20 +567,27 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> loadAccountData() async {
     if (!isLoggedIn) return;
-    final results = await Future.wait([
+    final futures = [
       api.get(ApiEndpoints.bookings),
       api.get(ApiEndpoints.notifications, query: {'per_page': 20}),
       api.get(ApiEndpoints.loyaltyAccount),
       api.get(ApiEndpoints.loyaltyRewards),
       api.get(ApiEndpoints.loyaltyCoupons),
       api.get(ApiEndpoints.reviewsMy),
-    ]);
+      if (canUseStaffCheckIn) api.get(ApiEndpoints.staffSchedulesMy),
+    ];
+    final results = await Future.wait(futures);
     bookings = List<dynamic>.from(api.data(results[0]) ?? []);
     notifications = List<dynamic>.from(api.data(results[1]) ?? []);
     loyalty = Map<String, dynamic>.from(api.data(results[2]) ?? {});
     rewards = List<dynamic>.from(api.data(results[3]) ?? []);
     coupons = List<dynamic>.from(api.data(results[4]) ?? []);
     myReviews = List<dynamic>.from(api.data(results[5]) ?? []);
+    if (canUseStaffCheckIn && results.length > 6) {
+      final staffData = api.data(results[6]) as Map?;
+      staffSchedules = List<dynamic>.from(staffData?['schedules'] ?? []);
+      staffSummary = Map<String, dynamic>.from(staffData?['summary'] ?? {});
+    }
     final cache = OfflineCache.instance;
     if (user != null) cache.writeAccount('user', user);
     cache.writeAccount('bookings', bookings);
@@ -587,6 +596,15 @@ class AppProvider extends ChangeNotifier {
     cache.writeAccount('rewards', rewards);
     cache.writeAccount('coupons', coupons);
     cache.writeAccount('myReviews', myReviews);
+    notifyListeners();
+  }
+
+  Future<void> loadStaffSchedules() async {
+    if (!isLoggedIn || !canUseStaffCheckIn) return;
+    final response = await api.get(ApiEndpoints.staffSchedulesMy);
+    final data = api.data(response) as Map?;
+    staffSchedules = List<dynamic>.from(data?['schedules'] ?? []);
+    staffSummary = Map<String, dynamic>.from(data?['summary'] ?? {});
     notifyListeners();
   }
 

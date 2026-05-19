@@ -67,4 +67,6 @@ class ApiEndpoints {
   // Staff
   static const staffCheckInLookup = 'staff/check-in/lookup';
   static const staffCheckInConfirm = 'staff/check-in/confirm';
+  static const staffSchedulesMy = 'staff/schedules/my';
+  static const staffReviewsMy = 'staff/reviews/my';
 }

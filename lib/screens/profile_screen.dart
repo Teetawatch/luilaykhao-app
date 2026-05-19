@@ -17,6 +17,7 @@ import '../widgets/support_shortcuts.dart';
 import '../widgets/travel_widgets.dart';
 import 'booking_lookup_screen.dart';
 import 'notification_preferences_screen.dart';
+import 'staff_check_in_screen.dart' show StaffCheckInScreen;
 import 'wishlist_screen.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';
@@ -30,6 +31,7 @@ part 'profile_payment_methods.part.dart';
 part 'profile_notifications.part.dart';
 part 'profile_help.part.dart';
 part 'profile_widgets.part.dart';
+part 'profile_staff.part.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -77,6 +79,7 @@ class ProfilePage extends StatelessWidget {
             if (context.mounted) _showError(context, e);
           }
         },
+
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
@@ -96,6 +99,10 @@ class ProfilePage extends StatelessWidget {
                       ProfileStatsSection(app: app, loyalty: loyalty),
                       const SizedBox(height: 16),
                       QuickActionsSection(app: app),
+                      if (app.canUseStaffCheckIn) ...[
+                        const SizedBox(height: 24),
+                        StaffDashboardSection(app: app),
+                      ],
                       const SizedBox(height: 24),
                       AccountMenu(user: user),
                       const SizedBox(height: 20),
