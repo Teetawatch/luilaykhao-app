@@ -27,6 +27,7 @@ class NotificationNavigator {
       case 'booking_cancelled':
       case 'booking_reminder':
       case 'trip_reminder':
+      case 'vehicle_departed':
       case 'vehicle_approaching':
         _openBookingDetail(data);
       case 'seat_alert':
