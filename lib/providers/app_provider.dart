@@ -26,7 +26,7 @@ class AppProvider extends ChangeNotifier {
 
   final ApiClient api = ApiClient();
   final RealtimeService realtime = RealtimeService.instance;
-  VoidCallback? _userChannelDisposer;
+  final List<VoidCallback> _userChannelDisposers = [];
   VoidCallback? _onSessionExpired;
   bool _handlingUnauthorized = false;
   VersionGateResult _versionGate = VersionGateResult.ok;
@@ -195,17 +195,29 @@ class AppProvider extends ChangeNotifier {
   Future<void> _bindUserChannel() async {
     final userId = user?['id']?.toString();
     if (userId == null || userId.isEmpty) return;
-    _userChannelDisposer?.call();
-    _userChannelDisposer = await realtime.subscribe(
-      channel: 'private-user.$userId',
+    for (final dispose in _userChannelDisposers) {
+      dispose();
+    }
+    _userChannelDisposers.clear();
+
+    final channel = 'private-user.$userId';
+    _userChannelDisposers.add(await realtime.subscribe(
+      channel: channel,
       event: 'PaymentConfirmed',
       handler: (_) => loadAccountData(),
-    );
+    ));
+    _userChannelDisposers.add(await realtime.subscribe(
+      channel: channel,
+      event: 'SosTriggered',
+      handler: (data) => NotificationNavigator.handle('sos_alert', data),
+    ));
   }
 
   Future<void> _unbindUserChannel() async {
-    _userChannelDisposer?.call();
-    _userChannelDisposer = null;
+    for (final dispose in _userChannelDisposers) {
+      dispose();
+    }
+    _userChannelDisposers.clear();
     await realtime.disconnect();
   }
 
