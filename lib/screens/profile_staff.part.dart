@@ -627,26 +627,47 @@ class _PickupPointRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = _cleanText(point['label'], fallback: 'จุดรับไม่ระบุ');
+    final regionLabel = _cleanText(point['region_label']);
+    final showRegion = !isDefault && regionLabel.isNotEmpty && regionLabel != label;
     final count = _numberValue(point['passenger_count']);
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          isDefault ? Icons.help_outline : Icons.trip_origin,
-          size: 14,
-          color: isDefault ? AppTheme.textSecondary : const Color(0xFF0D9488),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(
+            isDefault ? Icons.help_outline : Icons.trip_origin,
+            size: 14,
+            color: isDefault ? AppTheme.textSecondary : const Color(0xFF0D9488),
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            label,
-            style: GoogleFonts.anuphan(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: isDefault ? AppTheme.textSecondary : AppTheme.textMain,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.anuphan(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isDefault ? AppTheme.textSecondary : AppTheme.textMain,
+                ),
+              ),
+              if (showRegion)
+                Text(
+                  regionLabel,
+                  style: GoogleFonts.anuphan(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+            ],
           ),
         ),
+        const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
