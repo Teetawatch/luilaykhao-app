@@ -363,13 +363,13 @@ class _HeroTopBar extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 16, 28, 14),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
               child: Row(
                 children: [
                   Container(
-                    width: 58,
-                    height: 58,
-                    padding: const EdgeInsets.all(4),
+                    width: 50,
+                    height: 50,
+                    padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
@@ -399,32 +399,34 @@ class _HeroTopBar extends StatelessWidget {
                             ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'สวัสดี, $firstName',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 22,
-                            height: 1.05,
-                            fontWeight: FontWeight.w900,
-                            shadows: backgroundProgress < 0.45
-                                ? const [
-                                    Shadow(
-                                      color: Colors.black38,
-                                      offset: Offset(0, 2),
-                                      blurRadius: 4,
-                                    ),
-                                  ]
-                                : null,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'สวัสดี, $firstName',
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 18,
+                              height: 1.05,
+                              fontWeight: FontWeight.w900,
+                              shadows: backgroundProgress < 0.45
+                                  ? const [
+                                      Shadow(
+                                        color: Colors.black38,
+                                        offset: Offset(0, 2),
+                                        blurRadius: 4,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           'พร้อมออกเดินทางครั้งใหม่?',
                           maxLines: 1,
@@ -435,7 +437,7 @@ class _HeroTopBar extends StatelessWidget {
                               AppTheme.textSecondary,
                               backgroundProgress,
                             ),
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             shadows: backgroundProgress < 0.45
                                 ? const [
