@@ -69,6 +69,28 @@ void _showTripDetailMessage(BuildContext context, String message) {
     );
 }
 
+List<String> _detailGalleryImages(Map<String, dynamic> trip) {
+  final imageValues = <dynamic>[
+    ...asList(trip['images']),
+    ...asList(trip['gallery']),
+    ...asList(trip['photos']),
+  ];
+
+  return imageValues
+      .map((image) {
+        if (image is Map) {
+          final data = asMap(image);
+          return ApiConfig.mediaUrl(
+            data['url'] ?? data['image'] ?? data['path'],
+          );
+        }
+        return ApiConfig.mediaUrl(image);
+      })
+      .where((url) => url.isNotEmpty)
+      .toSet()
+      .toList();
+}
+
 List<String> _galleryImages(Map<String, dynamic> trip) {
   final imageValues = <dynamic>[
     trip['cover_image'],

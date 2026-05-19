@@ -347,6 +347,191 @@ class AboutSection extends StatelessWidget {
   }
 }
 
+class PhotoGallerySection extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const PhotoGallerySection({super.key, required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final images = _detailGalleryImages(trip);
+    if (images.isEmpty) return const SizedBox.shrink();
+
+    return _PremiumCard(
+      padding: const EdgeInsets.fromLTRB(24, 24, 0, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: _SectionHeader(
+              icon: Icons.photo_library_outlined,
+              title: 'รูปภาพ',
+              subtitle: '${images.length} รูป',
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 160,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 24),
+              itemCount: images.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) => GestureDetector(
+                onTap: () => _openFullscreen(context, images, index),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CachedNetworkImage(
+                    imageUrl: images[index],
+                    width: 120,
+                    height: 160,
+                    fit: BoxFit.cover,
+                    placeholder: (_, _) =>
+                        const Skeleton(width: 120, height: 160, radius: 16),
+                    errorWidget: (_, _, _) => Container(
+                      width: 120,
+                      height: 160,
+                      color: const Color(0xFFE7ECEA),
+                      child: const Icon(
+                        Icons.landscape_rounded,
+                        color: _softAccent,
+                        size: 36,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openFullscreen(
+    BuildContext context,
+    List<String> images,
+    int initialIndex,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) =>
+            _FullscreenGallery(images: images, initialIndex: initialIndex),
+      ),
+    );
+  }
+}
+
+class _FullscreenGallery extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const _FullscreenGallery({
+    required this.images,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_FullscreenGallery> createState() => _FullscreenGalleryState();
+}
+
+class _FullscreenGalleryState extends State<_FullscreenGallery> {
+  late int _currentIndex;
+  late PageController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _controller = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final safePadding = MediaQuery.paddingOf(context);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            PageView.builder(
+              controller: _controller,
+              itemCount: widget.images.length,
+              onPageChanged: (i) => setState(() => _currentIndex = i),
+              itemBuilder: (_, index) => InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 4.0,
+                child: Center(
+                  child: CachedNetworkImage(
+                    imageUrl: widget.images[index],
+                    fit: BoxFit.contain,
+                    placeholder: (_, _) => const Center(
+                      child: CircularProgressIndicator(color: Colors.white54),
+                    ),
+                    errorWidget: (_, _, _) => const Center(
+                      child: Icon(
+                        Icons.broken_image_rounded,
+                        color: Colors.white54,
+                        size: 64,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: safePadding.top + 8,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+            if (widget.images.length > 1)
+              Positioned(
+                bottom: safePadding.bottom + 20,
+                left: 0,
+                right: 0,
+                child: Text(
+                  '${_currentIndex + 1} / ${widget.images.length}',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.anuphan(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class MustKnowSection extends StatelessWidget {
   final Map<String, dynamic> trip;
 

@@ -131,14 +131,6 @@ class _BookingSummaryCard extends StatelessWidget {
                   label: 'ติดตามรถ',
                   onTap: () => _openTrackingForBooking(context, booking),
                 ),
-              if (status == 'pending' || status == 'confirmed')
-                _SmallActionButton(
-                  icon: Icons.cancel_outlined,
-                  label: 'ยกเลิก',
-                  color: AppTheme.errorColor,
-                  onTap: () =>
-                      _confirmCancelBooking(context, booking, onRefresh),
-                ),
             ],
           ),
         ],

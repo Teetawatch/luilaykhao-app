@@ -323,13 +323,8 @@ class _UtilityIconButton extends StatelessWidget {
 
 class UpcomingSection extends StatelessWidget {
   final List<Map<String, dynamic>> bookings;
-  final ValueChanged<Map<String, dynamic>> onCancel;
 
-  const UpcomingSection({
-    super.key,
-    required this.bookings,
-    required this.onCancel,
-  });
+  const UpcomingSection({super.key, required this.bookings});
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +332,6 @@ class UpcomingSection extends StatelessWidget {
       eyebrow: 'ทริปถัดไปของคุณ',
       title: 'กำลังจะถึง',
       bookings: bookings,
-      onCancel: onCancel,
     );
   }
 }
@@ -361,14 +355,12 @@ class BookingSection extends StatelessWidget {
   final String eyebrow;
   final String title;
   final List<Map<String, dynamic>> bookings;
-  final ValueChanged<Map<String, dynamic>>? onCancel;
 
   const BookingSection({
     super.key,
     required this.eyebrow,
     required this.title,
     required this.bookings,
-    this.onCancel,
   });
 
   @override
@@ -424,7 +416,7 @@ class BookingSection extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         for (final booking in bookings) ...[
-          ReservationCard(booking: booking, onCancel: onCancel),
+          ReservationCard(booking: booking),
           const SizedBox(height: 16),
         ],
       ],
@@ -434,9 +426,8 @@ class BookingSection extends StatelessWidget {
 
 class ReservationCard extends StatelessWidget {
   final Map<String, dynamic> booking;
-  final ValueChanged<Map<String, dynamic>>? onCancel;
 
-  const ReservationCard({super.key, required this.booking, this.onCancel});
+  const ReservationCard({super.key, required this.booking});
 
   @override
   Widget build(BuildContext context) {
@@ -558,7 +549,6 @@ class ReservationCard extends StatelessWidget {
                       PopupMenuButton<String>(
                         tooltip: 'เมนูเพิ่มเติม',
                         onSelected: (value) {
-                          if (value == 'cancel') onCancel?.call(booking);
                           if (value == 'detail') {
                             showModalBottomSheet(
                               context: context,
@@ -574,11 +564,6 @@ class ReservationCard extends StatelessWidget {
                             value: 'detail',
                             child: Text('ดูรายละเอียด'),
                           ),
-                          if (textOf(booking['status']) == 'pending')
-                            const PopupMenuItem(
-                              value: 'cancel',
-                              child: Text('ยกเลิกการจอง'),
-                            ),
                         ],
                         child: Container(
                           width: 40,

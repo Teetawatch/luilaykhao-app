@@ -367,21 +367,6 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                       label: const Text('ไปหน้าชำระเงิน'),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _cancel(context),
-                      icon: const Icon(Icons.cancel_outlined),
-                      label: const Text('ยกเลิกการจอง'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.errorColor,
-                        side: BorderSide(
-                          color: AppTheme.errorColor.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
 
                 // Review CTA
@@ -402,23 +387,6 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
         },
       ),
     );
-  }
-
-  Future<void> _cancel(BuildContext context) async {
-    final reason = await promptText(
-      context,
-      title: 'เหตุผลการยกเลิก',
-      hint: 'ระบุเหตุผล',
-    );
-    if (reason == null) return;
-    if (!context.mounted) return;
-    final app = context.read<AppProvider>();
-    try {
-      await app.cancelBooking(widget.bookingRef, reason);
-      if (context.mounted) Navigator.pop(context);
-    } catch (e) {
-      if (context.mounted) showSnack(context, e.toString());
-    }
   }
 
   Future<void> _review(

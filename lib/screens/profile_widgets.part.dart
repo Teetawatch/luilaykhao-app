@@ -441,19 +441,17 @@ class _StatusBadge extends StatelessWidget {
 class _SmallActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color? color;
   final VoidCallback onTap;
 
   const _SmallActionButton({
     required this.icon,
     required this.label,
-    this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = color ?? AppTheme.primaryColor;
+    const effectiveColor = AppTheme.primaryColor;
     return ActionChip(
       avatar: Icon(icon, size: 17, color: effectiveColor),
       label: Text(label),
@@ -762,6 +760,23 @@ String _cleanText(dynamic value, {String fallback = ''}) {
   return text.isEmpty ? fallback : text;
 }
 
+String _notificationTypeLabel(String type) {
+  return switch (type) {
+    'booking' || 'booking_confirmed' => 'การจอง',
+    'booking_cancelled' => 'ยกเลิกการจอง',
+    'booking_reminder' || 'trip_reminder' => 'แจ้งเตือนทริป',
+    'payment' || 'payment_confirmed' => 'การชำระเงิน',
+    'payment_rejected' => 'ชำระเงินไม่สำเร็จ',
+    'installment_due' => 'ผ่อนชำระ',
+    'seat_alert' => 'ที่นั่งใกล้เต็ม',
+    'promo' => 'โปรโมชัน',
+    'system' => 'ระบบ',
+    'loyalty' => 'คะแนนสะสม',
+    'vehicle_approaching' => 'รถใกล้ถึงแล้ว',
+    _ => 'การแจ้งเตือน',
+  };
+}
+
 IconData _notificationIcon(String type) {
   return switch (type) {
     'seat_alert' => Icons.local_fire_department_rounded,
@@ -931,76 +946,6 @@ String _statusLabel(String status) {
   };
 }
 
-Future<void> _confirmCancelBooking(
-  BuildContext context,
-  Map<String, dynamic> booking,
-  Future<void> Function() onRefresh,
-) async {
-  final reason = TextEditingController();
-  final confirmed = await showModalBottomSheet<bool>(
-    context: context,
-    showDragHandle: true,
-    backgroundColor: AppTheme.surface(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (context) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'ยกเลิกการจอง',
-                style: GoogleFonts.anuphan(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.textMain,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _ProfileTextField(
-                controller: reason,
-                label: 'เหตุผลการยกเลิก',
-                icon: Icons.edit_note_outlined,
-                maxLines: 3,
-              ),
-              const SizedBox(height: 18),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.errorColor,
-                ),
-                child: const Text('ยืนยันการยกเลิก'),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-
-  if (confirmed != true || !context.mounted) {
-    reason.dispose();
-    return;
-  }
-
-  try {
-    await context.read<AppProvider>().cancelBooking(
-      _cleanText(booking['booking_ref']),
-      reason.text.trim().isEmpty ? 'ยกเลิกจากแอป' : reason.text.trim(),
-    );
-    reason.dispose();
-    if (!context.mounted) return;
-    await onRefresh();
-    if (context.mounted) _showSuccess(context, 'ยกเลิกการจองแล้ว');
-  } catch (e) {
-    reason.dispose();
-    if (context.mounted) _showError(context, e);
-  }
-}
 
 Future<void> _showReviewDialog(
   BuildContext context,

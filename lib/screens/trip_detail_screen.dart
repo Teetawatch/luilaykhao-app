@@ -561,6 +561,8 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
                         onToggle: widget.onDescriptionToggle,
                       ),
                       const SizedBox(height: 16),
+                      PhotoGallerySection(trip: widget.trip),
+                      const SizedBox(height: 16),
                       MustKnowSection(trip: widget.trip),
                       const SizedBox(height: 16),
                       PreparationsSection(trip: widget.trip),

@@ -116,10 +116,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                           const _FilteredEmptyState()
                         else ...[
                           if (_segment == _ReservationSegment.all) ...[
-                            UpcomingSection(
-                              bookings: upcoming,
-                              onCancel: _cancelBooking,
-                            ),
+                            UpcomingSection(bookings: upcoming),
                             if (upcoming.isNotEmpty) const SizedBox(height: 28),
                             PastTripsSection(bookings: past),
                             if (past.isNotEmpty) const SizedBox(height: 28),
@@ -127,14 +124,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                               eyebrow: 'รายการที่ปิดแล้ว',
                               title: 'ยกเลิก',
                               bookings: cancelled,
-                              onCancel: _cancelBooking,
                             ),
                           ] else
                             BookingSection(
                               eyebrow: _segmentEyebrow,
                               title: _segmentTitle,
                               bookings: filtered,
-                              onCancel: _cancelBooking,
                             ),
                         ],
                       ],
@@ -205,23 +200,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     return result;
   }
 
-  Future<void> _cancelBooking(Map<String, dynamic> booking) async {
-    final reason = await promptText(
-      context,
-      title: 'เหตุผลการยกเลิก',
-      hint: 'ระบุเหตุผล',
-    );
-    if (reason == null) return;
-    if (!mounted) return;
-
-    final app = context.read<AppProvider>();
-    try {
-      await app.cancelBooking(textOf(booking['booking_ref']), reason);
-      if (mounted) showSnack(context, 'ยกเลิกการจองสำเร็จ');
-    } catch (e) {
-      if (mounted) showSnack(context, e.toString());
-    }
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

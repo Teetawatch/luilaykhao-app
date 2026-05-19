@@ -425,33 +425,42 @@ class _NavItemState extends State<_NavItem>
                     // unread badge
                     if (widget.badge > 0)
                       Positioned(
-                        top: -2,
-                        right: -4,
+                        top: -3,
+                        right: -5,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 1,
+                            horizontal: 5,
+                            vertical: 2,
                           ),
                           decoration: BoxDecoration(
                             color: AppTheme.errorColor,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isDark
                                   ? AppTheme.surfaceDark
                                   : Colors.white,
-                              width: 1.5,
+                              width: 2,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.errorColor.withValues(
+                                  alpha: 0.55,
+                                ),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
+                            minWidth: 19,
+                            minHeight: 19,
                           ),
                           child: Text(
                             widget.badge > 99 ? '99+' : '${widget.badge}',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
                               height: 1.1,
                             ),
                             textAlign: TextAlign.center,

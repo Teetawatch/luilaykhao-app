@@ -12,10 +12,10 @@ import '../theme/app_theme.dart';
 /// the backend hasn't been seeded yet.
 class SupportContact {
   static const _defaults = {
-    'phone': '0900000000',
+    'phone': '0626126006',
     'line': '@luilaykhao',
     'line_url': 'https://line.me/R/ti/p/@luilaykhao',
-    'email': 'support@luilaykhao.com',
+    'email': 'luilaykhao.info@gmail.com',
   };
 
   final String phone;

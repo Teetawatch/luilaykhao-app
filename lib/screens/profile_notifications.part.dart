@@ -148,7 +148,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       )
                     else
                       for (final notification in notifications) ...[
-                        _NotificationCard(
+                        _SwipableNotificationCard(
+                          key: ValueKey(notification['id']),
                           notification: notification,
                           busy: _busyIds.contains(
                             int.tryParse(_cleanText(notification['id'])),
@@ -164,6 +165,60 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SwipableNotificationCard extends StatelessWidget {
+  final Map<String, dynamic> notification;
+  final bool busy;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _SwipableNotificationCard({
+    super.key,
+    required this.notification,
+    required this.busy,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: ValueKey(notification['id']),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: busy ? (_) async => false : null,
+      onDismissed: (_) => onDelete(),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        decoration: BoxDecoration(
+          color: AppTheme.errorColor,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.delete_rounded, color: Colors.white, size: 26),
+            const SizedBox(height: 4),
+            Text(
+              'ลบ',
+              style: GoogleFonts.anuphan(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+      child: _NotificationCard(
+        notification: notification,
+        busy: busy,
+        onTap: onTap,
+        onDelete: onDelete,
       ),
     );
   }
@@ -189,6 +244,8 @@ class _NotificationCard extends StatelessWidget {
     final body = _cleanText(notification['body']);
     final unread = notification['is_read'] != true;
     final accent = _notificationColor(type);
+    final typeLabel = _notificationTypeLabel(type);
+    final isDark = AppTheme.isDark(context);
 
     return Material(
       color: Colors.transparent,
@@ -198,36 +255,75 @@ class _NotificationCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.surface(context),
+            color: unread
+                ? (isDark
+                    ? accent.withValues(alpha: 0.06)
+                    : accent.withValues(alpha: 0.03))
+                : AppTheme.surface(context),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: unread
-                  ? accent.withValues(alpha: 0.35)
+                  ? accent.withValues(alpha: 0.4)
                   : AppTheme.border(context),
+              width: unread ? 1.5 : 1,
             ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(
-                  alpha: AppTheme.isDark(context)
+                  alpha: isDark
                       ? (unread ? 0.22 : 0.16)
                       : (unread ? 0.07 : 0.04),
                 ),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
+              if (unread)
+                BoxShadow(
+                  color: accent.withValues(alpha: isDark ? 0.10 : 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
             ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(_notificationIcon(type), color: accent, size: 25),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(_notificationIcon(type), color: accent, size: 25),
+                  ),
+                  if (unread)
+                    Positioned(
+                      top: -3,
+                      right: -3,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark ? AppTheme.surfaceDark : Colors.white,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.errorColor.withValues(alpha: 0.5),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -236,35 +332,48 @@ class _NotificationCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: isDark ? 0.18 : 0.10),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            typeLabel,
                             style: GoogleFonts.anuphan(
-                              fontSize: 15,
-                              fontWeight: unread
-                                  ? FontWeight.w900
-                                  : FontWeight.w700,
-                              color: AppTheme.textMain,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: accent,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const Spacer(),
                         Text(
                           _notificationTimeAgo(notification['created_at']),
                           style: GoogleFonts.anuphan(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondary.withValues(
-                              alpha: 0.72,
-                            ),
+                            color: AppTheme.textSecondary.withValues(alpha: 0.65),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 6),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 15,
+                        fontWeight: unread ? FontWeight.w900 : FontWeight.w700,
+                        color: AppTheme.textMain,
+                      ),
+                    ),
                     if (body.isNotEmpty) ...[
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 4),
                       Text(
                         body,
                         maxLines: 2,
@@ -280,20 +389,24 @@ class _NotificationCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
-              busy
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : IconButton(
-                      visualDensity: VisualDensity.compact,
-                      tooltip: 'ลบการแจ้งเตือน',
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete_outline_rounded),
-                      color: AppTheme.textSecondary.withValues(alpha: 0.72),
-                    ),
+              const SizedBox(width: 4),
+              if (busy)
+                const Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'ลบการแจ้งเตือน',
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  color: AppTheme.errorColor.withValues(alpha: 0.55),
+                ),
             ],
           ),
         ),
