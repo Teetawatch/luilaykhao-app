@@ -7,6 +7,7 @@ import '../providers/app_provider.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/sos_alert_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
+import 'sos_alarm_service.dart';
 
 /// Maps notification type + data payload to the correct in-app screen.
 ///
@@ -58,11 +59,13 @@ class NotificationNavigator {
   static void _openSosAlert(Map<String, dynamic> data) {
     final nav = _nav;
     if (nav == null) return;
+    final alert = SosAlert.fromNotificationData(data);
+    SosAlarmService.instance.start(senderName: alert.userName);
     nav.push(
       MaterialPageRoute(
-        builder: (_) => SosAlertScreen(alert: SosAlert.fromNotificationData(data)),
+        builder: (_) => SosAlertScreen(alert: alert),
       ),
-    );
+    ).then((_) => SosAlarmService.instance.stop());
   }
 
   static void _openNotifications() {

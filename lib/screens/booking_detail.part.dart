@@ -653,6 +653,12 @@ class _SosButtonState extends State<_SosButton> {
     final message = await _confirmDialog();
     if (message == null || !mounted) return;
 
+    await _dispatchSos(message);
+  }
+
+  Future<void> _dispatchSos(String message) async {
+    if (_sending) return;
+
     setState(() => _sending = true);
     final messenger = ScaffoldMessenger.of(context);
     final provider = context.read<AppProvider>();
@@ -677,8 +683,16 @@ class _SosButtonState extends State<_SosButton> {
       await SystemSound.play(SystemSoundType.alert);
       await _successDialog(hasLocation: lat != null);
     } catch (e) {
+      // triggerSos already retried with backoff; offer a manual retry too.
       messenger.showSnackBar(
-        SnackBar(content: Text('ส่ง SOS ไม่สำเร็จ: $e')),
+        SnackBar(
+          content: Text('ส่ง SOS ไม่สำเร็จ: $e'),
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'ลองอีกครั้ง',
+            onPressed: () => _dispatchSos(message),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -796,7 +810,9 @@ class _SosButtonState extends State<_SosButton> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'แจ้งเตือนสตาฟและเพื่อนร่วมทริปทันที',
+                      _sending
+                          ? 'กำลังส่งสัญญาณ SOS...'
+                          : 'แจ้งเตือนสตาฟและเพื่อนร่วมทริปทันที',
                       style: GoogleFonts.anuphan(
                         fontSize: 12,
                         color: AppTheme.mutedText(context),

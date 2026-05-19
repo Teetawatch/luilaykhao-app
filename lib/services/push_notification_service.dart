@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../config/firebase_config.dart';
 import 'api_client.dart';
+import 'sos_alarm_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -248,11 +249,14 @@ class PushNotificationService {
       },
     );
 
-    await _localNotifications
+    final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(_channel);
+        >();
+    await androidPlugin?.createNotificationChannel(_channel);
+    // Alarm-grade SOS channel with the looping siren sound. Must exist before
+    // a killed app receives an FCM SOS, otherwise Android picks a silent channel.
+    await androidPlugin?.createNotificationChannel(SosAlarmService.sosChannel);
 
     _localReady = true;
   }
@@ -273,14 +277,23 @@ class PushNotificationService {
   }
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {
+    final notification = message.notification;
+    if (notification == null) return;
+
+    // SOS arriving while the app is foregrounded: fire the loud, looping
+    // siren on every platform so it cannot be missed.
+    if (message.data['type']?.toString() == 'sos_alert') {
+      final senderName =
+          message.data['sos_user_name']?.toString() ?? 'เพื่อนร่วมทริป';
+      await SosAlarmService.instance.start(senderName: senderName);
+      return;
+    }
+
     // iOS already shows the banner via setForegroundNotificationPresentationOptions.
     if (defaultTargetPlatform == TargetPlatform.iOS) return;
     if (!_localReady) return;
 
-    final notification = message.notification;
-    final android = notification?.android;
-    if (notification == null) return;
-
+    final android = notification.android;
     await _localNotifications.show(
       id: notification.hashCode,
       title: notification.title,

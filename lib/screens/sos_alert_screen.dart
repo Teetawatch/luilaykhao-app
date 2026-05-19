@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
+import '../services/sos_alarm_service.dart';
 import '../theme/app_theme.dart';
 
 /// Full-screen view shown to staff / fellow travelers when they open an
@@ -23,6 +24,12 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
   bool _resolved = false;
 
   static const _sosRed = Color(0xFFE11D48);
+
+  @override
+  void dispose() {
+    SosAlarmService.instance.stop();
+    super.dispose();
+  }
 
   Future<void> _call() async {
     final phone = widget.alert.contactPhone;

@@ -595,22 +595,57 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// Triggers an SOS, retrying on network/server failures with backoff.
+  ///
+  /// SOS must reach the server even on a weak (3G) connection, so each attempt
+  /// is bounded by a timeout and transient failures are retried. The backend
+  /// de-duplicates repeated triggers, so a retry never creates a second alert.
   Future<SosAlert> triggerSos({
     required int scheduleId,
     double? latitude,
     double? longitude,
     String? message,
   }) async {
-    final response = await api.post(
-      'sos',
-      body: {
-        'schedule_id': scheduleId,
-        'latitude': ?latitude,
-        'longitude': ?longitude,
-        if (message != null && message.isNotEmpty) 'message': message,
-      },
-    );
-    return SosAlert.fromJson(Map<String, dynamic>.from(api.data(response) as Map));
+    final body = {
+      'schedule_id': scheduleId,
+      'latitude': ?latitude,
+      'longitude': ?longitude,
+      if (message != null && message.isNotEmpty) 'message': message,
+    };
+
+    const attemptTimeout = Duration(seconds: 15);
+    const backoff = [
+      Duration(seconds: 2),
+      Duration(seconds: 4),
+      Duration(seconds: 8),
+    ];
+
+    Object lastError = const ApiException('ส่งสัญญาณ SOS ไม่สำเร็จ');
+
+    for (var attempt = 0; attempt <= backoff.length; attempt++) {
+      try {
+        final response =
+            await api.post('sos', body: body).timeout(attemptTimeout);
+        return SosAlert.fromJson(
+          Map<String, dynamic>.from(api.data(response) as Map),
+        );
+      } on ApiException catch (e) {
+        // Client errors (validation, auth, trip-window) won't be fixed by a
+        // retry — surface them immediately.
+        final status = e.statusCode;
+        if (status != null && status >= 400 && status < 500) rethrow;
+        lastError = e;
+      } catch (e) {
+        // Timeouts and connectivity errors — worth retrying.
+        lastError = e;
+      }
+
+      if (attempt < backoff.length) {
+        await Future.delayed(backoff[attempt]);
+      }
+    }
+
+    throw lastError;
   }
 
   Future<List<SosAlert>> activeSosAlerts() async {

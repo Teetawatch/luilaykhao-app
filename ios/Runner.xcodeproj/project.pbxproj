@@ -18,6 +18,7 @@
 		AE8D9F0B2C1D3E4F5A607182 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AE8D9F0A2C1D3E4F5A607182 /* GoogleService-Info.plist */; };
 		E67EC7D885E312783C8D2FF1 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E3CF47033FDA869F0B02E6E /* Pods_RunnerTests.framework */; };
 		EC180CFB824C6A561377B3D8 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C20B81339F5D56FFBCE66226 /* Pods_Runner.framework */; };
+		D05051AA0000000000000002 /* sos_siren.wav in Resources */ = {isa = PBXBuildFile; fileRef = D05051AA0000000000000001 /* sos_siren.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +71,7 @@
 		CF1B2C3D4E5F60718A930B1C /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		E3CEC125751EFEE2735EAB76 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		EBBB43034F07B59713CEBCCA /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
+		D05051AA0000000000000001 /* sos_siren.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sos_siren.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -168,6 +170,7 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				D05051AA0000000000000001 /* sos_siren.wav */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -273,6 +276,7 @@
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+				D05051AA0000000000000002 /* sos_siren.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
