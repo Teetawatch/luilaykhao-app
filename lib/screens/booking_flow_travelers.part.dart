@@ -68,6 +68,7 @@ class TravelerFormSection extends StatelessWidget {
   final VoidCallback onAddPassenger;
   final VoidCallback onRemovePassenger;
   final ValueChanged<int> onUseProfile;
+  final ValueChanged<int> onUseWallet;
 
   const TravelerFormSection({
     super.key,
@@ -78,6 +79,7 @@ class TravelerFormSection extends StatelessWidget {
     required this.onAddPassenger,
     required this.onRemovePassenger,
     required this.onUseProfile,
+    required this.onUseWallet,
   });
 
   @override
@@ -103,6 +105,7 @@ class TravelerFormSection extends StatelessWidget {
                   ? selectedSeatIds[index]
                   : null,
               onUseProfile: () => onUseProfile(index),
+              onUseWallet: () => onUseWallet(index),
             );
           }),
           AnimatedSwitcher(
@@ -659,6 +662,7 @@ class _TravelerCard extends StatelessWidget {
   final bool isLast;
   final String? seatId;
   final VoidCallback onUseProfile;
+  final VoidCallback onUseWallet;
 
   const _TravelerCard({
     required this.index,
@@ -666,6 +670,7 @@ class _TravelerCard extends StatelessWidget {
     required this.isLast,
     this.seatId,
     required this.onUseProfile,
+    required this.onUseWallet,
   });
 
   @override
@@ -727,23 +732,66 @@ class _TravelerCard extends StatelessWidget {
                   ),
                 ),
               const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: onUseProfile,
-                icon: const Icon(Icons.account_circle_outlined, size: 17),
-                label: Text(
-                  'ดึงข้อมูลโปรไฟล์',
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+              PopupMenuButton<String>(
+                onSelected: (val) {
+                  if (val == 'profile') onUseProfile();
+                  if (val == 'wallet') onUseWallet();
+                },
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                style: TextButton.styleFrom(
-                  foregroundColor: _softAccent,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'profile',
+                    child: Row(
+                      children: [
+                        Icon(Icons.account_circle_outlined,
+                            size: 18, color: _softAccent),
+                        const SizedBox(width: 10),
+                        Text('ดึงข้อมูลโปรไฟล์',
+                            style: GoogleFonts.anuphan(
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
                   ),
-                  minimumSize: const Size(0, 34),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
+                  PopupMenuItem(
+                    value: 'wallet',
+                    child: Row(
+                      children: [
+                        Icon(Icons.wallet_rounded,
+                            size: 18, color: _softAccent),
+                        const SizedBox(width: 10),
+                        Text('กรอกจาก Wallet',
+                            style: GoogleFonts.anuphan(
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _softAccent.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_note_rounded,
+                          size: 16, color: _softAccent),
+                      const SizedBox(width: 4),
+                      Text(
+                        'กรอกจาก',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: _softAccent,
+                        ),
+                      ),
+                      Icon(Icons.arrow_drop_down_rounded,
+                          size: 16, color: _softAccent),
+                    ],
                   ),
                 ),
               ),

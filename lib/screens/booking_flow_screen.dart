@@ -11,6 +11,7 @@ import '../providers/app_provider.dart';
 import '../services/realtime_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
+import 'document_wallet_screen.dart';
 import 'payment_screen.dart';
 
 part 'booking_flow_summary.part.dart';
@@ -289,6 +290,38 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('ดึงข้อมูลโปรไฟล์ให้ผู้เดินทางคนที่ ${index + 1} แล้ว'),
+      ),
+    );
+  }
+
+  Future<void> _fillPassengerFromWallet(int index) async {
+    if (index < 0 || index >= _passengers.length) return;
+    final wallet = await DocumentWallet.load();
+    if ((wallet['name'] as String).isEmpty &&
+        (wallet['phone'] as String).isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('ยังไม่มีข้อมูลใน Wallet กรุณาบันทึกก่อนใช้งาน'),
+          action: SnackBarAction(
+            label: 'เปิด Wallet',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const DocumentWalletScreen()),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    HapticFeedback.selectionClick();
+    setState(() => _passengers[index].applyWallet(wallet));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content:
+            Text('กรอกข้อมูล Wallet ให้ผู้เดินทางคนที่ ${index + 1} แล้ว'),
       ),
     );
   }
@@ -722,6 +755,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           onAddPassenger: _addPassenger,
           onRemovePassenger: _removePassenger,
           onUseProfile: _fillPassengerFromProfile,
+          onUseWallet: _fillPassengerFromWallet,
         ),
         const SizedBox(height: 24),
         if (_addonOptions.isNotEmpty) ...[

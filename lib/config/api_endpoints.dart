@@ -38,6 +38,7 @@ class ApiEndpoints {
   static const bookings = 'bookings';
   static const bookingsGuestLookup = 'bookings/guest-lookup';
   static const bookingsGuestLookupByName = 'bookings/guest-lookup-by-name';
+  static const reviewsUploadImage = 'reviews/upload-image';
   static String booking(String ref) => 'bookings/$ref';
   static String bookingCancel(String ref) => 'bookings/$ref/cancel';
 

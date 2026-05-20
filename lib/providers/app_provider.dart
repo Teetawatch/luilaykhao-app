@@ -827,10 +827,16 @@ class AppProvider extends ChangeNotifier {
     required int bookingId,
     required int rating,
     required String comment,
+    List<String> images = const [],
   }) async {
     await api.post(
       'reviews',
-      body: {'booking_id': bookingId, 'rating': rating, 'comment': comment},
+      body: {
+        'booking_id': bookingId,
+        'rating': rating,
+        'comment': comment,
+        if (images.isNotEmpty) 'images': images,
+      },
     );
     await loadPublicData();
     await loadMyReviews();

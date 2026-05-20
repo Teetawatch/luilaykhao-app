@@ -83,6 +83,13 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 20),
                 ],
 
+                // Pre-trip Briefing Card — confirmed, 0-3 days before departure
+                if (textOf(booking['status']) == 'confirmed' &&
+                    _isPreTripWindow(schedule)) ...[
+                  _PreTripBriefingCard(booking: booking, schedule: schedule),
+                  const SizedBox(height: 20),
+                ],
+
                 // SOS button — confirmed bookings, only during the trip window
                 if (textOf(booking['status']) == 'confirmed' &&
                     _isWithinTripWindow(schedule)) ...[
@@ -615,6 +622,435 @@ class _ReviewDialogState extends State<_ReviewDialog> {
             Navigator.pop(context, (_rating, comment));
           },
           child: const Text('ส่งรีวิว'),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Pre-trip Briefing Card ───────────────────────────────────────────────────
+
+/// True when departure is 0-3 days away (today through departure day inclusive).
+bool _isPreTripWindow(Map<String, dynamic> schedule) {
+  final dep = DateTime.tryParse(textOf(schedule['departure_date']));
+  if (dep == null) return false;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final start = DateTime(dep.year, dep.month, dep.day);
+  final diff = start.difference(today).inDays;
+  return diff >= 0 && diff <= 3;
+}
+
+class _PreTripBriefingCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final Map<String, dynamic> schedule;
+
+  const _PreTripBriefingCard({required this.booking, required this.schedule});
+
+  @override
+  Widget build(BuildContext context) {
+    final trip = asMap(schedule['trip']);
+    final pickupPoint = asMap(booking['pickup_point']);
+    final staffList = asList(booking['assigned_staff']);
+    final preparations = asList(trip['preparations']);
+    final mustKnow = asList(trip['must_know']);
+
+    final depDate = DateTime.tryParse(textOf(schedule['departure_date']));
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final daysLeft = depDate != null
+        ? DateTime(depDate.year, depDate.month, depDate.day)
+            .difference(today)
+            .inDays
+        : null;
+
+    final countdownText = switch (daysLeft) {
+      0 => 'วันนี้วันเดินทาง!',
+      1 => 'พรุ่งนี้วันเดินทาง',
+      _ => 'อีก $daysLeft วัน',
+    };
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: AppTheme.isDark(context)
+              ? [
+                  const Color(0xFF0F4C2A),
+                  const Color(0xFF0A2E1A),
+                ]
+              : [
+                  const Color(0xFFECFDF5),
+                  const Color(0xFFD1FAE5),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.30),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.flight_takeoff_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'เตรียมพร้อมก่อนเดินทาง',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                      Text(
+                        countdownText,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryColor.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    dateText(schedule['departure_date']),
+                    style: GoogleFonts.anuphan(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Divider(
+            height: 1,
+            color: AppTheme.primaryColor.withValues(alpha: 0.15),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Pickup location
+                if (pickupPoint.isNotEmpty) ...[
+                  _BriefingSection(
+                    icon: Icons.location_on_rounded,
+                    title: 'จุดรับ',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          textOf(pickupPoint['pickup_location'],
+                              textOf(pickupPoint['region'])),
+                          style: GoogleFonts.anuphan(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.onSurface(context),
+                            height: 1.4,
+                          ),
+                        ),
+                        if (textOf(pickupPoint['notes']).isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            textOf(pickupPoint['notes']),
+                            style: GoogleFonts.anuphan(
+                              fontSize: 12.5,
+                              color: AppTheme.mutedText(context),
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                        if (textOf(pickupPoint['map_url']).isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          GestureDetector(
+                            onTap: () async {
+                              final uri = Uri.parse(
+                                  textOf(pickupPoint['map_url']));
+                              if (await canLaunchUrl(uri)) {
+                                launchUrl(uri,
+                                    mode: LaunchMode.externalApplication);
+                              }
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.map_outlined,
+                                  size: 14,
+                                  color: AppTheme.primaryColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'เปิดแผนที่',
+                                  style: GoogleFonts.anuphan(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.primaryColor,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: AppTheme.primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
+                // Staff/guide contacts
+                if (staffList.isNotEmpty) ...[
+                  _BriefingSection(
+                    icon: Icons.badge_rounded,
+                    title: 'ไกด์ / สตาฟ',
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: staffList.map((item) {
+                        final s = asMap(item);
+                        final name = textOf(s['nickname']).isNotEmpty
+                            ? textOf(s['nickname'])
+                            : textOf(s['name']);
+                        final phone = textOf(s['phone']);
+                        return GestureDetector(
+                          onTap: phone.isEmpty
+                              ? null
+                              : () async {
+                                  final uri =
+                                      Uri(scheme: 'tel', path: phone);
+                                  if (await canLaunchUrl(uri)) {
+                                    launchUrl(uri);
+                                  }
+                                },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppTheme.surface(context).withValues(
+                                alpha: 0.80,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppTheme.primaryColor
+                                    .withValues(alpha: 0.20),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (phone.isNotEmpty) ...[
+                                  Icon(
+                                    Icons.call_rounded,
+                                    size: 13,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                  const SizedBox(width: 5),
+                                ],
+                                Text(
+                                  phone.isNotEmpty
+                                      ? '$name  $phone'
+                                      : name,
+                                  style: GoogleFonts.anuphan(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: phone.isNotEmpty
+                                        ? AppTheme.primaryColor
+                                        : AppTheme.onSurface(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
+                // Preparations checklist
+                if (preparations.isNotEmpty) ...[
+                  _BriefingSection(
+                    icon: Icons.checklist_rounded,
+                    title: 'สิ่งที่ต้องเตรียม',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: preparations.map((item) {
+                        final text = item is Map
+                            ? textOf(item['text'] ?? item['title'] ?? item)
+                            : item.toString();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 5),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 3),
+                                child: Icon(
+                                  Icons.check_circle_rounded,
+                                  size: 14,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                              const SizedBox(width: 7),
+                              Expanded(
+                                child: Text(
+                                  text,
+                                  style: GoogleFonts.anuphan(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.onSurface(context),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  if (mustKnow.isNotEmpty) const SizedBox(height: 14),
+                ],
+
+                // Must know
+                if (mustKnow.isNotEmpty) ...[
+                  _BriefingSection(
+                    icon: Icons.info_outline_rounded,
+                    title: 'ข้อควรทราบ',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: mustKnow.map((item) {
+                        final text = item is Map
+                            ? textOf(item['text'] ?? item['title'] ?? item)
+                            : item.toString();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 5),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 3),
+                                child: Icon(
+                                  Icons.circle,
+                                  size: 6,
+                                  color: AppTheme.mutedText(context),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  text,
+                                  style: GoogleFonts.anuphan(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.mutedText(context),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+
+                // Fallback when no content is available yet
+                if (pickupPoint.isEmpty &&
+                    staffList.isEmpty &&
+                    preparations.isEmpty &&
+                    mustKnow.isEmpty)
+                  Text(
+                    'ข้อมูลจะถูกอัปเดตโดยทีมงานก่อนวันเดินทาง',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 13,
+                      color: AppTheme.mutedText(context),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BriefingSection extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  const _BriefingSection({
+    required this.icon,
+    required this.title,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 17, color: AppTheme.primaryColor),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.anuphan(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.mutedText(context),
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              child,
+            ],
+          ),
         ),
       ],
     );

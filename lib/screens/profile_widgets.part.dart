@@ -721,6 +721,7 @@ class _QuickAction {
 class _MenuItem {
   final IconData icon;
   final String label;
+  final String? subtitle;
   final String? trailing;
   final Widget? trailingWidget;
   final bool showChevron;
@@ -729,6 +730,7 @@ class _MenuItem {
   const _MenuItem({
     required this.icon,
     required this.label,
+    this.subtitle,
     this.trailing,
     this.trailingWidget,
     this.showChevron = true,

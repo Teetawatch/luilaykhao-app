@@ -111,6 +111,30 @@ class _PassengerControllers {
   final healthNotes = TextEditingController();
   final halalFood = ValueNotifier<bool>(false);
 
+  void applyWallet(Map<String, dynamic> wallet) {
+    final t = (wallet['title'] as String? ?? '').trim();
+    if (t.isNotEmpty) title.text = t;
+    final n = (wallet['name'] as String? ?? '').trim();
+    if (n.isNotEmpty) name.text = n;
+    final nn = (wallet['nickname'] as String? ?? '').trim();
+    if (nn.isNotEmpty) nickname.text = nn;
+    final p = (wallet['phone'] as String? ?? '').trim();
+    if (p.isNotEmpty) phone.text = p;
+    final id = (wallet['id_card'] as String? ?? '').trim();
+    if (id.isNotEmpty) idCard.text = id;
+    final bg = (wallet['blood_group'] as String? ?? '').trim();
+    if (bg.isNotEmpty) bloodGroup.text = bg;
+    final ec = (wallet['emergency_contact'] as String? ?? '').trim();
+    if (ec.isNotEmpty) emergencyContact.text = ec;
+    final ep = (wallet['emergency_phone'] as String? ?? '').trim();
+    if (ep.isNotEmpty) emergencyPhone.text = ep;
+    final al = (wallet['allergies'] as String? ?? '').trim();
+    if (al.isNotEmpty) allergies.text = al;
+    final hn = (wallet['health_notes'] as String? ?? '').trim();
+    if (hn.isNotEmpty) healthNotes.text = hn;
+    halalFood.value = wallet['halal_food'] == true;
+  }
+
   void applyProfile(Map<String, dynamic> user) {
     title.text = _profileTitle(user['title']);
     name.text = textOf(user['name']);

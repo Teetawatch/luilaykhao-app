@@ -16,6 +16,7 @@ import '../theme/app_theme.dart';
 import '../widgets/support_shortcuts.dart';
 import '../widgets/travel_widgets.dart';
 import 'booking_lookup_screen.dart';
+import 'document_wallet_screen.dart';
 import 'notification_preferences_screen.dart';
 import 'staff_check_in_screen.dart' show StaffCheckInScreen;
 import 'wishlist_screen.dart';
@@ -703,6 +704,12 @@ class AccountMenu extends StatelessWidget {
           label: 'วิธีการชำระเงิน',
           onTap: () => _pushPremium(context, const PaymentMethodsScreen()),
         ),
+        _MenuItem(
+          icon: Icons.wallet_rounded,
+          label: 'Document Wallet',
+          subtitle: 'ข้อมูลผู้เดินทางสำหรับ auto-fill',
+          onTap: () => _pushPremium(context, const DocumentWalletScreen()),
+        ),
       ],
     );
   }
@@ -974,15 +981,32 @@ class _MenuTile extends StatelessWidget {
               Icon(item.icon, color: colorScheme.primary, size: 23),
               const SizedBox(width: 16),
               Expanded(
-                child: Text(
-                  item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    if (item.subtitle != null)
+                      Text(
+                        item.subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               if (item.trailing != null) ...[
