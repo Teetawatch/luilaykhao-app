@@ -163,12 +163,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               value: _selectedBloodGroup,
                               hint: 'กรุ๊ปเลือด',
                               icon: Icons.bloodtype_outlined,
-                              items: const [
-                                'A+', 'A-', 'B+', 'B-',
-                                'AB+', 'AB-', 'O+', 'O-', 'ไม่ทราบ',
-                              ],
+                              items: const ['A', 'B', 'AB', 'O'],
+                              required: true,
                               onChanged: (v) =>
                                   setState(() => _selectedBloodGroup = v),
+                              validator: (v) =>
+                                  v == null ? 'กรุณาเลือกกรุ๊ปเลือด' : null,
                             ),
                           ),
                         ],
@@ -179,12 +179,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         hint: 'เลขบัตรประชาชน (13 หลัก)',
                         icon: Icons.credit_card_rounded,
                         keyboardType: TextInputType.number,
+                        required: true,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(13),
                         ],
                         validator: (v) {
-                          if (v != null && v.isNotEmpty && v.length != 13) {
+                          if (v == null || v.isEmpty) {
+                            return 'กรุณากรอกเลขบัตรประชาชน';
+                          }
+                          if (v.length != 13) {
                             return 'เลขบัตรประชาชนต้องมี 13 หลัก';
                           }
                           return null;
@@ -221,10 +225,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         hint: 'เบอร์โทรศัพท์',
                         icon: Icons.phone_android_rounded,
                         keyboardType: TextInputType.phone,
+                        required: true,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-                          LengthLimitingTextInputFormatter(20),
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
                         ],
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'กรุณากรอกเบอร์โทรศัพท์';
+                          }
+                          if (v.length != 10) {
+                            return 'เบอร์โทรศัพท์ต้องมี 10 หลัก';
+                          }
+                          return null;
+                        },
                       ),
 
                       const SizedBox(height: 24),
