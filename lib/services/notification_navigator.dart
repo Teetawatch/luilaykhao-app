@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../main.dart' show appNavigatorKey;
 import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
+import '../screens/chat_screen.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/sos_alert_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
@@ -35,6 +36,8 @@ class NotificationNavigator {
         _switchTab(2);
       case 'sos_alert':
         _openSosAlert(data);
+      case 'chat_message':
+        _openChat(data);
       case 'promo':
         _switchTab(1);
       case 'loyalty':
@@ -54,6 +57,19 @@ class NotificationNavigator {
       return;
     }
     _switchTab(2);
+  }
+
+  static void _openChat(Map<String, dynamic> data) {
+    final nav = _nav;
+    if (nav == null) return;
+    final id = int.tryParse('${data['schedule_id']}') ?? 0;
+    if (id == 0) {
+      _openNotifications();
+      return;
+    }
+    nav.push(
+      MaterialPageRoute(builder: (_) => ChatScreen(scheduleId: id)),
+    );
   }
 
   static void _openSosAlert(Map<String, dynamic> data) {

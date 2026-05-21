@@ -724,6 +724,84 @@ class AppProvider extends ChangeNotifier {
     await AnalyticsService.instance.logBookingCancelled(ref);
   }
 
+  /// ย้ายการจองไปอีกรอบเดินทางของทริปเดียวกัน (คงราคาเดิม เลือกที่นั่งใหม่)
+  Future<Map<String, dynamic>> rescheduleBooking(
+    String ref, {
+    required int targetScheduleId,
+    List<String> seatIds = const [],
+    int? pickupPointId,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.bookingReschedule(ref),
+      body: {
+        'target_schedule_id': targetScheduleId,
+        if (seatIds.isNotEmpty) 'seat_ids': seatIds,
+        'pickup_point_id': ?pickupPointId,
+      },
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// เปลี่ยนจุดรับของการจอง (คงราคาเดิม)
+  Future<Map<String, dynamic>> changeBookingPickup(
+    String ref, {
+    required int pickupPointId,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.bookingChangePickup(ref),
+      body: {'pickup_point_id': pickupPointId},
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  // ─── Group chat ─────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> chatMessages(
+    int scheduleId, {
+    int? beforeId,
+  }) async {
+    final response = await api.get(
+      ApiEndpoints.chatMessages(scheduleId),
+      query: {'per_page': 30, 'before_id': ?beforeId},
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  Future<Map<String, dynamic>> sendChatMessage(
+    int scheduleId,
+    String body,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.chatMessages(scheduleId),
+      body: {'body': body},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<void> markChatRead(int scheduleId) async {
+    await api.post(ApiEndpoints.chatRead(scheduleId));
+  }
+
+  Future<int> chatUnreadCount(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.chatUnreadCount(scheduleId));
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    return int.tryParse('${data['count']}') ?? 0;
+  }
+
+  /// Subscribe to a schedule's chat channel. Returns a disposer.
+  Future<VoidCallback> subscribeChat(
+    int scheduleId,
+    RealtimeEventHandler handler,
+  ) {
+    return realtime.subscribe(
+      channel: 'private-chat.schedule.$scheduleId',
+      event: 'chat.message',
+      handler: handler,
+    );
+  }
+
   Future<Map<String, dynamic>> paymentStatus(String ref) async {
     final response = await api.get('payments/$ref');
     return Map<String, dynamic>.from(api.data(response) as Map);

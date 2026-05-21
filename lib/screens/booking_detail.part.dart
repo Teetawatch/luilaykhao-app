@@ -131,7 +131,33 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     _Chip(money(booking['total_amount'])),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+
+                // Group chat — available to members of active bookings
+                if (textOf(booking['status']) == 'pending' ||
+                    textOf(booking['status']) == 'confirmed') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final id = int.tryParse(textOf(schedule['id'])) ?? 0;
+                        if (id == 0) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(
+                              scheduleId: id,
+                              title: textOf(trip['title'], 'แชทกลุ่มทริป'),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.forum_rounded),
+                      label: const Text('แชทกลุ่มทริป'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Passengers section
                 const _SheetSectionTitle(
@@ -388,6 +414,45 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     ),
                   ),
                 ],
+
+                // Booking modification — เปลี่ยนวันเดินทาง / จุดรับ (ในช่วงที่อนุญาต)
+                if (_asBool(booking['can_modify'])) ...[
+                  const SizedBox(height: 8),
+                  const Divider(height: 28),
+                  const _SheetSectionTitle(
+                    icon: Icons.edit_calendar_rounded,
+                    title: 'แก้ไขการจอง',
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'เปลี่ยนได้ถึงก่อนวันเดินทาง 1 วัน · คงราคาเดิม',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 12,
+                      color: AppTheme.mutedText(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openReschedule(context, booking),
+                      icon: const Icon(Icons.event_repeat_rounded),
+                      label: const Text('เปลี่ยนวันเดินทาง'),
+                    ),
+                  ),
+                  if (asList(schedule['pickup_points']).isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openChangePickup(context, booking),
+                        icon: const Icon(Icons.location_on_rounded),
+                        label: const Text('เปลี่ยนจุดรับ'),
+                      ),
+                    ),
+                  ],
+                ],
               ],
             ),
           );
@@ -419,6 +484,44 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
       }
     } catch (e) {
       if (context.mounted) showSnack(context, e.toString());
+    }
+  }
+
+  void _reload() {
+    setState(() {
+      _future = context.read<AppProvider>().booking(widget.bookingRef);
+    });
+  }
+
+  Future<void> _openReschedule(
+    BuildContext context,
+    Map<String, dynamic> booking,
+  ) async {
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RescheduleSheet(booking: booking),
+    );
+    if (changed == true && mounted) {
+      _reload();
+      if (context.mounted) showSnack(context, 'เปลี่ยนวันเดินทางสำเร็จ');
+    }
+  }
+
+  Future<void> _openChangePickup(
+    BuildContext context,
+    Map<String, dynamic> booking,
+  ) async {
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ChangePickupSheet(booking: booking),
+    );
+    if (changed == true && mounted) {
+      _reload();
+      if (context.mounted) showSnack(context, 'เปลี่ยนจุดรับสำเร็จ');
     }
   }
 }
@@ -1681,6 +1784,566 @@ class _StaffAvatar extends StatelessWidget {
             color: Colors.white,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── Reschedule sheet (เปลี่ยนวันเดินทาง) ──────────────────────────────────────
+
+class _RescheduleSheet extends StatefulWidget {
+  final Map<String, dynamic> booking;
+
+  const _RescheduleSheet({required this.booking});
+
+  @override
+  State<_RescheduleSheet> createState() => _RescheduleSheetState();
+}
+
+class _RescheduleSheetState extends State<_RescheduleSheet> {
+  late Future<List<dynamic>> _schedulesFuture;
+  Map<String, dynamic>? _selected;
+  Map<String, dynamic>? _seatsData;
+  bool _loadingSeats = false;
+  bool _submitting = false;
+  final Set<String> _selectedSeats = {};
+
+  Map<String, dynamic> get _schedule => asMap(widget.booking['schedule']);
+  String get _tripSlug => textOf(asMap(_schedule['trip'])['slug']);
+  int get _currentScheduleId => int.tryParse(textOf(_schedule['id'])) ?? 0;
+  String get _ref => textOf(widget.booking['booking_ref']);
+  int get _passengerCount => asList(widget.booking['passengers']).length;
+  bool get _isSeatBased => asList(widget.booking['seats']).isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedulesFuture = context.read<AppProvider>().schedules(_tripSlug);
+  }
+
+  bool get _canSubmit {
+    if (_submitting || _selected == null) return false;
+    if (_isSeatBased) return _selectedSeats.length == _passengerCount;
+    return true;
+  }
+
+  Future<void> _selectSchedule(Map<String, dynamic> sched) async {
+    setState(() {
+      _selected = sched;
+      _seatsData = null;
+      _selectedSeats.clear();
+    });
+    if (_isSeatBased) {
+      final id = int.tryParse(textOf(sched['id'])) ?? 0;
+      setState(() => _loadingSeats = true);
+      try {
+        final data = await context.read<AppProvider>().seats(id);
+        if (mounted) setState(() => _seatsData = data);
+      } catch (e) {
+        if (mounted) showSnack(context, e.toString());
+      } finally {
+        if (mounted) setState(() => _loadingSeats = false);
+      }
+    }
+  }
+
+  void _toggleSeat(String id) {
+    setState(() {
+      if (_selectedSeats.contains(id)) {
+        _selectedSeats.remove(id);
+      } else if (_selectedSeats.length < _passengerCount) {
+        _selectedSeats.add(id);
+      }
+    });
+  }
+
+  Future<void> _submit() async {
+    final target = _selected;
+    if (target == null) return;
+    setState(() => _submitting = true);
+    try {
+      await context.read<AppProvider>().rescheduleBooking(
+            _ref,
+            targetScheduleId: int.tryParse(textOf(target['id'])) ?? 0,
+            seatIds: _selectedSeats.toList(),
+          );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _submitting = false);
+        showSnack(context, e.toString());
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.background(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+      ),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.border(context),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'เปลี่ยนวันเดินทาง',
+            style: GoogleFonts.anuphan(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.onSurface(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'เลือกรอบเดินทางใหม่ของทริปเดียวกัน · คงราคาเดิม',
+            style: GoogleFonts.anuphan(
+              fontSize: 12.5,
+              color: AppTheme.mutedText(context),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FutureBuilder<List<dynamic>>(
+                    future: _schedulesFuture,
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final options = snapshot.data!
+                          .map((e) => asMap(e))
+                          .where((s) =>
+                              (int.tryParse(textOf(s['id'])) ?? 0) !=
+                              _currentScheduleId)
+                          .toList();
+                      if (options.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          child: Text(
+                            'ไม่มีรอบเดินทางอื่นให้เลือกในขณะนี้',
+                            style: GoogleFonts.anuphan(
+                              fontSize: 13,
+                              color: AppTheme.mutedText(context),
+                            ),
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: options.map((sched) {
+                          final id = textOf(sched['id']);
+                          final selectedId = textOf(_selected?['id']);
+                          final selected = id == selectedId && id.isNotEmpty;
+                          final avail =
+                              int.tryParse(textOf(sched['available_seats'])) ??
+                                  0;
+                          final enough = avail >= _passengerCount;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: enough
+                                  ? () => _selectSchedule(sched)
+                                  : null,
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? AppTheme.primaryColor
+                                          .withValues(alpha: 0.08)
+                                      : AppTheme.subtleSurface(context),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: selected
+                                        ? AppTheme.primaryColor
+                                        : AppTheme.border(context)
+                                            .withValues(alpha: 0.6),
+                                    width: selected ? 2 : 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      selected
+                                          ? Icons.radio_button_checked_rounded
+                                          : Icons
+                                              .radio_button_unchecked_rounded,
+                                      size: 20,
+                                      color: selected
+                                          ? AppTheme.primaryColor
+                                          : AppTheme.mutedText(context),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            dateText(sched['departure_date']),
+                                            style: GoogleFonts.anuphan(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w900,
+                                              color:
+                                                  AppTheme.onSurface(context),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            enough
+                                                ? 'ว่าง $avail ที่นั่ง'
+                                                : 'ที่นั่งไม่พอ (ว่าง $avail)',
+                                            style: GoogleFonts.anuphan(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: enough
+                                                  ? AppTheme.mutedText(context)
+                                                  : AppTheme.warningColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  if (_selected != null && _isSeatBased) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'เลือกที่นั่งใหม่ (${_selectedSeats.length}/$_passengerCount)',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_loadingSeats)
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: asList(_seatsData?['seats']).map((item) {
+                          final seat = asMap(item);
+                          final id = textOf(seat['id']);
+                          final label = textOf(seat['label'], id);
+                          final available =
+                              textOf(seat['status']) == 'available';
+                          final picked = _selectedSeats.contains(id);
+                          return GestureDetector(
+                            onTap: available ? () => _toggleSeat(id) : null,
+                            child: Container(
+                              width: 52,
+                              height: 44,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: picked
+                                    ? AppTheme.primaryColor
+                                    : available
+                                        ? AppTheme.surface(context)
+                                        : AppTheme.border(context)
+                                            .withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: picked
+                                      ? AppTheme.primaryColor
+                                      : AppTheme.border(context),
+                                ),
+                              ),
+                              child: Text(
+                                label,
+                                style: GoogleFonts.anuphan(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: picked
+                                      ? Colors.white
+                                      : available
+                                          ? AppTheme.onSurface(context)
+                                          : AppTheme.mutedText(context),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _canSubmit ? _submit : null,
+              icon: _submitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check_rounded),
+              label: const Text('ยืนยันเปลี่ยนวันเดินทาง'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Change pickup sheet (เปลี่ยนจุดรับ) ───────────────────────────────────────
+
+class _ChangePickupSheet extends StatefulWidget {
+  final Map<String, dynamic> booking;
+
+  const _ChangePickupSheet({required this.booking});
+
+  @override
+  State<_ChangePickupSheet> createState() => _ChangePickupSheetState();
+}
+
+class _ChangePickupSheetState extends State<_ChangePickupSheet> {
+  int? _selectedId;
+  bool _submitting = false;
+
+  Map<String, dynamic> get _schedule => asMap(widget.booking['schedule']);
+  String get _ref => textOf(widget.booking['booking_ref']);
+
+  @override
+  void initState() {
+    super.initState();
+    final current = asMap(widget.booking['pickup_point']);
+    _selectedId = int.tryParse(textOf(current['id']));
+  }
+
+  Future<void> _submit() async {
+    final id = _selectedId;
+    if (id == null) return;
+    setState(() => _submitting = true);
+    try {
+      await context
+          .read<AppProvider>()
+          .changeBookingPickup(_ref, pickupPointId: id);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _submitting = false);
+        showSnack(context, e.toString());
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final points = asList(_schedule['pickup_points']);
+    final currentId = int.tryParse(textOf(asMap(widget.booking['pickup_point'])['id']));
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.background(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+      ),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.border(context),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'เปลี่ยนจุดรับ',
+            style: GoogleFonts.anuphan(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.onSurface(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'เลือกจุดรับใหม่สำหรับรอบเดินทางนี้ · คงราคาเดิม',
+            style: GoogleFonts.anuphan(
+              fontSize: 12.5,
+              color: AppTheme.mutedText(context),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                children: points.map((item) {
+                  final p = asMap(item);
+                  final id = int.tryParse(textOf(p['id']));
+                  final selected = id == _selectedId;
+                  final isCurrent = id == currentId;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: id == null
+                          ? null
+                          : () => setState(() => _selectedId = id),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? AppTheme.primaryColor.withValues(alpha: 0.08)
+                              : AppTheme.subtleSurface(context),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: selected
+                                ? AppTheme.primaryColor
+                                : AppTheme.border(context)
+                                    .withValues(alpha: 0.6),
+                            width: selected ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              selected
+                                  ? Icons.radio_button_checked_rounded
+                                  : Icons.radio_button_unchecked_rounded,
+                              size: 20,
+                              color: selected
+                                  ? AppTheme.primaryColor
+                                  : AppTheme.mutedText(context),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          textOf(p['pickup_location'],
+                                              textOf(p['region_label'])),
+                                          style: GoogleFonts.anuphan(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w900,
+                                            color: AppTheme.onSurface(context),
+                                          ),
+                                        ),
+                                      ),
+                                      if (isCurrent)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.mutedText(context)
+                                                .withValues(alpha: 0.12),
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                          ),
+                                          child: Text(
+                                            'ปัจจุบัน',
+                                            style: GoogleFonts.anuphan(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppTheme.mutedText(context),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  if (textOf(p['region_label']).isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      textOf(p['region_label']),
+                                      style: GoogleFonts.anuphan(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.mutedText(context),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: (_selectedId == null ||
+                      _selectedId == currentId ||
+                      _submitting)
+                  ? null
+                  : _submit,
+              icon: _submitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check_rounded),
+              label: const Text('ยืนยันเปลี่ยนจุดรับ'),
+            ),
+          ),
+        ],
       ),
     );
   }

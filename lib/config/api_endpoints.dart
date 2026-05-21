@@ -27,6 +27,13 @@ class ApiEndpoints {
   static const promotionsActive = 'promotions/active';
   static const promotionsValidate = 'promotions/validate';
 
+  // Chat (group chat per schedule)
+  static String chatMessages(int scheduleId) =>
+      'schedules/$scheduleId/chat/messages';
+  static String chatRead(int scheduleId) => 'schedules/$scheduleId/chat/read';
+  static String chatUnreadCount(int scheduleId) =>
+      'schedules/$scheduleId/chat/unread-count';
+
   // Schedules / seats
   static String scheduleSeats(int scheduleId) => 'schedules/$scheduleId/seats';
   static String scheduleSeatLock(int scheduleId) =>
@@ -41,6 +48,8 @@ class ApiEndpoints {
   static const reviewsUploadImage = 'reviews/upload-image';
   static String booking(String ref) => 'bookings/$ref';
   static String bookingCancel(String ref) => 'bookings/$ref/cancel';
+  static String bookingReschedule(String ref) => 'bookings/$ref/reschedule';
+  static String bookingChangePickup(String ref) => 'bookings/$ref/change-pickup';
 
   // Payments
   static const paymentsCharge = 'payments/charge';
