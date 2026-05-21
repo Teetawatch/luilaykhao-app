@@ -42,6 +42,7 @@ class _StatusChip extends StatelessWidget {
     final label = switch (status) {
       'confirmed' => 'ยืนยันแล้ว',
       'pending' => 'รอชำระ',
+      'paid' => 'ชำระแล้ว',
       'cancelled' => 'ยกเลิก',
       'completed' => 'จบทริป',
       _ => status,

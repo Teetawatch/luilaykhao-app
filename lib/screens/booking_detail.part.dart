@@ -136,26 +136,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 // Group chat — available to members of active bookings
                 if (textOf(booking['status']) == 'pending' ||
                     textOf(booking['status']) == 'confirmed') ...[
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        final id = int.tryParse(textOf(schedule['id'])) ?? 0;
-                        if (id == 0) return;
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatScreen(
-                              scheduleId: id,
-                              title: textOf(trip['title'], 'แชทกลุ่มทริป'),
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.forum_rounded),
-                      label: const Text('แชทกลุ่มทริป'),
-                    ),
-                  ),
+                  _TripChatButton(booking: booking),
                   const SizedBox(height: 16),
                 ],
 

@@ -466,6 +466,201 @@ class _ActionChipButton extends StatelessWidget {
   }
 }
 
+/// Prominent, eye-catching entry point into a trip's group chat. Surfaced on
+/// the reservation card and inside the detail sheet.
+class _TripChatButton extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _TripChatButton({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final schedule = asMap(booking['schedule']);
+    final trip = asMap(schedule['trip']);
+    final id = int.tryParse(textOf(schedule['id'])) ?? 0;
+    if (id == 0) return const SizedBox.shrink();
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(
+              scheduleId: id,
+              title: textOf(trip['title'], 'แชทกลุ่มทริป'),
+            ),
+          ),
+        ),
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primaryColor, AppTheme.accentColor],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryColor.withValues(alpha: 0.30),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.forum_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'แชทกลุ่มทริป',
+                      style: GoogleFonts.anuphan(
+                        color: Colors.white,
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'พูดคุยกับเพื่อนร่วมทริปและทีมงาน',
+                      style: GoogleFonts.anuphan(
+                        color: Colors.white.withValues(alpha: 0.88),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Surfaces a booking's key actions directly on the reservation card so the
+/// most-used flows are reachable without opening the detail sheet. Each item
+/// is gated by booking status / trip-time window.
+class _BookingActionDeck extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _BookingActionDeck({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = textOf(booking['status']);
+    final schedule = asMap(booking['schedule']);
+    final isActive = status == 'pending' || status == 'confirmed';
+    final confirmed = status == 'confirmed';
+    final showBriefing = confirmed && _isPreTripWindow(schedule);
+    final showSos = confirmed && _isWithinTripWindow(schedule);
+    final canModify = _asBool(booking['can_modify']);
+    final hasPickupPoints = asList(schedule['pickup_points']).isNotEmpty;
+
+    final items = <Widget>[
+      if (showBriefing)
+        _PreTripBriefingCard(booking: booking, schedule: schedule),
+      if (showSos)
+        _SosButton(scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0),
+      if (isActive) _TripChatButton(booking: booking),
+      if (canModify)
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ActionChipButton(
+              icon: Icons.event_repeat_rounded,
+              label: 'เปลี่ยนวันเดินทาง',
+              onPressed: () => _openReschedule(context),
+            ),
+            if (hasPickupPoints)
+              _ActionChipButton(
+                icon: Icons.location_on_rounded,
+                label: 'เปลี่ยนจุดรับ',
+                onPressed: () => _openChangePickup(context),
+              ),
+          ],
+        ),
+    ];
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            items[i],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openReschedule(BuildContext context) async {
+    final app = context.read<AppProvider>();
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RescheduleSheet(booking: booking),
+    );
+    if (changed == true && context.mounted) {
+      await app.loadAccountData();
+      if (context.mounted) showSnack(context, 'เปลี่ยนวันเดินทางสำเร็จ');
+    }
+  }
+
+  Future<void> _openChangePickup(BuildContext context) async {
+    final app = context.read<AppProvider>();
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ChangePickupSheet(booking: booking),
+    );
+    if (changed == true && context.mounted) {
+      await app.loadAccountData();
+      if (context.mounted) showSnack(context, 'เปลี่ยนจุดรับสำเร็จ');
+    }
+  }
+}
+
 class EmptyStateWidget extends StatelessWidget {
   const EmptyStateWidget({super.key});
 

@@ -793,6 +793,19 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  Future<Map<String, dynamic>> sendChatImage(
+    int scheduleId,
+    String imagePath, {
+    String? body,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.chatMessages(scheduleId),
+      fields: {if (body != null && body.isNotEmpty) 'body': body},
+      files: {'image': imagePath},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   Future<void> markChatRead(int scheduleId) async {
     await api.post(ApiEndpoints.chatRead(scheduleId));
   }

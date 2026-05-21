@@ -663,7 +663,8 @@ class ReservationCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
+                  _BookingActionDeck(booking: booking),
                   BookingQuickActions(
                     booking: booking,
                     onDetail: () => showModalBottomSheet(

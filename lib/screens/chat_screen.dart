@@ -1,7 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -21,6 +24,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [];
   final _input = TextEditingController();
   final _scroll = ScrollController();
+  final _picker = ImagePicker();
 
   bool _loading = true;
   bool _loadingMore = false;
@@ -130,6 +134,80 @@ class _ChatScreenState extends State<ChatScreen> {
         SnackBar(content: Text(e.toString())),
       );
     }
+  }
+
+  Future<void> _pickAndSendImage(ImageSource source) async {
+    if (_sending) return;
+    final XFile? picked;
+    try {
+      picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        imageQuality: 80,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ไม่สามารถเปิดรูปภาพได้')),
+      );
+      return;
+    }
+    if (picked == null || !mounted) return;
+
+    setState(() => _sending = true);
+    final app = context.read<AppProvider>();
+    try {
+      final message = await app.sendChatImage(widget.scheduleId, picked.path);
+      if (!mounted) return;
+      setState(() {
+        _messages.add(message);
+        _sending = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  void _showImageSourceSheet() {
+    if (_sending) return;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_rounded),
+              title: Text('ถ่ายรูป', style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickAndSendImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: Text('เลือกจากคลังรูปภาพ',
+                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickAndSendImage(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   void _onScroll() {
@@ -258,7 +336,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
           border: Border(
@@ -268,6 +346,16 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            IconButton(
+              onPressed: _sending ? null : _showImageSourceSheet,
+              icon: Icon(
+                Icons.add_photo_alternate_rounded,
+                color: _sending
+                    ? AppTheme.mutedText(context)
+                    : AppTheme.primaryColor,
+              ),
+              tooltip: 'ส่งรูปภาพ',
+            ),
             Expanded(
               child: TextField(
                 controller: _input,
@@ -352,6 +440,12 @@ class _MessageBubble extends StatelessWidget {
     final author = (user['nickname']?.toString().isNotEmpty ?? false)
         ? user['nickname'].toString()
         : (user['name']?.toString() ?? 'ผู้ใช้');
+    final avatarUrl = ApiConfig.mediaUrl(user['avatar_url']);
+
+    final body = message['body']?.toString() ?? '';
+    final imageUrl = ApiConfig.mediaUrl(message['image_url']);
+    final hasText = body.isNotEmpty;
+    final hasImage = imageUrl.isNotEmpty;
 
     final bg = isMine ? AppTheme.primaryColor : AppTheme.surface(context);
     final fg = isMine ? Colors.white : AppTheme.onSurface(context);
@@ -361,14 +455,20 @@ class _MessageBubble extends StatelessWidget {
       child: Row(
         mainAxisAlignment:
             isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (!isMine) ...[
+            _Avatar(url: avatarUrl, name: author),
+            const SizedBox(width: 8),
+          ],
           ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: MediaQuery.sizeOf(context).width * 0.74,
             ),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: hasImage && !hasText
+                  ? const EdgeInsets.all(4)
+                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.circular(16),
@@ -380,39 +480,56 @@ class _MessageBubble extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (!isMine) ...[
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          author,
-                          style: GoogleFonts.anuphan(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.onSurface(context),
+                    Padding(
+                      padding: hasImage && !hasText
+                          ? const EdgeInsets.fromLTRB(8, 6, 8, 4)
+                          : EdgeInsets.zero,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              author,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.anuphan(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w900,
+                                color: AppTheme.onSurface(context),
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        _RoleTag(role: role),
-                      ],
+                          const SizedBox(width: 6),
+                          _RoleTag(role: role),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 3),
                   ],
-                  Text(
-                    message['body']?.toString() ?? '',
-                    style: GoogleFonts.anuphan(
-                      fontSize: 14,
-                      height: 1.4,
-                      color: fg,
+                  if (hasImage) ...[
+                    _ChatImage(url: imageUrl),
+                    if (hasText) const SizedBox(height: 6),
+                  ],
+                  if (hasText)
+                    Text(
+                      body,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 14,
+                        height: 1.4,
+                        color: fg,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    _timeText(),
-                    style: GoogleFonts.anuphan(
-                      fontSize: 10,
-                      color: isMine
-                          ? Colors.white.withValues(alpha: 0.75)
-                          : AppTheme.mutedText(context),
+                  Padding(
+                    padding: hasImage && !hasText
+                        ? const EdgeInsets.fromLTRB(8, 4, 8, 6)
+                        : const EdgeInsets.only(top: 3),
+                    child: Text(
+                      _timeText(),
+                      style: GoogleFonts.anuphan(
+                        fontSize: 10,
+                        color: isMine
+                            ? Colors.white.withValues(alpha: 0.75)
+                            : AppTheme.mutedText(context),
+                      ),
                     ),
                   ),
                 ],
@@ -420,6 +537,128 @@ class _MessageBubble extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  final String url;
+  final String name;
+
+  const _Avatar({required this.url, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+    final fallback = Container(
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
+      color: AppTheme.primaryColor.withValues(alpha: 0.12),
+      child: Text(
+        initial,
+        style: GoogleFonts.anuphan(
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+          color: AppTheme.primaryColor,
+        ),
+      ),
+    );
+    return ClipOval(
+      child: SizedBox(
+        width: 32,
+        height: 32,
+        child: url.isEmpty
+            ? fallback
+            : CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => fallback,
+                errorWidget: (_, _, _) => fallback,
+              ),
+      ),
+    );
+  }
+}
+
+class _ChatImage extends StatelessWidget {
+  final String url;
+
+  const _ChatImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => _ImageViewer(url: url)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 240),
+          child: CachedNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.cover,
+            placeholder: (_, _) => Container(
+              width: 200,
+              height: 150,
+              color: AppTheme.subtleSurface(context),
+              alignment: Alignment.center,
+              child: const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            errorWidget: (_, _, _) => Container(
+              width: 200,
+              height: 120,
+              color: AppTheme.subtleSurface(context),
+              alignment: Alignment.center,
+              child: Icon(Icons.broken_image_rounded,
+                  color: AppTheme.mutedText(context)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageViewer extends StatelessWidget {
+  final String url;
+
+  const _ImageViewer({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 4,
+          child: CachedNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.contain,
+            placeholder: (_, _) => const SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            errorWidget: (_, _, _) => const Icon(
+              Icons.broken_image_rounded,
+              color: Colors.white54,
+              size: 48,
+            ),
+          ),
+        ),
       ),
     );
   }
