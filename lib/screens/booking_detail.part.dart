@@ -1189,13 +1189,13 @@ class _SosButtonState extends State<_SosButton> {
   Future<void> _onPressed() async {
     if (_sending || widget.scheduleId == 0) return;
 
-    final message = await _confirmDialog();
-    if (message == null || !mounted) return;
+    final result = await _confirmDialog();
+    if (result == null || !mounted) return;
 
-    await _dispatchSos(message);
+    await _dispatchSos(result.message, result.photoPath);
   }
 
-  Future<void> _dispatchSos(String message) async {
+  Future<void> _dispatchSos(String message, String? photoPath) async {
     if (_sending) return;
 
     setState(() => _sending = true);
@@ -1216,6 +1216,7 @@ class _SosButtonState extends State<_SosButton> {
         latitude: lat,
         longitude: lng,
         message: message.isEmpty ? null : message,
+        photoPath: photoPath,
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
@@ -1229,7 +1230,7 @@ class _SosButtonState extends State<_SosButton> {
           duration: const Duration(seconds: 8),
           action: SnackBarAction(
             label: 'ลองอีกครั้ง',
-            onPressed: () => _dispatchSos(message),
+            onPressed: () => _dispatchSos(message, photoPath),
           ),
         ),
       );
@@ -1238,8 +1239,8 @@ class _SosButtonState extends State<_SosButton> {
     }
   }
 
-  Future<String?> _confirmDialog() {
-    return showModalBottomSheet<String>(
+  Future<_SosSheetResult?> _confirmDialog() {
+    return showModalBottomSheet<_SosSheetResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1379,6 +1380,14 @@ class _SosOption {
   const _SosOption(this.value, this.label, this.emoji);
 }
 
+/// What the SOS sheet returns when the user confirms: the chosen message plus
+/// an optional photo (a local file path) to attach.
+class _SosSheetResult {
+  final String message;
+  final String? photoPath;
+  const _SosSheetResult({required this.message, this.photoPath});
+}
+
 class _SosMessageSheet extends StatefulWidget {
   const _SosMessageSheet();
 
@@ -1399,6 +1408,9 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
 
   String? _selected;
   final _controller = TextEditingController();
+  final _picker = ImagePicker();
+  String? _photoPath;
+  bool _pickingPhoto = false;
 
   @override
   void dispose() {
@@ -1415,20 +1427,86 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
   String get _message =>
       _selected == 'other' ? _controller.text.trim() : (_selected ?? '');
 
+  Future<void> _pickPhoto(ImageSource source) async {
+    if (_pickingPhoto) return;
+    setState(() => _pickingPhoto = true);
+    try {
+      // Keep the file small so it uploads on a weak (3G) connection — the photo
+      // only needs to show the surroundings, not be print-quality.
+      final image = await _picker.pickImage(
+        source: source,
+        imageQuality: 45,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+      if (image == null || !mounted) return;
+      setState(() => _photoPath = image.path);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ไม่สามารถเปิดรูปได้')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _pickingPhoto = false);
+    }
+  }
+
+  Future<void> _choosePhotoSource() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined, color: _sosRed),
+                title: Text('ถ่ายรูป',
+                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined, color: _sosRed),
+                title: Text('เลือกจากคลังภาพ',
+                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (source != null) await _pickPhoto(source);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Padding(
+      // Lift the whole sheet above the keyboard so the send button stays
+      // reachable when the "อื่น ๆ" text field is focused.
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           // Handle bar
           Center(
             child: Container(
@@ -1575,6 +1653,69 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
             ),
           ),
 
+          const SizedBox(height: 14),
+
+          // Optional photo attachment — helps responders see the surroundings.
+          if (_photoPath == null)
+            OutlinedButton.icon(
+              onPressed: _pickingPhoto ? null : _choosePhotoSource,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: BorderSide(color: Colors.grey.shade300),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                minimumSize: const Size.fromHeight(0),
+              ),
+              icon: _pickingPhoto
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(Icons.add_a_photo_outlined,
+                      size: 19, color: Colors.grey.shade700),
+              label: Text(
+                'แนบรูปสถานที่ (ไม่บังคับ)',
+                style: GoogleFonts.anuphan(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            )
+          else
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                children: [
+                  Image.file(
+                    File(_photoPath!),
+                    width: double.infinity,
+                    height: 160,
+                    fit: BoxFit.cover,
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Material(
+                      color: Colors.black54,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => setState(() => _photoPath = null),
+                        child: const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: Icon(Icons.close_rounded,
+                              size: 18, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           const SizedBox(height: 20),
 
           // Buttons
@@ -1604,7 +1745,13 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                 flex: 2,
                 child: FilledButton.icon(
                   onPressed: _canSend
-                      ? () => Navigator.pop(context, _message)
+                      ? () => Navigator.pop(
+                            context,
+                            _SosSheetResult(
+                              message: _message,
+                              photoPath: _photoPath,
+                            ),
+                          )
                       : null,
                   style: FilledButton.styleFrom(
                     backgroundColor: _sosRed,
@@ -1626,7 +1773,9 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
               ),
             ],
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ class SosAlert {
   final int scheduleId;
   final String userName;
   final String? message;
+  final String? photoUrl;
   final String? contactPhone;
   final double? latitude;
   final double? longitude;
@@ -15,6 +16,7 @@ class SosAlert {
     required this.scheduleId,
     required this.userName,
     this.message,
+    this.photoUrl,
     this.contactPhone,
     this.latitude,
     this.longitude,
@@ -32,6 +34,7 @@ class SosAlert {
       scheduleId: int.tryParse(json['schedule_id']?.toString() ?? '') ?? 0,
       userName: json['user_name']?.toString() ?? '',
       message: _nullableString(json['message']),
+      photoUrl: _nullableString(json['photo_url']),
       contactPhone: _nullableString(json['contact_phone']),
       latitude: double.tryParse(json['latitude']?.toString() ?? ''),
       longitude: double.tryParse(json['longitude']?.toString() ?? ''),
@@ -47,6 +50,7 @@ class SosAlert {
       scheduleId: int.tryParse(data['schedule_id']?.toString() ?? '') ?? 0,
       userName: data['sos_user_name']?.toString() ?? '',
       message: _nullableString(data['sos_message']),
+      photoUrl: _nullableString(data['photo_url']),
       contactPhone: _nullableString(data['contact_phone']),
       latitude: double.tryParse(data['latitude']?.toString() ?? ''),
       longitude: double.tryParse(data['longitude']?.toString() ?? ''),

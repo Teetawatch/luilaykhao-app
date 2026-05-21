@@ -628,6 +628,7 @@ class AppProvider extends ChangeNotifier {
     double? latitude,
     double? longitude,
     String? message,
+    String? photoPath,
   }) async {
     final body = {
       'schedule_id': scheduleId,
@@ -636,7 +637,12 @@ class AppProvider extends ChangeNotifier {
       if (message != null && message.isNotEmpty) 'message': message,
     };
 
-    const attemptTimeout = Duration(seconds: 15);
+    // A photo can take longer to upload on a weak connection, so give multipart
+    // attempts more headroom than a plain JSON trigger.
+    final hasPhoto = photoPath != null && photoPath.isNotEmpty;
+    final attemptTimeout = hasPhoto
+        ? const Duration(seconds: 30)
+        : const Duration(seconds: 15);
     const backoff = [
       Duration(seconds: 2),
       Duration(seconds: 4),
@@ -647,8 +653,15 @@ class AppProvider extends ChangeNotifier {
 
     for (var attempt = 0; attempt <= backoff.length; attempt++) {
       try {
-        final response =
-            await api.post('sos', body: body).timeout(attemptTimeout);
+        final response = hasPhoto
+            ? await api
+                .postMultipart(
+                  'sos',
+                  fields: body,
+                  files: {'photo': photoPath},
+                )
+                .timeout(attemptTimeout)
+            : await api.post('sos', body: body).timeout(attemptTimeout);
         return SosAlert.fromJson(
           Map<String, dynamic>.from(api.data(response) as Map),
         );

@@ -73,6 +73,30 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
     }
   }
 
+  void _openPhoto(String url) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black,
+      builder: (ctx) => Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              child: Center(child: Image.network(url)),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.paddingOf(ctx).top + 8,
+            right: 8,
+            child: IconButton(
+              icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _snack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -166,6 +190,43 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.onSurface(context),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if ((alert.photoUrl ?? '').isNotEmpty) ...[
+            _InfoCard(
+              icon: Icons.photo_outlined,
+              label: 'รูปสถานที่',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: GestureDetector(
+                  onTap: () => _openPhoto(alert.photoUrl!),
+                  child: Image.network(
+                    alert.photoUrl!,
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return const SizedBox(
+                        height: 200,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                    errorBuilder: (context, _, _) => SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: Text(
+                          'โหลดรูปไม่สำเร็จ',
+                          style: GoogleFonts.anuphan(
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
