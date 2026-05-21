@@ -38,5 +38,45 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+    end
+  end
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+  end
+
+  # Add a Run Script phase to patch frameworks that have IOSSIMULATOR platform marker
+  runner_project_path = File.expand_path('../Runner.xcodeproj', __FILE__)
+  runner_project = Xcodeproj::Project.open(runner_project_path)
+  runner_target = runner_project.targets.find { |t| t.name == 'Runner' }
+
+  if runner_target
+    phase_name = 'Strip Simulator Platform Slices'
+    existing = runner_target.build_phases.find { |p| p.respond_to?(:name) && p.name == phase_name }
+
+    unless existing
+      phase = runner_target.new_shell_script_build_phase(phase_name)
+      phase.shell_script = <<~'SHELL'
+        #!/bin/bash
+        set -e
+        APP="${TARGET_BUILD_DIR}/${WRAPPER_NAME}"
+        SDK=$(xcrun --sdk iphoneos --show-sdk-version)
+        find "$APP" -name '*.framework' -type d | while read -r FW; do
+          EXEC=$(defaults read "$FW/Info.plist" CFBundleExecutable 2>/dev/null || true)
+          [ -z "$EXEC" ] && continue
+          BIN="$FW/$EXEC"
+          [ -f "$BIN" ] || continue
+          if vtool -show-build "$BIN" 2>/dev/null | grep -q "IOSSIMULATOR"; then
+            MIN_OS=$(defaults read "$FW/Info.plist" MinimumOSVersion 2>/dev/null || echo "${IPHONEOS_DEPLOYMENT_TARGET:-15.0}")
+            echo "Patching $EXEC: IOSSIMULATOR -> IOS (minos=$MIN_OS)"
+            vtool -set-build-version ios "$MIN_OS" "$SDK" -replace -output "${BIN}.fixed" "$BIN"
+            mv "${BIN}.fixed" "$BIN"
+          fi
+        done
+      SHELL
+      runner_project.save
+      puts "Added '#{phase_name}' build phase to Runner target"
+    end
   end
 end
