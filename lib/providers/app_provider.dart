@@ -567,27 +567,32 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> loadAccountData() async {
     if (!isLoggedIn) return;
-    final futures = [
+
+    Future<dynamic> _safe(Future<dynamic> f) => f.catchError((_) => null);
+
+    final hasStaff = canUseStaffCheckIn;
+    final results = await Future.wait([
       api.get(ApiEndpoints.bookings),
-      api.get(ApiEndpoints.notifications, query: {'per_page': 20}),
-      api.get(ApiEndpoints.loyaltyAccount),
-      api.get(ApiEndpoints.loyaltyRewards),
-      api.get(ApiEndpoints.loyaltyCoupons),
-      api.get(ApiEndpoints.reviewsMy),
-      if (canUseStaffCheckIn) api.get(ApiEndpoints.staffSchedulesMy),
-    ];
-    final results = await Future.wait(futures);
+      _safe(api.get(ApiEndpoints.notifications, query: {'per_page': 20})),
+      _safe(api.get(ApiEndpoints.loyaltyAccount)),
+      _safe(api.get(ApiEndpoints.loyaltyRewards)),
+      _safe(api.get(ApiEndpoints.loyaltyCoupons)),
+      _safe(api.get(ApiEndpoints.reviewsMy)),
+      if (hasStaff) _safe(api.get(ApiEndpoints.staffSchedulesMy)),
+    ]);
+
     bookings = List<dynamic>.from(api.data(results[0]) ?? []);
-    notifications = List<dynamic>.from(api.data(results[1]) ?? []);
-    loyalty = Map<String, dynamic>.from(api.data(results[2]) ?? {});
-    rewards = List<dynamic>.from(api.data(results[3]) ?? []);
-    coupons = List<dynamic>.from(api.data(results[4]) ?? []);
-    myReviews = List<dynamic>.from(api.data(results[5]) ?? []);
-    if (canUseStaffCheckIn && results.length > 6) {
+    if (results[1] != null) notifications = List<dynamic>.from(api.data(results[1]) ?? []);
+    if (results[2] != null) loyalty = Map<String, dynamic>.from(api.data(results[2]) ?? {});
+    if (results[3] != null) rewards = List<dynamic>.from(api.data(results[3]) ?? []);
+    if (results[4] != null) coupons = List<dynamic>.from(api.data(results[4]) ?? []);
+    if (results[5] != null) myReviews = List<dynamic>.from(api.data(results[5]) ?? []);
+    if (hasStaff && results.length > 6 && results[6] != null) {
       final staffData = api.data(results[6]) as Map?;
       staffSchedules = List<dynamic>.from(staffData?['schedules'] ?? []);
       staffSummary = Map<String, dynamic>.from(staffData?['summary'] ?? {});
     }
+
     final cache = OfflineCache.instance;
     if (user != null) cache.writeAccount('user', user);
     cache.writeAccount('bookings', bookings);
