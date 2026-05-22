@@ -78,6 +78,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                           upcomingCount: allBookings
                               .where(_isUpcomingBooking)
                               .length,
+                          nextTrip: upcoming.firstOrNull,
                         ),
                         const SizedBox(height: 24),
                         ReservationSegmentTabs(
@@ -208,9 +209,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
 
 class _BookingCheckInCard extends StatelessWidget {
   final Map<String, dynamic> booking;
-  final bool compact;
 
-  const _BookingCheckInCard({required this.booking, this.compact = false});
+  const _BookingCheckInCard({required this.booking});
 
   @override
   Widget build(BuildContext context) {
@@ -224,7 +224,7 @@ class _BookingCheckInCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 14 : 20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -239,46 +239,36 @@ class _BookingCheckInCard extends StatelessWidget {
                   AppTheme.accentColor.withValues(alpha: 0.04),
                 ],
         ),
-        borderRadius: BorderRadius.circular(compact ? 22 : 28),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: compact ? 0.14 : 0.18),
+          color: AppTheme.primaryColor.withValues(alpha: 0.18),
         ),
       ),
-      child: compact
-          ? Row(
-              children: [
-                _CheckInQrBox(code: checkInCode, size: 74, padding: 7),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _CheckInTextBlock(bookingRef: bookingRef),
-                ),
-              ],
-            )
-          : Column(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.how_to_reg_rounded,
-                    color: AppTheme.primaryColor,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const _CheckInTextBlock(bookingRef: null),
-                if (checkInCode.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  _CheckInQrBox(code: checkInCode, size: 180, padding: 14),
-                ],
-                const SizedBox(height: 16),
-                _BookingReferencePanel(bookingRef: bookingRef),
-              ],
+      child: Column(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
             ),
+            child: const Icon(
+              Icons.how_to_reg_rounded,
+              color: AppTheme.primaryColor,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const _CheckInTextBlock(bookingRef: null),
+          if (checkInCode.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            _CheckInQrBox(code: checkInCode, size: 180, padding: 14),
+          ],
+          const SizedBox(height: 16),
+          _BookingReferencePanel(bookingRef: bookingRef),
+        ],
+      ),
     );
   }
 }

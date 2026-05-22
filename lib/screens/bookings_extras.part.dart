@@ -311,114 +311,27 @@ class _CountdownPill extends StatelessWidget {
   }
 }
 
-class _ReservationMetaPill extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _ReservationMetaPill({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minWidth: 142, maxWidth: 310),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.border(context)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AppTheme.primaryColor, size: 18),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: AppTheme.mutedText(context),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppTheme.onSurface(context),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class BookingQuickActions extends StatelessWidget {
   final Map<String, dynamic> booking;
-  final VoidCallback onDetail;
 
   const BookingQuickActions({
     super.key,
     required this.booking,
-    required this.onDetail,
   });
 
   @override
   Widget build(BuildContext context) {
-    final status = textOf(booking['status']);
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        if (status == 'pending')
-          _ActionChipButton(
-            icon: Icons.payments_rounded,
-            label: 'ชำระเงินต่อ',
-            filled: true,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    PaymentScreen(bookingRef: textOf(booking['booking_ref'])),
-              ),
-            ),
-          ),
-        if (status != 'pending')
-          _ActionChipButton(
-            icon: Icons.confirmation_number_rounded,
-            label: 'ดู Voucher',
-            onPressed: onDetail,
-          ),
-        _ActionChipButton(
-          icon: Icons.support_agent_rounded,
-          label: 'ติดต่อทีมงานลุยเลเขา',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ContactUsScreen()),
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: _ActionChipButton(
+        icon: Icons.support_agent_rounded,
+        label: 'ติดต่อทีมงานลุยเลเขา',
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ContactUsScreen()),
         ),
-        _ActionChipButton(
-          icon: Icons.download_rounded,
-          label: 'ดาวน์โหลดใบยืนยัน',
-          onPressed: onDetail,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -427,36 +340,25 @@ class _ActionChipButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
-  final bool filled;
 
   const _ActionChipButton({
     required this.icon,
     required this.label,
     required this.onPressed,
-    this.filled = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final filledBg = AppTheme.onSurface(context);
-    final outlinedBg = AppTheme.surface(context);
-    final outlinedFg = AppTheme.onSurface(context);
+    final bg = AppTheme.surface(context);
+    final fg = AppTheme.onSurface(context);
     return ActionChip(
-      avatar: Icon(
-        icon,
-        size: 17,
-        color: filled ? AppTheme.surface(context) : outlinedFg,
-      ),
+      avatar: Icon(icon, size: 17, color: fg),
       label: Text(label),
       onPressed: onPressed,
-      backgroundColor: filled ? filledBg : outlinedBg,
-      side: BorderSide(
-        color: filled
-            ? filledBg
-            : AppTheme.border(context),
-      ),
+      backgroundColor: bg,
+      side: BorderSide(color: AppTheme.border(context)),
       labelStyle: TextStyle(
-        color: filled ? AppTheme.surface(context) : outlinedFg,
+        color: fg,
         fontSize: 12,
         fontWeight: FontWeight.w900,
       ),

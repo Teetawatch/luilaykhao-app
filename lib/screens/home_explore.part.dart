@@ -144,6 +144,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 notificationCount: notificationCount,
                 backgroundProgress: _topBarProgress,
                 onNotificationsTap: openNotifications,
+                onProfileTap: NotificationNavigator.goToProfile,
               ),
             ),
           ],
@@ -303,12 +304,14 @@ class _HeroTopBar extends StatelessWidget {
   final int notificationCount;
   final double backgroundProgress;
   final VoidCallback onNotificationsTap;
+  final VoidCallback onProfileTap;
 
   const _HeroTopBar({
     required this.user,
     required this.notificationCount,
     required this.backgroundProgress,
     required this.onNotificationsTap,
+    required this.onProfileTap,
   });
 
   @override
@@ -366,93 +369,96 @@ class _HeroTopBar extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
               child: Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.10),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: avatar.isNotEmpty
-                          ? Image.network(avatar, fit: BoxFit.cover)
-                          : Image.asset(
-                              'logo.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Center(
-                                child: Text(
-                                  initial,
-                                  style: const TextStyle(
-                                    color: AppTheme.primaryColor,
-                                    fontWeight: FontWeight.w900,
+                  GestureDetector(
+                    onTap: onProfileTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.10),
+                                blurRadius: 18,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: avatar.isNotEmpty
+                                ? Image.network(avatar, fit: BoxFit.cover)
+                                : Image.asset(
+                                    'logo.png',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Center(
+                                      child: Text(
+                                        initial,
+                                        style: const TextStyle(
+                                          color: AppTheme.primaryColor,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'สวัสดี, $firstName',
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 18,
+                                height: 1.05,
+                                fontWeight: FontWeight.w900,
+                                shadows: backgroundProgress < 0.45
+                                    ? const [
+                                        Shadow(
+                                          color: Colors.black38,
+                                          offset: Offset(0, 2),
+                                          blurRadius: 4,
+                                        ),
+                                      ]
+                                    : null,
                               ),
                             ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'สวัสดี, $firstName',
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 18,
-                              height: 1.05,
-                              fontWeight: FontWeight.w900,
-                              shadows: backgroundProgress < 0.45
-                                  ? const [
-                                      Shadow(
-                                        color: Colors.black38,
-                                        offset: Offset(0, 2),
-                                        blurRadius: 4,
-                                      ),
-                                    ]
-                                  : null,
+                            const SizedBox(height: 4),
+                            Text(
+                              'พร้อมออกเดินทางครั้งใหม่?',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.anuphan(
+                                color: Color.lerp(
+                                  Colors.white.withValues(alpha: 0.88),
+                                  AppTheme.textSecondary,
+                                  backgroundProgress,
+                                ),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                shadows: backgroundProgress < 0.45
+                                    ? const [
+                                        Shadow(
+                                          color: Colors.black38,
+                                          offset: Offset(0, 1),
+                                          blurRadius: 4,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'พร้อมออกเดินทางครั้งใหม่?',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(
-                            color: Color.lerp(
-                              Colors.white.withValues(alpha: 0.88),
-                              AppTheme.textSecondary,
-                              backgroundProgress,
-                            ),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            shadows: backgroundProgress < 0.45
-                                ? const [
-                                    Shadow(
-                                      color: Colors.black38,
-                                      offset: Offset(0, 1),
-                                      blurRadius: 4,
-                                    ),
-                                  ]
-                                : null,
-                          ),
+                          ],
                         ),
                       ],
                     ),
                   ),
+                  const Spacer(),
                   const SizedBox(width: 14),
                   ClipOval(
                     child: BackdropFilter(

@@ -9,126 +9,295 @@ BoxDecoration _ecoCardDecoration(BuildContext context) {
   );
 }
 
+// ─── Bookings Header ──────────────────────────────────────────────────────────
+
 class _BookingsHeader extends StatelessWidget {
   final int totalCount;
   final int upcomingCount;
+  final Map<String, dynamic>? nextTrip;
 
   const _BookingsHeader({
     required this.totalCount,
     required this.upcomingCount,
+    this.nextTrip,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: AppTheme.border(context)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(
-              alpha: AppTheme.isDark(context) ? 0.18 : 0.06,
-            ),
-            blurRadius: 32,
-            offset: const Offset(0, 14),
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (nextTrip != null) ...[
+          _NextTripHeroCard(booking: nextTrip!),
+          const SizedBox(height: 12),
         ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(18),
+        Row(
+          children: [
+            Expanded(
+              child: _SummaryPill(
+                icon: Icons.event_available_rounded,
+                label: 'กำลังจะถึง',
+                value: '$upcomingCount',
+                accent: AppTheme.primaryColor,
+              ),
             ),
-            child: const Icon(
-              Icons.luggage_rounded,
-              color: AppTheme.primaryColor,
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SummaryPill(
+                icon: Icons.luggage_rounded,
+                label: 'การจองทั้งหมด',
+                value: '$totalCount',
+                accent: const Color(0xFF6366F1),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'ติดตามและจัดการการเดินทางของคุณ',
-            style: TextStyle(
-              color: AppTheme.onSurface(context),
-              fontSize: 24,
-              height: 1.18,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'ดูสถานะทริป รายละเอียดการชำระเงิน และเอกสารยืนยันได้ครบในที่เดียว',
-            style: TextStyle(
-              color: AppTheme.mutedText(context),
-              fontSize: 13,
-              height: 1.55,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _SummaryPill(
-                  label: 'ทริปที่กำลังจะถึง',
-                  value: '$upcomingCount',
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _NextTripHeroCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _NextTripHeroCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final schedule = asMap(booking['schedule']);
+    final trip = asMap(schedule['trip']);
+    final title = textOf(trip['title'], 'ทริปถัดไป');
+    final travelDate = bookingTravelDate(booking);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final days = travelDate?.difference(today).inDays;
+    final image = ApiConfig.mediaUrl(
+      textOf(trip['thumbnail_image'], textOf(trip['cover_image'])),
+    );
+    final bookingRef = textOf(booking['booking_ref']);
+
+    final (String badge, Color badgeColor) = switch (days) {
+      null => ('รอวันเดินทาง', AppTheme.primaryColor),
+      0 => ('เดินทางวันนี้!', const Color(0xFF16A34A)),
+      1 => ('พรุ่งนี้!', const Color(0xFFD97706)),
+      <= 3 => ('อีก $days วัน!', const Color(0xFFD97706)),
+      _ => ('อีก $days วัน', AppTheme.primaryColor),
+    };
+
+    return GestureDetector(
+      onTap: () {
+        if (bookingRef.isEmpty) return;
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => BookingDetailSheet(bookingRef: bookingRef),
+        );
+      },
+      child: Container(
+        height: 132,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: const Color(0xFF0B3D42),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (image.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: image,
+                fit: BoxFit.cover,
+                color: Colors.black.withValues(alpha: 0.50),
+                colorBlendMode: BlendMode.darken,
+                placeholder: (_, _) => const SizedBox.shrink(),
+                errorWidget: (_, _, _) => const SizedBox.shrink(),
+              ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.55),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _SummaryPill(
-                  label: 'การจองทั้งหมด',
-                  value: '$totalCount',
-                ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'ทริปถัดไปของคุณ',
+                          style: GoogleFonts.anuphan(
+                            color: Colors.white.withValues(alpha: 0.72),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.anuphan(
+                            color: Colors.white,
+                            fontSize: 17,
+                            height: 1.2,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        if (travelDate != null) ...[
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_rounded,
+                                color: Colors.white60,
+                                size: 11,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                DateFormat('d MMMM yyyy', 'th_TH')
+                                    .format(travelDate),
+                                style: GoogleFonts.anuphan(
+                                  color: Colors.white.withValues(alpha: 0.80),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeColor,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: badgeColor.withValues(alpha: 0.45),
+                              blurRadius: 14,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          badge,
+                          style: GoogleFonts.anuphan(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'กดดูรายละเอียด',
+                        style: GoogleFonts.anuphan(
+                          color: Colors.white.withValues(alpha: 0.60),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _SummaryPill extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
+  final Color accent;
 
-  const _SummaryPill({required this.label, required this.value});
+  const _SummaryPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.accent,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.subtleSurface(context),
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppTheme.border(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: AppTheme.onSurface(context),
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              height: 1,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: AppTheme.isDark(context) ? 0.14 : 0.04,
             ),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: AppTheme.mutedText(context),
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: accent, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: AppTheme.onSurface(context),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppTheme.mutedText(context),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -136,6 +305,8 @@ class _SummaryPill extends StatelessWidget {
     );
   }
 }
+
+// ─── Segment Tabs ─────────────────────────────────────────────────────────────
 
 class ReservationSegmentTabs extends StatelessWidget {
   final _ReservationSegment selected;
@@ -165,18 +336,18 @@ class ReservationSegmentTabs extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Container(
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppTheme.border(context)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(
-                alpha: AppTheme.isDark(context) ? 0.16 : 0.05,
+                alpha: AppTheme.isDark(context) ? 0.14 : 0.04,
               ),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -191,7 +362,7 @@ class ReservationSegmentTabs extends StatelessWidget {
                   showCheckmark: false,
                   avatar: Icon(
                     tab.$3,
-                    size: 17,
+                    size: 15,
                     color: selected == tab.$1
                         ? Colors.white
                         : AppTheme.mutedText(context),
@@ -212,7 +383,7 @@ class ReservationSegmentTabs extends StatelessWidget {
                     vertical: 10,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),
@@ -222,6 +393,8 @@ class ReservationSegmentTabs extends StatelessWidget {
     );
   }
 }
+
+// ─── Utility Bar ──────────────────────────────────────────────────────────────
 
 class _BookingUtilityBar extends StatelessWidget {
   final String query;
@@ -249,7 +422,16 @@ class _BookingUtilityBar extends StatelessWidget {
             onChanged: onQueryChanged,
             decoration: InputDecoration(
               hintText: 'ค้นหาการจอง',
-              prefixIcon: const Icon(Icons.search_rounded),
+              hintStyle: GoogleFonts.anuphan(
+                color: AppTheme.mutedText(context),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                color: AppTheme.mutedText(context),
+                size: 20,
+              ),
               filled: true,
               fillColor: AppTheme.surface(context),
               contentPadding: const EdgeInsets.symmetric(
@@ -264,6 +446,13 @@ class _BookingUtilityBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 borderSide: BorderSide(color: AppTheme.border(context)),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(
+                  color: AppTheme.primaryColor,
+                  width: 1.5,
+                ),
+              ),
             ),
           ),
         ),
@@ -273,7 +462,10 @@ class _BookingUtilityBar extends StatelessWidget {
           initialValue: sort,
           onSelected: onSortChanged,
           itemBuilder: (_) => const [
-            PopupMenuItem(value: 'upcoming', child: Text('วันเดินทางใกล้สุด')),
+            PopupMenuItem(
+              value: 'upcoming',
+              child: Text('วันเดินทางใกล้สุด'),
+            ),
             PopupMenuItem(value: 'latest', child: Text('จองล่าสุด')),
           ],
           child: const _UtilityIconButton(icon: Icons.swap_vert_rounded),
@@ -320,6 +512,8 @@ class _UtilityIconButton extends StatelessWidget {
     );
   }
 }
+
+// ─── Booking Sections ─────────────────────────────────────────────────────────
 
 class UpcomingSection extends StatelessWidget {
   final List<Map<String, dynamic>> bookings;
@@ -382,9 +576,10 @@ class BookingSection extends StatelessWidget {
                       color: AppTheme.mutedText(context),
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
+                      letterSpacing: 0.4,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     title,
                     style: TextStyle(
@@ -424,6 +619,8 @@ class BookingSection extends StatelessWidget {
   }
 }
 
+// ─── Reservation Card ─────────────────────────────────────────────────────────
+
 class ReservationCard extends StatelessWidget {
   final Map<String, dynamic> booking;
 
@@ -435,6 +632,9 @@ class ReservationCard extends StatelessWidget {
     final trip = asMap(schedule['trip']);
     final bookingRef = textOf(booking['booking_ref'], '-');
     final isCancelled = _isCancelledBooking(booking);
+    final isUpcoming = _isUpcomingBooking(booking);
+    final status = textOf(booking['status']);
+    final paymentType = textOf(booking['payment_type'], 'full');
     final image = ApiConfig.mediaUrl(
       textOf(
         trip['thumbnail_image'],
@@ -443,13 +643,7 @@ class ReservationCard extends StatelessWidget {
     );
 
     return InkWell(
-      onTap: () => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) =>
-            BookingDetailSheet(bookingRef: booking['booking_ref'].toString()),
-      ),
+      onTap: () => _openDetail(context, bookingRef),
       borderRadius: BorderRadius.circular(28),
       child: Ink(
         decoration: BoxDecoration(
@@ -461,14 +655,15 @@ class ReservationCard extends StatelessWidget {
               color: Colors.black.withValues(
                 alpha: AppTheme.isDark(context) ? 0.20 : 0.06,
               ),
-              blurRadius: 34,
-              offset: const Offset(0, 16),
+              blurRadius: 32,
+              offset: const Offset(0, 14),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Hero image ──
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(28),
@@ -476,13 +671,14 @@ class ReservationCard extends StatelessWidget {
               child: Stack(
                 children: [
                   SizedBox(
-                    height: 178,
+                    height: 160,
                     width: double.infinity,
                     child: CachedNetworkImage(
                       imageUrl: image,
                       fit: BoxFit.cover,
                       color: isCancelled ? Colors.grey : null,
-                      colorBlendMode: isCancelled ? BlendMode.saturation : null,
+                      colorBlendMode:
+                          isCancelled ? BlendMode.saturation : null,
                       placeholder: (_, _) =>
                           Container(color: const Color(0xFFEDEFEF)),
                       errorWidget: (_, _, _) => Container(
@@ -498,183 +694,103 @@ class ReservationCard extends StatelessWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.46),
+                            Colors.black.withValues(alpha: 0.12),
+                            Colors.black.withValues(alpha: 0.52),
                           ],
                         ),
                       ),
                     ),
                   ),
                   Positioned(
-                    left: 16,
-                    top: 16,
+                    left: 14,
+                    top: 14,
                     child: _DateBadge(date: bookingTravelDate(booking)),
                   ),
                   Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: 16,
-                    child: Row(
-                      children: [
-                        Expanded(child: _CountdownPill(booking: booking)),
-                        const SizedBox(width: 8),
-                        BookingStatusChip(booking: booking),
-                      ],
+                    right: 14,
+                    top: 14,
+                    child: BookingStatusChip(booking: booking),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                      child: _CountdownPill(booking: booking),
                     ),
                   ),
                 ],
               ),
             ),
+
+            // ── Body ──
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title
+                  Text(
+                    textOf(trip['title'], 'การจอง'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppTheme.onSurface(context),
+                      fontSize: 19,
+                      height: 1.22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  // Booking ref + payment type badge
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
-                          textOf(trip['title'], 'การจอง'),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          bookingRef,
                           style: TextStyle(
-                            color: AppTheme.onSurface(context),
-                            fontSize: 20,
-                            height: 1.22,
-                            fontWeight: FontWeight.w900,
+                            color: AppTheme.mutedText(context),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
-                      PopupMenuButton<String>(
-                        tooltip: 'เมนูเพิ่มเติม',
-                        onSelected: (value) {
-                          if (value == 'detail') {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (_) =>
-                                  BookingDetailSheet(bookingRef: bookingRef),
-                            );
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(
-                            value: 'detail',
-                            child: Text('ดูรายละเอียด'),
-                          ),
-                        ],
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppTheme.subtleSurface(context),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(Icons.more_horiz_rounded),
-                        ),
-                      ),
+                      if (paymentType.isNotEmpty)
+                        _PaymentTypeBadge(type: paymentType),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'หมายเลขการจอง $bookingRef',
-                    style: TextStyle(
-                      color: AppTheme.mutedText(context),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (textOf(booking['status']) == 'confirmed') ...[
-                    const SizedBox(height: 14),
-                    _BookingCheckInCard(booking: booking, compact: true),
-                  ],
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _ReservationMetaPill(
-                        icon: Icons.calendar_month_rounded,
-                        label: 'วันเดินทาง',
-                        value: _travelDateText(booking),
-                      ),
-                      _ReservationMetaPill(
-                        icon: Icons.groups_rounded,
-                        label: 'ผู้เดินทาง',
-                        value: _travelerText(booking),
-                      ),
-                      _ReservationMetaPill(
-                        icon: Icons.location_on_rounded,
-                        label: 'จุดรับ',
-                        value: _pickupText(booking),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'ยอดรวม',
-                              style: TextStyle(
-                                color: AppTheme.mutedText(context),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              money(booking['total_amount']),
-                              style: TextStyle(
-                                color: AppTheme.onSurface(context),
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                        onPressed: () => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) =>
-                              BookingDetailSheet(bookingRef: bookingRef),
-                        ),
-                        icon: const Icon(Icons.chevron_right_rounded),
-                        label: const Text('ดูรายละเอียด'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _BookingActionDeck(booking: booking),
-                  BookingQuickActions(
+                  const SizedBox(height: 14),
+
+                  // Meta strip
+                  _BookingMetaStrip(booking: booking),
+                  const SizedBox(height: 12),
+
+                  // Payment status
+                  _PaymentStatusRow(
                     booking: booking,
-                    onDetail: () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) =>
-                          BookingDetailSheet(bookingRef: bookingRef),
+                    onPayPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            PaymentScreen(bookingRef: bookingRef),
+                      ),
                     ),
                   ),
+
+                  // Compact check-in (confirmed upcoming only)
+                  if (status == 'confirmed' && isUpcoming) ...[
+                    const SizedBox(height: 10),
+                    _CompactCheckInRow(
+                      booking: booking,
+                      onTap: () => _openDetail(context, bookingRef),
+                    ),
+                  ],
+
+                  // Action deck (chat, SOS, pre-trip briefing, reschedule)
+                  _BookingActionDeck(booking: booking),
+
+                  // Review + refund CTAs
                   _ReviewCallToAction(booking: booking),
                   _RefundStatusCallToAction(booking: booking),
                 ],
@@ -685,5 +801,649 @@ class ReservationCard extends StatelessWidget {
       ),
     );
   }
+
+  void _openDetail(BuildContext context, String bookingRef) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BookingDetailSheet(bookingRef: bookingRef),
+    );
+  }
 }
 
+// ─── Booking Meta Strip ───────────────────────────────────────────────────────
+
+class _BookingMetaStrip extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _BookingMetaStrip({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.7),
+        ),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Expanded(
+              child: _MetaStripItem(
+                icon: Icons.calendar_month_rounded,
+                text: _travelDateText(booking),
+              ),
+            ),
+            VerticalDivider(
+              width: 20,
+              thickness: 1,
+              color: AppTheme.border(context),
+            ),
+            Expanded(
+              child: _MetaStripItem(
+                icon: Icons.groups_rounded,
+                text: _travelerText(booking),
+              ),
+            ),
+            VerticalDivider(
+              width: 20,
+              thickness: 1,
+              color: AppTheme.border(context),
+            ),
+            Expanded(
+              child: _MetaStripItem(
+                icon: Icons.location_on_rounded,
+                text: _pickupText(booking),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaStripItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _MetaStripItem({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: AppTheme.primaryColor),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppTheme.onSurface(context),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Payment Status Row ───────────────────────────────────────────────────────
+
+class _PaymentStatusRow extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final VoidCallback onPayPressed;
+
+  const _PaymentStatusRow({
+    required this.booking,
+    required this.onPayPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final status = textOf(booking['status']);
+    final paymentType = textOf(booking['payment_type'], 'full');
+    final total =
+        num.tryParse(booking['total_amount']?.toString() ?? '') ?? 0;
+    final paid = num.tryParse(booking['paid_amount']?.toString() ?? '') ?? 0;
+
+    if (status == 'pending') {
+      return _PendingPaymentBar(total: total, onPay: onPayPressed);
+    }
+
+    if (status == 'cancelled' || status == 'refunded') {
+      if (paid <= 0) return const SizedBox.shrink();
+      return _SimpleStatusBar(
+        icon: Icons.cancel_outlined,
+        color: const Color(0xFF6B7280),
+        label: 'ยกเลิก · ชำระไปแล้ว ${money(paid)}',
+      );
+    }
+
+    if (status == 'completed') {
+      return _SimpleStatusBar(
+        icon: Icons.check_circle_outline_rounded,
+        color: const Color(0xFF3B82F6),
+        label: 'เดินทางสำเร็จ · ${money(total)}',
+      );
+    }
+
+    if (paymentType == 'deposit') {
+      final balance =
+          num.tryParse(booking['balance_amount']?.toString() ?? '') ?? 0;
+      final balancePaidAt = textOf(booking['balance_paid_at']);
+      final dueDate = textOf(booking['balance_due_at']);
+      if (balancePaidAt.isEmpty && balance > 0) {
+        return _DepositBar(deposit: paid, balance: balance, dueDate: dueDate);
+      }
+      return _PaidFullBar(total: total);
+    }
+
+    if (paymentType == 'installment') {
+      final installments = asList(booking['installment_payments']);
+      if (installments.isNotEmpty) {
+        return _InstallmentBar(
+          installments: installments,
+          paid: paid,
+          total: total,
+        );
+      }
+    }
+
+    return _PaidFullBar(total: total);
+  }
+}
+
+class _PendingPaymentBar extends StatelessWidget {
+  final num total;
+  final VoidCallback onPay;
+
+  const _PendingPaymentBar({required this.total, required this.onPay});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFBD38D)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Color(0xFFD97706),
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'รอชำระเงิน',
+                  style: GoogleFonts.anuphan(
+                    color: const Color(0xFF92400E),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  money(total),
+                  style: GoogleFonts.anuphan(
+                    color: const Color(0xFFD97706),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          FilledButton(
+            onPressed: onPay,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD97706),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'ชำระเงิน',
+              style: GoogleFonts.anuphan(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaidFullBar extends StatelessWidget {
+  final num total;
+
+  const _PaidFullBar({required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.check_circle_rounded,
+            color: AppTheme.primaryColor,
+            size: 17,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'ชำระครบแล้ว · ',
+            style: GoogleFonts.anuphan(
+              color: AppTheme.primaryColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            money(total),
+            style: GoogleFonts.anuphan(
+              color: AppTheme.primaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DepositBar extends StatelessWidget {
+  final num deposit;
+  final num balance;
+  final String dueDate;
+
+  const _DepositBar({
+    required this.deposit,
+    required this.balance,
+    required this.dueDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dueDateText =
+        dueDate.isNotEmpty ? dateText(dueDate) : 'ไม่ระบุ';
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFBD38D)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'มัดจำแล้ว',
+                  style: GoogleFonts.anuphan(
+                    color: const Color(0xFF065F46),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  money(deposit),
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.primaryColor,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 36,
+            color: const Color(0xFFFBD38D),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Color(0xFFD97706),
+                      size: 12,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      'ค้างชำระ',
+                      style: GoogleFonts.anuphan(
+                        color: const Color(0xFF92400E),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  money(balance),
+                  style: GoogleFonts.anuphan(
+                    color: const Color(0xFFD97706),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  'ภายใน $dueDateText',
+                  style: GoogleFonts.anuphan(
+                    color: const Color(0xFF92400E),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InstallmentBar extends StatelessWidget {
+  final List<dynamic> installments;
+  final num paid;
+  final num total;
+
+  const _InstallmentBar({
+    required this.installments,
+    required this.paid,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final paidCount =
+        installments
+            .map(asMap)
+            .where((i) => textOf(i['status']) == 'paid')
+            .length;
+    final totalCount = installments.length;
+    final progress =
+        totalCount > 0 ? (paidCount / totalCount).clamp(0.0, 1.0) : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.receipt_long_rounded,
+                color: AppTheme.primaryColor,
+                size: 15,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'ผ่อนชำระ',
+                style: GoogleFonts.anuphan(
+                  color: AppTheme.mutedText(context),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$paidCount/$totalCount งวด',
+                style: GoogleFonts.anuphan(
+                  color: paidCount == totalCount
+                      ? AppTheme.primaryColor
+                      : AppTheme.onSurface(context),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: AppTheme.border(context),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppTheme.primaryColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Text(
+                'ชำระแล้ว ${money(paid)}',
+                style: GoogleFonts.anuphan(
+                  color: AppTheme.primaryColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'รวม ${money(total)}',
+                style: GoogleFonts.anuphan(
+                  color: AppTheme.mutedText(context),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SimpleStatusBar extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  const _SimpleStatusBar({
+    required this.icon,
+    required this.color,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.anuphan(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Payment Type Badge ───────────────────────────────────────────────────────
+
+class _PaymentTypeBadge extends StatelessWidget {
+  final String type;
+
+  const _PaymentTypeBadge({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final (String label, Color color) = switch (type) {
+      'deposit' => ('มัดจำ', const Color(0xFFD97706)),
+      'installment' => ('ผ่อนชำระ', const Color(0xFF7C3AED)),
+      _ => ('ชำระเต็ม', AppTheme.primaryColor),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.anuphan(
+          color: color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Compact Check-In Row ─────────────────────────────────────────────────────
+
+class _CompactCheckInRow extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final VoidCallback onTap;
+
+  const _CompactCheckInRow({required this.booking, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final bookingRef = textOf(booking['booking_ref'], '-');
+    final checkInCode = textOf(booking['qr_code']).trim();
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryColor.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.verified_rounded,
+              color: AppTheme.primaryColor,
+              size: 17,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'พร้อมเช็คอิน',
+                    style: GoogleFonts.anuphan(
+                      color: AppTheme.primaryColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    bookingRef,
+                    style: GoogleFonts.anuphan(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.75),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (checkInCode.isNotEmpty)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.qr_code_2_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'แสดง QR',
+                      style: GoogleFonts.anuphan(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

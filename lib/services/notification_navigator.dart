@@ -127,6 +127,8 @@ class NotificationNavigator {
     _switchTab = switcher;
   }
 
+  static void goToProfile() => _switchTab(3);
+
   // ignore: prefer_function_declarations_over_variables
   static void Function(int) _switchTab = (_) {};
 
