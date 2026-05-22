@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../config/firebase_config.dart';
@@ -12,6 +13,8 @@ import 'sos_alarm_service.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
+    WidgetsFlutterBinding.ensureInitialized();
+
     final options = FirebaseConfig.options;
     if (Firebase.apps.isEmpty) {
       if (options == null) {
@@ -19,6 +22,51 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       } else {
         await Firebase.initializeApp(options: options);
       }
+    }
+
+    // SOS is sent as data-only for Android. Show a local notification on the
+    // SOS alarm channel so the siren sound plays and fullScreenIntent wakes
+    // the screen — no user tap required.
+    // iOS already receives the notification via APNs payload with sos_siren.wav,
+    // so skip local notification there to avoid showing a duplicate.
+    if (message.data['type'] == 'sos_alert' &&
+        defaultTargetPlatform == TargetPlatform.android) {
+      final localNotifications = FlutterLocalNotificationsPlugin();
+      await localNotifications.initialize(
+        settings: const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        ),
+      );
+      final androidPlugin = localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await androidPlugin?.createNotificationChannel(SosAlarmService.sosChannel);
+
+      final senderName =
+          message.data['sos_user_name']?.toString() ?? 'เพื่อนร่วมทริป';
+      await localNotifications.show(
+        id: 9911,
+        title: '🆘 SOS — $senderName ขอความช่วยเหลือ',
+        body: 'แตะเพื่อดูรายละเอียดและช่วยเหลือ',
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            SosAlarmService.sosChannel.id,
+            SosAlarmService.sosChannel.name,
+            channelDescription: SosAlarmService.sosChannel.description,
+            importance: Importance.max,
+            priority: Priority.max,
+            fullScreenIntent: true,
+            category: AndroidNotificationCategory.alarm,
+            ongoing: true,
+            sound: const RawResourceAndroidNotificationSound('sos_siren'),
+            audioAttributesUsage: AudioAttributesUsage.alarm,
+            enableVibration: true,
+            vibrationPattern:
+                Int64List.fromList([0, 500, 200, 500, 200, 500, 200, 500]),
+            playSound: true,
+          ),
+        ),
+        payload: jsonEncode(message.data),
+      );
     }
   } catch (_) {
     // Background delivery should never crash the app process.
@@ -136,10 +184,27 @@ class PushNotificationService {
       _initialized = true;
       debugPrint('[FCM] initialization complete ✓');
 
+      // App launched by tapping an FCM notification (killed state).
       final initialMessage = await _messaging.getInitialMessage();
       if (initialMessage != null) {
         _handleNotificationTap(initialMessage.data);
         _onRefreshRequested?.call();
+      }
+
+      // App launched by tapping a local notification shown by the background
+      // handler (e.g. SOS while the app was killed on Android).
+      final launchDetails = await _localNotifications.getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp == true) {
+        final payload = launchDetails!.notificationResponse?.payload;
+        if (payload != null) {
+          try {
+            final data = Map<String, dynamic>.from(jsonDecode(payload) as Map);
+            // Small delay to ensure the navigator is mounted before routing.
+            Future.delayed(const Duration(milliseconds: 500), () {
+              _handleNotificationTap(data);
+            });
+          } catch (_) {}
+        }
       }
     } catch (e, st) {
       _initFuture = null; // allow retry on next initialize() call

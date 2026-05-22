@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
@@ -33,14 +34,15 @@ class SosAlarmService {
   );
 
   // Route playback through the alarm stream so it stays loud even when the
-  // ringer is silenced, and grab audio focus so music/podcasts pause.
+  // ringer is silenced. Use gain (not gainTransient) so Android doesn't revoke
+  // focus while the siren loops — gainTransient is designed for brief sounds.
   static final _alarmAudioContext = AudioContext(
     android: const AudioContextAndroid(
       isSpeakerphoneOn: false,
       stayAwake: true,
       contentType: AndroidContentType.sonification,
       usageType: AndroidUsageType.alarm,
-      audioFocus: AndroidAudioFocus.gainTransient,
+      audioFocus: AndroidAudioFocus.gain,
     ),
     iOS: AudioContextIOS(category: AVAudioSessionCategory.playback),
   );
@@ -87,8 +89,12 @@ class SosAlarmService {
       _playing = true;
       try {
         await _player.stop();
+        // Re-apply audio context before each play so Android honours the alarm
+        // stream and audio focus even when the player was previously released.
+        await _player.setAudioContext(_alarmAudioContext);
         await _player.play(AssetSource('audio/sos_siren.wav'), volume: 1.0);
-      } catch (_) {
+      } catch (e) {
+        debugPrint('[SosAlarm] audio play failed: $e');
         _playing = false;
       }
     }
