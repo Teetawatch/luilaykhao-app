@@ -108,7 +108,12 @@ class _ReviewRatingSummary extends StatelessWidget {
       starCounts[v - 1]++;
     }
 
-    return Row(
+    final breakdown = _tripBreakdownAverages(trip);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // big score
@@ -210,6 +215,80 @@ class _ReviewRatingSummary extends StatelessWidget {
           ),
         ),
       ],
+    ),
+        if (breakdown.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: breakdown
+                .map((b) => _CategoryAverageTile(label: b.$1, value: b.$2))
+                .toList(),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Reads the trip's aggregate `rating_breakdown` map into ordered
+/// (label, value) pairs, skipping categories with no data.
+List<(String, num)> _tripBreakdownAverages(Map<String, dynamic> trip) {
+  final raw = asMap(trip['rating_breakdown']);
+  const labels = {
+    'guide': 'ไกด์',
+    'vehicle': 'รถ',
+    'food': 'อาหาร',
+    'value': 'ความคุ้มค่า',
+  };
+  final result = <(String, num)>[];
+  labels.forEach((key, label) {
+    final v = raw[key];
+    final value = v is num ? v : num.tryParse('${v ?? ''}');
+    if (value != null && value > 0) result.add((label, value));
+  });
+  return result;
+}
+
+class _CategoryAverageTile extends StatelessWidget {
+  final String label;
+  final num value;
+
+  const _CategoryAverageTile({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEEF2F7)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.anuphan(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: _mutedText,
+            ),
+          ),
+          const SizedBox(width: 6),
+          const Icon(Icons.star_rounded, size: 13, color: Color(0xFFE8A117)),
+          const SizedBox(width: 2),
+          Text(
+            numberText(value),
+            style: GoogleFonts.anuphan(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w900,
+              color: _premiumText,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -229,6 +308,11 @@ class _ReviewCard extends StatelessWidget {
     final avatarUrl = textOf(user['avatar_url']);
     final date = _formatRelativeDate(review['created_at']);
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final images = asList(review['images'])
+        .map((e) => e.toString())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    final breakdown = _reviewBreakdown(review);
 
     // avatar background color cycle
     final colors = [
@@ -404,8 +488,230 @@ class _ReviewCard extends StatelessWidget {
                 ),
               ),
             ],
+            if (breakdown.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: breakdown
+                    .map((b) => _ReviewBreakdownChip(label: b.$1, value: b.$2))
+                    .toList(),
+              ),
+            ],
+            if (images.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 76,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: images.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) => GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        fullscreenDialog: true,
+                        builder: (_) =>
+                            _FullscreenGallery(images: images, initialIndex: i),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: CachedNetworkImage(
+                        imageUrl: images[i],
+                        width: 76,
+                        height: 76,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(
+                          width: 76,
+                          height: 76,
+                          color: const Color(0xFFF1F5F9),
+                        ),
+                        errorWidget: (_, _, _) => Container(
+                          width: 76,
+                          height: 76,
+                          color: const Color(0xFFF1F5F9),
+                          child: const Icon(Icons.broken_image_rounded,
+                              size: 22, color: Color(0xFF9CA3AF)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Extracts non-null per-category sub-ratings from a review map as
+/// (label, value) pairs, in display order.
+List<(String, num)> _reviewBreakdown(Map<String, dynamic> review) {
+  const labels = {
+    'rating_guide': 'ไกด์',
+    'rating_vehicle': 'รถ',
+    'rating_food': 'อาหาร',
+    'rating_value': 'คุ้มค่า',
+  };
+  final result = <(String, num)>[];
+  labels.forEach((key, label) {
+    final raw = review[key];
+    final value = raw is num ? raw : num.tryParse('${raw ?? ''}');
+    if (value != null && value > 0) result.add((label, value));
+  });
+  return result;
+}
+
+/// Gallery of photos pulled from all community reviews of this trip.
+class CommunityPhotosSection extends StatelessWidget {
+  final List<dynamic> reviews;
+
+  const CommunityPhotosSection({super.key, required this.reviews});
+
+  @override
+  Widget build(BuildContext context) {
+    final photos = <String>[];
+    for (final r in reviews) {
+      for (final img in asList(asMap(r)['images'])) {
+        final url = img.toString();
+        if (url.isNotEmpty) photos.add(url);
+      }
+    }
+    if (photos.isEmpty) return const SizedBox.shrink();
+
+    const previewCount = 8;
+    final preview = photos.take(previewCount).toList();
+    final extra = photos.length - preview.length;
+
+    return _PremiumCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: _SectionHeader(
+                  icon: Icons.photo_library_outlined,
+                  title: 'รูปจากนักเดินทาง',
+                ),
+              ),
+              Text(
+                '${photos.length} รูป',
+                style: GoogleFonts.anuphan(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: _mutedText,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 104,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: preview.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (_, i) {
+                final isLast = i == preview.length - 1 && extra > 0;
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      fullscreenDialog: true,
+                      builder: (_) =>
+                          _FullscreenGallery(images: photos, initialIndex: i),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      children: [
+                        CachedNetworkImage(
+                          imageUrl: preview[i],
+                          width: 104,
+                          height: 104,
+                          fit: BoxFit.cover,
+                          placeholder: (_, _) => Container(
+                            width: 104,
+                            height: 104,
+                            color: const Color(0xFFF1F5F9),
+                          ),
+                          errorWidget: (_, _, _) => Container(
+                            width: 104,
+                            height: 104,
+                            color: const Color(0xFFF1F5F9),
+                            child: const Icon(Icons.broken_image_rounded,
+                                color: Color(0xFF9CA3AF)),
+                          ),
+                        ),
+                        if (isLast)
+                          Positioned.fill(
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.45),
+                              alignment: Alignment.center,
+                              child: Text(
+                                '+$extra',
+                                style: GoogleFonts.anuphan(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewBreakdownChip extends StatelessWidget {
+  final String label;
+  final num value;
+
+  const _ReviewBreakdownChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.anuphan(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF92400E),
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.star_rounded, size: 11, color: Color(0xFFF59E0B)),
+          const SizedBox(width: 2),
+          Text(
+            numberText(value),
+            style: GoogleFonts.anuphan(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF92400E),
+            ),
+          ),
+        ],
       ),
     );
   }

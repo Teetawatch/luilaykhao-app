@@ -288,6 +288,11 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
   String? get _effectivePickupRegionKey =>
       _selectedPickupRegionKey ?? _initialPickupRegionKey;
 
+  /// True when at least one review of this trip carries a photo.
+  bool get _hasCommunityPhotos => widget.reviews.any(
+        (r) => asList(asMap(r)['images']).any((u) => u.toString().isNotEmpty),
+      );
+
   List<dynamic> get _selectedPickupPoints {
     final schedule = _selectedSchedule;
     if (schedule == null) return const [];
@@ -592,6 +597,10 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      if (_hasCommunityPhotos) ...[
+                        CommunityPhotosSection(reviews: widget.reviews),
+                        const SizedBox(height: 16),
+                      ],
                       ReviewSection(trip: widget.trip, reviews: widget.reviews),
                     ],
                   ),

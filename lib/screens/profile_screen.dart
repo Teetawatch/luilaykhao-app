@@ -18,6 +18,7 @@ import '../widgets/travel_widgets.dart';
 import 'booking_lookup_screen.dart';
 import 'document_wallet_screen.dart';
 import 'notification_preferences_screen.dart';
+import 'chat_screen.dart' show ChatScreen;
 import 'staff_check_in_screen.dart' show StaffCheckInScreen;
 import 'wishlist_screen.dart';
 import 'login_screen.dart';

@@ -44,6 +44,28 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
   bool _submitting = false;
   String? _error;
 
+  // Optional per-category ratings (0 = ไม่ระบุ)
+  final Map<String, int> _categoryRatings = {
+    'guide': 0,
+    'vehicle': 0,
+    'food': 0,
+    'value': 0,
+  };
+
+  static const _categoryLabels = {
+    'guide': 'ไกด์',
+    'vehicle': 'รถ',
+    'food': 'อาหาร',
+    'value': 'ความคุ้มค่า',
+  };
+
+  static const _categoryIcons = {
+    'guide': Icons.hiking_rounded,
+    'vehicle': Icons.directions_bus_rounded,
+    'food': Icons.restaurant_rounded,
+    'value': Icons.savings_rounded,
+  };
+
   final List<File> _selectedImages = [];
   final List<String> _uploadedUrls = [];
   final List<bool> _uploadingFlags = [];
@@ -146,6 +168,16 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
             rating: _rating,
             comment: comment,
             images: images,
+            ratingGuide:
+                _categoryRatings['guide']! > 0 ? _categoryRatings['guide'] : null,
+            ratingVehicle: _categoryRatings['vehicle']! > 0
+                ? _categoryRatings['vehicle']
+                : null,
+            ratingFood:
+                _categoryRatings['food']! > 0 ? _categoryRatings['food'] : null,
+            ratingValue: _categoryRatings['value']! > 0
+                ? _categoryRatings['value']
+                : null,
           );
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -156,6 +188,55 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
         _submitting = false;
       });
     }
+  }
+
+  Widget _buildCategoryRow(String key) {
+    final value = _categoryRatings[key]!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Icon(_categoryIcons[key],
+              size: 16, color: AppTheme.mutedText(context)),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 78,
+            child: Text(
+              _categoryLabels[key]!,
+              style: GoogleFonts.anuphan(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+          ),
+          const Spacer(),
+          ...List.generate(5, (i) {
+            final star = i + 1;
+            final filled = star <= value;
+            return GestureDetector(
+              onTap: _submitting
+                  ? null
+                  : () => setState(() {
+                        // Tapping the current value clears it (back to optional).
+                        _categoryRatings[key] = value == star ? 0 : star;
+                      }),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                child: Icon(
+                  filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                  size: 22,
+                  color: filled
+                      ? const Color(0xFFFFB400)
+                      : AppTheme.mutedText(context).withValues(alpha: 0.5),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
   }
 
   @override
@@ -215,8 +296,35 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 }),
               ),
 
+              // ── Category breakdown (optional) ────────────────────────
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.fieldSurface(context),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'ให้คะแนนแยกหมวด (ไม่บังคับ)',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    ..._categoryLabels.keys.map(_buildCategoryRow),
+                  ],
+                ),
+              ),
+
               // ── Comment ──────────────────────────────────────────────
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: _commentController,
                 enabled: !_submitting,

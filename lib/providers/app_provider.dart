@@ -937,6 +937,10 @@ class AppProvider extends ChangeNotifier {
     required int rating,
     required String comment,
     List<String> images = const [],
+    int? ratingGuide,
+    int? ratingVehicle,
+    int? ratingFood,
+    int? ratingValue,
   }) async {
     await api.post(
       'reviews',
@@ -945,6 +949,10 @@ class AppProvider extends ChangeNotifier {
         'rating': rating,
         'comment': comment,
         if (images.isNotEmpty) 'images': images,
+        'rating_guide': ?ratingGuide,
+        'rating_vehicle': ?ratingVehicle,
+        'rating_food': ?ratingFood,
+        'rating_value': ?ratingValue,
       },
     );
     await loadPublicData();

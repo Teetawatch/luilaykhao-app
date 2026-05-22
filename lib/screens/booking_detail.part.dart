@@ -994,41 +994,14 @@ class _PreTripBriefingCard extends StatelessWidget {
                   _BriefingSection(
                     icon: Icons.checklist_rounded,
                     title: 'สิ่งที่ต้องเตรียม',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: preparations.map((item) {
-                        final text = item is Map
-                            ? textOf(item['text'] ?? item['title'] ?? item)
-                            : item.toString();
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 5),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(top: 3),
-                                child: Icon(
-                                  Icons.check_circle_rounded,
-                                  size: 14,
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
-                              const SizedBox(width: 7),
-                              Expanded(
-                                child: Text(
-                                  text,
-                                  style: GoogleFonts.anuphan(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.onSurface(context),
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                    child: _PreparationsChecklist(
+                      bookingRef: textOf(booking['booking_ref']),
+                      items: preparations
+                          .map((item) => item is Map
+                              ? textOf(item['text'] ?? item['title'] ?? item)
+                              : item.toString())
+                          .where((t) => t.trim().isNotEmpty)
+                          .toList(),
                     ),
                   ),
                   if (mustKnow.isNotEmpty) const SizedBox(height: 14),
@@ -1136,6 +1109,144 @@ class _BriefingSection extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Interactive pre-departure checklist. Items come from the trip's
+/// `preparations`; the tick state is stored locally per booking in
+/// SharedPreferences (no backend), keyed by item text so it survives reorder.
+class _PreparationsChecklist extends StatefulWidget {
+  final String bookingRef;
+  final List<String> items;
+
+  const _PreparationsChecklist({
+    required this.bookingRef,
+    required this.items,
+  });
+
+  @override
+  State<_PreparationsChecklist> createState() => _PreparationsChecklistState();
+}
+
+class _PreparationsChecklistState extends State<_PreparationsChecklist> {
+  final Set<String> _checked = {};
+  SharedPreferences? _prefs;
+
+  String get _storeKey => 'prep_checklist_${widget.bookingRef}';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChecked();
+  }
+
+  Future<void> _loadChecked() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_storeKey) ?? const [];
+    if (!mounted) return;
+    setState(() {
+      _prefs = prefs;
+      _checked
+        ..clear()
+        ..addAll(saved.where(widget.items.contains));
+    });
+  }
+
+  void _toggle(String item) {
+    setState(() {
+      if (!_checked.add(item)) _checked.remove(item);
+    });
+    _prefs?.setStringList(_storeKey, _checked.toList());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = widget.items.length;
+    final done = _checked.length;
+    final allDone = total > 0 && done == total;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // progress
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: total == 0 ? 0 : done / total,
+                    minHeight: 5,
+                    backgroundColor: AppTheme.mutedText(context)
+                        .withValues(alpha: 0.15),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      allDone ? AppTheme.primaryColor : const Color(0xFFE8A117),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                allDone ? 'พร้อมแล้ว 🎉' : 'เตรียมแล้ว $done/$total',
+                style: GoogleFonts.anuphan(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: allDone
+                      ? AppTheme.primaryColor
+                      : AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ...widget.items.map((item) {
+          final checked = _checked.contains(item);
+          return InkWell(
+            onTap: () => _toggle(item),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(
+                      checked
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      size: 18,
+                      color: checked
+                          ? AppTheme.primaryColor
+                          : AppTheme.mutedText(context).withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                        color: checked
+                            ? AppTheme.mutedText(context)
+                            : AppTheme.onSurface(context),
+                        decoration:
+                            checked ? TextDecoration.lineThrough : null,
+                        decorationColor: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
       ],
     );
   }

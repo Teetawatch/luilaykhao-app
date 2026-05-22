@@ -609,9 +609,13 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
             ),
           ),
 
-          // Footer action
-          if (widget.isToday || status == 'confirmed' || status == 'active')
-            _StaffScheduleAction(schedule: s),
+          // Footer actions (group chat + optional QR check-in)
+          if (status != 'cancelled')
+            _StaffScheduleAction(
+              schedule: s,
+              showCheckIn:
+                  widget.isToday || status == 'confirmed' || status == 'active',
+            ),
         ],
       ),
     );
@@ -690,38 +694,100 @@ class _PickupPointRow extends StatelessWidget {
 
 class _StaffScheduleAction extends StatelessWidget {
   final Map<String, dynamic> schedule;
+  final bool showCheckIn;
 
-  const _StaffScheduleAction({required this.schedule});
+  const _StaffScheduleAction({
+    required this.schedule,
+    this.showCheckIn = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final scheduleId = _numberValue(schedule['id']);
+    final trip = _toMap(schedule['trip']);
+    final tripTitle = _cleanText(trip['title'], fallback: 'แชทกลุ่มทริป');
+    final hasChat = scheduleId > 0;
+
     return Container(
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: AppTheme.border(context).withValues(alpha: 0.6)),
         ),
       ),
-      child: InkWell(
-        onTap: () => _pushPremium(context, const StaffCheckInScreen()),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(22)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-          child: Row(
-            children: [
-              const Icon(Icons.qr_code_scanner, size: 18, color: Color(0xFF0D9488)),
-              const SizedBox(width: 8),
-              Text(
-                'เปิดหน้า QR Check-in',
-                style: GoogleFonts.anuphan(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF0D9488),
-                ),
+      child: Column(
+        children: [
+          // Group chat — available to assigned staff for coordinating the trip
+          if (hasChat)
+            _StaffActionRow(
+              icon: Icons.forum_outlined,
+              label: 'แชทกลุ่มทริป',
+              color: AppTheme.primaryColor,
+              roundedBottom: !showCheckIn,
+              onTap: () => _pushPremium(
+                context,
+                ChatScreen(scheduleId: scheduleId, title: tripTitle),
               ),
-              const Spacer(),
-              Icon(Icons.arrow_forward_ios, size: 13, color: AppTheme.mutedText(context)),
-            ],
-          ),
+            ),
+          if (hasChat && showCheckIn)
+            Divider(
+              height: 1,
+              color: AppTheme.border(context).withValues(alpha: 0.5),
+            ),
+          // QR check-in
+          if (showCheckIn)
+            _StaffActionRow(
+              icon: Icons.qr_code_scanner,
+              label: 'เปิดหน้า QR Check-in',
+              color: const Color(0xFF0D9488),
+              roundedBottom: true,
+              onTap: () => _pushPremium(context, const StaffCheckInScreen()),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StaffActionRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool roundedBottom;
+  final VoidCallback onTap;
+
+  const _StaffActionRow({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.roundedBottom = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: roundedBottom
+          ? const BorderRadius.vertical(bottom: Radius.circular(22))
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.anuphan(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.arrow_forward_ios,
+                size: 13, color: AppTheme.mutedText(context)),
+          ],
         ),
       ),
     );
