@@ -64,6 +64,23 @@ class ApiEndpoints {
   static String notification(int id) => 'notifications/$id';
   static const notificationsPushToken = 'notifications/push-token';
 
+  // Trip price & availability alerts (per-trip bell)
+  static const tripAlerts = 'trip-alerts';
+  static String tripAlert(String slug) => 'trips/$slug/alerts';
+
+  // Group trip invite (host-pays-all)
+  static String scheduleGroupPlans(int scheduleId) =>
+      'schedules/$scheduleId/group-plans';
+  static const groupPlansMine = 'group-plans/mine';
+  static String groupPlan(String code) => 'group-plans/$code';
+  static String groupPlanJoin(String code) => 'group-plans/$code/join';
+  static String groupPlanClaimSeat(String code) =>
+      'group-plans/$code/claim-seat';
+  static String groupPlanReleaseSeat(String code) =>
+      'group-plans/$code/release-seat';
+  static String groupPlanLeave(String code) => 'group-plans/$code/leave';
+  static String groupPlanCheckout(String code) => 'group-plans/$code/checkout';
+
   // Loyalty
   static const loyaltyAccount = 'loyalty/account';
   static const loyaltyRewards = 'loyalty/rewards';

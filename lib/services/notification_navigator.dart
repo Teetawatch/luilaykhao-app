@@ -5,6 +5,7 @@ import '../main.dart' show appNavigatorKey;
 import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../screens/chat_screen.dart';
+import '../screens/group_room_screen.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/sos_alert_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
@@ -34,6 +35,8 @@ class NotificationNavigator {
         _openBookingDetail(data);
       case 'seat_alert':
         _switchTab(2);
+      case 'trip_alert':
+        _openTripFromData(data);
       case 'sos_alert':
         _openSosAlert(data);
       case 'chat_message':
@@ -57,6 +60,15 @@ class NotificationNavigator {
       return;
     }
     _switchTab(2);
+  }
+
+  static void _openTripFromData(Map<String, dynamic> data) {
+    final slug = data['trip_slug']?.toString().trim() ?? '';
+    if (slug.isEmpty) {
+      _openNotifications();
+      return;
+    }
+    _openTrip(slug);
   }
 
   static void _openChat(Map<String, dynamic> data) {
@@ -137,8 +149,21 @@ class NotificationNavigator {
         if (ref == null) return false;
         _openBookingByRef(ref);
         return true;
+      case 'group':
+        final code = _firstSegment(uri.pathSegments);
+        if (code == null) return false;
+        _openGroup(code);
+        return true;
     }
     return false;
+  }
+
+  static void _openGroup(String code) {
+    final nav = _nav;
+    if (nav == null) return;
+    nav.push(
+      MaterialPageRoute(builder: (_) => GroupRoomScreen(inviteCode: code)),
+    );
   }
 
   static String? _firstSegment(List<String> segments) {

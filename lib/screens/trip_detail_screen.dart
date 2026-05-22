@@ -8,12 +8,14 @@ import 'package:luilaykhao_app/providers/app_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../providers/trip_alert_provider.dart';
 import '../providers/wishlist_provider.dart';
 
 import '../config/api_config.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
 import 'booking_flow_screen.dart';
+import 'group_room_screen.dart';
 import 'login_screen.dart';
 
 part 'trip_detail_hero.part.dart';
@@ -233,6 +235,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     _scrollController = ScrollController()..addListener(_handleScroll);
     _syncInitialSelection();
     _syncFavoriteState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAlertState());
   }
 
   @override
@@ -518,9 +521,50 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     );
   }
 
+  Future<void> _loadAlertState() async {
+    if (!mounted) return;
+    final app = context.read<AppProvider>();
+    if (!app.isLoggedIn) return;
+    await context.read<TripAlertProvider>().load(app.api, force: true);
+  }
+
+  Future<void> _handleAlertTap() async {
+    final slug = textOf(widget.trip['slug']).trim();
+    if (slug.isEmpty) {
+      _showTripDetailMessage(context, 'กำลังโหลดข้อมูลทริป');
+      return;
+    }
+
+    final app = context.read<AppProvider>();
+    if (!app.isLoggedIn) {
+      _showTripDetailMessage(context, 'กรุณาเข้าสู่ระบบเพื่อรับการแจ้งเตือน');
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      return;
+    }
+
+    try {
+      final on = await context.read<TripAlertProvider>().toggle(app.api, slug);
+      if (!mounted) return;
+      _showTripDetailMessage(
+        context,
+        on
+            ? 'เปิดแจ้งเตือนแล้ว — เราจะบอกคุณเมื่อราคาลด เปิดรอบใหม่ หรือที่นั่งใกล้เต็ม'
+            : 'ปิดแจ้งเตือนทริปนี้แล้ว',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showTripDetailMessage(context, 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final heroHeight = _heroHeight(context);
+    final alertSlug = textOf(widget.trip['slug']).trim();
+    final isAlertOn = alertSlug.isNotEmpty &&
+        context.watch<TripAlertProvider>().isSubscribed(alertSlug);
     final selectedSchedule = _selectedSchedule;
     final joinTripEnabled = selectedSchedule != null &&
         _asBool(selectedSchedule['join_trip_enabled']);
@@ -542,8 +586,10 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
               isCollapsed: _isCollapsed,
               expandedHeight: heroHeight,
               isFavorite: _isFavorite,
+              isAlertOn: isAlertOn,
               onSharePressed: _handleShareTrip,
               onFavoritePressed: _handleFavoriteTap,
+              onAlertPressed: _handleAlertTap,
             ),
             SliverToBoxAdapter(
               child: Transform.translate(
@@ -582,6 +628,15 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
                         onScheduleChanged: _handleScheduleChanged,
                         onPickupChanged: _handlePickupChanged,
                       ),
+                      if (_selectedScheduleId != null) ...[
+                        const SizedBox(height: 12),
+                        _GroupInviteEntry(
+                          onPressed: () => GroupRoomScreen.startFlow(
+                            context,
+                            _selectedScheduleId!,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       HighlightsSection(trip: widget.trip),
                       const SizedBox(height: 16),
@@ -624,6 +679,62 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
   double _heroHeight(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     return (size.height * 0.46).clamp(320.0, 480.0);
+  }
+}
+
+/// Call-to-action that lets a customer start a group plan for the chosen
+/// schedule — friends join via a shared link and the host pays for everyone.
+class _GroupInviteEntry extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _GroupInviteEntry({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.accentColor.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border:
+                Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.groups_rounded, color: AppTheme.primaryColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ชวนเพื่อนมาเป็นกลุ่ม',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: _premiumText,
+                      ),
+                    ),
+                    Text(
+                      'จองที่นั่งติดกัน เพื่อนเลือกที่นั่งเอง คุณจ่ายทีเดียว',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 12.5,
+                        color: _mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: _mutedText),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

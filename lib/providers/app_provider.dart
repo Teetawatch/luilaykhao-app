@@ -828,6 +828,87 @@ class AppProvider extends ChangeNotifier {
     );
   }
 
+  // ── Group trip invite (host-pays-all) ────────────────────────────────────
+
+  /// Live updates for a group plan room. Returns a disposer.
+  Future<VoidCallback> subscribeGroup(
+    String code,
+    RealtimeEventHandler handler,
+  ) {
+    return realtime.subscribe(
+      channel: 'private-group.$code',
+      event: 'group.updated',
+      handler: handler,
+    );
+  }
+
+  Future<Map<String, dynamic>> createGroupPlan(
+    int scheduleId,
+    int seatCount,
+    String? name,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.scheduleGroupPlans(scheduleId),
+      body: {'seat_count': seatCount, 'name': ?name},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> fetchGroupPlan(String code) async {
+    final response = await api.get(ApiEndpoints.groupPlan(code));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<List<dynamic>> myGroupPlans() async {
+    final response = await api.get(ApiEndpoints.groupPlansMine);
+    return List<dynamic>.from(api.data(response) ?? []);
+  }
+
+  Future<Map<String, dynamic>> joinGroupPlan(String code) async {
+    final response = await api.post(ApiEndpoints.groupPlanJoin(code));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> claimGroupSeat(
+    String code,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.groupPlanClaimSeat(code),
+      body: body,
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> releaseGroupSeat(String code) async {
+    final response = await api.post(ApiEndpoints.groupPlanReleaseSeat(code));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<void> leaveGroupPlan(String code) async {
+    await api.post(ApiEndpoints.groupPlanLeave(code));
+  }
+
+  Future<void> cancelGroupPlan(String code) async {
+    await api.delete(ApiEndpoints.groupPlan(code));
+  }
+
+  Future<Map<String, dynamic>> checkoutGroupPlan(
+    String code, {
+    int? pickupPointId,
+    String? pickupRegion,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.groupPlanCheckout(code),
+      body: {
+        'pickup_point_id': ?pickupPointId,
+        'pickup_region': ?pickupRegion,
+      },
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   Future<Map<String, dynamic>> paymentStatus(String ref) async {
     final response = await api.get('payments/$ref');
     return Map<String, dynamic>.from(api.data(response) as Map);

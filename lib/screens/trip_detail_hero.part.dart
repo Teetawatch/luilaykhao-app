@@ -6,8 +6,10 @@ class TravelSliverAppBar extends StatelessWidget {
   final bool isCollapsed;
   final double expandedHeight;
   final bool isFavorite;
+  final bool isAlertOn;
   final VoidCallback onSharePressed;
   final VoidCallback onFavoritePressed;
+  final VoidCallback onAlertPressed;
 
   const TravelSliverAppBar({
     super.key,
@@ -16,8 +18,10 @@ class TravelSliverAppBar extends StatelessWidget {
     required this.isCollapsed,
     required this.expandedHeight,
     required this.isFavorite,
+    required this.isAlertOn,
     required this.onSharePressed,
     required this.onFavoritePressed,
+    required this.onAlertPressed,
   });
 
   @override
@@ -64,6 +68,15 @@ class TravelSliverAppBar extends StatelessWidget {
           icon: Icons.ios_share_rounded,
           isCollapsed: isCollapsed,
           onPressed: onSharePressed,
+        ),
+        const SizedBox(width: 8),
+        FloatingActionIconButton(
+          icon: isAlertOn
+              ? Icons.notifications_active_rounded
+              : Icons.notifications_none_rounded,
+          isCollapsed: isCollapsed,
+          foregroundColor: isAlertOn ? const Color(0xFFF59E0B) : null,
+          onPressed: onAlertPressed,
         ),
         const SizedBox(width: 8),
         FloatingActionIconButton(
