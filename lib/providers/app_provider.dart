@@ -774,10 +774,11 @@ class AppProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> chatMessages(
     int scheduleId, {
     int? beforeId,
+    int? afterId,
   }) async {
     final response = await api.get(
       ApiEndpoints.chatMessages(scheduleId),
-      query: {'per_page': 30, 'before_id': ?beforeId},
+      query: {'per_page': 30, 'before_id': ?beforeId, 'after_id': ?afterId},
     );
     return Map<String, dynamic>.from(api.data(response) ?? {});
   }
@@ -951,6 +952,30 @@ class AppProvider extends ChangeNotifier {
       ApiEndpoints.paymentsChargeBalance,
       fields: {
         'booking_ref': bookingRef,
+        'payment_method': paymentMethod,
+        'transfer_date': ?transferDate,
+        'transfer_time': ?transferTime,
+      },
+      files: {'slip_image': slipImagePath},
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// Pay a specific installment for an installment booking.
+  Future<Map<String, dynamic>> chargeInstallment({
+    required String bookingRef,
+    required int installmentNo,
+    String paymentMethod = 'promptpay',
+    String? transferDate,
+    String? transferTime,
+    required String slipImagePath,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.paymentsChargeInstallment,
+      fields: {
+        'booking_ref': bookingRef,
+        'installment_no': '$installmentNo',
         'payment_method': paymentMethod,
         'transfer_date': ?transferDate,
         'transfer_time': ?transferTime,

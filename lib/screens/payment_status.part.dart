@@ -329,6 +329,90 @@ class _BalanceDueBanner extends StatelessWidget {
   }
 }
 
+class _InstallmentBanner extends StatelessWidget {
+  final int no;
+  final String dueDate;
+  final num amount;
+  final bool paid;
+
+  const _InstallmentBanner({
+    required this.no,
+    required this.dueDate,
+    required this.amount,
+    required this.paid,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = paid ? _accent : AppTheme.warningColor;
+    final due = DateTime.tryParse(dueDate);
+    final dueText =
+        due == null ? '-' : DateFormat('d MMM yyyy', 'th_TH').format(due);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: AppTheme.isDark(context) ? 0.22 : 0.10),
+            color.withValues(alpha: AppTheme.isDark(context) ? 0.10 : 0.04),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              paid ? Icons.check_circle_rounded : Icons.receipt_long_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  paid ? 'ชำระงวดที่ $no แล้ว' : 'ชำระงวดที่ $no',
+                  style: GoogleFonts.anuphan(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  paid
+                      ? 'รับชำระ ${money(amount)} เรียบร้อยแล้ว'
+                      : 'ยอดชำระ ${money(amount)} · ครบกำหนด $dueText',
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.onSurface(context),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Countdown banner
 // ─────────────────────────────────────────────────────────────────────────────

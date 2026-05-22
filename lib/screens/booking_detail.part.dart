@@ -36,6 +36,18 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
           final trip = asMap(schedule['trip']);
           final passengers = asList(booking['passengers']);
           final installments = asList(booking['installment_payments']);
+          // Lowest unpaid installment the customer can still pay (no.1 is settled
+          // at booking time, so the next payable is always >= 2).
+          final nextInstallmentNo = () {
+            final unpaid = installments
+                .map(asMap)
+                .where((i) => textOf(i['status']) != 'paid')
+                .map((i) => int.tryParse(textOf(i['installment_no'])) ?? 0)
+                .where((no) => no >= 2)
+                .toList()
+              ..sort();
+            return unpaid.isEmpty ? null : unpaid.first;
+          }();
           final installmentAvailable = _scheduleInstallmentAvailable(schedule);
           final depositAvailable = _scheduleDepositAvailable(schedule) &&
               !_asBool(booking['is_join_trip']);
@@ -304,6 +316,28 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                       ),
                     );
                   }),
+                  if (nextInstallmentNo != null) ...[
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PaymentScreen(
+                                bookingRef: widget.bookingRef,
+                                installmentNo: nextInstallmentNo,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.payments_outlined),
+                        label: Text('ชำระงวดที่ $nextInstallmentNo'),
+                      ),
+                    ),
+                  ],
                 ],
 
                 const SizedBox(height: 20),

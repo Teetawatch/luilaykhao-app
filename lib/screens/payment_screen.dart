@@ -39,10 +39,15 @@ class PaymentScreen extends StatefulWidget {
   final String bookingRef;
   final String initialPaymentType;
 
+  /// When set, the screen collects payment for this specific installment
+  /// (an already-confirmed installment booking) instead of an initial payment.
+  final int? installmentNo;
+
   const PaymentScreen({
     super.key,
     required this.bookingRef,
     this.initialPaymentType = 'full',
+    this.installmentNo,
   });
 
   @override
@@ -176,8 +181,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<void> _submit(
     Map<String, dynamic> booking, {
     bool payingBalance = false,
+    int? installmentNo,
   }) async {
-    if (!payingBalance && textOf(booking['status']) != 'pending') return;
+    final payingInstallment = installmentNo != null;
+    if (!payingBalance && !payingInstallment &&
+        textOf(booking['status']) != 'pending') {
+      return;
+    }
     if (payingBalance && !_balanceUnpaid(booking)) return;
     if (_transferDate == null || _transferTime == null) {
       _showSnack('กรุณาระบุวันที่และเวลาที่โอนเงินตามสลิป');
@@ -199,6 +209,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
         amount = _balanceAmount(booking);
         await context.read<AppProvider>().chargeBalance(
           bookingRef: widget.bookingRef,
+          paymentMethod: _paymentMethod,
+          transferDate: transferDateStr,
+          transferTime: transferTimeStr,
+          slipImagePath: _slipImage!.path,
+        );
+      } else if (payingInstallment) {
+        amount = _asNum(_installmentRecord(booking, installmentNo)['amount']);
+        await context.read<AppProvider>().chargeInstallment(
+          bookingRef: widget.bookingRef,
+          installmentNo: installmentNo,
           paymentMethod: _paymentMethod,
           transferDate: transferDateStr,
           transferTime: transferTimeStr,
@@ -345,15 +365,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
           // When the booking is on a deposit plan with an unpaid balance, we
           // collect the balance from this screen even though status is "confirmed".
           final collectingBalance = status == 'confirmed' && balanceUnpaid;
-          final checkInReady = status == 'confirmed' && !balanceUnpaid;
+          // Paying one installment of an already-confirmed installment booking.
+          final payingInstallment = widget.installmentNo != null;
+          final installmentRecord = payingInstallment
+              ? _installmentRecord(booking, widget.installmentNo!)
+              : const <String, dynamic>{};
+          final installmentPaid =
+              payingInstallment && textOf(installmentRecord['status']) == 'paid';
+          final collectingInstallment =
+              payingInstallment && !installmentPaid && installmentRecord.isNotEmpty;
+          final checkInReady = status == 'confirmed' &&
+              !balanceUnpaid &&
+              !payingInstallment;
           final paymentType = collectingBalance
               ? 'balance'
               : _normalizePaymentType(booking, _paymentType);
           final amountDue = collectingBalance
               ? _balanceAmount(booking)
-              : _amountDue(booking, paymentType);
+              : payingInstallment
+                  ? _asNum(installmentRecord['amount'])
+                  : _amountDue(booking, paymentType);
           final qrPayload = _buildPromptPayPayload(_promptPayId, amountDue);
-          final pendingFormVisible = status == 'pending' || collectingBalance;
+          final pendingFormVisible =
+              status == 'pending' || collectingBalance || collectingInstallment;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
@@ -370,6 +404,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 _BalanceDueBanner(booking: booking),
                 const SizedBox(height: 16),
               ],
+              if (payingInstallment) ...[
+                _InstallmentBanner(
+                  no: widget.installmentNo!,
+                  dueDate: textOf(installmentRecord['due_date']),
+                  amount: _asNum(installmentRecord['amount']),
+                  paid: installmentPaid,
+                ),
+                const SizedBox(height: 16),
+              ],
               if (checkInReady) ...[
                 _PaymentCompletedCard(booking: booking),
                 const SizedBox(height: 16),
@@ -383,6 +426,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const _SeatLockSection(),
               if (pendingFormVisible) ...[
                 if (!collectingBalance &&
+                    !payingInstallment &&
                     (_installmentAvailable(booking) ||
                         _depositAvailable(booking))) ...[
                   _PaymentTypeSection(
@@ -426,10 +470,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 _SubmitButton(
                   paying: _paying,
                   amount: amountDue,
-                  label: collectingBalance ? 'ชำระยอดส่วนที่เหลือ' : null,
+                  label: collectingBalance
+                      ? 'ชำระยอดส่วนที่เหลือ'
+                      : collectingInstallment
+                          ? 'ชำระงวดที่ ${widget.installmentNo}'
+                          : null,
                   onPressed: () => _submit(
                     booking,
                     payingBalance: collectingBalance,
+                    installmentNo:
+                        collectingInstallment ? widget.installmentNo : null,
                   ),
                 ),
               ],

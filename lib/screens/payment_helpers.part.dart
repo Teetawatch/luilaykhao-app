@@ -194,6 +194,17 @@ List<_InstallmentPreview> _installmentSchedule(Map<String, dynamic> booking) {
   });
 }
 
+/// The actual installment record (id/amount/due_date/status) for a given number.
+Map<String, dynamic> _installmentRecord(Map<String, dynamic> booking, int no) {
+  for (final item in asList(booking['installment_payments'])) {
+    final inst = asMap(item);
+    if ((int.tryParse(textOf(inst['installment_no'])) ?? -1) == no) {
+      return inst;
+    }
+  }
+  return <String, dynamic>{};
+}
+
 String _statusLabel(String status) => switch (status) {
   'pending' => 'รอชำระเงิน',
   'confirmed' => 'ยืนยันแล้ว',

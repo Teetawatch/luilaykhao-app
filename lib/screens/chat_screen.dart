@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,7 +22,11 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
+  // Fallback poll interval — keeps the room live even when the realtime
+  // socket can't connect (mobile network, proxy, missing build config).
+  static const _pollInterval = Duration(seconds: 3);
+
   final List<Map<String, dynamic>> _messages = [];
   final _input = TextEditingController();
   final _scroll = ScrollController();
@@ -30,18 +36,23 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _loadingMore = false;
   bool _hasMore = false;
   bool _sending = false;
+  bool _polling = false;
   String? _error;
   VoidCallback? _disposer;
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _scroll.addListener(_onScroll);
     _init();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopPolling();
     _disposer?.call();
     _input.dispose();
     _scroll.removeListener(_onScroll);
@@ -49,10 +60,22 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) return;
+    if (state == AppLifecycleState.resumed) {
+      _startPolling();
+      _poll();
+    } else {
+      _stopPolling();
+    }
+  }
+
   Future<void> _init() async {
     final app = context.read<AppProvider>();
     await _load();
     _disposer = await app.subscribeChat(widget.scheduleId, _onIncoming);
+    _startPolling();
   }
 
   Future<void> _load() async {
@@ -104,13 +127,61 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _onIncoming(Map<String, dynamic> data) {
-    if (!mounted) return;
-    final id = data['id'];
-    if (id != null && _messages.any((m) => m['id'] == id)) return;
+    _ingest([
+      {...data, 'is_mine': false},
+    ]);
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(_pollInterval, (_) => _poll());
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+
+  Future<void> _poll() async {
+    if (!mounted || _polling || _loading || _messages.isEmpty) return;
+    _polling = true;
+    try {
+      final afterId = _latestId();
+      if (afterId == 0) return;
+      final data = await context
+          .read<AppProvider>()
+          .chatMessages(widget.scheduleId, afterId: afterId);
+      final fresh = (data['messages'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      _ingest(fresh);
+    } catch (_) {
+      // Transient network failure — next tick retries.
+    } finally {
+      _polling = false;
+    }
+  }
+
+  /// Append messages we don't already have, then update the UI / read state.
+  void _ingest(List<Map<String, dynamic>> incoming) {
+    if (!mounted || incoming.isEmpty) return;
+    final fresh = incoming
+        .where((m) => m['id'] == null || !_messages.any((e) => e['id'] == m['id']))
+        .toList();
+    if (fresh.isEmpty) return;
     final wasAtBottom = _isNearBottom();
-    setState(() => _messages.add({...data, 'is_mine': false}));
+    setState(() => _messages.addAll(fresh));
     context.read<AppProvider>().markChatRead(widget.scheduleId);
     if (wasAtBottom) _scrollToBottom();
+  }
+
+  int _latestId() {
+    var max = 0;
+    for (final m in _messages) {
+      final id = int.tryParse('${m['id']}') ?? 0;
+      if (id > max) max = id;
+    }
+    return max;
   }
 
   Future<void> _send() async {
