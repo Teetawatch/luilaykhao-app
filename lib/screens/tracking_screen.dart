@@ -240,7 +240,7 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
       children: [
         TileLayer(
           urlTemplate:
-              'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+              'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
           subdomains: const ['a', 'b', 'c', 'd'],
           userAgentPackageName: 'com.luilaykhao.app',
         ),

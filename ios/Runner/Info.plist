@@ -46,6 +46,8 @@
 	<string>ใช้ Face ID เพื่อยืนยันตัวตนในการเข้าสู่ระบบแทนรหัสผ่าน</string>
 	<key>NSCameraUsageDescription</key>
 	<string>ใช้กล้องเพื่อสแกน QR และอัปโหลดหลักฐานการชำระเงิน</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุดและติดตามรถรับส่งระหว่างทริป</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุดและติดตามรถรับส่งระหว่างทริป</string>
 	<key>NSPhotoLibraryUsageDescription</key>

@@ -38,6 +38,12 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphoneos*]'] = 'x86_64'
+    end
+  end
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings['EXCLUDED_ARCHS[sdk=iphoneos*]'] = 'x86_64'
   end
 
   # Add a Run Script phase to patch frameworks that have IOSSIMULATOR platform marker
@@ -46,6 +52,11 @@ post_install do |installer|
   runner_target = runner_project.targets.find { |t| t.name == 'Runner' }
 
   if runner_target
+    runner_target.build_configurations.each do |config|
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphoneos*]'] = 'x86_64'
+    end
+    runner_project.save
+
     phase_name = 'Strip Simulator Platform Slices'
     existing = runner_target.build_phases.find { |p| p.respond_to?(:name) && p.name == phase_name }
 
@@ -67,6 +78,12 @@ post_install do |installer|
           [ -z "$EXEC" ] && continue
           BIN="$FW/$EXEC"
           [ -f "$BIN" ] || continue
+          # Strip x86_64 (simulator-only arch) from device builds
+          if lipo -archs "$BIN" 2>/dev/null | grep -q "x86_64"; then
+            echo "Stripping x86_64 from $EXEC"
+            lipo -remove x86_64 "$BIN" -output "${BIN}.stripped" && mv "${BIN}.stripped" "$BIN"
+          fi
+          # Patch IOSSIMULATOR platform markers to IOS for device builds
           if vtool -show-build "$BIN" 2>/dev/null | grep -q "IOSSIMULATOR"; then
             MIN_OS=$(defaults read "$FW/Info.plist" MinimumOSVersion 2>/dev/null || echo "${IPHONEOS_DEPLOYMENT_TARGET:-15.0}")
             echo "Patching $EXEC: IOSSIMULATOR -> IOS (minos=$MIN_OS)"

@@ -771,6 +771,7 @@ String _notificationTypeLabel(String type) {
     'payment_rejected' => 'ชำระเงินไม่สำเร็จ',
     'installment_due' => 'ผ่อนชำระ',
     'seat_alert' => 'ที่นั่งใกล้เต็ม',
+    'sos_alert' => 'SOS ฉุกเฉิน',
     'promo' => 'โปรโมชัน',
     'system' => 'ระบบ',
     'loyalty' => 'คะแนนสะสม',
@@ -782,6 +783,7 @@ String _notificationTypeLabel(String type) {
 IconData _notificationIcon(String type) {
   return switch (type) {
     'seat_alert' => Icons.local_fire_department_rounded,
+    'sos_alert' => Icons.sos_rounded,
     'booking_reminder' || 'trip_reminder' => Icons.calendar_month_rounded,
     'promo' => Icons.card_giftcard_rounded,
     'system' => Icons.info_outline_rounded,
@@ -799,6 +801,7 @@ IconData _notificationIcon(String type) {
 Color _notificationColor(String type) {
   return switch (type) {
     'seat_alert' => AppTheme.errorColor,
+    'sos_alert' => const Color(0xFFE11D48),
     'booking_reminder' || 'trip_reminder' => const Color(0xFF2563EB),
     'promo' => AppTheme.warningColor,
     'system' => AppTheme.textSecondary,

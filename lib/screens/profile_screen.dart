@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
+import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../services/api_client.dart';
@@ -23,6 +24,7 @@ import 'staff_check_in_screen.dart' show StaffCheckInScreen;
 import 'wishlist_screen.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';
+import 'sos_alert_screen.dart';
 import 'tracking_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 

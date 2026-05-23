@@ -56,7 +56,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     if (!mounted) return;
+    final type = _cleanText(notification['type']);
     final data = asMap(notification['data']);
+
+    if (type == 'sos_alert') {
+      final alert = SosAlert.fromNotificationData(data);
+      _pushPremium(context, SosAlertScreen(alert: alert));
+      return;
+    }
+
     final bookingRef = _cleanText(data['booking_ref']);
     final tripSlug = _cleanText(data['trip_slug']);
 
