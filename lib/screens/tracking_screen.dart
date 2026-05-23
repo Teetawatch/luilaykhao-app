@@ -777,7 +777,7 @@ class _MetricCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: highlighted
             ? AppTheme.primaryColor.withValues(alpha: 0.08)
-            : const Color(0xFFF8F8F8),
+            : AppTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(

@@ -37,10 +37,25 @@ class TrackingProvider extends ChangeNotifier {
 
   /// เริ่มติดตามสำหรับ guest ที่ผ่านการ verify แล้ว — ข้าม fetchBookingInfo เพราะมีข้อมูลครบแล้ว
   Future<void> startTrackingAsGuest(BookingInfo bookingInfo) async {
+    _service.stop();
+    _locationService.stop();
     _isLoading = true;
     _errorMessage = '';
+    _vehicleTracking = null;
+    _eta = null;
+    _customerLocation = null;
+    _locationPermissionDenied = false;
+    _locationError = null;
+    _phase = TrackingPhase.far;
     _service.authToken = null;
     notifyListeners();
+
+    if (bookingInfo.vehicleId == 0) {
+      _isLoading = false;
+      _errorMessage = 'ยังไม่ได้กำหนดรถสำหรับทริปนี้';
+      notifyListeners();
+      return;
+    }
 
     _booking = bookingInfo;
     _cachedDriverName = bookingInfo.driverName;
@@ -95,8 +110,16 @@ class TrackingProvider extends ChangeNotifier {
   }
 
   Future<void> startTracking(String bookingRef, {String? authToken}) async {
+    _service.stop();
+    _locationService.stop();
     _isLoading = true;
     _errorMessage = '';
+    _vehicleTracking = null;
+    _eta = null;
+    _customerLocation = null;
+    _locationPermissionDenied = false;
+    _locationError = null;
+    _phase = TrackingPhase.far;
     _service.authToken = authToken;
     notifyListeners();
 
@@ -104,6 +127,13 @@ class TrackingProvider extends ChangeNotifier {
     if (booking == null) {
       _isLoading = false;
       _errorMessage = 'ไม่พบข้อมูลการจอง กรุณาตรวจสอบรหัสอีกครั้ง';
+      notifyListeners();
+      return;
+    }
+
+    if (booking.vehicleId == 0) {
+      _isLoading = false;
+      _errorMessage = 'ยังไม่ได้กำหนดรถสำหรับทริปนี้';
       notifyListeners();
       return;
     }

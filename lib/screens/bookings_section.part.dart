@@ -742,7 +742,7 @@ class ReservationCard extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 8),
                   // Booking ref + payment type badge
                   Row(
                     children: [
@@ -780,7 +780,7 @@ class ReservationCard extends StatelessWidget {
 
                   // Compact check-in (confirmed upcoming only)
                   if (status == 'confirmed' && isUpcoming) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _CompactCheckInRow(
                       booking: booking,
                       onTap: () => _openDetail(context, bookingRef),

@@ -210,7 +210,7 @@
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				C598C2CF373C56DAF5BA5908 /* [CP] Embed Pods Frameworks */,
 				6FD38491504EDBF51DD9C84F /* [CP] Copy Pods Resources */,
-				B2BED0BB093DA5C611081C42 /* Strip Simulator Platform Slices */,
+				4F6FFE0F5EEE5FBB93D19DE0 /* Strip Simulator Platform Slices */,
 			);
 			buildRules = (
 			);
@@ -300,6 +300,24 @@
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
 		};
+		4F6FFE0F5EEE5FBB93D19DE0 /* Strip Simulator Platform Slices */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Strip Simulator Platform Slices";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/bash\nset -e\n# Only patch for device builds — simulator builds need IOSSIMULATOR platform markers\nif [[ \"$PLATFORM_NAME\" == *\"simulator\"* ]]; then\n  echo \"Simulator build — skipping platform patch\"\n  exit 0\nfi\nAPP=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"\nSDK=$(xcrun --sdk iphoneos --show-sdk-version)\nfind \"$APP\" -name '*.framework' -type d | while read -r FW; do\n  EXEC=$(defaults read \"$FW/Info.plist\" CFBundleExecutable 2>/dev/null || true)\n  [ -z \"$EXEC\" ] && continue\n  BIN=\"$FW/$EXEC\"\n  [ -f \"$BIN\" ] || continue\n  if vtool -show-build \"$BIN\" 2>/dev/null | grep -q \"IOSSIMULATOR\"; then\n    MIN_OS=$(defaults read \"$FW/Info.plist\" MinimumOSVersion 2>/dev/null || echo \"${IPHONEOS_DEPLOYMENT_TARGET:-15.0}\")\n    echo \"Patching $EXEC: IOSSIMULATOR -> IOS (minos=$MIN_OS)\"\n    vtool -set-build-version ios \"$MIN_OS\" \"$SDK\" -replace -output \"${BIN}.fixed\" \"$BIN\"\n    mv \"${BIN}.fixed\" \"$BIN\"\n  fi\ndone\n";
+		};
 		6EA1BD6DB863A5C57C368877 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -375,24 +393,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
-		};
-		B2BED0BB093DA5C611081C42 /* Strip Simulator Platform Slices */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Strip Simulator Platform Slices";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "#!/bin/bash\nset -e\nAPP=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"\nSDK=$(xcrun --sdk iphoneos --show-sdk-version)\nfind \"$APP\" -name '*.framework' -type d | while read -r FW; do\n  EXEC=$(defaults read \"$FW/Info.plist\" CFBundleExecutable 2>/dev/null || true)\n  [ -z \"$EXEC\" ] && continue\n  BIN=\"$FW/$EXEC\"\n  [ -f \"$BIN\" ] || continue\n  PLATFORM=$(vtool -show-build \"$BIN\" 2>/dev/null | awk '/platform/{print $2}' | head -1)\n  if [ \"$PLATFORM\" = \"IOSSIMULATOR\" ]; then\n    MIN_OS=$(defaults read \"$FW/Info.plist\" MinimumOSVersion 2>/dev/null || echo \"${IPHONEOS_DEPLOYMENT_TARGET:-15.0}\")\n    echo \"Patching $EXEC: IOSSIMULATOR -> IOS (minos=$MIN_OS)\"\n    vtool -set-build-version ios \"$MIN_OS\" \"$SDK\" -replace -output \"${BIN}.fixed\" \"$BIN\"\n    mv \"${BIN}.fixed\" \"$BIN\"\n  fi\ndone\n";
 		};
 		C598C2CF373C56DAF5BA5908 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;

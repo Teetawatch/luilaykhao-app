@@ -38,12 +38,6 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-    target.build_configurations.each do |config|
-      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
-    end
-  end
-  installer.pods_project.build_configurations.each do |config|
-    config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
   end
 
   # Add a Run Script phase to patch frameworks that have IOSSIMULATOR platform marker
@@ -55,11 +49,17 @@ post_install do |installer|
     phase_name = 'Strip Simulator Platform Slices'
     existing = runner_target.build_phases.find { |p| p.respond_to?(:name) && p.name == phase_name }
 
-    unless existing
+    existing.remove_from_project if existing
+    if true
       phase = runner_target.new_shell_script_build_phase(phase_name)
       phase.shell_script = <<~'SHELL'
         #!/bin/bash
         set -e
+        # Only patch for device builds — simulator builds need IOSSIMULATOR platform markers
+        if [[ "$PLATFORM_NAME" == *"simulator"* ]]; then
+          echo "Simulator build — skipping platform patch"
+          exit 0
+        fi
         APP="${TARGET_BUILD_DIR}/${WRAPPER_NAME}"
         SDK=$(xcrun --sdk iphoneos --show-sdk-version)
         find "$APP" -name '*.framework' -type d | while read -r FW; do

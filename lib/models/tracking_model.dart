@@ -93,12 +93,16 @@ class BookingInfo {
     return BookingInfo(
       bookingRef:
           json['booking_ref']?.toString() ?? json['id']?.toString() ?? '',
-      scheduleId: json['schedule_id'] is int
-          ? json['schedule_id'] as int
-          : int.parse(json['schedule_id'].toString()),
-      vehicleId: json['vehicle_id'] is int
-          ? json['vehicle_id'] as int
-          : int.parse(json['vehicle_id'].toString()),
+      scheduleId: json['schedule_id'] == null
+          ? 0
+          : (json['schedule_id'] is int
+              ? json['schedule_id'] as int
+              : int.tryParse(json['schedule_id'].toString()) ?? 0),
+      vehicleId: json['vehicle_id'] == null
+          ? 0
+          : (json['vehicle_id'] is int
+              ? json['vehicle_id'] as int
+              : int.tryParse(json['vehicle_id'].toString()) ?? 0),
       tripTitle: json['trip_title']?.toString() ?? '',
       departurePoint: json['departure_point']?.toString() ?? '',
       pickupPoint: LatLng(
