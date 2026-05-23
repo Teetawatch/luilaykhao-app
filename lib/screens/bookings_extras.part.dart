@@ -492,9 +492,12 @@ class _BookingActionDeck extends StatelessWidget {
     final canModify = _asBool(booking['can_modify']);
     final hasPickupPoints = asList(schedule['pickup_points']).isNotEmpty;
 
+    final showTracking = confirmed && _isUpcomingBooking(booking);
+
     final items = <Widget>[
       if (showBriefing)
         _PreTripBriefingCard(booking: booking, schedule: schedule),
+      if (showTracking) _TrackVehicleButton(booking: booking),
       if (showSos)
         _SosButton(scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0),
       if (isActive) _TripChatButton(booking: booking),
@@ -643,6 +646,154 @@ class _FilteredEmptyState extends StatelessWidget {
       icon: Icons.search_off_rounded,
       title: 'ไม่พบการจอง',
       body: 'ลองเปลี่ยนคำค้นหา ตัวกรอง หรือแท็บสถานะอีกครั้ง',
+    );
+  }
+}
+
+// ─── Track Vehicle Button ─────────────────────────────────────────────────────
+
+class _TrackVehicleButton extends StatefulWidget {
+  final Map<String, dynamic> booking;
+
+  const _TrackVehicleButton({required this.booking});
+
+  @override
+  State<_TrackVehicleButton> createState() => _TrackVehicleButtonState();
+}
+
+class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
+  bool _isLoading = false;
+
+  Future<void> _onTap() async {
+    final ref = textOf(widget.booking['booking_ref']);
+    if (ref.isEmpty || _isLoading) return;
+
+    final app = context.read<AppProvider>();
+    final provider = context.read<TrackingProvider>();
+
+    setState(() => _isLoading = true);
+    provider.stopTracking();
+    await provider.startTracking(ref, authToken: app.token);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (provider.errorMessage.isNotEmpty || provider.booking == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            provider.errorMessage.isNotEmpty
+                ? provider.errorMessage
+                : 'ไม่พบข้อมูลติดตามรถ',
+            style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 360),
+        reverseTransitionDuration: const Duration(milliseconds: 260),
+        pageBuilder: (_, animation, _) =>
+            FadeTransition(opacity: animation, child: const TrackingMapPage()),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _isLoading ? null : _onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppTheme.primaryColor.withValues(alpha: 0.30),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: _isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.primaryColor,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.near_me_rounded,
+                        color: AppTheme.primaryColor,
+                        size: 22,
+                      ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ติดตามรถแบบเรียลไทม์',
+                      style: GoogleFonts.anuphan(
+                        color: AppTheme.onSurface(context),
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'ดูตำแหน่งรถและเวลาถึงโดยประมาณ',
+                      style: GoogleFonts.anuphan(
+                        color: AppTheme.mutedText(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

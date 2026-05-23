@@ -197,48 +197,56 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final tracking = widget.tracking;
-    final target = tracking?.driverLocation;
-    final begin = _lastVehicleLocation ?? target;
+    final target = widget.tracking?.driverLocation;
 
-    return TweenAnimationBuilder<LatLng?>(
+    // No vehicle location yet — render map directly without TweenAnimationBuilder
+    // to avoid null-check crash inside tween_animation_builder.dart (tween.end!)
+    if (target == null) {
+      return _buildMap(null);
+    }
+
+    final begin = _lastVehicleLocation ?? target;
+    return TweenAnimationBuilder<LatLng>(
       tween: _LatLngTween(begin: begin, end: target),
       duration: const Duration(milliseconds: 850),
       curve: Curves.easeOutCubic,
       onEnd: () => _lastVehicleLocation = target,
       builder: (context, animatedVehicle, _) {
-        if (widget.isFollowing && animatedVehicle != null && _isMapReady) {
+        if (widget.isFollowing && _isMapReady) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && _isMapReady && widget.isFollowing) {
               _mapController.move(animatedVehicle, _mapController.camera.zoom);
             }
           });
         }
-
-        return FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(
-            initialCenter: _initialCenter(animatedVehicle),
-            initialZoom: 14.5,
-            minZoom: 5,
-            maxZoom: 18,
-            onMapReady: () => setState(() => _isMapReady = true),
-            onPositionChanged: (_, hasGesture) {
-              if (hasGesture) widget.onUserGesture();
-            },
-          ),
-          children: [
-            TileLayer(
-              urlTemplate:
-                  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-              subdomains: const ['a', 'b', 'c', 'd'],
-              userAgentPackageName: 'com.luilaykhao.app',
-            ),
-            PolylineLayer(polylines: _routeLines(animatedVehicle)),
-            MarkerLayer(markers: _markers(animatedVehicle)),
-          ],
-        );
+        return _buildMap(animatedVehicle);
       },
+    );
+  }
+
+  Widget _buildMap(LatLng? vehicleLocation) {
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: _initialCenter(vehicleLocation),
+        initialZoom: 14.5,
+        minZoom: 5,
+        maxZoom: 18,
+        onMapReady: () => setState(() => _isMapReady = true),
+        onPositionChanged: (_, hasGesture) {
+          if (hasGesture) widget.onUserGesture();
+        },
+      ),
+      children: [
+        TileLayer(
+          urlTemplate:
+              'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
+          userAgentPackageName: 'com.luilaykhao.app',
+        ),
+        PolylineLayer(polylines: _routeLines(vehicleLocation)),
+        MarkerLayer(markers: _markers(vehicleLocation)),
+      ],
     );
   }
 
@@ -998,13 +1006,11 @@ class _TrackingLoadingOverlay extends StatelessWidget {
   }
 }
 
-class _LatLngTween extends Tween<LatLng?> {
-  _LatLngTween({required super.begin, required super.end});
+class _LatLngTween extends Tween<LatLng> {
+  _LatLngTween({required LatLng super.begin, required LatLng super.end});
 
   @override
-  LatLng? lerp(double t) {
-    if (begin == null) return end;
-    if (end == null) return begin;
+  LatLng lerp(double t) {
     return LatLng(
       begin!.latitude + (end!.latitude - begin!.latitude) * t,
       begin!.longitude + (end!.longitude - begin!.longitude) * t,

@@ -16,6 +16,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
+import '../providers/tracking_provider.dart';
+import 'tracking_screen.dart' show TrackingMapPage;
 import '../services/notification_navigator.dart';
 import '../services/push_notification_service.dart';
 import '../theme/app_theme.dart';
