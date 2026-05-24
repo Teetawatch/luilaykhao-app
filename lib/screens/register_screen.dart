@@ -179,16 +179,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         hint: 'เลขบัตรประชาชน (13 หลัก)',
                         icon: Icons.credit_card_rounded,
                         keyboardType: TextInputType.number,
-                        required: true,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(13),
                         ],
                         validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return 'กรุณากรอกเลขบัตรประชาชน';
-                          }
-                          if (v.length != 13) {
+                          if (v != null && v.isNotEmpty && v.length != 13) {
                             return 'เลขบัตรประชาชนต้องมี 13 หลัก';
                           }
                           return null;

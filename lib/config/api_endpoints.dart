@@ -9,6 +9,7 @@ class ApiEndpoints {
   static const authLogout = 'auth/logout';
   static const authMe = 'auth/me';
   static const authProfile = 'auth/profile';
+  static const authAppleNative = 'auth/apple/native';
   static String authSocialRedirect(String provider) => 'auth/$provider/redirect';
 
   // Catalog

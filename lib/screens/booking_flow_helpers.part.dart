@@ -22,6 +22,8 @@ class _PricingQuote {
   final num addonsTotal;
   final num serviceFee;
   final num discount;
+  final bool hasVariedPrices;
+  final num? _passengersSubtotal;
 
   const _PricingQuote({
     required this.pricePerTraveler,
@@ -29,50 +31,67 @@ class _PricingQuote {
     required this.addonsTotal,
     required this.serviceFee,
     required this.discount,
-  });
+    this.hasVariedPrices = false,
+    num? passengersSubtotal,
+  }) : _passengersSubtotal = passengersSubtotal;
 
-  num get tripSubtotal => pricePerTraveler * travelerCount;
+  num get tripSubtotal => _passengersSubtotal ?? pricePerTraveler * travelerCount;
 
   num get total {
     final value = tripSubtotal + addonsTotal + serviceFee - discount;
     return value < 0 ? 0 : value;
   }
 
-  factory _PricingQuote.from({
-    required Map<String, dynamic> trip,
+  factory _PricingQuote.fromPassengers({
+    required List<_PassengerControllers> passengers,
     required Map<String, dynamic> schedule,
-    required Map<String, dynamic> pickupPoint,
-    required int travelerCount,
     required bool isJoinTrip,
+    required List<dynamic> pickupPoints,
     List<_AddonOption> selectedAddons = const [],
   }) {
     final basePrice = _asNum(
       isJoinTrip
           ? schedule['join_trip_price'] ??
                 schedule['effective_price'] ??
-                schedule['price'] ??
-                trip['price_per_person'] ??
-                trip['price'] ??
-                trip['start_price']
-          : schedule['effective_price'] ??
-                schedule['price'] ??
-                trip['price_per_person'] ??
-                trip['price'] ??
-                trip['start_price'],
+                schedule['price']
+          : schedule['effective_price'] ?? schedule['price'],
     );
-    final pickupPrice = _asNum(pickupPoint['price']);
 
+    num passengersTotal = 0;
+    num? firstPrice;
+    var pricesVary = false;
+
+    for (final passenger in passengers) {
+      num passengerPrice = basePrice;
+      final pickupId = passenger.pickupPointId.value;
+      if (!isJoinTrip && pickupId != null && pickupPoints.isNotEmpty) {
+        final ppData = pickupPoints.firstWhere(
+          (p) => asMap(p)['id'].toString() == pickupId.toString(),
+          orElse: () => const <String, dynamic>{},
+        );
+        final ppPrice = _asNum(asMap(ppData)['price']);
+        if (ppPrice > 0) passengerPrice = ppPrice;
+      }
+      if (firstPrice == null) {
+        firstPrice = passengerPrice;
+      } else if (passengerPrice != firstPrice) {
+        pricesVary = true;
+      }
+      passengersTotal += passengerPrice;
+    }
+
+    final count = passengers.length;
     return _PricingQuote(
-      pricePerTraveler: !isJoinTrip && pickupPrice > 0
-          ? pickupPrice
-          : basePrice,
-      travelerCount: travelerCount,
+      pricePerTraveler: firstPrice ?? basePrice,
+      travelerCount: count,
       addonsTotal: selectedAddons.fold<num>(
         0,
-        (sum, addon) => sum + addon.totalFor(travelerCount),
+        (sum, addon) => sum + addon.totalFor(count),
       ),
       serviceFee: 0,
       discount: 0,
+      hasVariedPrices: pricesVary,
+      passengersSubtotal: passengersTotal,
     );
   }
 }
@@ -110,6 +129,7 @@ class _PassengerControllers {
   final allergies = TextEditingController();
   final healthNotes = TextEditingController();
   final halalFood = ValueNotifier<bool>(false);
+  final pickupPointId = ValueNotifier<int?>(null);
 
   void applyWallet(Map<String, dynamic> wallet) {
     final t = (wallet['title'] as String? ?? '').trim();
@@ -175,6 +195,7 @@ class _PassengerControllers {
     'health_notes': healthNotes.text.trim().isEmpty
         ? null
         : healthNotes.text.trim(),
+    'pickup_point_id': pickupPointId.value,
   };
 
   void dispose() {
@@ -190,6 +211,7 @@ class _PassengerControllers {
     allergies.dispose();
     healthNotes.dispose();
     halalFood.dispose();
+    pickupPointId.dispose();
   }
 }
 

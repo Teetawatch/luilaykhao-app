@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
@@ -80,6 +81,37 @@ class _LoginScreenState extends State<LoginScreen>
         mode: LaunchMode.externalApplication,
       );
       if (!launched) throw Exception('ไม่สามารถเปิดหน้าล็อกอินได้');
+    } catch (e) {
+      if (mounted) _showSnack(e.toString());
+    } finally {
+      if (mounted) setState(() => _socialLoadingProvider = null);
+    }
+  }
+
+  Future<void> _handleAppleLogin() async {
+    if (_isLoading || _isSocialLoading) return;
+    final app = context.read<AppProvider>();
+    setState(() => _socialLoadingProvider = 'apple');
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+      if (credential.identityToken == null) {
+        throw Exception('ไม่ได้รับ identity token จาก Apple');
+      }
+      await app.loginWithApple(
+            identityToken: credential.identityToken!,
+            givenName: credential.givenName,
+            familyName: credential.familyName,
+          );
+      if (mounted) _finishLogin();
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code != AuthorizationErrorCode.canceled && mounted) {
+        _showSnack('ไม่สามารถเข้าสู่ระบบด้วย Apple ได้');
+      }
     } catch (e) {
       if (mounted) _showSnack(e.toString());
     } finally {
@@ -203,6 +235,7 @@ class _LoginScreenState extends State<LoginScreen>
                     context,
                     MaterialPageRoute(builder: (_) => const RegisterScreen()),
                   ),
+                  onApple: _handleAppleLogin,
                   onGoogle: () => _handleSocialLogin('google'),
                   onFacebook: () => _handleSocialLogin('facebook'),
                   onLine: () => _handleSocialLogin('line'),
@@ -353,6 +386,7 @@ class _LoginSheet extends StatelessWidget {
   final VoidCallback? onLogin;
   final VoidCallback onRegister;
   final VoidCallback onTogglePassword;
+  final VoidCallback onApple;
   final VoidCallback onGoogle;
   final VoidCallback onFacebook;
   final VoidCallback onLine;
@@ -369,6 +403,7 @@ class _LoginSheet extends StatelessWidget {
     required this.onLogin,
     required this.onRegister,
     required this.onTogglePassword,
+    required this.onApple,
     required this.onGoogle,
     required this.onFacebook,
     required this.onLine,
@@ -446,10 +481,12 @@ class _LoginSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 28),
 
-                  // Social login – priority row
+                  // Social login – Apple first (required by Apple guideline 4.8),
+                  // then other providers in a row below.
                   _SocialRow(
                     socialLoadingProvider: socialLoadingProvider,
                     isBusy: _isBusy,
+                    onApple: onApple,
                     onGoogle: onGoogle,
                     onFacebook: onFacebook,
                     onLine: onLine,
@@ -529,6 +566,7 @@ class _LoginSheet extends StatelessWidget {
 class _SocialRow extends StatelessWidget {
   final String? socialLoadingProvider;
   final bool isBusy;
+  final VoidCallback onApple;
   final VoidCallback onGoogle;
   final VoidCallback onFacebook;
   final VoidCallback onLine;
@@ -536,6 +574,7 @@ class _SocialRow extends StatelessWidget {
   const _SocialRow({
     required this.socialLoadingProvider,
     required this.isBusy,
+    required this.onApple,
     required this.onGoogle,
     required this.onFacebook,
     required this.onLine,
@@ -543,35 +582,48 @@ class _SocialRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _SocialTile(
-            mark: const _GoogleMark(),
-            label: 'Google',
-            isLoading: socialLoadingProvider == 'google',
-            onPressed: isBusy ? null : onGoogle,
-          ),
+        // Apple Sign-In — prominent top row (Apple guideline 4.8)
+        _SocialTile(
+          mark: const _AppleMark(),
+          label: 'Apple',
+          isLoading: socialLoadingProvider == 'apple',
+          onPressed: isBusy ? null : onApple,
+          fullWidth: true,
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _SocialTile(
-            mark: const _FacebookMark(),
-            label: 'Facebook',
-            isLoading: socialLoadingProvider == 'facebook',
-            onPressed: isBusy ? null : onFacebook,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _SocialTile(
-            mark: const _LineMark(),
-            label: 'LINE',
-            isLoading:
-                socialLoadingProvider == 'line' ||
-                socialLoadingProvider == 'callback',
-            onPressed: isBusy ? null : onLine,
-          ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _SocialTile(
+                mark: const _GoogleMark(),
+                label: 'Google',
+                isLoading: socialLoadingProvider == 'google',
+                onPressed: isBusy ? null : onGoogle,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _SocialTile(
+                mark: const _FacebookMark(),
+                label: 'Facebook',
+                isLoading: socialLoadingProvider == 'facebook',
+                onPressed: isBusy ? null : onFacebook,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _SocialTile(
+                mark: const _LineMark(),
+                label: 'LINE',
+                isLoading:
+                    socialLoadingProvider == 'line' ||
+                    socialLoadingProvider == 'callback',
+                onPressed: isBusy ? null : onLine,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -583,54 +635,86 @@ class _SocialTile extends StatelessWidget {
   final String label;
   final bool isLoading;
   final VoidCallback? onPressed;
+  final bool fullWidth;
 
   const _SocialTile({
     required this.mark,
     required this.label,
     required this.isLoading,
     required this.onPressed,
+    this.fullWidth = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final tile = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: isLoading ? null : onPressed,
         borderRadius: BorderRadius.circular(18),
         child: Ink(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: EdgeInsets.symmetric(
+            vertical: fullWidth ? 16 : 14,
+            horizontal: fullWidth ? 20 : 0,
+          ),
           decoration: BoxDecoration(
             color: const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          child: Column(
-            children: [
-              isLoading
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.primaryColor,
+          child: fullWidth
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.primaryColor,
+                            ),
+                          )
+                        : mark,
+                    const SizedBox(width: 10),
+                    Text(
+                      'เข้าสู่ระบบด้วย $label',
+                      style: GoogleFonts.anuphan(
+                        color: AppTheme.textMain,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
                       ),
-                    )
-                  : mark,
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: GoogleFonts.anuphan(
-                  color: AppTheme.textMain,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                    ),
+                  ],
+                )
+              : Column(
+                  children: [
+                    isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.primaryColor,
+                            ),
+                          )
+                        : mark,
+                    const SizedBox(height: 6),
+                    Text(
+                      label,
+                      style: GoogleFonts.anuphan(
+                        color: AppTheme.textMain,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );
+
+    return fullWidth ? SizedBox(width: double.infinity, child: tile) : tile;
   }
 }
 
@@ -957,6 +1041,15 @@ class _GlassBackButton extends StatelessWidget {
 }
 
 // ─── Brand Marks ──────────────────────────────────────────────────────────────
+
+class _AppleMark extends StatelessWidget {
+  const _AppleMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Icon(Icons.apple, size: 26, color: Color(0xFF1D1D1F));
+  }
+}
 
 class _GoogleMark extends StatelessWidget {
   const _GoogleMark();

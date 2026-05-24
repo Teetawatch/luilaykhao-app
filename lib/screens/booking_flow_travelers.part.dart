@@ -69,6 +69,7 @@ class TravelerFormSection extends StatelessWidget {
   final VoidCallback onRemovePassenger;
   final ValueChanged<int> onUseProfile;
   final ValueChanged<int> onUseWallet;
+  final List<dynamic> pickupPoints;
 
   const TravelerFormSection({
     super.key,
@@ -80,6 +81,7 @@ class TravelerFormSection extends StatelessWidget {
     required this.onRemovePassenger,
     required this.onUseProfile,
     required this.onUseWallet,
+    this.pickupPoints = const [],
   });
 
   @override
@@ -104,6 +106,7 @@ class TravelerFormSection extends StatelessWidget {
               seatId: index < selectedSeatIds.length
                   ? selectedSeatIds[index]
                   : null,
+              pickupPoints: pickupPoints,
               onUseProfile: () => onUseProfile(index),
               onUseWallet: () => onUseWallet(index),
             );
@@ -161,17 +164,24 @@ class PricingSummaryCard extends StatelessWidget {
             textInputAction: TextInputAction.done,
           ),
           const SizedBox(height: 16),
+          if (!pricing.hasVariedPrices) ...[
+            _PriceRow(
+              label: 'ราคาต่อท่าน',
+              value: money(pricing.pricePerTraveler),
+            ),
+            const SizedBox(height: 10),
+            _PriceRow(
+              label: 'จำนวนผู้เดินทาง',
+              value: '${pricing.travelerCount} คน',
+            ),
+            const SizedBox(height: 10),
+          ],
           _PriceRow(
-            label: 'ราคาต่อท่าน',
-            value: money(pricing.pricePerTraveler),
+            label: pricing.hasVariedPrices
+                ? 'ค่าที่นั่ง (${pricing.travelerCount} คน)'
+                : 'ราคาทริป',
+            value: money(pricing.tripSubtotal),
           ),
-          const SizedBox(height: 10),
-          _PriceRow(
-            label: 'จำนวนผู้เดินทาง',
-            value: '${pricing.travelerCount} คน',
-          ),
-          const SizedBox(height: 10),
-          _PriceRow(label: 'ราคาทริป', value: money(pricing.tripSubtotal)),
           const SizedBox(height: 10),
           if (pricing.addonsTotal > 0) ...[
             _PriceRow(
@@ -661,6 +671,7 @@ class _TravelerCard extends StatelessWidget {
   final _PassengerControllers controllers;
   final bool isLast;
   final String? seatId;
+  final List<dynamic> pickupPoints;
   final VoidCallback onUseProfile;
   final VoidCallback onUseWallet;
 
@@ -669,6 +680,7 @@ class _TravelerCard extends StatelessWidget {
     required this.controllers,
     required this.isLast,
     this.seatId,
+    this.pickupPoints = const [],
     required this.onUseProfile,
     required this.onUseWallet,
   });
@@ -745,7 +757,7 @@ class _TravelerCard extends StatelessWidget {
                     value: 'profile',
                     child: Row(
                       children: [
-                        Icon(Icons.account_circle_outlined,
+                        const Icon(Icons.account_circle_outlined,
                             size: 18, color: _softAccent),
                         const SizedBox(width: 10),
                         Text('ดึงข้อมูลโปรไฟล์',
@@ -758,7 +770,7 @@ class _TravelerCard extends StatelessWidget {
                     value: 'wallet',
                     child: Row(
                       children: [
-                        Icon(Icons.wallet_rounded,
+                        const Icon(Icons.wallet_rounded,
                             size: 18, color: _softAccent),
                         const SizedBox(width: 10),
                         Text('กรอกจาก Wallet',
@@ -778,7 +790,7 @@ class _TravelerCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.edit_note_rounded,
+                      const Icon(Icons.edit_note_rounded,
                           size: 16, color: _softAccent),
                       const SizedBox(width: 4),
                       Text(
@@ -789,7 +801,7 @@ class _TravelerCard extends StatelessWidget {
                           color: _softAccent,
                         ),
                       ),
-                      Icon(Icons.arrow_drop_down_rounded,
+                      const Icon(Icons.arrow_drop_down_rounded,
                           size: 16, color: _softAccent),
                     ],
                   ),
@@ -797,6 +809,127 @@ class _TravelerCard extends StatelessWidget {
               ),
             ],
           ),
+          // Per-passenger pickup point selector
+          if (pickupPoints.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ValueListenableBuilder<int?>(
+              valueListenable: controllers.pickupPointId,
+              builder: (context, selectedId, _) {
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _fieldBackground(context),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: _cardBorder(context)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_rounded,
+                              size: 16, color: _softAccent),
+                          const SizedBox(width: 6),
+                          Text(
+                            'จุดขึ้นรถ',
+                            style: GoogleFonts.anuphan(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: _premiumText(context),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '*',
+                            style: GoogleFonts.anuphan(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: pickupPoints.map((pt) {
+                          final ptMap = asMap(pt);
+                          final ptId = int.tryParse(ptMap['id'].toString());
+                          final isSelected = selectedId == ptId;
+                          final location = ptMap['pickup_location'] as String? ?? '';
+                          final price = _asNum(ptMap['price']);
+                          return GestureDetector(
+                            onTap: () => controllers.pickupPointId.value = ptId,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF059669).withValues(alpha: 0.1)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? const Color(0xFF059669)
+                                      : _cardBorder(context),
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isSelected
+                                        ? Icons.check_circle_rounded
+                                        : Icons.radio_button_unchecked_rounded,
+                                    size: 16,
+                                    color: isSelected
+                                        ? const Color(0xFF059669)
+                                        : _mutedTextColor(context),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    location,
+                                    style: GoogleFonts.anuphan(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: isSelected
+                                          ? const Color(0xFF059669)
+                                          : _premiumText(context),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    money(price),
+                                    style: GoogleFonts.anuphan(
+                                      fontSize: 11,
+                                      color: _mutedTextColor(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      if (selectedId == null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '* กรุณาเลือกจุดขึ้นรถ',
+                          style: GoogleFonts.anuphan(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
           const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -1056,4 +1189,3 @@ class _TravelerCard extends StatelessWidget {
     );
   }
 }
-

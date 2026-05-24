@@ -442,6 +442,19 @@ class AppProvider extends ChangeNotifier {
     await AnalyticsService.instance.logSignUp('password');
   }
 
+  Future<void> loginWithApple({
+    required String identityToken,
+    String? givenName,
+    String? familyName,
+  }) async {
+    await _auth(() => api.post(ApiEndpoints.authAppleNative, body: {
+          'identity_token': identityToken,
+          'given_name': ?givenName,
+          'family_name': ?familyName,
+        }));
+    await AnalyticsService.instance.logLogin('apple');
+  }
+
   Future<void> completeSocialLogin({
     required String token,
     required Map<String, dynamic> user,
@@ -568,17 +581,17 @@ class AppProvider extends ChangeNotifier {
   Future<void> loadAccountData() async {
     if (!isLoggedIn) return;
 
-    Future<dynamic> _safe(Future<dynamic> f) => f.catchError((_) => null);
+    Future<dynamic> safe(Future<dynamic> f) => f.catchError((_) => null);
 
     final hasStaff = canUseStaffCheckIn;
     final results = await Future.wait([
       api.get(ApiEndpoints.bookings),
-      _safe(api.get(ApiEndpoints.notifications, query: {'per_page': 20})),
-      _safe(api.get(ApiEndpoints.loyaltyAccount)),
-      _safe(api.get(ApiEndpoints.loyaltyRewards)),
-      _safe(api.get(ApiEndpoints.loyaltyCoupons)),
-      _safe(api.get(ApiEndpoints.reviewsMy)),
-      if (hasStaff) _safe(api.get(ApiEndpoints.staffSchedulesMy)),
+      safe(api.get(ApiEndpoints.notifications, query: {'per_page': 20})),
+      safe(api.get(ApiEndpoints.loyaltyAccount)),
+      safe(api.get(ApiEndpoints.loyaltyRewards)),
+      safe(api.get(ApiEndpoints.loyaltyCoupons)),
+      safe(api.get(ApiEndpoints.reviewsMy)),
+      if (hasStaff) safe(api.get(ApiEndpoints.staffSchedulesMy)),
     ]);
 
     bookings = List<dynamic>.from(api.data(results[0]) ?? []);

@@ -152,12 +152,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     );
   }
 
-  _PricingQuote get _pricing => _PricingQuote.from(
-    trip: widget.trip,
+  _PricingQuote get _pricing => _PricingQuote.fromPassengers(
+    passengers: _passengers,
     schedule: _selectedSchedule,
-    pickupPoint: _selectedPickupPoint,
-    travelerCount: _passengers.length,
     isJoinTrip: _isJoinTrip,
+    pickupPoints: _pickupPoints,
     selectedAddons: _selectedAddonOptions,
   );
 
@@ -258,6 +257,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       );
       _pickupPointId = int.tryParse(point['id'].toString());
       _pickupRegion = _pickupRegionKey(point);
+      // Pre-fill passengers that don't have their own pickup selected
+      for (final p in _passengers) {
+        if (p.pickupPointId.value == null) p.pickupPointId.value = _pickupPointId;
+      }
     } else {
       _pickupPointId = null;
       _pickupRegion = null;
@@ -266,7 +269,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   void _addPassenger() {
     HapticFeedback.selectionClick();
-    setState(() => _passengers.add(_PassengerControllers()));
+    setState(() {
+      final p = _PassengerControllers();
+      p.pickupPointId.value = _pickupPointId;
+      _passengers.add(p);
+    });
   }
 
   void _removePassenger() {
@@ -709,11 +716,15 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             _pickupPoints,
             preferredRegion: value,
           );
+          final newPickupId = int.tryParse(point['id'].toString());
           setState(() {
             _pickupRegion = _pickupRegionKey(point).isNotEmpty
                 ? _pickupRegionKey(point)
                 : value;
-            _pickupPointId = int.tryParse(point['id'].toString());
+            _pickupPointId = newPickupId;
+            for (final p in _passengers) {
+              p.pickupPointId.value = newPickupId;
+            }
           });
         },
         onPickupChanged: (value) {
@@ -726,6 +737,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           setState(() {
             _pickupPointId = value;
             _pickupRegion = _pickupRegionKey(point);
+            // Update all passengers to use the new global pickup
+            for (final p in _passengers) {
+              p.pickupPointId.value = value;
+            }
           });
         },
       );
@@ -752,6 +767,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           groupNotes: _groupNotes,
           isSeatSelectionMode: _hasSeatMap,
           selectedSeatIds: _hasSeatMap ? _selectedSeatList : const <String>[],
+          pickupPoints: _isJoinTrip ? const [] : _pickupPoints,
           onAddPassenger: _addPassenger,
           onRemovePassenger: _removePassenger,
           onUseProfile: _fillPassengerFromProfile,
@@ -906,6 +922,17 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกที่นั่ง')));
       return;
+    }
+    // Validate per-passenger pickup points
+    if (!_isJoinTrip && _pickupPoints.isNotEmpty) {
+      for (var i = 0; i < _passengers.length; i++) {
+        if (_passengers[i].pickupPointId.value == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถสำหรับผู้เดินทางคนที่ ${i + 1}')),
+          );
+          return;
+        }
+      }
     }
     if (!_formKey.currentState!.validate()) {
       final ctx = _travelerFormKey.currentContext;
