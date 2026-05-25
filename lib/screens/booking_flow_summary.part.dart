@@ -263,9 +263,15 @@ class TravelInfoSection extends StatelessWidget {
                     _scheduleHasPickupRegion(schedule, selectedRegion),
               )
               .toList();
+    final charterScheduleIds = scheduleMaps
+        .where((s) => _asBool(s['is_charter']))
+        .map((s) => int.parse(s['id'].toString()))
+        .toSet();
     final selectedScheduleId = _validDropdownValue(
       scheduleId,
-      scheduleMaps.map((item) => int.parse(item['id'].toString())),
+      scheduleMaps
+          .where((item) => !charterScheduleIds.contains(int.parse(item['id'].toString())))
+          .map((item) => int.parse(item['id'].toString())),
     );
     final selectedSchedule = selectedScheduleId == null
         ? <String, dynamic>{}
@@ -310,11 +316,42 @@ class TravelInfoSection extends StatelessWidget {
             value: selectedScheduleId,
             items: scheduleMaps.map((schedule) {
               final id = int.parse(schedule['id'].toString());
+              final isCharter = _asBool(schedule['is_charter']);
               return DropdownMenuItem<int>(
                 value: id,
-                child: Text(
-                  '${dateText(schedule['departure_date'])}  ·  เหลือ ${textOf(schedule['available_seats'], '0')} ที่',
-                  overflow: TextOverflow.ellipsis,
+                enabled: !isCharter,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${dateText(schedule['departure_date'])}  ·  ${isCharter ? 'รอบเหมา' : 'เหลือ ${textOf(schedule['available_seats'], '0')} ที่'}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isCharter)
+                      Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7C3AED).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: const Color(0xFF7C3AED).withValues(alpha: 0.30),
+                          ),
+                        ),
+                        child: Text(
+                          'เหมา',
+                          style: GoogleFonts.anuphan(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF7C3AED),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               );
             }).toList(),

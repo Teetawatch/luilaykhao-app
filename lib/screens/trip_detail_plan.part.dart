@@ -65,9 +65,15 @@ class TravelPlanSelectionSection extends StatelessWidget {
     final regionValue = (regionKey != null && regionMap.containsKey(regionKey))
         ? regionKey
         : (regionMap.isEmpty ? null : regionMap.keys.first);
+    final charterIds = scheduleMaps
+        .where((s) => _asBool(s['is_charter']))
+        .map((s) => int.parse(s['id'].toString()))
+        .toSet();
     final scheduleValue = _validDropdownValue(
       selectedScheduleId,
-      scheduleMaps.map((item) => int.parse(item['id'].toString())),
+      scheduleMaps
+          .where((item) => !charterIds.contains(int.parse(item['id'].toString())))
+          .map((item) => int.parse(item['id'].toString())),
     );
     final pickupValue = _validDropdownValue(
       selectedPickupPointId,
@@ -148,17 +154,52 @@ class TravelPlanSelectionSection extends StatelessWidget {
                           value: scheduleValue,
                           items: scheduleMaps.map((schedule) {
                             final id = int.parse(schedule['id'].toString());
+                            final isCharter = _asBool(schedule['is_charter']);
                             final seats =
                                 textOf(schedule['available_seats'], '0');
                             final regionSummary =
                                 _regionSummary(schedule, regionKey: regionKey);
                             return DropdownMenuItem<int>(
                               value: id,
-                              child: _DropdownText(
-                                title: _scheduleTravelDateText(schedule),
-                                subtitle: regionSummary.isEmpty
-                                    ? 'เหลือ $seats ที่นั่ง'
-                                    : 'เหลือ $seats ที่ • $regionSummary',
+                              enabled: !isCharter,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _DropdownText(
+                                      title: _scheduleTravelDateText(schedule),
+                                      subtitle: isCharter
+                                          ? 'จองครั้งนี้ไม่ได้'
+                                          : regionSummary.isEmpty
+                                              ? 'เหลือ $seats ที่นั่ง'
+                                              : 'เหลือ $seats ที่ • $regionSummary',
+                                    ),
+                                  ),
+                                  if (isCharter)
+                                    Container(
+                                      margin: const EdgeInsets.only(left: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF7C3AED)
+                                            .withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: const Color(0xFF7C3AED)
+                                              .withValues(alpha: 0.30),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'รอบเหมา',
+                                        style: GoogleFonts.anuphan(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF7C3AED),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             );
                           }).toList(),

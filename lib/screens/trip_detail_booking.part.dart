@@ -65,6 +65,7 @@ class StickyBookingBar extends StatelessWidget {
       );
     }
 
+    final isCharter = _asBool(selectedSchedule['is_charter']);
     final isDark = AppTheme.isDark(context);
     final priceValue = _priceText(
       trip,
@@ -147,6 +148,43 @@ class StickyBookingBar extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 2),
+                              if (isCharter)
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF7C3AED)
+                                      .withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFF7C3AED)
+                                        .withValues(alpha: 0.28),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.lock_rounded,
+                                      size: 13,
+                                      color: Color(0xFF7C3AED),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'รอบเหมา',
+                                      style: GoogleFonts.anuphan(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF7C3AED),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
                               Text(
                                 priceValue,
                                 maxLines: 1,
@@ -159,7 +197,7 @@ class StickyBookingBar extends StatelessWidget {
                                   letterSpacing: -0.6,
                                 ),
                               ),
-                              if (joinTripEnabled) ...[
+                              if (!isCharter && joinTripEnabled) ...[
                                 const SizedBox(height: 3),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -188,14 +226,14 @@ class StickyBookingBar extends StatelessWidget {
                         const SizedBox(width: 14),
                         // book button
                         _BookingButton(
-                          enabled: schedules.isNotEmpty,
+                          enabled: schedules.isNotEmpty && !isCharter,
                           onPressed: handleBookingTap,
                         ),
                       ],
                     ),
                   ),
                   // ── join trip button ──────────────────────────────
-                  if (joinTripEnabled) ...[
+                  if (!isCharter && joinTripEnabled) ...[
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                       child: SizedBox(
