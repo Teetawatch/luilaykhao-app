@@ -9,8 +9,10 @@ class ApiEndpoints {
   static const authLogout = 'auth/logout';
   static const authMe = 'auth/me';
   static const authProfile = 'auth/profile';
+  static const authAccount = 'auth/account';
   static const authAppleNative = 'auth/apple/native';
-  static String authSocialRedirect(String provider) => 'auth/$provider/redirect';
+  static String authSocialRedirect(String provider) =>
+      'auth/$provider/redirect';
 
   // Catalog
   static const trips = 'trips';
@@ -50,7 +52,8 @@ class ApiEndpoints {
   static String booking(String ref) => 'bookings/$ref';
   static String bookingCancel(String ref) => 'bookings/$ref/cancel';
   static String bookingReschedule(String ref) => 'bookings/$ref/reschedule';
-  static String bookingChangePickup(String ref) => 'bookings/$ref/change-pickup';
+  static String bookingChangePickup(String ref) =>
+      'bookings/$ref/change-pickup';
 
   // Payments
   static const paymentsCharge = 'payments/charge';

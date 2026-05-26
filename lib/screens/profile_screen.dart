@@ -204,7 +204,9 @@ class ProfileHeader extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        email.isNotEmpty ? email : 'พร้อมออกผจญภัยครั้งต่อไปไหม?',
+                        email.isNotEmpty
+                            ? email
+                            : 'พร้อมออกผจญภัยครั้งต่อไปไหม?',
                         style: GoogleFonts.anuphan(
                           fontSize: 14,
                           height: 1.45,
@@ -371,7 +373,10 @@ class ProfileStatsSection extends StatelessWidget {
               ),
               if (tier.isNotEmpty) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF059669), Color(0xFF047857)],
@@ -1048,12 +1053,21 @@ class LogoutSection extends StatelessWidget {
 
   const LogoutSection({super.key, required this.onLogout});
 
-  Future<void> _confirmLogout(BuildContext context, VoidCallback onLogout) async {
+  Future<void> _confirmLogout(
+    BuildContext context,
+    VoidCallback onLogout,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('ออกจากระบบ', style: GoogleFonts.anuphan(fontWeight: FontWeight.w900)),
-        content: Text('คุณต้องการออกจากระบบใช่หรือไม่?', style: GoogleFonts.anuphan()),
+        title: Text(
+          'ออกจากระบบ',
+          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+        ),
+        content: Text(
+          'คุณต้องการออกจากระบบใช่หรือไม่?',
+          style: GoogleFonts.anuphan(),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -1083,8 +1097,221 @@ class LogoutSection extends StatelessWidget {
             color: AppTheme.errorColor,
             onTap: () => _confirmLogout(context, onLogout),
           ),
+          Divider(
+            height: 1,
+            indent: 56,
+            endIndent: 16,
+            color: Theme.of(
+              context,
+            ).colorScheme.outline.withValues(alpha: 0.65),
+          ),
+          _AccountActionTile(
+            icon: Icons.delete_forever_outlined,
+            label: 'ลบบัญชี',
+            color: AppTheme.errorColor,
+            onTap: () => _confirmDeleteAccount(context),
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context) async {
+    final app = context.read<AppProvider>();
+    final requiresPassword = app.user?['has_password'] == true;
+
+    // The dialog shows its own success confirmation once deletion completes,
+    // so it stays visible even after the session is cleared and the screen
+    // rebuilds into the login view underneath.
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _DeleteAccountDialog(
+        requiresPassword: requiresPassword,
+        onConfirm: ({String? password}) =>
+            app.deleteAccount(password: password),
+      ),
+    );
+  }
+}
+
+/// Confirmation dialog for permanent account deletion. Manages its own loading,
+/// error and success state and, for password-based accounts, collects a password
+/// for re-authentication. After deletion succeeds it switches to an explicit
+/// success view so the user (and an App Review screen recording) sees a clear
+/// confirmation before dismissing.
+class _DeleteAccountDialog extends StatefulWidget {
+  final bool requiresPassword;
+  final Future<void> Function({String? password}) onConfirm;
+
+  const _DeleteAccountDialog({
+    required this.requiresPassword,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  final _passwordController = TextEditingController();
+  bool _obscure = true;
+  bool _loading = false;
+  bool _done = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_loading) return;
+    final password = _passwordController.text;
+    if (widget.requiresPassword && password.isEmpty) {
+      setState(() => _error = 'กรุณากรอกรหัสผ่านเพื่อยืนยัน');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await widget.onConfirm(
+        password: widget.requiresPassword ? password : null,
+      );
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _done = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e.toString().replaceFirst('ApiException: ', '');
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_done) return _buildSuccess(context);
+    return _buildConfirm(context);
+  }
+
+  Widget _buildSuccess(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        children: [
+          const Icon(
+            Icons.check_circle_rounded,
+            color: AppTheme.primaryColor,
+            size: 26,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'ลบบัญชีเรียบร้อยแล้ว',
+              style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        'บัญชีและข้อมูลทั้งหมดของคุณถูกลบออกจากระบบอย่างถาวรเรียบร้อยแล้ว '
+        'ขอบคุณที่ใช้บริการลุยเลเขา',
+        style: GoogleFonts.anuphan(fontSize: 14, height: 1.5),
+      ),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.pop(context),
+          style: FilledButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+          child: Text(
+            'ปิด',
+            style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConfirm(BuildContext context) {
+    return AlertDialog(
+      title: Text(
+        'ลบบัญชีถาวร',
+        style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'การลบบัญชีจะลบข้อมูลส่วนตัว ประวัติการจอง แต้มสะสม และรีวิวทั้งหมดอย่างถาวร '
+            'การดำเนินการนี้ไม่สามารถย้อนกลับได้',
+            style: GoogleFonts.anuphan(fontSize: 14, height: 1.5),
+          ),
+          if (widget.requiresPassword) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _passwordController,
+              obscureText: _obscure,
+              enabled: !_loading,
+              style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+              decoration: InputDecoration(
+                labelText: 'ยืนยันด้วยรหัสผ่าน',
+                labelStyle: GoogleFonts.anuphan(),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscure
+                        ? Icons.visibility_rounded
+                        : Icons.visibility_off_rounded,
+                  ),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: GoogleFonts.anuphan(
+                color: AppTheme.errorColor,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.pop(context, false),
+          child: Text('ยกเลิก', style: GoogleFonts.anuphan()),
+        ),
+        FilledButton(
+          onPressed: _loading ? null : _submit,
+          style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
+          child: _loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  'ลบบัญชี',
+                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+                ),
+        ),
+      ],
     );
   }
 }

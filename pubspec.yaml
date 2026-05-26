@@ -1,6 +1,6 @@
 name: luilaykhao_app
 description: "Luilaykhao Customer App - Track your van in real-time"
-version: 1.0.5+23
+version: 1.0.5+24
 
 environment:
   sdk: ^3.11.1
@@ -42,6 +42,7 @@ dependencies:
   vibration: ^3.1.8
   audioplayers: ^6.1.0
   sign_in_with_apple: ^6.1.1
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -75,3 +76,4 @@ flutter:
     - logo.png
     - logo_ios.png
     - assets/audio/sos_siren.wav
+    - assets/icons/google_2025.svg

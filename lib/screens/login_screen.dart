@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -103,10 +104,10 @@ class _LoginScreenState extends State<LoginScreen>
         throw Exception('ไม่ได้รับ identity token จาก Apple');
       }
       await app.loginWithApple(
-            identityToken: credential.identityToken!,
-            givenName: credential.givenName,
-            familyName: credential.familyName,
-          );
+        identityToken: credential.identityToken!,
+        givenName: credential.givenName,
+        familyName: credential.familyName,
+      );
       if (mounted) _finishLogin();
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code != AuthorizationErrorCode.canceled && mounted) {
@@ -147,7 +148,10 @@ class _LoginScreenState extends State<LoginScreen>
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+        content: Text(
+          message,
+          style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+        ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -197,7 +201,9 @@ class _LoginScreenState extends State<LoginScreen>
           children: [
             // ── Background image ──────────────────────────────────────
             Positioned.fill(
-              child: _HeroBg(imageUrl: ApiConfig.mediaUrl('/images/khaochangphueak.webp')),
+              child: _HeroBg(
+                imageUrl: ApiConfig.mediaUrl('/images/khaochangphueak.webp'),
+              ),
             ),
 
             // ── Back button ───────────────────────────────────────────
@@ -205,14 +211,20 @@ class _LoginScreenState extends State<LoginScreen>
               Positioned(
                 top: padding.top + 12,
                 left: 16,
-                child: _GlassBackButton(onPressed: () => Navigator.pop(context)),
+                child: _GlassBackButton(
+                  onPressed: () => Navigator.pop(context),
+                ),
               ),
 
             // ── Bottom sheet ──────────────────────────────────────────
+            // Bounded top so the sheet never overflows above the screen on
+            // large displays (iPad): the inner scroll view scrolls instead of
+            // clipping the title/register link at the top.
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
+              top: padding.top,
               child: AnimatedBuilder(
                 animation: _animController,
                 builder: (context, child) => FractionalTranslation(
@@ -311,7 +323,10 @@ class _HeroBg extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF06C755).withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(999),
@@ -413,145 +428,152 @@ class _LoginSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Color(0xF2FFFFFF),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.fromLTRB(24, 28, 24, bottomInset + 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Drag handle
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 24),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFCBD5E1),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-
-                  // Title
-                  Text(
-                    'เข้าสู่ระบบ',
-                    style: GoogleFonts.anuphan(
-                      color: AppTheme.textMain,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xF2FFFFFF),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(24, 28, 24, bottomInset + 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        'ยังไม่มีบัญชี? ',
-                        style: GoogleFonts.anuphan(
-                          color: AppTheme.textSecondary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: onRegister,
-                        child: Text(
-                          'สมัครสมาชิกฟรี',
-                          style: GoogleFonts.anuphan(
-                            color: AppTheme.primaryColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            decoration: TextDecoration.underline,
-                            decorationColor: AppTheme.primaryColor,
+                      // Drag handle
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(999),
                           ),
                         ),
                       ),
+
+                      // Title
+                      Text(
+                        'เข้าสู่ระบบ',
+                        style: GoogleFonts.anuphan(
+                          color: AppTheme.textMain,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(
+                            'ยังไม่มีบัญชี? ',
+                            style: GoogleFonts.anuphan(
+                              color: AppTheme.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: onRegister,
+                            child: Text(
+                              'สมัครสมาชิกฟรี',
+                              style: GoogleFonts.anuphan(
+                                color: AppTheme.primaryColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                decoration: TextDecoration.underline,
+                                decorationColor: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Social login – Apple first (required by Apple guideline 4.8),
+                      // then other providers in a row below.
+                      _SocialRow(
+                        socialLoadingProvider: socialLoadingProvider,
+                        isBusy: _isBusy,
+                        onApple: onApple,
+                        onGoogle: onGoogle,
+                        onFacebook: onFacebook,
+                        onLine: onLine,
+                      ),
+
+                      const SizedBox(height: 24),
+                      const _DividerOr(),
+                      const SizedBox(height: 24),
+
+                      // Email field
+                      _SheetTextField(
+                        controller: emailController,
+                        hint: 'อีเมลของคุณ',
+                        icon: Icons.alternate_email_rounded,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Password field
+                      _SheetTextField(
+                        controller: passwordController,
+                        hint: 'รหัสผ่าน',
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: !isPasswordVisible,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => onLogin?.call(),
+                        suffix: _ToggleVisibilityButton(
+                          isVisible: isPasswordVisible,
+                          onTap: onTogglePassword,
+                        ),
+                      ),
+
+                      // Forgot password
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {},
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTheme.primaryColor,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 8,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'ลืมรหัสผ่าน?',
+                            style: GoogleFonts.anuphan(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Login button
+                      _LoginButton(isLoading: isLoading, onPressed: onLogin),
+
+                      const SizedBox(height: 20),
+                      _LegalNote(),
                     ],
                   ),
-                  const SizedBox(height: 28),
-
-                  // Social login – Apple first (required by Apple guideline 4.8),
-                  // then other providers in a row below.
-                  _SocialRow(
-                    socialLoadingProvider: socialLoadingProvider,
-                    isBusy: _isBusy,
-                    onApple: onApple,
-                    onGoogle: onGoogle,
-                    onFacebook: onFacebook,
-                    onLine: onLine,
-                  ),
-
-                  const SizedBox(height: 24),
-                  const _DividerOr(),
-                  const SizedBox(height: 24),
-
-                  // Email field
-                  _SheetTextField(
-                    controller: emailController,
-                    hint: 'อีเมลของคุณ',
-                    icon: Icons.alternate_email_rounded,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Password field
-                  _SheetTextField(
-                    controller: passwordController,
-                    hint: 'รหัสผ่าน',
-                    icon: Icons.lock_outline_rounded,
-                    obscureText: !isPasswordVisible,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => onLogin?.call(),
-                    suffix: _ToggleVisibilityButton(
-                      isVisible: isPasswordVisible,
-                      onTap: onTogglePassword,
-                    ),
-                  ),
-
-                  // Forgot password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.primaryColor,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 8,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        'ลืมรหัสผ่าน?',
-                        style: GoogleFonts.anuphan(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Login button
-                  _LoginButton(isLoading: isLoading, onPressed: onLogin),
-
-                  const SizedBox(height: 20),
-                  _LegalNote(),
-                ],
+                ),
               ),
             ),
           ),
@@ -727,9 +749,7 @@ class _DividerOr extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(
-          child: Divider(color: Color(0xFFE2E8F0), height: 1),
-        ),
+        const Expanded(child: Divider(color: Color(0xFFE2E8F0), height: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -741,9 +761,7 @@ class _DividerOr extends StatelessWidget {
             ),
           ),
         ),
-        const Expanded(
-          child: Divider(color: Color(0xFFE2E8F0), height: 1),
-        ),
+        const Expanded(child: Divider(color: Color(0xFFE2E8F0), height: 1)),
       ],
     );
   }
@@ -865,10 +883,7 @@ class _ToggleVisibilityButton extends StatelessWidget {
   final bool isVisible;
   final VoidCallback onTap;
 
-  const _ToggleVisibilityButton({
-    required this.isVisible,
-    required this.onTap,
-  });
+  const _ToggleVisibilityButton({required this.isVisible, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -965,7 +980,9 @@ class _LoginButtonState extends State<_LoginButton> {
                         Text(
                           'เข้าสู่ระบบ',
                           style: GoogleFonts.anuphan(
-                            color: enabled ? Colors.white : const Color(0xFF94A3B8),
+                            color: enabled
+                                ? Colors.white
+                                : const Color(0xFF94A3B8),
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.3,
@@ -974,7 +991,9 @@ class _LoginButtonState extends State<_LoginButton> {
                         const SizedBox(width: 10),
                         Icon(
                           Icons.arrow_forward_rounded,
-                          color: enabled ? Colors.white : const Color(0xFF94A3B8),
+                          color: enabled
+                              ? Colors.white
+                              : const Color(0xFF94A3B8),
                           size: 20,
                         ),
                       ],
@@ -1024,9 +1043,7 @@ class _GlassBackButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.22),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.30),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.30)),
             ),
             child: const Icon(
               Icons.arrow_back_rounded,
@@ -1056,56 +1073,13 @@ class _GoogleMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SvgPicture.asset(
+      'assets/icons/google_2025.svg',
       width: 26,
       height: 26,
-      child: CustomPaint(painter: _GoogleMarkPainter()),
+      fit: BoxFit.contain,
     );
   }
-}
-
-class _GoogleMarkPainter extends CustomPainter {
-  const _GoogleMarkPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final stroke = size.width * 0.16;
-    final rect = Rect.fromLTWH(
-      stroke,
-      stroke,
-      size.width - stroke * 2,
-      size.height - stroke * 2,
-    );
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round;
-
-    void arc(Color color, double start, double sweep) {
-      paint.color = color;
-      canvas.drawArc(rect, start, sweep, false, paint);
-    }
-
-    arc(const Color(0xFFEA4335), -2.75, 1.18);
-    arc(const Color(0xFFFBBC05), 2.45, 1.18);
-    arc(const Color(0xFF34A853), 1.05, 1.55);
-    arc(const Color(0xFF4285F4), -0.15, 1.25);
-
-    final blue = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.square;
-    final center = Offset(size.width * 0.52, size.height * 0.50);
-    canvas.drawLine(
-      center,
-      Offset(size.width * 0.86, size.height * 0.50),
-      blue,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _FacebookMark extends StatelessWidget {

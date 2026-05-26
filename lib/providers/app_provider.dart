@@ -203,16 +203,20 @@ class AppProvider extends ChangeNotifier {
     _userChannelDisposers.clear();
 
     final channel = 'private-user.$userId';
-    _userChannelDisposers.add(await realtime.subscribe(
-      channel: channel,
-      event: 'PaymentConfirmed',
-      handler: (_) => loadAccountData(),
-    ));
-    _userChannelDisposers.add(await realtime.subscribe(
-      channel: channel,
-      event: 'SosTriggered',
-      handler: (data) => NotificationNavigator.handle('sos_alert', data),
-    ));
+    _userChannelDisposers.add(
+      await realtime.subscribe(
+        channel: channel,
+        event: 'PaymentConfirmed',
+        handler: (_) => loadAccountData(),
+      ),
+    );
+    _userChannelDisposers.add(
+      await realtime.subscribe(
+        channel: channel,
+        event: 'SosTriggered',
+        handler: (data) => NotificationNavigator.handle('sos_alert', data),
+      ),
+    );
   }
 
   Future<void> _unbindUserChannel() async {
@@ -307,7 +311,10 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> loadPublicData({String? search, String? type}) async {
     final results = await Future.wait([
-      api.get(ApiEndpoints.trips, query: {'per_page': 30, 'search': search, 'type': type}),
+      api.get(
+        ApiEndpoints.trips,
+        query: {'per_page': 30, 'search': search, 'type': type},
+      ),
       api.get(ApiEndpoints.tripsFeatured),
       api.get(ApiEndpoints.categories),
       api.get(ApiEndpoints.reviews, query: {'per_page': 8}),
@@ -431,8 +438,10 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> login(String email, String password) async {
     await _auth(
-      () =>
-          api.post(ApiEndpoints.authLogin, body: {'email': email, 'password': password}),
+      () => api.post(
+        ApiEndpoints.authLogin,
+        body: {'email': email, 'password': password},
+      ),
     );
     await AnalyticsService.instance.logLogin('password');
   }
@@ -447,11 +456,16 @@ class AppProvider extends ChangeNotifier {
     String? givenName,
     String? familyName,
   }) async {
-    await _auth(() => api.post(ApiEndpoints.authAppleNative, body: {
+    await _auth(
+      () => api.post(
+        ApiEndpoints.authAppleNative,
+        body: {
           'identity_token': identityToken,
           'given_name': ?givenName,
           'family_name': ?familyName,
-        }));
+        },
+      ),
+    );
     await AnalyticsService.instance.logLogin('apple');
   }
 
@@ -552,6 +566,27 @@ class AppProvider extends ChangeNotifier {
     } catch (_) {
       // Keep local logout responsive even if token is already expired.
     }
+    await _clearLocalSession();
+  }
+
+  /// Permanently deletes the signed-in account on the server, then clears the
+  /// local session. [password] is required for password-based accounts and is
+  /// omitted for social-only accounts. Throws if the server rejects the request
+  /// (e.g. wrong password), leaving the local session intact.
+  Future<void> deleteAccount({String? password}) async {
+    await api.delete(
+      ApiEndpoints.authAccount,
+      body: password == null ? null : {'password': password},
+    );
+    try {
+      await PushNotificationService.instance.unregisterToken();
+    } catch (_) {
+      // Token is already gone server-side; ignore cleanup failure.
+    }
+    await _clearLocalSession();
+  }
+
+  Future<void> _clearLocalSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await SecureStorage.instance.deleteToken();
@@ -595,11 +630,21 @@ class AppProvider extends ChangeNotifier {
     ]);
 
     bookings = List<dynamic>.from(api.data(results[0]) ?? []);
-    if (results[1] != null) notifications = List<dynamic>.from(api.data(results[1]) ?? []);
-    if (results[2] != null) loyalty = Map<String, dynamic>.from(api.data(results[2]) ?? {});
-    if (results[3] != null) rewards = List<dynamic>.from(api.data(results[3]) ?? []);
-    if (results[4] != null) coupons = List<dynamic>.from(api.data(results[4]) ?? []);
-    if (results[5] != null) myReviews = List<dynamic>.from(api.data(results[5]) ?? []);
+    if (results[1] != null) {
+      notifications = List<dynamic>.from(api.data(results[1]) ?? []);
+    }
+    if (results[2] != null) {
+      loyalty = Map<String, dynamic>.from(api.data(results[2]) ?? {});
+    }
+    if (results[3] != null) {
+      rewards = List<dynamic>.from(api.data(results[3]) ?? []);
+    }
+    if (results[4] != null) {
+      coupons = List<dynamic>.from(api.data(results[4]) ?? []);
+    }
+    if (results[5] != null) {
+      myReviews = List<dynamic>.from(api.data(results[5]) ?? []);
+    }
     if (hasStaff && results.length > 6 && results[6] != null) {
       final staffData = api.data(results[6]) as Map?;
       staffSchedules = List<dynamic>.from(staffData?['schedules'] ?? []);
@@ -668,12 +713,12 @@ class AppProvider extends ChangeNotifier {
       try {
         final response = hasPhoto
             ? await api
-                .postMultipart(
-                  'sos',
-                  fields: body,
-                  files: {'photo': photoPath},
-                )
-                .timeout(attemptTimeout)
+                  .postMultipart(
+                    'sos',
+                    fields: body,
+                    files: {'photo': photoPath},
+                  )
+                  .timeout(attemptTimeout)
             : await api.post('sos', body: body).timeout(attemptTimeout);
         return SosAlert.fromJson(
           Map<String, dynamic>.from(api.data(response) as Map),
@@ -914,10 +959,7 @@ class AppProvider extends ChangeNotifier {
   }) async {
     final response = await api.post(
       ApiEndpoints.groupPlanCheckout(code),
-      body: {
-        'pickup_point_id': ?pickupPointId,
-        'pickup_region': ?pickupRegion,
-      },
+      body: {'pickup_point_id': ?pickupPointId, 'pickup_region': ?pickupRegion},
     );
     await loadAccountData();
     return Map<String, dynamic>.from(api.data(response) as Map);
