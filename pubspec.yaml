@@ -57,17 +57,19 @@ flutter_launcher_icons:
   image_path: "logo.png"
   image_path_ios: "logo_ios.png"
   min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "logo.png"
 
 flutter_native_splash:
-  color: "#1A3C2A"
+  color: "#FFFFFF"
   image: "logo.png"
   android_12:
-    color: "#1A3C2A"
+    color: "#FFFFFF"
     image: "logo.png"
-  color_dark: "#0D1F0F"
+  color_dark: "#FFFFFF"
   image_dark: "logo.png"
   android: true
-  ios: true
+  ios: false
 
 flutter:
   uses-material-design: true
