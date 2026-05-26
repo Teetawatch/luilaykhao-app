@@ -24,12 +24,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       }
     }
 
-    // SOS is sent as data-only for Android. Show a local notification on the
-    // SOS alarm channel so the siren sound plays and fullScreenIntent wakes
-    // the screen — no user tap required.
-    // iOS already receives the notification via APNs payload with sos_siren.wav,
-    // so skip local notification there to avoid showing a duplicate.
+    // SOS now arrives as a notification message on the loud `sos_emergency_v2`
+    // channel, which the Android system displays (with siren + vibration) on its
+    // own even when killed. Only fall back to a local notification here for a
+    // data-only SOS (no notification block) so we never show a duplicate.
     if (message.data['type'] == 'sos_alert' &&
+        message.notification == null &&
         defaultTargetPlatform == TargetPlatform.android) {
       final localNotifications = FlutterLocalNotificationsPlugin();
       await localNotifications.initialize(
