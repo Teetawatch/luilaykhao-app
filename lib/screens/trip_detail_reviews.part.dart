@@ -114,108 +114,108 @@ class _ReviewRatingSummary extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // big score
-        Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              numberText(rating, fallback: '0'),
-              style: GoogleFonts.anuphan(
-                fontSize: 44,
-                fontWeight: FontWeight.w900,
-                color: _premiumText,
-                height: 1,
-              ),
+            // big score
+            Column(
+              children: [
+                Text(
+                  numberText(rating, fallback: '0'),
+                  style: GoogleFonts.anuphan(
+                    fontSize: 44,
+                    fontWeight: FontWeight.w900,
+                    color: _premiumText,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(5, (i) {
+                    final full = i < rating.floor();
+                    final half = !full && i < rating;
+                    return Icon(
+                      full
+                          ? Icons.star_rounded
+                          : half
+                          ? Icons.star_half_rounded
+                          : Icons.star_outline_rounded,
+                      size: 16,
+                      color: const Color(0xFFE8A117),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$count รีวิว',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 12,
+                    color: _mutedText,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(5, (i) {
-                final full = i < rating.floor();
-                final half = !full && i < rating;
-                return Icon(
-                  full
-                      ? Icons.star_rounded
-                      : half
-                      ? Icons.star_half_rounded
-                      : Icons.star_outline_rounded,
-                  size: 16,
-                  color: const Color(0xFFE8A117),
-                );
-              }),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$count รีวิว',
-              style: GoogleFonts.anuphan(
-                fontSize: 12,
-                color: _mutedText,
-                fontWeight: FontWeight.w700,
+            const SizedBox(width: 20),
+            // star bars
+            Expanded(
+              child: Column(
+                children: List.generate(5, (i) {
+                  final star = 5 - i;
+                  final c = reviews.isEmpty ? 0 : starCounts[star - 1];
+                  final pct = reviews.isEmpty ? 0.0 : c / reviews.length;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Text(
+                          '$star',
+                          style: GoogleFonts.anuphan(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: _mutedText,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 11,
+                          color: Color(0xFFE8A117),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: LinearProgressIndicator(
+                              value: pct,
+                              minHeight: 6,
+                              backgroundColor: const Color(0xFFF3F4F6),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Color(0xFFE8A117),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        SizedBox(
+                          width: 20,
+                          child: Text(
+                            '$c',
+                            style: GoogleFonts.anuphan(
+                              fontSize: 11,
+                              color: _mutedText,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
               ),
             ),
           ],
         ),
-        const SizedBox(width: 20),
-        // star bars
-        Expanded(
-          child: Column(
-            children: List.generate(5, (i) {
-              final star = 5 - i;
-              final c = reviews.isEmpty ? 0 : starCounts[star - 1];
-              final pct = reviews.isEmpty ? 0.0 : c / reviews.length;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Text(
-                      '$star',
-                      style: GoogleFonts.anuphan(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: _mutedText,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 11,
-                      color: Color(0xFFE8A117),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
-                        child: LinearProgressIndicator(
-                          value: pct,
-                          minHeight: 6,
-                          backgroundColor: const Color(0xFFF3F4F6),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFFE8A117),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    SizedBox(
-                      width: 20,
-                      child: Text(
-                        '$c',
-                        style: GoogleFonts.anuphan(
-                          fontSize: 11,
-                          color: _mutedText,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ),
-        ),
-      ],
-    ),
         if (breakdown.isNotEmpty) ...[
           const SizedBox(height: 16),
           Wrap(
@@ -305,11 +305,11 @@ class _ReviewCard extends StatelessWidget {
     final rating = _ratingValue(review).round().clamp(0, 5);
     final comment = textOf(review['comment']).trim();
     final name = textOf(user['name'], 'ผู้ใช้ทั่วไป');
-    final avatarUrl = textOf(user['avatar_url']);
+    final avatarUrl = ApiConfig.mediaUrl(textOf(user['avatar_url']));
     final date = _formatRelativeDate(review['created_at']);
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final images = asList(review['images'])
-        .map((e) => e.toString())
+        .map((e) => ApiConfig.mediaUrl(e.toString()))
         .where((s) => s.isNotEmpty)
         .toList();
     final breakdown = _reviewBreakdown(review);
@@ -418,7 +418,14 @@ class _ReviewCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Container(width: 3, height: 3, decoration: BoxDecoration(color: _mutedText.withValues(alpha: 0.4), shape: BoxShape.circle)),
+                          Container(
+                            width: 3,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: _mutedText.withValues(alpha: 0.4),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             date,
@@ -435,7 +442,10 @@ class _ReviewCard extends StatelessWidget {
                 ),
                 // rating badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFFBEB),
                     borderRadius: BorderRadius.circular(8),
@@ -446,7 +456,11 @@ class _ReviewCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.star_rounded, size: 12, color: Color(0xFFF59E0B)),
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 12,
+                        color: Color(0xFFF59E0B),
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         '$rating.0',
@@ -530,8 +544,11 @@ class _ReviewCard extends StatelessWidget {
                           width: 76,
                           height: 76,
                           color: const Color(0xFFF1F5F9),
-                          child: const Icon(Icons.broken_image_rounded,
-                              size: 22, color: Color(0xFF9CA3AF)),
+                          child: const Icon(
+                            Icons.broken_image_rounded,
+                            size: 22,
+                            color: Color(0xFF9CA3AF),
+                          ),
                         ),
                       ),
                     ),
@@ -575,7 +592,7 @@ class CommunityPhotosSection extends StatelessWidget {
     final photos = <String>[];
     for (final r in reviews) {
       for (final img in asList(asMap(r)['images'])) {
-        final url = img.toString();
+        final url = ApiConfig.mediaUrl(img.toString());
         if (url.isNotEmpty) photos.add(url);
       }
     }
@@ -642,8 +659,10 @@ class CommunityPhotosSection extends StatelessWidget {
                             width: 104,
                             height: 104,
                             color: const Color(0xFFF1F5F9),
-                            child: const Icon(Icons.broken_image_rounded,
-                                color: Color(0xFF9CA3AF)),
+                            child: const Icon(
+                              Icons.broken_image_rounded,
+                              color: Color(0xFF9CA3AF),
+                            ),
                           ),
                         ),
                         if (isLast)
@@ -687,7 +706,9 @@ class _ReviewBreakdownChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFFFBEB),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.25)),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -29,6 +29,7 @@ class AppProvider extends ChangeNotifier {
   final List<VoidCallback> _userChannelDisposers = [];
   VoidCallback? _onSessionExpired;
   bool _handlingUnauthorized = false;
+  bool _deletingAccount = false;
   VersionGateResult _versionGate = VersionGateResult.ok;
   VersionGateResult get versionGate => _versionGate;
 
@@ -91,6 +92,10 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> _handleUnauthorized() async {
+    // While deleting the account the token is intentionally invalidated
+    // server-side; ignore the resulting 401s so the session-expired handler
+    // does not tear down the navigation stack mid-flow.
+    if (_deletingAccount) return;
     if (_handlingUnauthorized) return;
     if (!isLoggedIn) return;
     _handlingUnauthorized = true;
@@ -569,21 +574,39 @@ class AppProvider extends ChangeNotifier {
     await _clearLocalSession();
   }
 
-  /// Permanently deletes the signed-in account on the server, then clears the
-  /// local session. [password] is required for password-based accounts and is
-  /// omitted for social-only accounts. Throws if the server rejects the request
-  /// (e.g. wrong password), leaving the local session intact.
+  /// Deletes the signed-in account on the server. [password] is required for
+  /// password-based accounts and omitted for social-only accounts. Throws if
+  /// the server rejects the request (e.g. wrong password), leaving the local
+  /// session intact. The local session is cleared separately via
+  /// [finalizeAccountDeletion] so the UI can show a success confirmation that
+  /// stays visible until the user dismisses it — clearing here would flip the
+  /// screen to the login view before the confirmation can be seen.
   Future<void> deleteAccount({String? password}) async {
-    await api.delete(
-      ApiEndpoints.authAccount,
-      body: password == null ? null : {'password': password},
-    );
+    _deletingAccount = true;
     try {
-      await PushNotificationService.instance.unregisterToken();
-    } catch (_) {
-      // Token is already gone server-side; ignore cleanup failure.
+      await api.delete(
+        ApiEndpoints.authAccount,
+        body: password == null ? null : {'password': password},
+      );
+    } catch (e) {
+      // Deletion failed (e.g. wrong password) — restore normal 401 handling.
+      _deletingAccount = false;
+      rethrow;
     }
+    // Account + its tokens are gone server-side. Halt background work that would
+    // otherwise fire an authenticated request and 401, without clearing the
+    // session yet so the success confirmation can stay on screen.
+    stopActiveSeatLockPolling();
+    await _unbindUserChannel();
+  }
+
+  /// Clears the local session after the user acknowledges a successful account
+  /// deletion. No network calls are made here — the server-side token and push
+  /// tokens were already removed by the deletion (cascade) — so the dead-token
+  /// 401 path that used to tear down the navigation stack never runs.
+  Future<void> finalizeAccountDeletion() async {
     await _clearLocalSession();
+    _deletingAccount = false;
   }
 
   Future<void> _clearLocalSession() async {

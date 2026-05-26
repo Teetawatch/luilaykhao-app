@@ -21,7 +21,6 @@ import 'tracking_screen.dart' show TrackingMapPage;
 import '../services/notification_navigator.dart';
 import '../services/push_notification_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/review_dialog.dart';
 import '../widgets/travel_widgets.dart';
 import 'login_screen.dart';
 import 'refund_status_screen.dart';

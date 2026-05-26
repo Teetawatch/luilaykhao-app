@@ -166,8 +166,10 @@ class _NextTripHeroCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                DateFormat('d MMMM yyyy', 'th_TH')
-                                    .format(travelDate),
+                                DateFormat(
+                                  'd MMMM yyyy',
+                                  'th_TH',
+                                ).format(travelDate),
                                 style: GoogleFonts.anuphan(
                                   color: Colors.white.withValues(alpha: 0.80),
                                   fontSize: 11.5,
@@ -462,10 +464,7 @@ class _BookingUtilityBar extends StatelessWidget {
           initialValue: sort,
           onSelected: onSortChanged,
           itemBuilder: (_) => const [
-            PopupMenuItem(
-              value: 'upcoming',
-              child: Text('วันเดินทางใกล้สุด'),
-            ),
+            PopupMenuItem(value: 'upcoming', child: Text('วันเดินทางใกล้สุด')),
             PopupMenuItem(value: 'latest', child: Text('จองล่าสุด')),
           ],
           child: const _UtilityIconButton(icon: Icons.swap_vert_rounded),
@@ -633,6 +632,7 @@ class ReservationCard extends StatelessWidget {
     final bookingRef = textOf(booking['booking_ref'], '-');
     final isCancelled = _isCancelledBooking(booking);
     final isUpcoming = _isUpcomingBooking(booking);
+    final isPast = _isPastBooking(booking);
     final status = textOf(booking['status']);
     final paymentType = textOf(booking['payment_type'], 'full');
     final image = ApiConfig.mediaUrl(
@@ -677,8 +677,7 @@ class ReservationCard extends StatelessWidget {
                       imageUrl: image,
                       fit: BoxFit.cover,
                       color: isCancelled ? Colors.grey : null,
-                      colorBlendMode:
-                          isCancelled ? BlendMode.saturation : null,
+                      colorBlendMode: isCancelled ? BlendMode.saturation : null,
                       placeholder: (_, _) =>
                           Container(color: const Color(0xFFEDEFEF)),
                       errorWidget: (_, _, _) => Container(
@@ -720,6 +719,30 @@ class ReservationCard extends StatelessWidget {
                       child: _CountdownPill(booking: booking),
                     ),
                   ),
+                  // Past, completed trips: a gentle farewell instead of a
+                  // review prompt — these trips can no longer be reviewed.
+                  if (isPast && !isCancelled)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.38),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'ยินดีที่ได้พบกันครับ',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.anuphan(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.45),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -772,8 +795,7 @@ class ReservationCard extends StatelessWidget {
                     onPayPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            PaymentScreen(bookingRef: bookingRef),
+                        builder: (_) => PaymentScreen(bookingRef: bookingRef),
                       ),
                     ),
                   ),
@@ -790,8 +812,7 @@ class ReservationCard extends StatelessWidget {
                   // Action deck (chat, SOS, pre-trip briefing, reschedule)
                   _BookingActionDeck(booking: booking),
 
-                  // Review + refund CTAs
-                  _ReviewCallToAction(booking: booking),
+                  // Refund CTA (past trips are no longer reviewable)
                   _RefundStatusCallToAction(booking: booking),
                 ],
               ),
@@ -904,17 +925,13 @@ class _PaymentStatusRow extends StatelessWidget {
   final Map<String, dynamic> booking;
   final VoidCallback onPayPressed;
 
-  const _PaymentStatusRow({
-    required this.booking,
-    required this.onPayPressed,
-  });
+  const _PaymentStatusRow({required this.booking, required this.onPayPressed});
 
   @override
   Widget build(BuildContext context) {
     final status = textOf(booking['status']);
     final paymentType = textOf(booking['payment_type'], 'full');
-    final total =
-        num.tryParse(booking['total_amount']?.toString() ?? '') ?? 0;
+    final total = num.tryParse(booking['total_amount']?.toString() ?? '') ?? 0;
     final paid = num.tryParse(booking['paid_amount']?.toString() ?? '') ?? 0;
 
     if (status == 'pending') {
@@ -1095,8 +1112,7 @@ class _DepositBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dueDateText =
-        dueDate.isNotEmpty ? dateText(dueDate) : 'ไม่ระบุ';
+    final dueDateText = dueDate.isNotEmpty ? dateText(dueDate) : 'ไม่ระบุ';
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
@@ -1131,11 +1147,7 @@ class _DepositBar extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 1,
-            height: 36,
-            color: const Color(0xFFFBD38D),
-          ),
+          Container(width: 1, height: 36, color: const Color(0xFFFBD38D)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1198,14 +1210,14 @@ class _InstallmentBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final paidCount =
-        installments
-            .map(asMap)
-            .where((i) => textOf(i['status']) == 'paid')
-            .length;
+    final paidCount = installments
+        .map(asMap)
+        .where((i) => textOf(i['status']) == 'paid')
+        .length;
     final totalCount = installments.length;
-    final progress =
-        totalCount > 0 ? (paidCount / totalCount).clamp(0.0, 1.0) : 0.0;
+    final progress = totalCount > 0
+        ? (paidCount / totalCount).clamp(0.0, 1.0)
+        : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1415,8 +1427,10 @@ class _CompactCheckInRow extends StatelessWidget {
             ),
             if (checkInCode.isNotEmpty)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor,
                   borderRadius: BorderRadius.circular(10),

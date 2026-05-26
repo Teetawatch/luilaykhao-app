@@ -39,17 +39,19 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
           // Lowest unpaid installment the customer can still pay (no.1 is settled
           // at booking time, so the next payable is always >= 2).
           final nextInstallmentNo = () {
-            final unpaid = installments
-                .map(asMap)
-                .where((i) => textOf(i['status']) != 'paid')
-                .map((i) => int.tryParse(textOf(i['installment_no'])) ?? 0)
-                .where((no) => no >= 2)
-                .toList()
-              ..sort();
+            final unpaid =
+                installments
+                    .map(asMap)
+                    .where((i) => textOf(i['status']) != 'paid')
+                    .map((i) => int.tryParse(textOf(i['installment_no'])) ?? 0)
+                    .where((no) => no >= 2)
+                    .toList()
+                  ..sort();
             return unpaid.isEmpty ? null : unpaid.first;
           }();
           final installmentAvailable = _scheduleInstallmentAvailable(schedule);
-          final depositAvailable = _scheduleDepositAvailable(schedule) &&
+          final depositAvailable =
+              _scheduleDepositAvailable(schedule) &&
               !_asBool(booking['is_join_trip']);
           final paymentType = () {
             if (_paymentType == 'installment' && installmentAvailable) {
@@ -61,9 +63,11 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
             return 'full';
           }();
           final bookingPaymentType = textOf(booking['payment_type']);
-          final balanceUnpaid = bookingPaymentType == 'deposit' &&
+          final balanceUnpaid =
+              bookingPaymentType == 'deposit' &&
               textOf(booking['balance_paid_at']).isEmpty &&
-              (num.tryParse(booking['balance_amount']?.toString() ?? '0') ?? 0) >
+              (num.tryParse(booking['balance_amount']?.toString() ?? '0') ??
+                      0) >
                   0;
           return Container(
             decoration: BoxDecoration(
@@ -106,8 +110,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 if (textOf(booking['status']) == 'confirmed' &&
                     _isWithinTripWindow(schedule)) ...[
                   _SosButton(
-                    scheduleId:
-                        int.tryParse(textOf(schedule['id'])) ?? 0,
+                    scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -160,8 +163,8 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 const SizedBox(height: 10),
                 ...passengers.map((item) {
                   final p = asMap(item);
-                  final name =
-                      '${textOf(p['title'])} ${textOf(p['name'])}'.trim();
+                  final name = '${textOf(p['title'])} ${textOf(p['name'])}'
+                      .trim();
                   final phone = textOf(p['phone'], 'ไม่มีเบอร์โทร');
                   final seat = textOf(p['seat_id']);
                   final halal = p['halal_food'] == true;
@@ -173,9 +176,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                         color: AppTheme.subtleSurface(context),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: AppTheme.border(context).withValues(
-                            alpha: 0.6,
-                          ),
+                          color: AppTheme.border(
+                            context,
+                          ).withValues(alpha: 0.6),
                         ),
                       ),
                       child: Row(
@@ -243,7 +246,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     title: 'สตาฟ / ไกด์ประจำรอบ',
                   ),
                   const SizedBox(height: 10),
-                  _AssignedStaffList(staffList: asList(booking['assigned_staff'])),
+                  _AssignedStaffList(
+                    staffList: asList(booking['assigned_staff']),
+                  ),
                 ],
 
                 // Installments section
@@ -270,9 +275,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                           border: Border.all(
                             color: isPaid
                                 ? AppTheme.primaryColor.withValues(alpha: 0.16)
-                                : AppTheme.border(context).withValues(
-                                    alpha: 0.6,
-                                  ),
+                                : AppTheme.border(
+                                    context,
+                                  ).withValues(alpha: 0.6),
                           ),
                         ),
                         child: Row(
@@ -354,9 +359,8 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => PaymentScreen(
-                              bookingRef: widget.bookingRef,
-                            ),
+                            builder: (_) =>
+                                PaymentScreen(bookingRef: widget.bookingRef),
                           ),
                         );
                       },
@@ -417,8 +421,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   ),
                 ],
 
-                // Review CTA
-                if (_asBool(booking['can_review'])) ...[
+                // Review CTA — not offered for trips that have already passed.
+                if (_asBool(booking['can_review']) &&
+                    !_isPastBooking(booking)) ...[
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
@@ -706,8 +711,12 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               return IconButton(
                 onPressed: () => setState(() => _rating = star),
                 icon: Icon(
-                  star <= _rating ? Icons.star_rounded : Icons.star_border_rounded,
-                  color: star <= _rating ? const Color(0xFFFFB020) : AppTheme.textSecondary,
+                  star <= _rating
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  color: star <= _rating
+                      ? const Color(0xFFFFB020)
+                      : AppTheme.textSecondary,
                   size: 36,
                 ),
               );
@@ -777,9 +786,11 @@ class _PreTripBriefingCard extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final daysLeft = depDate != null
-        ? DateTime(depDate.year, depDate.month, depDate.day)
-            .difference(today)
-            .inDays
+        ? DateTime(
+            depDate.year,
+            depDate.month,
+            depDate.day,
+          ).difference(today).inDays
         : null;
 
     final countdownText = switch (daysLeft) {
@@ -794,14 +805,8 @@ class _PreTripBriefingCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: AppTheme.isDark(context)
-              ? [
-                  const Color(0xFF0F4C2A),
-                  const Color(0xFF0A2E1A),
-                ]
-              : [
-                  const Color(0xFFECFDF5),
-                  const Color(0xFFD1FAE5),
-                ],
+              ? [const Color(0xFF0F4C2A), const Color(0xFF0A2E1A)]
+              : [const Color(0xFFECFDF5), const Color(0xFFD1FAE5)],
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
@@ -855,7 +860,9 @@ class _PreTripBriefingCard extends StatelessWidget {
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
@@ -892,8 +899,10 @@ class _PreTripBriefingCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          textOf(pickupPoint['pickup_location'],
-                              textOf(pickupPoint['region'])),
+                          textOf(
+                            pickupPoint['pickup_location'],
+                            textOf(pickupPoint['region']),
+                          ),
                           style: GoogleFonts.anuphan(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
@@ -917,10 +926,13 @@ class _PreTripBriefingCard extends StatelessWidget {
                           GestureDetector(
                             onTap: () async {
                               final uri = Uri.parse(
-                                  textOf(pickupPoint['map_url']));
+                                textOf(pickupPoint['map_url']),
+                              );
                               if (await canLaunchUrl(uri)) {
-                                launchUrl(uri,
-                                    mode: LaunchMode.externalApplication);
+                                launchUrl(
+                                  uri,
+                                  mode: LaunchMode.externalApplication,
+                                );
                               }
                             },
                             child: Row(
@@ -970,24 +982,25 @@ class _PreTripBriefingCard extends StatelessWidget {
                           onTap: phone.isEmpty
                               ? null
                               : () async {
-                                  final uri =
-                                      Uri(scheme: 'tel', path: phone);
+                                  final uri = Uri(scheme: 'tel', path: phone);
                                   if (await canLaunchUrl(uri)) {
                                     launchUrl(uri);
                                   }
                                 },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 6),
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
-                              color:
-                                  AppTheme.surface(context).withValues(
-                                alpha: 0.80,
-                              ),
+                              color: AppTheme.surface(
+                                context,
+                              ).withValues(alpha: 0.80),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: AppTheme.primaryColor
-                                    .withValues(alpha: 0.20),
+                                color: AppTheme.primaryColor.withValues(
+                                  alpha: 0.20,
+                                ),
                               ),
                             ),
                             child: Row(
@@ -1002,9 +1015,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                                   const SizedBox(width: 5),
                                 ],
                                 Text(
-                                  phone.isNotEmpty
-                                      ? '$name  $phone'
-                                      : name,
+                                  phone.isNotEmpty ? '$name  $phone' : name,
                                   style: GoogleFonts.anuphan(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w800,
@@ -1031,9 +1042,11 @@ class _PreTripBriefingCard extends StatelessWidget {
                     child: _PreparationsChecklist(
                       bookingRef: textOf(booking['booking_ref']),
                       items: preparations
-                          .map((item) => item is Map
-                              ? textOf(item['text'] ?? item['title'] ?? item)
-                              : item.toString())
+                          .map(
+                            (item) => item is Map
+                                ? textOf(item['text'] ?? item['title'] ?? item)
+                                : item.toString(),
+                          )
                           .where((t) => t.trim().isNotEmpty)
                           .toList(),
                     ),
@@ -1155,10 +1168,7 @@ class _PreparationsChecklist extends StatefulWidget {
   final String bookingRef;
   final List<String> items;
 
-  const _PreparationsChecklist({
-    required this.bookingRef,
-    required this.items,
-  });
+  const _PreparationsChecklist({required this.bookingRef, required this.items});
 
   @override
   State<_PreparationsChecklist> createState() => _PreparationsChecklistState();
@@ -1215,8 +1225,9 @@ class _PreparationsChecklistState extends State<_PreparationsChecklist> {
                   child: LinearProgressIndicator(
                     value: total == 0 ? 0 : done / total,
                     minHeight: 5,
-                    backgroundColor: AppTheme.mutedText(context)
-                        .withValues(alpha: 0.15),
+                    backgroundColor: AppTheme.mutedText(
+                      context,
+                    ).withValues(alpha: 0.15),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       allDone ? AppTheme.primaryColor : const Color(0xFFE8A117),
                     ),
@@ -1270,8 +1281,7 @@ class _PreparationsChecklistState extends State<_PreparationsChecklist> {
                         color: checked
                             ? AppTheme.mutedText(context)
                             : AppTheme.onSurface(context),
-                        decoration:
-                            checked ? TextDecoration.lineThrough : null,
+                        decoration: checked ? TextDecoration.lineThrough : null,
                         decorationColor: AppTheme.mutedText(context),
                       ),
                     ),
@@ -1380,8 +1390,10 @@ class _SosButtonState extends State<_SosButton> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.check_circle_rounded,
-                color: AppTheme.primaryColor),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: AppTheme.primaryColor,
+            ),
             const SizedBox(width: 8),
             Text(
               'ส่ง SOS แล้ว',
@@ -1393,7 +1405,7 @@ class _SosButtonState extends State<_SosButton> {
           hasLocation
               ? 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนพร้อมตำแหน่งของคุณแล้ว'
               : 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนแล้ว '
-                  '(ไม่สามารถระบุตำแหน่ง GPS ได้)',
+                    '(ไม่สามารถระบุตำแหน่ง GPS ได้)',
           style: GoogleFonts.anuphan(fontSize: 13, height: 1.5),
         ),
         actions: [
@@ -1420,9 +1432,7 @@ class _SosButtonState extends State<_SosButton> {
     }
 
     return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-      ),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
   }
 
@@ -1458,8 +1468,11 @@ class _SosButtonState extends State<_SosButton> {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.sos_rounded,
-                        color: Colors.white, size: 26),
+                    : const Icon(
+                        Icons.sos_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1487,8 +1500,10 @@ class _SosButtonState extends State<_SosButton> {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded,
-                  color: _sosRed.withValues(alpha: 0.7)),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: _sosRed.withValues(alpha: 0.7),
+              ),
             ],
           ),
         ),
@@ -1569,9 +1584,9 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
       setState(() => _photoPath = image.path);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ไม่สามารถเปิดรูปได้')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('ไม่สามารถเปิดรูปได้')));
       }
     } finally {
       if (mounted) setState(() => _pickingPhoto = false);
@@ -1592,15 +1607,25 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_camera_outlined, color: _sosRed),
-                title: Text('ถ่ายรูป',
-                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+                leading: const Icon(
+                  Icons.photo_camera_outlined,
+                  color: _sosRed,
+                ),
+                title: Text(
+                  'ถ่ายรูป',
+                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+                ),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined, color: _sosRed),
-                title: Text('เลือกจากคลังภาพ',
-                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+                leading: const Icon(
+                  Icons.photo_library_outlined,
+                  color: _sosRed,
+                ),
+                title: Text(
+                  'เลือกจากคลังภาพ',
+                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+                ),
                 onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
             ],
@@ -1633,272 +1658,287 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-          // Handle bar
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Title
-          Row(
-            children: [
-              const Icon(Icons.sos_rounded, color: _sosRed, size: 26),
-              const SizedBox(width: 10),
-              Text(
-                'ขอความช่วยเหลือ SOS',
-                style: GoogleFonts.anuphan(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: _sosRed,
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'เลือกข้อความที่ต้องการส่งให้สตาฟและผู้ร่วมทริป',
-            style: GoogleFonts.anuphan(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-          // Option grid
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 2.4,
-            children: _options.map((opt) {
-              final selected = _selected == opt.value;
-              return GestureDetector(
-                onTap: () => setState(() {
-                  _selected = opt.value;
-                  if (opt.value != 'other') _controller.clear();
-                }),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? _sosRed.withValues(alpha: 0.08)
-                        : Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: selected
-                          ? _sosRed
-                          : Colors.grey.shade200,
-                      width: selected ? 2 : 1,
+              // Title
+              Row(
+                children: [
+                  const Icon(Icons.sos_rounded, color: _sosRed, size: 26),
+                  const SizedBox(width: 10),
+                  Text(
+                    'ขอความช่วยเหลือ SOS',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: _sosRed,
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    children: [
-                      Text(opt.emoji, style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          opt.label,
-                          style: GoogleFonts.anuphan(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: selected ? _sosRed : Colors.grey.shade800,
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'เลือกข้อความที่ต้องการส่งให้สตาฟและผู้ร่วมทริป',
+                style: GoogleFonts.anuphan(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Option grid
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 2.4,
+                children: _options.map((opt) {
+                  final selected = _selected == opt.value;
+                  return GestureDetector(
+                    onTap: () => setState(() {
+                      _selected = opt.value;
+                      if (opt.value != 'other') _controller.clear();
+                    }),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? _sosRed.withValues(alpha: 0.08)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: selected ? _sosRed : Colors.grey.shade200,
+                          width: selected ? 2 : 1,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Text(opt.emoji, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              opt.label,
+                              style: GoogleFonts.anuphan(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: selected
+                                    ? _sosRed
+                                    : Colors.grey.shade800,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              // Custom text field (shown when "อื่น ๆ" selected)
+              if (_selected == 'other') ...[
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _controller,
+                  maxLength: 255,
+                  maxLines: 2,
+                  onChanged: (_) => setState(() {}),
+                  style: GoogleFonts.anuphan(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'อธิบายสถานการณ์โดยย่อ...',
+                    hintStyle: GoogleFonts.anuphan(color: Colors.grey.shade400),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: _sosRed, width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.all(14),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 16),
+
+              // Info note
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 15,
+                      color: Colors.grey.shade500,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'สตาฟและผู้โดยสารในทริปจะได้รับการแจ้งเตือนพร้อมตำแหน่ง GPS ทันที',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Optional photo attachment — helps responders see the surroundings.
+              if (_photoPath == null)
+                OutlinedButton.icon(
+                  onPressed: _pickingPhoto ? null : _choosePhotoSource,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(color: Colors.grey.shade300),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    minimumSize: const Size.fromHeight(0),
+                  ),
+                  icon: _pickingPhoto
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          Icons.add_a_photo_outlined,
+                          size: 19,
+                          color: Colors.grey.shade700,
+                        ),
+                  label: Text(
+                    'แนบรูปสถานที่ (ไม่บังคับ)',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                )
+              else
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      Image.file(
+                        File(_photoPath!),
+                        width: double.infinity,
+                        height: 160,
+                        fit: BoxFit.cover,
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Material(
+                          color: Colors.black54,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => setState(() => _photoPath = null),
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              );
-            }).toList(),
-          ),
 
-          // Custom text field (shown when "อื่น ๆ" selected)
-          if (_selected == 'other') ...[
-            const SizedBox(height: 14),
-            TextField(
-              controller: _controller,
-              maxLength: 255,
-              maxLines: 2,
-              onChanged: (_) => setState(() {}),
-              style: GoogleFonts.anuphan(fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'อธิบายสถานการณ์โดยย่อ...',
-                hintStyle: GoogleFonts.anuphan(color: Colors.grey.shade400),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: _sosRed, width: 2),
-                ),
-                contentPadding: const EdgeInsets.all(14),
-              ),
-            ),
-          ],
+              const SizedBox(height: 20),
 
-          const SizedBox(height: 16),
-
-          // Info note
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.info_outline_rounded,
-                    size: 15, color: Colors.grey.shade500),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'สตาฟและผู้โดยสารในทริปจะได้รับการแจ้งเตือนพร้อมตำแหน่ง GPS ทันที',
-                    style: GoogleFonts.anuphan(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      height: 1.4,
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        'ยกเลิก',
+                        style: GoogleFonts.anuphan(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          // Optional photo attachment — helps responders see the surroundings.
-          if (_photoPath == null)
-            OutlinedButton.icon(
-              onPressed: _pickingPhoto ? null : _choosePhotoSource,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                side: BorderSide(color: Colors.grey.shade300),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                minimumSize: const Size.fromHeight(0),
-              ),
-              icon: _pickingPhoto
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(Icons.add_a_photo_outlined,
-                      size: 19, color: Colors.grey.shade700),
-              label: Text(
-                'แนบรูปสถานที่ (ไม่บังคับ)',
-                style: GoogleFonts.anuphan(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-            )
-          else
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Stack(
-                children: [
-                  Image.file(
-                    File(_photoPath!),
-                    width: double.infinity,
-                    height: 160,
-                    fit: BoxFit.cover,
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Material(
-                      color: Colors.black54,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => setState(() => _photoPath = null),
-                        child: const Padding(
-                          padding: EdgeInsets.all(6),
-                          child: Icon(Icons.close_rounded,
-                              size: 18, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      onPressed: _canSend
+                          ? () => Navigator.pop(
+                              context,
+                              _SosSheetResult(
+                                message: _message,
+                                photoPath: _photoPath,
+                              ),
+                            )
+                          : null,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _sosRed,
+                        disabledBackgroundColor: Colors.grey.shade200,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.sos_rounded, size: 20),
+                      label: Text(
+                        'ส่งสัญญาณ SOS',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-
-          const SizedBox(height: 20),
-
-          // Buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Text(
-                    'ยกเลิก',
-                    style: GoogleFonts.anuphan(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: _canSend
-                      ? () => Navigator.pop(
-                            context,
-                            _SosSheetResult(
-                              message: _message,
-                              photoPath: _photoPath,
-                            ),
-                          )
-                      : null,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _sosRed,
-                    disabledBackgroundColor: Colors.grey.shade200,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  icon: const Icon(Icons.sos_rounded, size: 20),
-                  label: Text(
-                    'ส่งสัญญาณ SOS',
-                    style: GoogleFonts.anuphan(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
             ],
           ),
         ),
@@ -1959,10 +1999,13 @@ class _AssignedStaffList extends StatelessWidget {
                             Container(
                               margin: const EdgeInsets.only(left: 6),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryColor
-                                    .withValues(alpha: 0.10),
+                                color: AppTheme.primaryColor.withValues(
+                                  alpha: 0.10,
+                                ),
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
@@ -2138,10 +2181,10 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
     setState(() => _submitting = true);
     try {
       await context.read<AppProvider>().rescheduleBooking(
-            _ref,
-            targetScheduleId: int.tryParse(textOf(target['id'])) ?? 0,
-            seatIds: _selectedSeats.toList(),
-          );
+        _ref,
+        targetScheduleId: int.tryParse(textOf(target['id'])) ?? 0,
+        seatIds: _selectedSeats.toList(),
+      );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
@@ -2212,9 +2255,11 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                       }
                       final options = snapshot.data!
                           .map((e) => asMap(e))
-                          .where((s) =>
-                              (int.tryParse(textOf(s['id'])) ?? 0) !=
-                              _currentScheduleId)
+                          .where(
+                            (s) =>
+                                (int.tryParse(textOf(s['id'])) ?? 0) !=
+                                _currentScheduleId,
+                          )
                           .toList();
                       if (options.isEmpty) {
                         return Padding(
@@ -2235,7 +2280,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                           final selected = id == selectedId && id.isNotEmpty;
                           final avail =
                               int.tryParse(textOf(sched['available_seats'])) ??
-                                  0;
+                              0;
                           final enough = avail >= _passengerCount;
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),
@@ -2248,15 +2293,17 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
                                   color: selected
-                                      ? AppTheme.primaryColor
-                                          .withValues(alpha: 0.08)
+                                      ? AppTheme.primaryColor.withValues(
+                                          alpha: 0.08,
+                                        )
                                       : AppTheme.subtleSurface(context),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: selected
                                         ? AppTheme.primaryColor
-                                        : AppTheme.border(context)
-                                            .withValues(alpha: 0.6),
+                                        : AppTheme.border(
+                                            context,
+                                          ).withValues(alpha: 0.6),
                                     width: selected ? 2 : 1,
                                   ),
                                 ),
@@ -2266,7 +2313,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                                       selected
                                           ? Icons.radio_button_checked_rounded
                                           : Icons
-                                              .radio_button_unchecked_rounded,
+                                                .radio_button_unchecked_rounded,
                                       size: 20,
                                       color: selected
                                           ? AppTheme.primaryColor
@@ -2283,8 +2330,9 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                                             style: GoogleFonts.anuphan(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w900,
-                                              color:
-                                                  AppTheme.onSurface(context),
+                                              color: AppTheme.onSurface(
+                                                context,
+                                              ),
                                             ),
                                           ),
                                           const SizedBox(height: 2),
@@ -2349,9 +2397,10 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                                 color: picked
                                     ? AppTheme.primaryColor
                                     : available
-                                        ? AppTheme.surface(context)
-                                        : AppTheme.border(context)
-                                            .withValues(alpha: 0.4),
+                                    ? AppTheme.surface(context)
+                                    : AppTheme.border(
+                                        context,
+                                      ).withValues(alpha: 0.4),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: picked
@@ -2367,8 +2416,8 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                                   color: picked
                                       ? Colors.white
                                       : available
-                                          ? AppTheme.onSurface(context)
-                                          : AppTheme.mutedText(context),
+                                      ? AppTheme.onSurface(context)
+                                      : AppTheme.mutedText(context),
                                 ),
                               ),
                             ),
@@ -2434,9 +2483,10 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
     if (id == null) return;
     setState(() => _submitting = true);
     try {
-      await context
-          .read<AppProvider>()
-          .changeBookingPickup(_ref, pickupPointId: id);
+      await context.read<AppProvider>().changeBookingPickup(
+        _ref,
+        pickupPointId: id,
+      );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
@@ -2450,7 +2500,9 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final points = asList(_schedule['pickup_points']);
-    final currentId = int.tryParse(textOf(asMap(widget.booking['pickup_point'])['id']));
+    final currentId = int.tryParse(
+      textOf(asMap(widget.booking['pickup_point'])['id']),
+    );
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.background(context),
@@ -2518,8 +2570,9 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                           border: Border.all(
                             color: selected
                                 ? AppTheme.primaryColor
-                                : AppTheme.border(context)
-                                    .withValues(alpha: 0.6),
+                                : AppTheme.border(
+                                    context,
+                                  ).withValues(alpha: 0.6),
                             width: selected ? 2 : 1,
                           ),
                         ),
@@ -2543,8 +2596,10 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          textOf(p['pickup_location'],
-                                              textOf(p['region_label'])),
+                                          textOf(
+                                            p['pickup_location'],
+                                            textOf(p['region_label']),
+                                          ),
                                           style: GoogleFonts.anuphan(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w900,
@@ -2555,19 +2610,25 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                       if (isCurrent)
                                         Container(
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 2),
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: AppTheme.mutedText(context)
-                                                .withValues(alpha: 0.12),
-                                            borderRadius:
-                                                BorderRadius.circular(999),
+                                            color: AppTheme.mutedText(
+                                              context,
+                                            ).withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
                                           ),
                                           child: Text(
                                             'ปัจจุบัน',
                                             style: GoogleFonts.anuphan(
                                               fontSize: 10.5,
                                               fontWeight: FontWeight.w800,
-                                              color: AppTheme.mutedText(context),
+                                              color: AppTheme.mutedText(
+                                                context,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -2600,7 +2661,8 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: (_selectedId == null ||
+              onPressed:
+                  (_selectedId == null ||
                       _selectedId == currentId ||
                       _submitting)
                   ? null

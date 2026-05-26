@@ -1120,10 +1120,11 @@ class LogoutSection extends StatelessWidget {
     final app = context.read<AppProvider>();
     final requiresPassword = app.user?['has_password'] == true;
 
-    // The dialog shows its own success confirmation once deletion completes,
-    // so it stays visible even after the session is cleared and the screen
-    // rebuilds into the login view underneath.
-    await showDialog<void>(
+    // The dialog deletes the account on the server and shows a success view that
+    // stays put until the user taps "ปิด" (returning true). Only then do we clear
+    // the local session, so the confirmation never flashes past before the login
+    // screen replaces this one.
+    final acknowledged = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _DeleteAccountDialog(
@@ -1132,6 +1133,10 @@ class LogoutSection extends StatelessWidget {
             app.deleteAccount(password: password),
       ),
     );
+
+    if (acknowledged == true) {
+      await app.finalizeAccountDeletion();
+    }
   }
 }
 
@@ -1228,7 +1233,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
       ),
       actions: [
         FilledButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, true),
           style: FilledButton.styleFrom(backgroundColor: AppTheme.primaryColor),
           child: Text(
             'ปิด',

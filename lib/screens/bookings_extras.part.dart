@@ -1,125 +1,5 @@
 part of 'customer_app_screen.dart';
 
-class _ReviewCallToAction extends StatelessWidget {
-  final Map<String, dynamic> booking;
-
-  const _ReviewCallToAction({required this.booking});
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isPastBooking(booking)) return const SizedBox.shrink();
-    if (_isCancelledBooking(booking)) return const SizedBox.shrink();
-
-    final app = context.watch<AppProvider>();
-    if (!bookingNeedsReview(booking, app.myReviews)) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 14),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.verified_rounded,
-              size: 16,
-              color: AppTheme.primaryColor,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'คุณได้รีวิวทริปนี้แล้ว',
-              style: GoogleFonts.anuphan(
-                color: AppTheme.mutedText(context),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final bookingId = int.tryParse(booking['id']?.toString() ?? '');
-    if (bookingId == null) return const SizedBox.shrink();
-    final schedule = asMap(booking['schedule']);
-    final trip = asMap(schedule['trip']);
-    final tripTitle = textOf(trip['title'], 'ทริป');
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-        decoration: BoxDecoration(
-          color: AppTheme.primaryColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppTheme.primaryColor.withValues(alpha: 0.18),
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.rate_review_rounded,
-              color: AppTheme.primaryColor,
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'รีวิวประสบการณ์ของคุณ',
-                    style: GoogleFonts.anuphan(
-                      color: AppTheme.onSurface(context),
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  Text(
-                    'ใช้เวลาไม่กี่วินาที ช่วยให้นักเดินทางคนต่อไปตัดสินใจง่ายขึ้น',
-                    style: GoogleFonts.anuphan(
-                      color: AppTheme.mutedText(context),
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: AppTheme.primaryColor,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 9,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () async {
-                final ok = await ReviewSubmissionDialog.show(
-                  context,
-                  bookingId: bookingId,
-                  tripTitle: tripTitle,
-                );
-                if (ok && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ขอบคุณสำหรับรีวิว')),
-                  );
-                }
-              },
-              child: Text(
-                'รีวิว',
-                style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _RefundStatusCallToAction extends StatelessWidget {
   final Map<String, dynamic> booking;
 
@@ -140,7 +20,8 @@ class _RefundStatusCallToAction extends StatelessWidget {
     final ref = textOf(booking['booking_ref']);
     if (ref.isEmpty) return const SizedBox.shrink();
 
-    final isCompleted = status == 'refunded' ||
+    final isCompleted =
+        status == 'refunded' ||
         textOf(booking['refund_status']).toLowerCase() == 'completed';
     final label = isCompleted ? 'ดูใบสรุปการคืนเงิน' : 'ติดตามสถานะการคืนเงิน';
 
@@ -311,14 +192,10 @@ class _CountdownPill extends StatelessWidget {
   }
 }
 
-
 class BookingQuickActions extends StatelessWidget {
   final Map<String, dynamic> booking;
 
-  const BookingQuickActions({
-    super.key,
-    required this.booking,
-  });
+  const BookingQuickActions({super.key, required this.booking});
 
   @override
   Widget build(BuildContext context) {
@@ -797,4 +674,3 @@ class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
     );
   }
 }
-

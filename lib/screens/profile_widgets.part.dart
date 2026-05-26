@@ -308,7 +308,9 @@ class _ProfileTextFieldState extends State<_ProfileTextField> {
         suffixIcon: widget.obscureText
             ? IconButton(
                 icon: Icon(
-                  _visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _visible
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   size: 20,
                 ),
                 onPressed: () => setState(() => _visible = !_visible),
@@ -463,62 +465,6 @@ class _SmallActionButton extends StatelessWidget {
       backgroundColor: effectiveColor.withValues(alpha: 0.08),
       side: BorderSide(color: effectiveColor.withValues(alpha: 0.14)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-    );
-  }
-}
-
-class _ReviewableBookingCard extends StatelessWidget {
-  final Map<String, dynamic> booking;
-  final Future<void> Function() onSubmitted;
-
-  const _ReviewableBookingCard({
-    required this.booking,
-    required this.onSubmitted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final schedule = asMap(booking['schedule']);
-    final trip = asMap(schedule['trip']);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: _sectionDecoration(context: context, radius: 22),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _cleanText(trip['title'], fallback: 'ทริปของคุณ'),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    color: AppTheme.textMain,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _travelDateText(booking),
-                  style: GoogleFonts.anuphan(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          FilledButton(
-            onPressed: () => _showReviewDialog(context, booking, onSubmitted),
-            child: const Text('รีวิว'),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -788,8 +734,9 @@ IconData _notificationIcon(String type) {
     'promo' => Icons.card_giftcard_rounded,
     'system' => Icons.info_outline_rounded,
     'loyalty' => Icons.star_rounded,
-    'payment' || 'payment_confirmed' || 'payment_rejected' =>
-      Icons.payments_rounded,
+    'payment' ||
+    'payment_confirmed' ||
+    'payment_rejected' => Icons.payments_rounded,
     'installment_due' => Icons.schedule_rounded,
     'booking' || 'booking_confirmed' => Icons.confirmation_number_rounded,
     'booking_cancelled' => Icons.cancel_rounded,
@@ -951,89 +898,6 @@ String _statusLabel(String status) {
   };
 }
 
-
-Future<void> _showReviewDialog(
-  BuildContext context,
-  Map<String, dynamic> booking,
-  Future<void> Function() onSubmitted,
-) async {
-  final comment = TextEditingController();
-  var rating = 5;
-
-  final submitted = await showDialog<bool>(
-    context: context,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('เขียนรีวิว'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    5,
-                    (index) => IconButton(
-                      onPressed: () => setState(() => rating = index + 1),
-                      icon: Icon(
-                        index < rating
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
-                        color: AppTheme.warningColor,
-                      ),
-                    ),
-                  ),
-                ),
-                TextField(
-                  controller: comment,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    hintText: 'เล่าประสบการณ์ของคุณ',
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('ยกเลิก'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  if (comment.text.trim().isEmpty) return; // don't dismiss if empty
-                  Navigator.pop(context, true);
-                },
-                child: const Text('ส่งรีวิว'),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-
-  if (submitted != true || !context.mounted) {
-    comment.dispose();
-    return;
-  }
-
-  try {
-    await context.read<AppProvider>().submitReview(
-      bookingId: int.parse(_cleanText(booking['id'])),
-      rating: rating,
-      comment: comment.text.trim(),
-    );
-    comment.dispose();
-    if (!context.mounted) return;
-    await onSubmitted();
-    if (context.mounted) _showSuccess(context, 'ส่งรีวิวเรียบร้อยแล้ว');
-  } catch (e) {
-    comment.dispose();
-    if (context.mounted) _showError(context, e);
-  }
-}
-
 void _pushPremium(BuildContext context, Widget screen) {
   Navigator.of(context).push(
     PageRouteBuilder<void>(
@@ -1135,10 +999,7 @@ Future<void> _showLanguagePicker(BuildContext context) async {
                 ),
               ),
             ),
-            for (final option in const [
-              ('th', 'ภาษาไทย'),
-              ('en', 'English'),
-            ])
+            for (final option in const [('th', 'ภาษาไทย'), ('en', 'English')])
               ListTile(
                 leading: Icon(
                   app.locale.languageCode == option.$1
@@ -1167,23 +1028,36 @@ Future<void> _showLanguagePicker(BuildContext context) async {
 void _showSuccess(BuildContext context, String message) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(message, style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-    ));
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
+    );
 }
 
 void _showError(BuildContext context, Object error) {
   final message = error is ApiException ? error.message : error.toString();
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(message, style: GoogleFonts.anuphan(fontWeight: FontWeight.w600, color: Colors.white)),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: AppTheme.errorColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-    ));
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.anuphan(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppTheme.errorColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
+    );
 }
