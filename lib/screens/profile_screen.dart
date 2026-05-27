@@ -1,8 +1,8 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -12,7 +12,6 @@ import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../services/api_client.dart';
-import '../services/biometric_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/support_shortcuts.dart';
 import '../widgets/travel_widgets.dart';
@@ -765,111 +764,16 @@ class TravelMenu extends StatelessWidget {
   }
 }
 
-class SettingsMenu extends StatefulWidget {
+class SettingsMenu extends StatelessWidget {
   const SettingsMenu({super.key});
-
-  @override
-  State<SettingsMenu> createState() => _SettingsMenuState();
-}
-
-class _SettingsMenuState extends State<SettingsMenu> {
-  bool _biometricSupported = false;
-  bool _biometricEnabled = false;
-  bool _biometricBusy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _refreshBiometric();
-  }
-
-  Future<void> _refreshBiometric() async {
-    final supported = await BiometricService.instance.isSupported();
-    final enabled = supported && await BiometricService.instance.isEnabled();
-    if (!mounted) return;
-    setState(() {
-      _biometricSupported = supported;
-      _biometricEnabled = enabled;
-    });
-  }
-
-  Future<void> _toggleBiometric(bool value) async {
-    if (_biometricBusy) return;
-    setState(() => _biometricBusy = true);
-    try {
-      if (value) {
-        final ok = await BiometricService.instance.authenticate(
-          reason: 'ยืนยันตัวตนเพื่อเปิดใช้งานการปลดล็อก',
-        );
-        if (!ok) {
-          if (mounted) _showSuccess(context, 'ยกเลิกการเปิดใช้งานแล้ว');
-          return;
-        }
-        await BiometricService.instance.setEnabled(true);
-        if (mounted) {
-          setState(() => _biometricEnabled = true);
-          _showSuccess(context, 'เปิดใช้งานการปลดล็อกด้วยลายนิ้วมือแล้ว');
-        }
-      } else {
-        await BiometricService.instance.setEnabled(false);
-        if (mounted) {
-          setState(() => _biometricEnabled = false);
-          _showSuccess(context, 'ปิดใช้งานการปลดล็อกด้วยลายนิ้วมือแล้ว');
-        }
-      }
-    } finally {
-      if (mounted) setState(() => _biometricBusy = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    final isDarkMode = app.isDarkMode;
-
-    void updateTheme(bool enabled) {
-      unawaited(
-        context.read<AppProvider>().setThemeMode(
-          enabled ? ThemeMode.dark : ThemeMode.light,
-        ),
-      );
-      _showSuccess(
-        context,
-        enabled ? 'เปลี่ยนเป็นธีมมืดแล้ว' : 'เปลี่ยนเป็นธีมสว่างแล้ว',
-      );
-    }
 
     return MenuSection(
       title: 'การตั้งค่า',
       items: [
-        _MenuItem(
-          icon: isDarkMode
-              ? Icons.dark_mode_outlined
-              : Icons.light_mode_outlined,
-          label: 'ธีมมืด',
-          trailingWidget: Switch.adaptive(
-            value: isDarkMode,
-            activeThumbColor: AppTheme.primaryColor,
-            onChanged: updateTheme,
-          ),
-          showChevron: false,
-          onTap: () => updateTheme(!isDarkMode),
-        ),
-        if (_biometricSupported && app.isLoggedIn)
-          _MenuItem(
-            icon: Icons.fingerprint_rounded,
-            label: 'ปลดล็อกด้วยลายนิ้วมือ',
-            trailingWidget: Switch.adaptive(
-              value: _biometricEnabled,
-              activeThumbColor: AppTheme.primaryColor,
-              onChanged: _biometricBusy ? null : _toggleBiometric,
-            ),
-            showChevron: false,
-            onTap: () {
-              if (_biometricBusy) return;
-              _toggleBiometric(!_biometricEnabled);
-            },
-          ),
         _MenuItem(
           icon: Icons.tune_outlined,
           label: 'ตั้งค่าแอป',

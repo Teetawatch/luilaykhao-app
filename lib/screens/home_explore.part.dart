@@ -104,13 +104,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         child: _HomeInspiredTopSection(
                           app: app,
                           user: app.user,
-                          onCategorySelected: (value) {
-                            setState(() {
-                              _activeType = value;
-                              _activeSearch = null;
-                            });
-                            app.loadPublicData(type: value);
-                          },
                           onSearch: (value) {
                             setState(() {
                               _activeSearch = value.isEmpty ? null : value;
@@ -124,7 +117,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ],
                   ),
-                  _PopularTripsSection(trips: showTrips),
+                  _CategoryChipsSection(
+                    activeType: _activeType,
+                    onTypeChanged: (type) {
+                      setState(() {
+                        _activeType = type;
+                        _activeSearch = null;
+                      });
+                      app.loadPublicData(type: type);
+                    },
+                  ),
+                  _PopularTripsSection(
+                    trips: showTrips,
+                    activeType: _activeType,
+                  ),
                   PromotionsSection(
                     promotions: app.promotions
                         .map(asMap)
@@ -516,13 +522,11 @@ class _HeroTopBar extends StatelessWidget {
 class _HomeInspiredTopSection extends StatefulWidget {
   final AppProvider app;
   final Map<String, dynamic>? user;
-  final ValueChanged<String?> onCategorySelected;
   final ValueChanged<String> onSearch;
 
   const _HomeInspiredTopSection({
     required this.app,
     required this.user,
-    required this.onCategorySelected,
     required this.onSearch,
   });
 
@@ -533,7 +537,6 @@ class _HomeInspiredTopSection extends StatefulWidget {
 
 class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
   final _searchController = TextEditingController();
-  int? _selectedCategoryIndex;
 
   @override
   void dispose() {
@@ -566,33 +569,11 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
               ),
             ],
           ),
-          child: Column(
+          child: const Column(
             children: [
-              SizedBox(
-                height: 108,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  itemCount: _homeCategories.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 14),
-                  itemBuilder: (context, index) {
-                    final category = _homeCategories[index];
-                    return _HomeCategoryBubble(
-                      category: category,
-                      isSelected: _selectedCategoryIndex == index,
-                      onTap: () {
-                        setState(() => _selectedCategoryIndex = index);
-                        widget.onCategorySelected(category.type);
-                      },
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 22),
-              const _LicenseAssuranceBanner(),
-              const SizedBox(height: 14),
-              const _GuestBookingBanner(),
+              _LicenseAssuranceBanner(),
+              SizedBox(height: 14),
+              _GuestBookingBanner(),
             ],
           ),
         ),
@@ -773,140 +754,6 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HomeCategoryData {
-  final String label;
-  final String? type;
-  final IconData icon;
-  final List<Color> gradient;
-
-  const _HomeCategoryData({
-    required this.label,
-    required this.type,
-    required this.icon,
-    required this.gradient,
-  });
-}
-
-const _homeCategories = [
-  _HomeCategoryData(
-    label: 'เดินป่า',
-    type: 'trekking',
-    icon: Icons.hiking_rounded,
-    gradient: [Color(0xFF10B981), Color(0xFF047857)],
-  ),
-  _HomeCategoryData(
-    label: 'ดำน้ำตื้น',
-    type: 'snorkeling',
-    icon: Icons.scuba_diving_rounded,
-    gradient: [Color(0xFF38BDF8), Color(0xFF0369A1)],
-  ),
-  _HomeCategoryData(
-    label: 'เช่ารถตู้',
-    type: 'van-service',
-    icon: Icons.airport_shuttle_rounded,
-    gradient: [Color(0xFFFB923C), Color(0xFFC2410C)],
-  ),
-  _HomeCategoryData(
-    label: 'แคมป์ปิ้ง',
-    type: 'camping',
-    icon: Icons.cabin_rounded,
-    gradient: [Color(0xFFA78BFA), Color(0xFF6D28D9)],
-  ),
-  _HomeCategoryData(
-    label: 'ทริปทั้งหมด',
-    type: null,
-    icon: Icons.explore_rounded,
-    gradient: [Color(0xFFF472B6), Color(0xFFBE185D)],
-  ),
-];
-
-class _HomeCategoryBubble extends StatefulWidget {
-  final _HomeCategoryData category;
-  final VoidCallback onTap;
-  final bool isSelected;
-
-  const _HomeCategoryBubble({
-    required this.category,
-    required this.onTap,
-    this.isSelected = false,
-  });
-
-  @override
-  State<_HomeCategoryBubble> createState() => _HomeCategoryBubbleState();
-}
-
-class _HomeCategoryBubbleState extends State<_HomeCategoryBubble> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final category = widget.category;
-    return SizedBox(
-      width: 76,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: widget.onTap,
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 120),
-          scale: _pressed ? 0.94 : 1.0,
-          child: Column(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: category.gradient,
-                  ),
-                  boxShadow: [
-                    if (widget.isSelected)
-                      BoxShadow(
-                        color: category.gradient.last.withValues(alpha: 0.55),
-                        blurRadius: 0,
-                        spreadRadius: 3,
-                      ),
-                    BoxShadow(
-                      color: category.gradient.last.withValues(
-                        alpha: widget.isSelected ? 0.45 : 0.28,
-                      ),
-                      blurRadius: widget.isSelected ? 22 : 14,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Icon(category.icon, color: Colors.white, size: 28),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                category.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
-                  color: widget.isSelected
-                      ? category.gradient.first
-                      : const Color(0xFF1F2937),
-                  fontSize: 12.5,
-                  fontWeight:
-                      widget.isSelected ? FontWeight.w900 : FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1392,10 +1239,155 @@ class HomeHeader extends StatelessWidget {
   }
 }
 
+// ─── Trip type helpers ────────────────────────────────────────────────────────
+
+const _tripCategories = [
+  (type: null, label: 'ทั้งหมด', icon: Icons.explore_rounded),
+  (type: 'trekking', label: 'เดินป่า', icon: Icons.forest_rounded),
+  (type: 'snorkeling', label: 'ดำน้ำตื้น', icon: Icons.waves_rounded),
+  (type: 'camping', label: 'แคมป์ปิ้ง', icon: Icons.cabin_rounded),
+  (type: 'van_service', label: 'รถตู้นำเที่ยว', icon: Icons.airport_shuttle_rounded),
+];
+
+// ─── Category Chips Section ───────────────────────────────────────────────────
+
+class _CategoryChipsSection extends StatelessWidget {
+  final String? activeType;
+  final ValueChanged<String?> onTypeChanged;
+
+  const _CategoryChipsSection({
+    required this.activeType,
+    required this.onTypeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 20, 0, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'หมวดหมู่',
+            style: GoogleFonts.anuphan(
+              color: const Color(0xFF063F46),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 76,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              padding: const EdgeInsets.only(right: 20, bottom: 4),
+              itemCount: _tripCategories.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final cat = _tripCategories[index];
+                final isSelected = activeType == cat.type;
+                return _CategoryChip(
+                  label: cat.label,
+                  icon: cat.icon,
+                  isSelected: isSelected,
+                  onTap: () => onTypeChanged(cat.type),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CategoryChip({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        width: 68,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF044C4D)
+              : const Color(0xFFF0F4F4),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF044C4D).withValues(alpha: 0.28),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.15)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isSelected
+                    ? Colors.white
+                    : const Color(0xFF044C4D),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.anuphan(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: isSelected
+                    ? Colors.white
+                    : const Color(0xFF3D6363),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _PopularTripsSection extends StatelessWidget {
   final List<Map<String, dynamic>> trips;
+  final String? activeType;
 
-  const _PopularTripsSection({required this.trips});
+  const _PopularTripsSection({required this.trips, this.activeType});
 
   @override
   Widget build(BuildContext context) {
@@ -1415,21 +1407,14 @@ class _PopularTripsSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ทริปแนะนำ',
+                        activeType != null
+                            ? _tripTypeLabel(activeType!)
+                            : 'ทริปแนะนำ',
                         style: GoogleFonts.anuphan(
                           color: const Color(0xFF063F46),
                           fontSize: 25,
                           height: 1.1,
                           fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox.shrink(),
-                      Text(
-                        '',
-                        style: GoogleFonts.anuphan(
-                          color: AppTheme.textSecondary,
-                          fontSize: 0,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -1738,6 +1723,7 @@ class _CodeChip extends StatelessWidget {
   }
 
   void _copyCode(BuildContext context, String code) {
+    HapticFeedback.lightImpact();
     Clipboard.setData(ClipboardData(text: code));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1765,31 +1751,126 @@ class PromotionsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          const TravelSliverAppBar(title: 'โปรโมชั่นและสิทธิพิเศษ'),
-          SliverToBoxAdapter(
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                child: promotions.isEmpty
-                    ? const _EmptyState(
-                        icon: Icons.local_offer_outlined,
-                        title: 'ยังไม่มีโปรโมชั่น',
-                        body: 'ติดตามโปรโมชั่นและสิทธิพิเศษได้ที่นี่',
-                      )
-                    : Column(
-                        children: [
-                          for (final promo in promotions) ...[
-                            _PromotionListCard(promotion: promo),
-                            const SizedBox(height: 12),
-                          ],
-                        ],
-                      ),
+          LargeTitleSliverHeader(
+            title: 'โปรโมชั่นและสิทธิพิเศษ',
+            subtitle: promotions.isEmpty
+                ? 'รออัปเดตเร็ว ๆ นี้'
+                : '${promotions.length} ดีลพร้อมใช้งาน',
+            subtitleColor: promotions.isEmpty ? null : AppTheme.primaryColor,
+          ),
+          if (promotions.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: _PromotionsEmptyState(),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+              sliver: SliverList.builder(
+                itemCount: promotions.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) return const _PromotionsHintBanner();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: _PromotionListCard(promotion: promotions[index - 1]),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PromotionsHintBanner extends StatelessWidget {
+  const _PromotionsHintBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.local_offer_rounded,
+            size: 18,
+            color: AppTheme.primaryColor,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'แตะที่โค้ดเพื่อคัดลอก แล้วนำไปกรอกตอนชำระเงินเพื่อรับส่วนลด',
+              style: GoogleFonts.anuphan(
+                fontSize: 12.5,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.primaryColor,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PromotionsEmptyState extends StatelessWidget {
+  const _PromotionsEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.local_offer_rounded,
+                size: 42,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              'ยังไม่มีโปรโมชั่นตอนนี้',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.anuphan(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'เรากำลังเตรียมดีลและสิทธิพิเศษใหม่ ๆ ไว้ให้ กลับมาเช็กได้เร็ว ๆ นี้',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.anuphan(
+                fontSize: 14,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1145,16 +1145,51 @@ class _PromotionListCard extends StatelessWidget {
     }
   }
 
+  int? _daysUntil(dynamic value) {
+    final raw = value?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    final end = DateTime.tryParse(raw);
+    if (end == null) return null;
+    final now = DateTime.now();
+    return DateTime(end.year, end.month, end.day)
+        .difference(DateTime(now.year, now.month, now.day))
+        .inDays;
+  }
+
   @override
   Widget build(BuildContext context) {
     final code = promotion['code']?.toString() ?? '';
     final name = promotion['name']?.toString() ?? '-';
     final startDate = promotion['start_date'];
     final endDate = promotion['end_date'];
-    final maxUses = promotion['max_uses'];
-    final usedCount = promotion['used_count'] ?? 0;
+    final maxUses = int.tryParse('${promotion['max_uses'] ?? ''}');
+    final usedCount = int.tryParse('${promotion['used_count'] ?? 0}') ?? 0;
+    final daysLeft = _daysUntil(endDate);
+    final expiringSoon = daysLeft != null && daysLeft >= 0 && daysLeft <= 7;
+
+    final metaPills = <Widget>[
+      if (startDate != null)
+        _MetaPill(
+          icon: Icons.calendar_today_outlined,
+          text: 'เริ่ม ${_formatDate(startDate.toString())}',
+        ),
+      if (endDate != null)
+        _MetaPill(
+          icon: Icons.event_outlined,
+          text: 'ถึง ${_formatDate(endDate.toString())}',
+        ),
+    ];
+    if (metaPills.isEmpty) {
+      metaPills.add(
+        const _MetaPill(
+          icon: Icons.verified_outlined,
+          text: 'ใช้ได้ทุกการจอง',
+        ),
+      );
+    }
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(24),
@@ -1169,90 +1204,230 @@ class _PromotionListCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Brand gradient header — discount + copyable code.
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [AppTheme.primaryColor, AppTheme.accentColor],
               ),
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Expanded(
-                  child: Text(
-                    name,
-                    style: GoogleFonts.anuphan(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      height: 1.3,
-                    ),
-                  ),
+                const Positioned(
+                  right: -24,
+                  top: -34,
+                  child: _SoftCircle(size: 96, opacity: 0.10),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: Text(
-                    _discountLabel(),
-                    style: GoogleFonts.anuphan(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+                const Positioned(
+                  right: 28,
+                  bottom: -42,
+                  child: _SoftCircle(size: 72, opacity: 0.08),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _CodeChip(code: code),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (startDate != null)
-                      _MetaPill(
-                        icon: Icons.calendar_today_outlined,
-                        text: 'เริ่ม ${_formatDate(startDate.toString())}',
-                      ),
-                    if (endDate != null)
-                      _MetaPill(
-                        icon: Icons.event_outlined,
-                        text: 'ถึง ${_formatDate(endDate.toString())}',
-                      ),
-                    if (maxUses != null)
-                      _MetaPill(
-                        icon: Icons.people_outline_rounded,
-                        text: 'ใช้แล้ว $usedCount/$maxUses',
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: GoogleFonts.anuphan(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            _discountLabel(),
+                            style: GoogleFonts.anuphan(
+                              color: AppTheme.primaryColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _CodeChip(code: code),
+                        const Spacer(),
+                        if (expiringSoon) _ExpiryChip(daysLeft: daysLeft),
+                      ],
+                    ),
                   ],
                 ),
               ],
             ),
           ),
+          // Details on surface, separated by a coupon tear line.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DashedDivider(
+                  color: AppTheme.border(context).withValues(alpha: 0.9),
+                ),
+                const SizedBox(height: 14),
+                Wrap(spacing: 10, runSpacing: 8, children: metaPills),
+                if (maxUses != null && maxUses > 0) ...[
+                  const SizedBox(height: 14),
+                  _PromotionUsageBar(used: usedCount, max: maxUses),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _SoftCircle extends StatelessWidget {
+  final double size;
+  final double opacity;
+
+  const _SoftCircle({required this.size, required this.opacity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: opacity),
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+}
+
+class _ExpiryChip extends StatelessWidget {
+  final int daysLeft;
+
+  const _ExpiryChip({required this.daysLeft});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = daysLeft <= 0 ? 'หมดเขตวันนี้' : 'เหลือ $daysLeft วัน';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.schedule_rounded, color: Colors.white, size: 13),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.anuphan(
+              color: Colors.white,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashedDivider extends StatelessWidget {
+  final Color color;
+
+  const _DashedDivider({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const dashWidth = 5.0;
+        const dashGap = 4.0;
+        final count = (constraints.maxWidth / (dashWidth + dashGap))
+            .floor()
+            .clamp(1, 999);
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(
+            count,
+            (_) => Container(width: dashWidth, height: 1.5, color: color),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PromotionUsageBar extends StatelessWidget {
+  final int used;
+  final int max;
+
+  const _PromotionUsageBar({required this.used, required this.max});
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = max <= 0 ? 0.0 : (used / max).clamp(0.0, 1.0);
+    final remaining = (max - used).clamp(0, max);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'สิทธิ์การใช้งาน',
+              style: GoogleFonts.anuphan(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              'เหลือ $remaining จาก $max สิทธิ์',
+              style: GoogleFonts.anuphan(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: ratio,
+            minHeight: 6,
+            backgroundColor: AppTheme.subtleSurface(context),
+            valueColor: const AlwaysStoppedAnimation(AppTheme.primaryColor),
+          ),
+        ),
+      ],
     );
   }
 }

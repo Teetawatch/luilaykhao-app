@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
@@ -355,6 +356,190 @@ class TravelSliverAppBar extends StatelessWidget {
             )
           : null,
       actions: actions,
+    );
+  }
+}
+
+/// iOS-style large title navigation bar that collapses to an inline centered
+/// title on scroll, over a frosted background with a hairline that fades in.
+/// Place directly inside a [CustomScrollView]'s `slivers` list.
+class LargeTitleSliverHeader extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final Color? subtitleColor;
+
+  /// Trailing action shown in the collapsed bar (e.g. a text button).
+  final Widget? trailing;
+
+  const LargeTitleSliverHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.subtitleColor,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _LargeTitleHeaderDelegate(
+        topPadding: MediaQuery.paddingOf(context).top,
+        title: title,
+        subtitle: subtitle,
+        subtitleColor: subtitleColor,
+        trailing: trailing,
+      ),
+    );
+  }
+}
+
+class _LargeTitleHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double topPadding;
+  final String title;
+  final String? subtitle;
+  final Color? subtitleColor;
+  final Widget? trailing;
+
+  _LargeTitleHeaderDelegate({
+    required this.topPadding,
+    required this.title,
+    required this.subtitle,
+    required this.subtitleColor,
+    required this.trailing,
+  });
+
+  static const double _bar = 52;
+  static const double _largeTitle = 72;
+
+  @override
+  double get minExtent => topPadding + _bar;
+
+  @override
+  double get maxExtent => topPadding + _bar + _largeTitle;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final t = (shrinkOffset / _largeTitle).clamp(0.0, 1.0);
+    final onSurface = AppTheme.onSurface(context);
+
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.background(context),
+          border: Border(
+            bottom: BorderSide(
+              color: AppTheme.border(context).withValues(alpha: 0.55 * t),
+              width: 0.5,
+            ),
+          ),
+        ),
+        padding: EdgeInsets.only(top: topPadding),
+        child: Stack(
+          children: [
+            // Collapsed bar: back button + (fading-in) centered title + action.
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: _bar,
+              child: Row(
+                children: [
+                  _LargeTitleBackButton(color: onSurface),
+                  Expanded(
+                    child: Opacity(
+                      opacity: t,
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                  trailing ?? const SizedBox(width: 12),
+                ],
+              ),
+            ),
+            // Large title that fades and lifts away as the bar collapses.
+            Positioned(
+              left: 20,
+              right: 20,
+              top: _bar - (8 * t),
+              child: Opacity(
+                opacity: (1 - t * 1.4).clamp(0.0, 1.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                        color: onSurface,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: subtitleColor ?? AppTheme.mutedText(context),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_LargeTitleHeaderDelegate oldDelegate) {
+    return oldDelegate.title != title ||
+        oldDelegate.subtitle != subtitle ||
+        oldDelegate.subtitleColor != subtitleColor ||
+        oldDelegate.trailing != trailing ||
+        oldDelegate.topPadding != topPadding;
+  }
+}
+
+class _LargeTitleBackButton extends StatelessWidget {
+  final Color color;
+
+  const _LargeTitleBackButton({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Navigator.canPop(context)) return const SizedBox(width: 12);
+    return IconButton(
+      onPressed: () {
+        HapticFeedback.selectionClick();
+        Navigator.maybePop(context);
+      },
+      icon: Icon(Icons.arrow_back_ios_new_rounded, size: 19, color: color),
+      splashRadius: 22,
     );
   }
 }

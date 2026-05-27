@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,7 +31,7 @@ part 'trip_detail_helpers.part.dart';
 const Color _premiumText = Color(0xFF0F172A);
 const Color _mutedText = Color(0xFF64748B);
 const Color _softAccent = Color(0xFF10B981);
-const double _contentOverlap = 32;
+const double _contentOverlap = 28;
 
 class TripDetailScreen extends StatefulWidget {
   final String? slug;
@@ -594,8 +595,14 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
             SliverToBoxAdapter(
               child: Transform.translate(
                 offset: const Offset(0, -_contentOverlap),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, bottomBarHeight + 24),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.background(context),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(_contentOverlap),
+                    ),
+                  ),
+                  padding: EdgeInsets.fromLTRB(16, 24, 16, bottomBarHeight + 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [

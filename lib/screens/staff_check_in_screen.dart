@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
@@ -826,12 +827,30 @@ class _BookingHeaderCard extends StatelessWidget {
                             ),
                           ),
                           if (textOf(user['phone']).isNotEmpty)
-                            Text(
-                              textOf(user['phone']),
-                              style: GoogleFonts.anuphan(
-                                fontSize: 13,
-                                color: AppTheme.mutedText(context),
-                                fontWeight: FontWeight.w600,
+                            GestureDetector(
+                              onTap: () => launchUrl(
+                                Uri.parse('tel:${textOf(user['phone'])}'),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.phone_rounded,
+                                    size: 12,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    textOf(user['phone']),
+                                    style: GoogleFonts.anuphan(
+                                      fontSize: 13,
+                                      color: AppTheme.primaryColor,
+                                      fontWeight: FontWeight.w700,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: AppTheme.primaryColor,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           if (textOf(user['email']).isNotEmpty)
@@ -911,7 +930,7 @@ class _UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = textOf(user['profile_image'] ?? user['avatar']);
+    final imageUrl = textOf(user['avatar_url'] ?? user['profile_image'] ?? user['avatar']);
     final backgroundColor = isDark
         ? AppTheme.primaryColor.withValues(alpha: 0.18)
         : AppTheme.primaryColor.withValues(alpha: 0.12);
@@ -1285,18 +1304,36 @@ class _PassengerTile extends StatelessWidget {
 
   const _PassengerTile({required this.passenger, required this.seat});
 
+  String _initials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return name[0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final notes = <String>[];
+    final name = textOf(passenger['name'], '-');
+    final nickname = textOf(passenger['nickname']);
     final phone = textOf(passenger['phone']);
+    final email = textOf(passenger['email']);
     final seatId = textOf(seat['seat_id']);
-    if (phone.isNotEmpty) notes.add('โทร $phone');
-    if (seatId.isNotEmpty) notes.add('ที่นั่ง $seatId');
-    if (passenger['halal_food'] == true) notes.add('อาหารฮาลาล');
+    final bloodGroup = textOf(passenger['blood_group']);
     final allergies = textOf(passenger['allergies']);
     final healthNotes = textOf(passenger['health_notes']);
-    if (allergies.isNotEmpty) notes.add('แพ้ $allergies');
-    if (healthNotes.isNotEmpty) notes.add(healthNotes);
+    final emergencyContact = textOf(passenger['emergency_contact']);
+    final emergencyPhone = textOf(passenger['emergency_phone']);
+    final passengerPickup = asMap(passenger['pickup_point']);
+
+    final chips = <String>[];
+    if (seatId.isNotEmpty) chips.add('ที่นั่ง $seatId');
+    if (bloodGroup.isNotEmpty) chips.add('เลือด $bloodGroup');
+    if (passenger['halal_food'] == true) chips.add('อาหารฮาลาล');
+    if (allergies.isNotEmpty) chips.add('แพ้ $allergies');
+    if (healthNotes.isNotEmpty) chips.add(healthNotes);
+    if (passengerPickup.isNotEmpty) {
+      chips.add(textOf(passengerPickup['pickup_location'], textOf(passengerPickup['region'])));
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -1304,12 +1341,15 @@ class _PassengerTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 18,
+            radius: 20,
             backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.10),
-            child: const Icon(
-              Icons.person_rounded,
-              color: AppTheme.primaryColor,
-              size: 18,
+            child: Text(
+              _initials(name),
+              style: GoogleFonts.anuphan(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.primaryColor,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -1317,24 +1357,114 @@ class _PassengerTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  textOf(passenger['name'], '-'),
-                  style: GoogleFonts.anuphan(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
-                    color: AppTheme.onSurface(context),
-                  ),
+                // Name + nickname
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: GoogleFonts.anuphan(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                    ),
+                    if (nickname.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '($nickname)',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                if (notes.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                // Phone (tappable)
+                if (phone.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => launchUrl(Uri.parse('tel:$phone')),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.phone_rounded,
+                          size: 12,
+                          color: AppTheme.primaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          phone,
+                          style: GoogleFonts.anuphan(
+                            fontSize: 13,
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.underline,
+                            decorationColor: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                // Email
+                if (email.isNotEmpty) ...[
                   const SizedBox(height: 2),
+                  Text(
+                    email,
+                    style: GoogleFonts.anuphan(
+                      fontSize: 12,
+                      color: AppTheme.mutedText(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                // Emergency contact
+                if (emergencyContact.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.emergency_rounded, size: 12, color: Colors.red.shade400),
+                      const SizedBox(width: 4),
+                      Text(
+                        'ฉุกเฉิน: $emergencyContact',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12,
+                          color: Colors.red.shade400,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (emergencyPhone.isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () => launchUrl(Uri.parse('tel:$emergencyPhone')),
+                          child: Text(
+                            emergencyPhone,
+                            style: GoogleFonts.anuphan(
+                              fontSize: 12,
+                              color: AppTheme.primaryColor,
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+                // Chips
+                if (chips.isNotEmpty) ...[
+                  const SizedBox(height: 4),
                   Wrap(
                     spacing: 6,
                     runSpacing: 4,
-                    children: notes
-                        .map(
-                          (note) => _NoteChip(note),
-                        )
-                        .toList(),
+                    children: chips.map((note) => _NoteChip(note)).toList(),
                   ),
                 ],
               ],

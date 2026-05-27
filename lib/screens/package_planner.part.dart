@@ -205,7 +205,7 @@ String _tripTypeLabel(String type) {
     'trekking' => 'เดินป่า',
     'diving' => 'ดำน้ำ',
     'snorkeling' => 'ดำน้ำตื้น',
-    'van' || 'van-service' || 'van_service' => 'เช่ารถตู้',
+    'van' || 'van-service' || 'van_service' => 'รถตู้นำเที่ยว',
     'climbing' => 'ปีนเขา',
     'camping' => 'แคมป์ปิ้ง',
     'kayaking' => 'พายเรือคายัค',

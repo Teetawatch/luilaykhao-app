@@ -31,6 +31,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _markAllRead() async {
+    HapticFeedback.lightImpact();
     setState(() => _saving = true);
     try {
       await context.read<AppProvider>().markAllNotificationsRead();
@@ -43,6 +44,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _openNotification(Map<String, dynamic> notification) async {
+    HapticFeedback.selectionClick();
     final id = int.tryParse(_cleanText(notification['id']));
     if (id != null && notification['is_read'] != true) {
       setState(() => _busyIds.add(id));
@@ -81,6 +83,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final id = int.tryParse(_cleanText(notification['id']));
     if (id == null) return;
 
+    HapticFeedback.mediumImpact();
     setState(() => _busyIds.add(id));
     try {
       await context.read<AppProvider>().deleteNotification(id);
@@ -102,73 +105,258 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final unread = notifications
         .where((item) => item['is_read'] != true)
         .length;
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final groups = _groupNotifications(notifications);
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       body: RefreshIndicator(
         onRefresh: _refresh,
+        edgeOffset: topPadding + 60,
+        color: AppTheme.primaryColor,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            const TravelSliverAppBar(title: 'การแจ้งเตือน'),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _FormCard(
-                      title: 'สถานะการแจ้งเตือน',
-                      subtitle: unread > 0
-                          ? 'คุณมี $unread รายการใหม่ที่ยังไม่ได้อ่าน'
-                          : 'คุณอ่านการแจ้งเตือนครบทุกรายการแล้ว',
+            LargeTitleSliverHeader(
+              title: 'การแจ้งเตือน',
+              subtitle: unread > 0
+                  ? '$unread รายการที่ยังไม่ได้อ่าน'
+                  : 'อ่านครบทุกรายการแล้ว',
+              subtitleColor: unread > 0
+                  ? AppTheme.primaryColor
+                  : AppTheme.mutedText(context),
+              trailing: _MarkAllReadAction(
+                visible: unread > 0,
+                saving: _saving,
+                onPressed: _markAllRead,
+              ),
+            ),
+            if (_loading && notifications.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              )
+            else if (notifications.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: _NotificationsEmptyState(),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                sliver: SliverList.builder(
+                  itemCount: groups.length,
+                  itemBuilder: (context, index) {
+                    final group = groups[index];
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        FilledButton.icon(
-                          onPressed: _saving || unread == 0
-                              ? null
-                              : _markAllRead,
-                          icon: _saving
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.done_all_outlined),
-                          label: const Text('ทำเครื่องหมายว่าอ่านทั้งหมด'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    if (_loading && notifications.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (notifications.isEmpty)
-                      const _EmptyProfileState(
-                        icon: Icons.notifications_none_outlined,
-                        title: 'ยังไม่มีการแจ้งเตือน',
-                        body:
-                            'เมื่อมีการแจ้งเตือนใหม่ จะแสดงที่นี่',
-                      )
-                    else
-                      for (final notification in notifications) ...[
-                        _SwipableNotificationCard(
-                          key: ValueKey(notification['id']),
-                          notification: notification,
-                          busy: _busyIds.contains(
-                            int.tryParse(_cleanText(notification['id'])),
-                          ),
-                          onTap: () => _openNotification(notification),
-                          onDelete: () => _deleteNotification(notification),
+                        if (index > 0) const SizedBox(height: 18),
+                        _NotificationSectionHeader(
+                          label: group.label,
+                          count: group.items.length,
                         ),
                         const SizedBox(height: 10),
+                        for (final notification in group.items) ...[
+                          _SwipableNotificationCard(
+                            key: ValueKey(notification['id']),
+                            notification: notification,
+                            busy: _busyIds.contains(
+                              int.tryParse(_cleanText(notification['id'])),
+                            ),
+                            onTap: () => _openNotification(notification),
+                            onDelete: () => _deleteNotification(notification),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                       ],
-                  ],
+                    );
+                  },
                 ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Buckets notifications into iOS-style time sections, preserving the
+/// newest-first order returned by the API.
+List<_NotificationGroup> _groupNotifications(
+  List<Map<String, dynamic>> notifications,
+) {
+  const order = ['วันนี้', 'เมื่อวาน', 'สัปดาห์นี้', 'ก่อนหน้านี้'];
+  final buckets = <String, List<Map<String, dynamic>>>{};
+  for (final notification in notifications) {
+    final label = _notificationGroupLabel(notification['created_at']);
+    buckets.putIfAbsent(label, () => []).add(notification);
+  }
+  return [
+    for (final label in order)
+      if (buckets[label] != null)
+        _NotificationGroup(label: label, items: buckets[label]!),
+  ];
+}
+
+String _notificationGroupLabel(dynamic value) {
+  final date = DateTime.tryParse(_cleanText(value))?.toLocal();
+  if (date == null) return 'ก่อนหน้านี้';
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(date.year, date.month, date.day);
+  final diff = today.difference(day).inDays;
+  if (diff <= 0) return 'วันนี้';
+  if (diff == 1) return 'เมื่อวาน';
+  if (diff < 7) return 'สัปดาห์นี้';
+  return 'ก่อนหน้านี้';
+}
+
+class _NotificationGroup {
+  final String label;
+  final List<Map<String, dynamic>> items;
+
+  const _NotificationGroup({required this.label, required this.items});
+}
+
+class _MarkAllReadAction extends StatelessWidget {
+  final bool visible;
+  final bool saving;
+  final VoidCallback onPressed;
+
+  const _MarkAllReadAction({
+    required this.visible,
+    required this.saving,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      transitionBuilder: (child, animation) =>
+          FadeTransition(opacity: animation, child: child),
+      child: !visible
+          ? const SizedBox(width: 12, key: ValueKey('empty'))
+          : Padding(
+              key: const ValueKey('action'),
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton(
+                onPressed: saving ? null : onPressed,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primaryColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  minimumSize: const Size(0, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: saving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.primaryColor,
+                        ),
+                      )
+                    : Text(
+                        'อ่านทั้งหมด',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+              ),
+            ),
+    );
+  }
+}
+
+class _NotificationSectionHeader extends StatelessWidget {
+  final String label;
+  final int count;
+
+  const _NotificationSectionHeader({required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.anuphan(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$count',
+            style: GoogleFonts.anuphan(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.mutedText(context).withValues(alpha: 0.55),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationsEmptyState extends StatelessWidget {
+  const _NotificationsEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.notifications_none_rounded,
+                size: 44,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              'ยังไม่มีการแจ้งเตือน',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.anuphan(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'เมื่อมีอัปเดตการจอง การชำระเงิน หรือโปรโมชันใหม่ จะแสดงที่นี่',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.anuphan(
+                fontSize: 14,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mutedText(context),
               ),
             ),
           ],
@@ -201,16 +389,16 @@ class _SwipableNotificationCard extends StatelessWidget {
       onDismissed: (_) => onDelete(),
       background: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
+        padding: const EdgeInsets.only(right: 26),
         decoration: BoxDecoration(
           color: AppTheme.errorColor,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.delete_rounded, color: Colors.white, size: 26),
-            const SizedBox(height: 4),
+            const Icon(Icons.delete_rounded, color: Colors.white, size: 24),
+            const SizedBox(height: 3),
             Text(
               'ลบ',
               style: GoogleFonts.anuphan(
@@ -222,12 +410,7 @@ class _SwipableNotificationCard extends StatelessWidget {
           ],
         ),
       ),
-      child: _NotificationCard(
-        notification: notification,
-        busy: busy,
-        onTap: onTap,
-        onDelete: onDelete,
-      ),
+      child: _NotificationCard(notification: notification, busy: busy, onTap: onTap),
     );
   }
 }
@@ -236,13 +419,11 @@ class _NotificationCard extends StatelessWidget {
   final Map<String, dynamic> notification;
   final bool busy;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
 
   const _NotificationCard({
     required this.notification,
     required this.busy,
     required this.onTap,
-    required this.onDelete,
   });
 
   @override
@@ -259,161 +440,136 @@ class _NotificationCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: busy ? null : onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         child: Ink(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
           decoration: BoxDecoration(
             color: unread
-                ? (isDark
-                    ? accent.withValues(alpha: 0.06)
-                    : accent.withValues(alpha: 0.03))
+                ? Color.alphaBlend(
+                    accent.withValues(alpha: isDark ? 0.10 : 0.045),
+                    AppTheme.surface(context),
+                  )
                 : AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: unread
-                  ? accent.withValues(alpha: 0.4)
-                  : AppTheme.border(context),
-              width: unread ? 1.5 : 1,
+                  ? accent.withValues(alpha: isDark ? 0.30 : 0.18)
+                  : AppTheme.border(context).withValues(alpha: 0.6),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: isDark
-                      ? (unread ? 0.22 : 0.16)
-                      : (unread ? 0.07 : 0.04),
-                ),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-              if (unread)
-                BoxShadow(
-                  color: accent.withValues(alpha: isDark ? 0.10 : 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
             ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(_notificationIcon(type), color: accent, size: 25),
-                  ),
-                  if (unread)
-                    Positioned(
-                      top: -3,
-                      right: -3,
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: AppTheme.errorColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isDark ? AppTheme.surfaceDark : Colors.white,
-                            width: 2,
+              // Unread dot (iOS Mail style) — reserves space when read.
+              SizedBox(
+                width: 14,
+                child: unread
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 18),
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: accent,
+                            shape: BoxShape.circle,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.errorColor.withValues(alpha: 0.5),
-                              blurRadius: 6,
-                            ),
-                          ],
                         ),
-                      ),
-                    ),
-                ],
+                      )
+                    : null,
               ),
-              const SizedBox(width: 12),
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: isDark ? 0.18 : 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(_notificationIcon(type), color: accent, size: 24),
+              ),
+              const SizedBox(width: 13),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: isDark ? 0.18 : 0.10),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
+                        Expanded(
                           child: Text(
                             typeLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.anuphan(
-                              fontSize: 11,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
                               color: accent,
                             ),
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         Text(
                           _notificationTimeAgo(notification['created_at']),
                           style: GoogleFonts.anuphan(
-                            fontSize: 11,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondary.withValues(alpha: 0.65),
+                            color: AppTheme.mutedText(context),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     Text(
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.anuphan(
-                        fontSize: 15,
-                        fontWeight: unread ? FontWeight.w900 : FontWeight.w700,
-                        color: AppTheme.textMain,
+                        fontSize: 15.5,
+                        fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
+                        height: 1.2,
+                        color: AppTheme.onSurface(context),
                       ),
                     ),
                     if (body.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                         body,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.anuphan(
-                          fontSize: 13,
+                          fontSize: 13.5,
                           height: 1.45,
                           fontWeight: FontWeight.w500,
-                          color: AppTheme.textSecondary,
+                          color: AppTheme.mutedText(context),
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-              const SizedBox(width: 4),
               if (busy)
                 const Padding(
-                  padding: EdgeInsets.only(top: 4),
+                  padding: EdgeInsets.only(left: 8, top: 2),
                   child: SizedBox(
-                    width: 22,
-                    height: 22,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 )
               else
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'ลบการแจ้งเตือน',
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline_rounded),
-                  color: AppTheme.errorColor.withValues(alpha: 0.55),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 2),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: AppTheme.mutedText(context).withValues(alpha: 0.5),
+                  ),
                 ),
             ],
           ),

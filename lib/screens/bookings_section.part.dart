@@ -78,6 +78,7 @@ class _NextTripHeroCard extends StatelessWidget {
 
     final (String badge, Color badgeColor) = switch (days) {
       null => ('รอวันเดินทาง', AppTheme.primaryColor),
+      < 0 => ('กำลังดำเนินการ', const Color(0xFF16A34A)),
       0 => ('เดินทางวันนี้!', const Color(0xFF16A34A)),
       1 => ('พรุ่งนี้!', const Color(0xFFD97706)),
       <= 3 => ('อีก $days วัน!', const Color(0xFFD97706)),

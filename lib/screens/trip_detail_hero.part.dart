@@ -91,83 +91,38 @@ class TravelSliverAppBar extends StatelessWidget {
       ],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
-        background: HeroImageGallery(trip: trip, isLoading: isLoading),
+        background: HeroCoverImage(trip: trip, isLoading: isLoading),
       ),
     );
   }
 }
 
-class HeroImageGallery extends StatefulWidget {
+/// A single, static cover image for the trip — no swiping, no counters.
+/// The bottom dissolves into the page background so the detail card below
+/// blends in cleanly, in the spirit of Apple's photo-led layouts.
+class HeroCoverImage extends StatelessWidget {
   final Map<String, dynamic> trip;
   final bool isLoading;
 
-  const HeroImageGallery({
+  const HeroCoverImage({
     super.key,
     required this.trip,
     required this.isLoading,
   });
 
   @override
-  State<HeroImageGallery> createState() => _HeroImageGalleryState();
-}
-
-class _HeroImageGalleryState extends State<HeroImageGallery> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-
-  @override
-  void didUpdateWidget(covariant HeroImageGallery oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    final previousImages = _galleryImages(oldWidget.trip);
-    final nextImages = _galleryImages(widget.trip);
-    final galleryChanged =
-        previousImages.length != nextImages.length ||
-        (previousImages.isNotEmpty &&
-            nextImages.isNotEmpty &&
-            previousImages.first != nextImages.first);
-
-    if (galleryChanged || _currentPage >= nextImages.length) {
-      _currentPage = 0;
-      if (_pageController.hasClients) {
-        _pageController.jumpToPage(0);
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final images = _galleryImages(widget.trip);
+    final images = _galleryImages(trip);
     final imageUrl = images.isNotEmpty ? images.first : '';
-    final canSwipe = images.length > 1;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // ── image / page view ──────────────────────────────────────
+        // ── cover image only ───────────────────────────────────────
         Container(
           color: const Color(0xFFE7ECEA),
-          child: widget.isLoading
+          child: isLoading
               ? const Skeleton(radius: 0)
-              : canSwipe
-              ? PageView.builder(
-                  controller: _pageController,
-                  itemCount: images.length,
-                  onPageChanged: (index) =>
-                      setState(() => _currentPage = index),
-                  itemBuilder: (context, index) => CachedNetworkImage(
-                    imageUrl: images[index],
-                    fit: BoxFit.cover,
-                    placeholder: (_, _) => const Skeleton(radius: 0),
-                    errorWidget: (_, _, _) => const _GalleryImageFallback(),
-                  ),
-                )
               : imageUrl.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: imageUrl,
@@ -178,61 +133,20 @@ class _HeroImageGalleryState extends State<HeroImageGallery> {
               : const _GalleryImageFallback(),
         ),
 
-        // ── subtle gradient: light at top for button legibility,
-        //    stronger at bottom to blend into the card ──────────────
-        const DecoratedBox(
+        // ── top scrim for control legibility only ─────────────────
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Color(0x55000000), // 33% — just enough for back button
-                Color(0x00000000), // transparent mid
-                Color(0x00000000),
-                Color(0x66000000), // 40% at bottom edge
+                Colors.black.withValues(alpha: 0.42),
+                Colors.transparent,
               ],
-              stops: [0.0, 0.25, 0.6, 1.0],
+              stops: const [0.0, 0.38],
             ),
           ),
         ),
-
-        // ── dot page indicators ────────────────────────────────────
-        if (canSwipe)
-          Positioned(
-            bottom: _contentOverlap + 14,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(images.length, (i) {
-                final active = i == _currentPage;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOut,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: active ? 20 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: active
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.45),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }),
-            ),
-          ),
-
-        // ── photo count badge (top-right) ──────────────────────────
-        if (canSwipe)
-          Positioned(
-            right: 16,
-            bottom: _contentOverlap + 14,
-            child: _GalleryBadge(
-              currentIndex: _currentPage,
-              count: images.length,
-            ),
-          ),
       ],
     );
   }
