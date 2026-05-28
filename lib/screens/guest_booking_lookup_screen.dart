@@ -231,8 +231,9 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 360),
         reverseTransitionDuration: const Duration(milliseconds: 260),
-        pageBuilder: (_, animation, _) =>
-            FadeTransition(opacity: animation, child: const TrackingMapPage()),
+        pageBuilder: (_, _, _) => const TrackingMapPage(),
+        transitionsBuilder: (_, animation, _, child) =>
+            FadeTransition(opacity: animation, child: child),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -51,7 +52,8 @@ class CustomerAppScreen extends StatefulWidget {
   State<CustomerAppScreen> createState() => _CustomerAppScreenState();
 }
 
-class _CustomerAppScreenState extends State<CustomerAppScreen> {
+class _CustomerAppScreenState extends State<CustomerAppScreen>
+    with WidgetsBindingObserver {
   int _index = 0;
 
   // In-app foreground notification banner state.
@@ -60,6 +62,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     NotificationNavigator.registerTabSwitcher((index) => selectTab(index));
     PushNotificationService.instance.initialize(
       onNotificationTap: (type, data) {
@@ -76,6 +79,23 @@ class _CustomerAppScreenState extends State<CustomerAppScreen> {
         );
       },
     );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Re-sync notifications from the server so the app-icon badge reflects
+      // anything the user marked read on another device — and so APNs-driven
+      // badges from while we were backgrounded get cleared if there's nothing
+      // unread left.
+      final app = context.read<AppProvider>();
+      if (app.isLoggedIn) {
+        unawaited(app.loadNotifications());
+      } else {
+        unawaited(PushNotificationService.instance.clearBadge());
+      }
+    }
   }
 
   void selectTab(int value) {
@@ -107,6 +127,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _bannerEntry?.remove();
     super.dispose();
   }

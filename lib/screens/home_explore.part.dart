@@ -177,8 +177,8 @@ class HeroHeader extends StatelessWidget {
       260.0,
       680.0,
     );
-    final titleSize = (size.width * 0.060).clamp(20.0, 28.0).toDouble();
-    final subtitleSize = compactWidth ? 14.0 : 16.0;
+    final titleSize = (size.width * 0.058).clamp(20.0, 26.0).toDouble();
+    final subtitleSize = compactWidth ? 14.0 : 15.0;
 
     return SizedBox(
       height: heroHeight,
@@ -216,19 +216,20 @@ class HeroHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                // Dark Gradient Overlay for Readability (Top to Bottom)
+                // Apple-style vignette: stronger scrim where the headline sits
+                // so text is legible without needing per-character text shadows.
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.45),
-                        Colors.black.withValues(alpha: 0.15),
+                        Colors.black.withValues(alpha: 0.38),
+                        Colors.black.withValues(alpha: 0.10),
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.2),
+                        Colors.black.withValues(alpha: 0.36),
                       ],
-                      stops: const [0.0, 0.4, 0.7, 1.0],
+                      stops: const [0.0, 0.28, 0.55, 1.0],
                     ),
                   ),
                 ),
@@ -264,33 +265,20 @@ class HeroHeader extends StatelessWidget {
                         style: GoogleFonts.anuphan(
                           color: Colors.white,
                           fontSize: titleSize,
-                          height: 1.24,
-                          fontWeight: FontWeight.w900,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              offset: const Offset(0, 2),
-                              blurRadius: 10,
-                            ),
-                          ],
+                          height: 1.22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       Text(
                         'ค้นหาทริปและประสบการณ์ที่พร้อมเดินทาง',
                         textAlign: TextAlign.start,
                         style: GoogleFonts.anuphan(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: Colors.white.withValues(alpha: 0.88),
                           fontSize: subtitleSize,
                           height: 1.4,
                           fontWeight: FontWeight.w500,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              offset: const Offset(0, 2),
-                              blurRadius: 8,
-                            ),
-                          ],
                         ),
                       ),
                     ],
@@ -340,39 +328,40 @@ class _HeroTopBar extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
-        bottom: Radius.circular(24 * backgroundProgress),
+        bottom: Radius.circular(20 * backgroundProgress),
       ),
       child: BackdropFilter(
         filter: ImageFilter.blur(
-          sigmaX: 18 * backgroundProgress,
-          sigmaY: 18 * backgroundProgress,
+          sigmaX: 22 * backgroundProgress,
+          sigmaY: 22 * backgroundProgress,
         ),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.82 * backgroundProgress),
+            color: Colors.white.withValues(alpha: 0.78 * backgroundProgress),
             border: Border(
               bottom: BorderSide(
                 color: AppTheme.outlineColor.withValues(
-                  alpha: 0.55 * backgroundProgress,
+                  alpha: 0.45 * backgroundProgress,
                 ),
+                width: 0.5,
               ),
             ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(
-                  alpha: 0.08 * backgroundProgress,
+                  alpha: 0.05 * backgroundProgress,
                 ),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
               child: Row(
                 children: [
                   GestureDetector(
@@ -381,19 +370,11 @@ class _HeroTopBar extends StatelessWidget {
                     child: Row(
                       children: [
                         Container(
-                          width: 50,
-                          height: 50,
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.10),
-                                blurRadius: 18,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
                           ),
                           child: ClipOval(
                             child: avatar.isNotEmpty
@@ -406,7 +387,7 @@ class _HeroTopBar extends StatelessWidget {
                                         initial,
                                         style: const TextStyle(
                                           color: AppTheme.primaryColor,
-                                          fontWeight: FontWeight.w900,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ),
@@ -419,44 +400,27 @@ class _HeroTopBar extends StatelessWidget {
                           children: [
                             Text(
                               'สวัสดี, $firstName',
-                              style: TextStyle(
+                              style: GoogleFonts.anuphan(
                                 color: textColor,
-                                fontSize: 18,
-                                height: 1.05,
-                                fontWeight: FontWeight.w900,
-                                shadows: backgroundProgress < 0.45
-                                    ? const [
-                                        Shadow(
-                                          color: Colors.black38,
-                                          offset: Offset(0, 2),
-                                          blurRadius: 4,
-                                        ),
-                                      ]
-                                    : null,
+                                fontSize: 17,
+                                height: 1.1,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.2,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             Text(
                               'พร้อมออกเดินทางครั้งใหม่?',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.anuphan(
                                 color: Color.lerp(
-                                  Colors.white.withValues(alpha: 0.88),
+                                  Colors.white.withValues(alpha: 0.85),
                                   AppTheme.textSecondary,
                                   backgroundProgress,
                                 ),
                                 fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                shadows: backgroundProgress < 0.45
-                                    ? const [
-                                        Shadow(
-                                          color: Colors.black38,
-                                          offset: Offset(0, 1),
-                                          blurRadius: 4,
-                                        ),
-                                      ]
-                                    : null,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
@@ -465,7 +429,6 @@ class _HeroTopBar extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  const SizedBox(width: 14),
                   ClipOval(
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
@@ -474,24 +437,25 @@ class _HeroTopBar extends StatelessWidget {
                         children: [
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
-                            width: 54,
-                            height: 54,
+                            width: 44,
+                            height: 44,
                             color: Colors.white.withValues(
-                              alpha: 0.20 + (0.58 * backgroundProgress),
+                              alpha: 0.22 + (0.50 * backgroundProgress),
                             ),
                             child: IconButton(
                               padding: EdgeInsets.zero,
                               onPressed: onNotificationsTap,
                               icon: Icon(
-                                Icons.notifications_none,
+                                Icons.notifications_outlined,
                                 color: iconColor,
+                                size: 22,
                               ),
                             ),
                           ),
                           if (notificationCount > 0)
                             Positioned(
-                              top: 10,
-                              right: 12,
+                              top: 9,
+                              right: 10,
                               child: Container(
                                 width: 9,
                                 height: 9,
@@ -500,7 +464,7 @@ class _HeroTopBar extends StatelessWidget {
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: Colors.white,
-                                    width: 1,
+                                    width: 1.2,
                                   ),
                                 ),
                               ),
@@ -639,20 +603,20 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
       curve: Curves.easeOut,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _focused
               ? const Color(0xFF0B8A6E)
-              : const Color(0xFFDDE4E4),
+              : const Color(0xFFE5EBEB),
           width: _focused ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: _focused
-                ? const Color(0xFF0B8A6E).withValues(alpha: 0.18)
-                : const Color(0xFF082A30).withValues(alpha: 0.18),
-            blurRadius: _focused ? 20 : 16,
-            offset: const Offset(0, 8),
+                ? const Color(0xFF0B8A6E).withValues(alpha: 0.14)
+                : const Color(0xFF082A30).withValues(alpha: 0.12),
+            blurRadius: _focused ? 18 : 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -661,7 +625,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
           GestureDetector(
             onTap: () => widget.onSubmitted(widget.controller.text),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 0, 0),
+              padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 180),
                 child: Icon(
@@ -670,12 +634,12 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                   color: _focused
                       ? const Color(0xFF0B8A6E)
                       : const Color(0xFF8A9FA0),
-                  size: 22,
+                  size: 20,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: widget.controller,
@@ -692,13 +656,13 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                 isDense: true,
                 hintText: 'ค้นหาทริป ปลายทาง หรือกิจกรรม',
                 hintStyle: GoogleFonts.anuphan(
-                  color: const Color(0xFF111313).withValues(alpha: 0.40),
-                  fontSize: 14,
+                  color: const Color(0xFF111313).withValues(alpha: 0.42),
+                  fontSize: 14.5,
                   fontWeight: FontWeight.w500,
                 ),
                 border: InputBorder.none,
                 filled: false,
-                contentPadding: const EdgeInsets.symmetric(vertical: 20),
+                contentPadding: const EdgeInsets.symmetric(vertical: 18),
               ),
             ),
           ),
@@ -710,46 +674,37 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
               },
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 6),
-                width: 28,
-                height: 28,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEEF2F2),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111313).withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.close_rounded,
-                  size: 16,
-                  color: Color(0xFF6B8080),
+                  size: 14,
+                  color: Colors.white,
                 ),
               ),
             ),
-          const SizedBox(width: 8),
-          // Filter button
+          const SizedBox(width: 6),
+          // Tonal iOS-style filter button — same visual language as the field
+          // so the bar reads as a single control.
           GestureDetector(
             onTap: widget.onFilterTap,
+            behavior: HitTestBehavior.opaque,
             child: Container(
-              margin: const EdgeInsets.all(8),
-              width: 48,
-              height: 48,
+              margin: const EdgeInsets.all(6),
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF0E7A62), Color(0xFF0B5260)],
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0B5260).withValues(alpha: 0.35),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                color: const Color(0xFF0B8A6E).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.tune_rounded,
-                color: Colors.white,
-                size: 22,
+                color: Color(0xFF0B6E5A),
+                size: 20,
               ),
             ),
           ),
@@ -906,15 +861,21 @@ class _LicenseAssuranceBanner extends StatelessWidget {
         }
 
         Widget iconBox() {
+          // Apple Wallet-style trust glyph — white seal on a soft inner tint
+          // so the verified mark reads first.
           return Container(
             width: iconBoxSize,
             height: iconBoxSize,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(compact ? 14 : 18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(compact ? 14 : 16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.22),
+                width: 1,
+              ),
             ),
             child: Icon(
-              Icons.verified_user_outlined,
+              Icons.verified_rounded,
               color: Colors.white,
               size: iconSize,
             ),
@@ -932,7 +893,8 @@ class _LicenseAssuranceBanner extends StatelessWidget {
                 style: GoogleFonts.anuphan(
                   color: Colors.white,
                   fontSize: titleSize,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
                 ),
               ),
               const SizedBox(height: 4),
@@ -941,10 +903,10 @@ class _LicenseAssuranceBanner extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.anuphan(
-                  color: Colors.white.withValues(alpha: 0.82),
+                  color: Colors.white.withValues(alpha: 0.86),
                   fontSize: bodySize,
                   height: 1.42,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -952,31 +914,32 @@ class _LicenseAssuranceBanner extends StatelessWidget {
         }
 
         Widget licenseButton() {
+          // Filled-light CTA: white pill on dark green — far higher contrast
+          // than the previous dark-on-dark button.
           return TextButton.icon(
             onPressed: showLicenseDialog,
             style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: const Color(0xFF083C42).withValues(alpha: 0.62),
+              foregroundColor: const Color(0xFF0B5E55),
+              backgroundColor: Colors.white,
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? 12 : 14,
+                horizontal: compact ? 14 : 16,
                 vertical: compact ? 10 : 12,
               ),
               minimumSize: narrow ? const Size.fromHeight(42) : null,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
             iconAlignment: IconAlignment.end,
-            icon: const Icon(Icons.chevron_right_rounded, size: 22),
+            icon: const Icon(Icons.chevron_right_rounded, size: 18),
             label: Text(
               'ดูใบอนุญาต',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.anuphan(
-                fontSize: compact ? 12 : 13,
-                fontWeight: FontWeight.w900,
+                fontSize: compact ? 12.5 : 13.5,
+                fontWeight: FontWeight.w800,
               ),
             ),
           );
@@ -1012,16 +975,16 @@ class _LicenseAssuranceBanner extends StatelessWidget {
           padding: padding,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [Color(0xFF044C4D), Color(0xFF087C68)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0B6E5F), Color(0xFF0E8770)],
             ),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF044C4D).withValues(alpha: 0.24),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
+                color: const Color(0xFF0B6E5F).withValues(alpha: 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -1884,7 +1847,7 @@ class _GuestBookingBanner extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => const GuestBookingLookupScreen(),
@@ -1893,10 +1856,10 @@ class _GuestBookingBanner extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(18),
+            color: AppTheme.primaryColor.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppTheme.primaryColor.withValues(alpha: 0.18),
+              color: AppTheme.primaryColor.withValues(alpha: 0.14),
             ),
           ),
           child: Row(
@@ -1906,7 +1869,7 @@ class _GuestBookingBanner extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
                   Icons.confirmation_number_outlined,
@@ -1922,27 +1885,30 @@ class _GuestBookingBanner extends StatelessWidget {
                     Text(
                       'มีรหัสการจองอยู่แล้ว?',
                       style: GoogleFonts.anuphan(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor,
+                        letterSpacing: -0.1,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       'ดู QR เช็คอิน และติดตามรถได้เลย ไม่ต้องสมัครสมาชิก',
                       style: GoogleFonts.anuphan(
-                        fontSize: 12,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w500,
-                        color: AppTheme.primaryColor.withValues(alpha: 0.75),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.72),
                         height: 1.35,
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 6),
               Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 14,
-                color: AppTheme.primaryColor.withValues(alpha: 0.6),
+                Icons.chevron_right_rounded,
+                size: 22,
+                color: AppTheme.primaryColor.withValues(alpha: 0.55),
               ),
             ],
           ),

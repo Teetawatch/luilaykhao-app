@@ -87,6 +87,15 @@ class AppProvider extends ChangeNotifier {
         roles.contains('admin');
   }
 
+  int get unreadNotificationCount =>
+      notifications.where((n) => (n as Map?)?['is_read'] != true).length;
+
+  void _syncAppIconBadge() {
+    unawaited(
+      PushNotificationService.instance.setBadgeCount(unreadNotificationCount),
+    );
+  }
+
   void setOnSessionExpired(VoidCallback callback) {
     _onSessionExpired = callback;
   }
@@ -626,6 +635,7 @@ class AppProvider extends ChangeNotifier {
     myReviews = [];
     rewards = [];
     coupons = [];
+    _syncAppIconBadge();
     notifyListeners();
   }
 
@@ -682,6 +692,7 @@ class AppProvider extends ChangeNotifier {
     cache.writeAccount('rewards', rewards);
     cache.writeAccount('coupons', coupons);
     cache.writeAccount('myReviews', myReviews);
+    _syncAppIconBadge();
     notifyListeners();
   }
 
@@ -1087,6 +1098,7 @@ class AppProvider extends ChangeNotifier {
       query: {'per_page': perPage},
     );
     notifications = List<dynamic>.from(api.data(response) ?? []);
+    _syncAppIconBadge();
     notifyListeners();
   }
 
@@ -1100,6 +1112,7 @@ class AppProvider extends ChangeNotifier {
       }
       return notification;
     }).toList();
+    _syncAppIconBadge();
     notifyListeners();
   }
 
@@ -1108,6 +1121,7 @@ class AppProvider extends ChangeNotifier {
     notifications = notifications
         .where((item) => _asMap(item)['id']?.toString() != id.toString())
         .toList();
+    _syncAppIconBadge();
     notifyListeners();
   }
 

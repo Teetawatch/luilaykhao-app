@@ -250,18 +250,10 @@ class _AllTripsHero extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppTheme.surface(context),
+            color: AppTheme.primaryColor.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppTheme.border(context)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -269,38 +261,40 @@ class _AllTripsHero extends StatelessWidget {
               const Icon(
                 Icons.explore_rounded,
                 color: AppTheme.primaryColor,
-                size: 18,
+                size: 14,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Text(
                 'ค้นพบประสบการณ์ใหม่',
                 style: GoogleFonts.anuphan(
                   color: AppTheme.primaryColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.1,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         Text(
           'กิจกรรมและทริปทั้งหมด',
           style: GoogleFonts.anuphan(
             color: AppTheme.textMain,
-            fontSize: 32,
+            fontSize: 28,
             height: 1.12,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Text(
           'สำรวจทริปที่คัดสรรมาเพื่อคุณ ตั้งแต่ดำน้ำตื้น เดินป่า จนถึงบริการรถตู้ระดับพรีเมียม',
           style: GoogleFonts.anuphan(
             color: AppTheme.textSecondary,
-            fontSize: 15,
-            height: 1.55,
-            fontWeight: FontWeight.w600,
+            fontSize: 14.5,
+            height: 1.5,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -336,16 +330,18 @@ class _TripsFilterPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppTheme.border(context)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -360,19 +356,39 @@ class _TripsFilterPanel extends StatelessWidget {
             onSubmitted: (_) => onApply(),
             decoration: InputDecoration(
               hintText: 'ค้นหาทริป...',
-              prefixIcon: const Icon(Icons.search_rounded),
+              hintStyle: GoogleFonts.anuphan(
+                color: AppTheme.mutedText(context),
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+              ),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                size: 18,
+                color: AppTheme.mutedText(context),
+              ),
+              isDense: true,
               filled: true,
               fillColor: AppTheme.subtleSurface(context),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: const BorderSide(color: AppTheme.primaryColor),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: AppTheme.primaryColor,
+                  width: 1.5,
+                ),
               ),
             ),
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+            style: GoogleFonts.anuphan(
+              fontWeight: FontWeight.w600,
+              fontSize: 14.5,
+            ),
           ),
           const SizedBox(height: 20),
           const _FilterTitle(icon: Icons.category_rounded, label: 'หมวดหมู่กิจกรรม'),
@@ -411,27 +427,41 @@ class _TripsFilterPanel extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: onApply,
-              icon: const Icon(Icons.filter_list_rounded),
+              icon: const Icon(Icons.filter_list_rounded, size: 18),
               label: const Text('ใช้ตัวกรอง'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 textStyle: GoogleFonts.anuphan(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.1,
                 ),
               ),
             ),
           ),
           if (hasFilters) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: TextButton.icon(
                 onPressed: onClear,
-                icon: const Icon(Icons.close_rounded, size: 18),
-                label: const Text('ล้างตัวกรอง'),
+                icon: const Icon(Icons.close_rounded, size: 16),
+                label: Text(
+                  'ล้างตัวกรอง',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.mutedText(context),
+                ),
               ),
             ),
           ],
@@ -451,14 +481,15 @@ class _FilterTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: AppTheme.primaryColor, size: 20),
+        Icon(icon, color: AppTheme.primaryColor, size: 17),
         const SizedBox(width: 8),
         Text(
           label,
           style: GoogleFonts.anuphan(
             color: AppTheme.textMain,
             fontSize: 14,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.1,
           ),
         ),
       ],
@@ -481,32 +512,35 @@ class _FilterChipButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
           color: selected
               ? AppTheme.primaryColor
-              : AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(16),
+              : AppTheme.primaryColor.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? AppTheme.primaryColor : AppTheme.border(context),
+            color: selected
+                ? AppTheme.primaryColor
+                : AppTheme.primaryColor.withValues(alpha: 0.14),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (selected) ...[
-              const Icon(Icons.check_rounded, color: Colors.white, size: 16),
-              const SizedBox(width: 6),
+              const Icon(Icons.check_rounded, color: Colors.white, size: 14),
+              const SizedBox(width: 5),
             ],
             Text(
               label,
               style: GoogleFonts.anuphan(
-                color: selected ? Colors.white : AppTheme.textSecondary,
+                color: selected ? Colors.white : AppTheme.primaryColor,
                 fontSize: 13,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.1,
               ),
             ),
           ],
@@ -552,15 +586,22 @@ class _TripsResultsToolbar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppTheme.border(context)),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.55),
+            ),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: sortOrder,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded),
-              borderRadius: BorderRadius.circular(18),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+              borderRadius: BorderRadius.circular(14),
               isExpanded: true,
+              style: GoogleFonts.anuphan(
+                color: AppTheme.textMain,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
               items: const [
                 DropdownMenuItem(
                   value: 'popular',
@@ -593,23 +634,23 @@ class _InfoPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.surface(context),
+        color: AppTheme.primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppTheme.primaryColor),
-          const SizedBox(width: 6),
+          Icon(icon, size: 14, color: AppTheme.primaryColor),
+          const SizedBox(width: 5),
           Text(
             text,
             style: GoogleFonts.anuphan(
-              color: AppTheme.textMain,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
+              color: AppTheme.primaryColor,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.1,
             ),
           ),
         ],
@@ -625,21 +666,27 @@ class _TripsLoadingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 56),
+      padding: const EdgeInsets.symmetric(vertical: 48),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppTheme.border(context)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
       ),
       child: Column(
         children: [
-          const CircularProgressIndicator(color: AppTheme.primaryColor),
-          const SizedBox(height: 18),
+          const CircularProgressIndicator(
+            color: AppTheme.primaryColor,
+            strokeWidth: 2.5,
+          ),
+          const SizedBox(height: 16),
           Text(
             'กำลังค้นหาทริปที่ดีที่สุดให้คุณ...',
             style: GoogleFonts.anuphan(
               color: AppTheme.textMain,
-              fontWeight: FontWeight.w800,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -658,26 +705,29 @@ class _TripsErrorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppTheme.border(context)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
       ),
       child: Column(
         children: [
           const Icon(
             Icons.wifi_off_rounded,
             color: AppTheme.textSecondary,
-            size: 44,
+            size: 40,
           ),
           const SizedBox(height: 12),
           Text(
             'โหลดข้อมูลทริปไม่สำเร็จ',
             style: GoogleFonts.anuphan(
               color: AppTheme.textMain,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
             ),
           ),
           const SizedBox(height: 6),
@@ -686,13 +736,31 @@ class _TripsErrorCard extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(color: AppTheme.textSecondary),
+            style: GoogleFonts.anuphan(
+              color: AppTheme.textSecondary,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.refresh_rounded, size: 18),
             label: const Text('ลองใหม่'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: GoogleFonts.anuphan(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -727,17 +795,19 @@ class _AllTripCard extends StatelessWidget {
           : () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => TripDetailScreen(slug: slug)),
             ),
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: AppTheme.border(context)),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: AppTheme.border(context).withValues(alpha: 0.55),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 30,
-              offset: const Offset(0, 14),
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -745,11 +815,11 @@ class _AllTripCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               child: AspectRatio(
                 aspectRatio: 1.12,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(16),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -779,15 +849,16 @@ class _AllTripCard extends StatelessWidget {
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
                             colors: [
-                              Colors.black.withValues(alpha: 0.62),
+                              Colors.black.withValues(alpha: 0.55),
                               Colors.transparent,
                             ],
+                            stops: const [0.0, 0.55],
                           ),
                         ),
                       ),
                       Positioned(
-                        top: 14,
-                        left: 14,
+                        top: 12,
+                        left: 12,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -814,16 +885,16 @@ class _AllTripCard extends StatelessWidget {
                         ),
                       ),
                       Positioned(
-                        left: 14,
-                        right: 14,
-                        bottom: 14,
+                        left: 12,
+                        right: 12,
+                        bottom: 12,
                         child: Row(
                           children: [
                             _OverlayPill(
                               text: '$duration วัน',
                               icon: Icons.schedule_rounded,
                               backgroundColor: Colors.black.withValues(
-                                alpha: 0.34,
+                                alpha: 0.30,
                               ),
                               foregroundColor: Colors.white,
                             ),
@@ -833,7 +904,7 @@ class _AllTripCard extends StatelessWidget {
                                 text: _difficultyLabel(difficulty),
                                 icon: Icons.terrain_rounded,
                                 backgroundColor: Colors.black.withValues(
-                                  alpha: 0.34,
+                                  alpha: 0.30,
                                 ),
                                 foregroundColor: Colors.white,
                               ),
@@ -846,7 +917,7 @@ class _AllTripCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -855,7 +926,7 @@ class _AllTripCard extends StatelessWidget {
                       const Icon(
                         Icons.star_rounded,
                         color: Color(0xFFFFB020),
-                        size: 18,
+                        size: 16,
                       ),
                       const SizedBox(width: 4),
                       if (reviewCount > 0) ...[
@@ -864,7 +935,8 @@ class _AllTripCard extends StatelessWidget {
                           style: GoogleFonts.anuphan(
                             color: AppTheme.textMain,
                             fontSize: 13,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.1,
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -873,7 +945,7 @@ class _AllTripCard extends StatelessWidget {
                           style: GoogleFonts.anuphan(
                             color: AppTheme.textSecondary,
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ] else
@@ -882,7 +954,7 @@ class _AllTripCard extends StatelessWidget {
                           style: GoogleFonts.anuphan(
                             color: AppTheme.textSecondary,
                             fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       const Spacer(),
@@ -900,12 +972,13 @@ class _AllTripCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(
                       color: AppTheme.textMain,
-                      fontSize: 18,
-                      height: 1.22,
-                      fontWeight: FontWeight.w900,
+                      fontSize: 17,
+                      height: 1.25,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     description.isNotEmpty ? description : location,
                     maxLines: 2,
@@ -914,12 +987,15 @@ class _AllTripCard extends StatelessWidget {
                       color: AppTheme.textSecondary,
                       fontSize: 13,
                       height: 1.45,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Divider(color: AppTheme.border(context), height: 1),
                   const SizedBox(height: 14),
+                  Divider(
+                    color: AppTheme.border(context).withValues(alpha: 0.55),
+                    height: 0.5,
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -932,7 +1008,8 @@ class _AllTripCard extends StatelessWidget {
                               style: GoogleFonts.anuphan(
                                 color: AppTheme.textSecondary,
                                 fontSize: 11,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.1,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -942,23 +1019,25 @@ class _AllTripCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.anuphan(
                                 color: AppTheme.textMain,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.4,
                               ),
                             ),
                           ],
                         ),
                       ),
                       Container(
-                        width: 42,
-                        height: 42,
+                        width: 38,
+                        height: 38,
                         decoration: BoxDecoration(
-                          color: AppTheme.subtleSurface(context),
-                          shape: BoxShape.circle,
+                          color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
                           Icons.arrow_forward_rounded,
                           color: AppTheme.primaryColor,
+                          size: 18,
                         ),
                       ),
                     ],
@@ -982,21 +1061,23 @@ class _MiniStatPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppTheme.primaryColor, size: 15),
+          Icon(icon, color: AppTheme.primaryColor, size: 13),
           const SizedBox(width: 4),
           Text(
             text,
             style: GoogleFonts.anuphan(
               color: AppTheme.primaryColor,
               fontSize: 11,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.1,
             ),
           ),
         ],
@@ -1036,10 +1117,11 @@ class _TripsPaginationBar extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
-                  '...',
+                  '…',
                   style: GoogleFonts.anuphan(
                     color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               )
@@ -1099,21 +1181,25 @@ class _NumberPageButton extends StatelessWidget {
       onTap: selected ? null : onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
-        width: 38,
-        height: 38,
+        width: 36,
+        height: 36,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? AppTheme.primaryColor : AppTheme.surface(context),
           shape: BoxShape.circle,
           border: Border.all(
-            color: selected ? AppTheme.primaryColor : AppTheme.border(context),
+            color: selected
+                ? AppTheme.primaryColor
+                : AppTheme.border(context).withValues(alpha: 0.55),
           ),
         ),
         child: Text(
           page.toString(),
           style: GoogleFonts.anuphan(
             color: selected ? Colors.white : AppTheme.textMain,
-            fontWeight: FontWeight.w900,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.1,
           ),
         ),
       ),

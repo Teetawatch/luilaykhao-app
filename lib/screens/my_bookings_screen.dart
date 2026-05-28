@@ -56,7 +56,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
               surfaceTintColor: Colors.transparent,
               title: const Text(
                 'การจองของฉัน',
-                style: TextStyle(fontWeight: FontWeight.w900),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
             SliverPadding(
@@ -224,24 +227,14 @@ class _BookingCheckInCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [
-                  AppTheme.primaryColor.withValues(alpha: 0.22),
-                  AppTheme.accentColor.withValues(alpha: 0.10),
-                ]
-              : [
-                  AppTheme.primaryColor.withValues(alpha: 0.08),
-                  AppTheme.accentColor.withValues(alpha: 0.04),
-                ],
-        ),
-        borderRadius: BorderRadius.circular(28),
+        color: isDark
+            ? AppTheme.primaryColor.withValues(alpha: 0.14)
+            : AppTheme.primaryColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.18),
+          color: AppTheme.primaryColor.withValues(alpha: 0.16),
         ),
       ),
       child: Column(
@@ -302,7 +295,8 @@ class _CheckInTextBlock extends StatelessWidget {
               style: GoogleFonts.anuphan(
                 color: AppTheme.onSurface(context),
                 fontSize: 15,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.1,
               ),
             ),
           ],
@@ -315,7 +309,7 @@ class _CheckInTextBlock extends StatelessWidget {
             color: AppTheme.mutedText(context),
             fontSize: 12,
             height: 1.4,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
         if (bookingRef != null) ...[
@@ -325,8 +319,8 @@ class _CheckInTextBlock extends StatelessWidget {
             style: GoogleFonts.anuphan(
               color: AppTheme.primaryColor,
               fontSize: 14,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.3,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -369,14 +363,14 @@ class _CheckInQrBox extends StatelessWidget {
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.15),
+          color: AppTheme.primaryColor.withValues(alpha: 0.14),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.08),
-            blurRadius: 16,
+            color: AppTheme.primaryColor.withValues(alpha: 0.06),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -404,9 +398,9 @@ class _BookingReferencePanel extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.15),
+          color: AppTheme.primaryColor.withValues(alpha: 0.14),
         ),
       ),
       child: Column(
@@ -416,7 +410,8 @@ class _BookingReferencePanel extends StatelessWidget {
             style: GoogleFonts.anuphan(
               color: AppTheme.mutedText(context),
               fontSize: 12,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
             ),
           ),
           const SizedBox(height: 4),
@@ -426,8 +421,8 @@ class _BookingReferencePanel extends StatelessWidget {
             style: GoogleFonts.anuphan(
               color: AppTheme.primaryColor,
               fontSize: 20,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.3,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
             ),
           ),
         ],

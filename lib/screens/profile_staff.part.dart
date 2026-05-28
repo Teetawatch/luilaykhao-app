@@ -30,24 +30,31 @@ class _StaffDashboardSectionState extends State<StaffDashboardSection> {
     final schedules = widget.app.staffSchedules.map((e) => asMap(e)).toList();
     final summary = widget.app.staffSummary;
 
-    final today = DateTime.now();
-    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
-    final todaySchedules = schedules
-        .where((s) => _cleanText(s['departure_date']) == todayStr)
-        .toList();
-    final upcomingSchedules = schedules
-        .where((s) {
-          final d = _cleanText(s['departure_date']);
-          return d.isNotEmpty && d.compareTo(todayStr) > 0;
-        })
-        .toList();
-    final pastSchedules = schedules
-        .where((s) {
-          final d = _cleanText(s['return_date'], fallback: _cleanText(s['departure_date']));
-          return d.isNotEmpty && d.compareTo(todayStr) < 0;
-        })
-        .toList();
+    final activeSchedules = <Map<String, dynamic>>[];
+    final upcomingSchedules = <Map<String, dynamic>>[];
+    final pastSchedules = <Map<String, dynamic>>[];
+
+    for (final s in schedules) {
+      final dep = _parseScheduleDate(s['departure_date']);
+      final ret = _parseScheduleDate(s['return_date']) ?? dep;
+      if (dep == null) {
+        // No usable date — bucket with upcoming so it stays visible.
+        upcomingSchedules.add(s);
+        continue;
+      }
+      if (today.isBefore(dep)) {
+        upcomingSchedules.add(s);
+      } else if (ret != null && today.isAfter(ret)) {
+        pastSchedules.add(s);
+      } else {
+        // departure <= today <= return — includes ongoing multi-day trips
+        // that would otherwise disappear between the upcoming/past buckets.
+        activeSchedules.add(s);
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,12 +68,22 @@ class _StaffDashboardSectionState extends State<StaffDashboardSection> {
         ),
         if (_expanded) ...[
           const SizedBox(height: 12),
-          _StaffSummaryRow(summary: summary, totalSchedules: schedules.length),
-          if (todaySchedules.isNotEmpty) ...[
+          _StaffSummaryRow(
+            summary: summary,
+            totalSchedules: schedules.length,
+            // Derive from actual list groupings so the summary always matches
+            // what the user sees. Includes today's/active trips in "ถัดไป" so
+            // the staff sees their next obligations at a glance.
+            upcomingCount: activeSchedules.length + upcomingSchedules.length,
+          ),
+          if (activeSchedules.isNotEmpty) ...[
             const SizedBox(height: 16),
-            const _StaffGroupLabel(label: 'วันนี้', color: Color(0xFFDC2626)),
+            const _StaffGroupLabel(
+              label: 'วันนี้ / กำลังเดินทาง',
+              color: Color(0xFFDC2626),
+            ),
             const SizedBox(height: 8),
-            for (final s in todaySchedules) ...[
+            for (final s in activeSchedules) ...[
               _StaffScheduleCard(schedule: s, isToday: true),
               const SizedBox(height: 10),
             ],
@@ -92,28 +109,29 @@ class _StaffDashboardSectionState extends State<StaffDashboardSection> {
           if (schedules.isEmpty)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
-              decoration: _sectionDecoration(context: context, radius: 22),
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+              decoration: _sectionDecoration(context: context, radius: 20),
               child: Column(
                 children: [
-                  Icon(Icons.work_outline, size: 40, color: AppTheme.mutedText(context)),
+                  Icon(Icons.work_outline, size: 36, color: AppTheme.mutedText(context)),
                   const SizedBox(height: 12),
                   Text(
                     'ยังไม่มีงานที่ได้รับมอบหมาย',
                     style: GoogleFonts.anuphan(
                       fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       color: AppTheme.textMain,
+                      letterSpacing: -0.1,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     'งานที่ได้รับมอบหมายจากแอดมินจะปรากฏที่นี่',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.anuphan(
                       fontSize: 13,
                       height: 1.45,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                       color: AppTheme.textSecondary,
                     ),
                   ),
@@ -124,6 +142,17 @@ class _StaffDashboardSectionState extends State<StaffDashboardSection> {
       ],
     );
   }
+}
+
+/// Parses an ISO date (with or without time) to a *date-only* DateTime so
+/// schedule grouping comparisons are not thrown off by hour/minute values
+/// returned by the API.
+DateTime? _parseScheduleDate(dynamic value) {
+  final raw = _cleanText(value);
+  if (raw.isEmpty) return null;
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return null;
+  return DateTime(parsed.year, parsed.month, parsed.day);
 }
 
 class _StaffSectionHeader extends StatelessWidget {
@@ -148,34 +177,37 @@ class _StaffSectionHeader extends StatelessWidget {
         Expanded(
           child: GestureDetector(
             onTap: onToggle,
+            behavior: HitTestBehavior.opaque,
             child: Row(
               children: [
                 Container(
-                  width: 28,
-                  height: 28,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                    color: const Color(0xFF0D9488).withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.badge_outlined,
-                    size: 16,
+                    size: 18,
                     color: Color(0xFF0D9488),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Text(
                   'งานสตาฟ',
                   style: GoogleFonts.anuphan(
                     fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     color: AppTheme.textMain,
-                    letterSpacing: 0.1,
+                    letterSpacing: -0.1,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Icon(
-                  expanded ? Icons.expand_less : Icons.expand_more,
+                  expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
                   size: 18,
                   color: AppTheme.mutedText(context),
                 ),
@@ -185,14 +217,18 @@ class _StaffSectionHeader extends StatelessWidget {
         ),
         if (loading)
           const SizedBox(
-            width: 20,
-            height: 20,
+            width: 18,
+            height: 18,
             child: CircularProgressIndicator(strokeWidth: 2),
           )
         else
           IconButton(
             onPressed: onRefresh,
-            icon: Icon(Icons.refresh, size: 20, color: AppTheme.mutedText(context)),
+            icon: Icon(
+              Icons.refresh_rounded,
+              size: 18,
+              color: AppTheme.mutedText(context),
+            ),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
@@ -204,8 +240,13 @@ class _StaffSectionHeader extends StatelessWidget {
 class _StaffSummaryRow extends StatelessWidget {
   final Map<String, dynamic> summary;
   final int totalSchedules;
+  final int upcomingCount;
 
-  const _StaffSummaryRow({required this.summary, required this.totalSchedules});
+  const _StaffSummaryRow({
+    required this.summary,
+    required this.totalSchedules,
+    required this.upcomingCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -213,8 +254,6 @@ class _StaffSummaryRow extends StatelessWidget {
     final avgRating = summary['avg_rating'] != null
         ? double.tryParse(summary['avg_rating'].toString()) ?? 0.0
         : 0.0;
-    final totalSchedules = _numberValue(summary['total_schedules'], fallback: this.totalSchedules);
-    final upcomingCount = _numberValue(summary['upcoming_count']);
 
     return Row(
       children: [
@@ -231,7 +270,7 @@ class _StaffSummaryRow extends StatelessWidget {
           child: _StaffStatBox(
             icon: Icons.upcoming_outlined,
             value: upcomingCount.toString(),
-            label: 'กำลังจะมาถึง',
+            label: 'งานถัดไป',
             color: const Color(0xFF2563EB),
           ),
         ),
@@ -239,7 +278,7 @@ class _StaffSummaryRow extends StatelessWidget {
         Expanded(
           child: _StaffStatBox(
             icon: Icons.star_rounded,
-            value: totalReviews == 0 ? '-' : avgRating.toStringAsFixed(1),
+            value: totalReviews == 0 ? '–' : avgRating.toStringAsFixed(1),
             label: 'คะแนนเฉลี่ย',
             color: AppTheme.warningColor,
           ),
@@ -265,23 +304,24 @@ class _StaffStatBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: color),
+          Icon(icon, size: 18, color: color),
           const SizedBox(height: 8),
           Text(
             value,
             style: GoogleFonts.anuphan(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
+              letterSpacing: -0.4,
             ),
           ),
           const SizedBox(height: 2),
@@ -290,8 +330,8 @@ class _StaffStatBox extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.anuphan(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
             ),
           ),
@@ -309,24 +349,27 @@ class _StaffGroupLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: GoogleFonts.anuphan(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: color,
-            letterSpacing: 0.2,
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.anuphan(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: -0.1,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -373,17 +416,17 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: widget.isToday
-              ? const Color(0xFFDC2626).withValues(alpha: 0.25)
-              : AppTheme.border(context),
+              ? const Color(0xFFDC2626).withValues(alpha: 0.22)
+              : AppTheme.border(context).withValues(alpha: 0.55),
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -408,15 +451,16 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                               margin: const EdgeInsets.only(bottom: 6),
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+                                color: const Color(0xFFDC2626).withValues(alpha: 0.10),
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                'วันนี้',
+                                'กำลังเดินทาง',
                                 style: GoogleFonts.anuphan(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
                                   color: const Color(0xFFDC2626),
+                                  letterSpacing: -0.1,
                                 ),
                               ),
                             ),
@@ -426,9 +470,10 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.anuphan(
                               fontSize: 16,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w800,
                               height: 1.25,
                               color: AppTheme.onSurface(context),
+                              letterSpacing: -0.2,
                             ),
                           ),
                           if (location.isNotEmpty) ...[
@@ -445,7 +490,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.anuphan(
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w500,
                                       color: AppTheme.textSecondary,
                                     ),
                                   ),
@@ -502,8 +547,9 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                           'QR Check-in',
                           style: GoogleFonts.anuphan(
                             fontSize: 13,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             color: AppTheme.textMain,
+                            letterSpacing: -0.1,
                           ),
                         ),
                         const Spacer(),
@@ -513,8 +559,9 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                               : '$checkedIn / $totalConfirmed คน',
                           style: GoogleFonts.anuphan(
                             fontSize: 13,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w800,
                             color: accentColor,
+                            letterSpacing: -0.1,
                           ),
                         ),
                       ],
@@ -524,12 +571,12 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(999),
                         child: LinearProgressIndicator(
-                          minHeight: 7,
+                          minHeight: 6,
                           value: checkinProgress,
                           color: checkinProgress >= 1.0
                               ? AppTheme.primaryColor
                               : accentColor,
-                          backgroundColor: accentColor.withValues(alpha: 0.1),
+                          backgroundColor: accentColor.withValues(alpha: 0.10),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -538,8 +585,8 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                             ? 'เช็คอินครบแล้ว'
                             : 'เหลือ ${totalConfirmed - checkedIn} คน ยังไม่เช็คอิน',
                         style: GoogleFonts.anuphan(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
                           color: AppTheme.textSecondary,
                         ),
                       ),
@@ -552,6 +599,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                   const SizedBox(height: 12),
                   GestureDetector(
                     onTap: () => setState(() => _pickupsExpanded = !_pickupsExpanded),
+                    behavior: HitTestBehavior.opaque,
                     child: Row(
                       children: [
                         Icon(Icons.place_outlined, size: 15, color: accentColor),
@@ -560,14 +608,17 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                           'จุดรับผู้โดยสาร',
                           style: GoogleFonts.anuphan(
                             fontSize: 13,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             color: AppTheme.textMain,
+                            letterSpacing: -0.1,
                           ),
                         ),
                         const Spacer(),
                         Icon(
-                          _pickupsExpanded ? Icons.expand_less : Icons.expand_more,
-                          size: 16,
+                          _pickupsExpanded
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          size: 18,
                           color: AppTheme.mutedText(context),
                         ),
                       ],
@@ -579,7 +630,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppTheme.subtleSurface(context),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
                         children: [
@@ -655,16 +706,17 @@ class _PickupPointRow extends StatelessWidget {
                 label,
                 style: GoogleFonts.anuphan(
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: isDefault ? AppTheme.textSecondary : AppTheme.textMain,
+                  letterSpacing: -0.1,
                 ),
               ),
               if (showRegion)
                 Text(
                   regionLabel,
                   style: GoogleFonts.anuphan(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
                     color: AppTheme.textSecondary,
                   ),
                 ),
@@ -675,15 +727,16 @@ class _PickupPointRow extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: const Color(0xFF0D9488).withValues(alpha: 0.08),
+            color: const Color(0xFF0D9488).withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
             '$count คน',
             style: GoogleFonts.anuphan(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
               color: const Color(0xFF0D9488),
+              letterSpacing: -0.1,
             ),
           ),
         ),
@@ -768,25 +821,29 @@ class _StaffActionRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: roundedBottom
-          ? const BorderRadius.vertical(bottom: Radius.circular(22))
+          ? const BorderRadius.vertical(bottom: Radius.circular(18))
           : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         child: Row(
           children: [
             Icon(icon, size: 18, color: color),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Text(
               label,
               style: GoogleFonts.anuphan(
                 fontSize: 14,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: color,
+                letterSpacing: -0.1,
               ),
             ),
             const Spacer(),
-            Icon(Icons.arrow_forward_ios,
-                size: 13, color: AppTheme.mutedText(context)),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: AppTheme.mutedText(context).withValues(alpha: 0.7),
+            ),
           ],
         ),
       ),
@@ -810,17 +867,18 @@ class _StaffScheduleStatusBadge extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
         style: GoogleFonts.anuphan(
           fontSize: 11,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
           color: color,
+          letterSpacing: -0.1,
         ),
       ),
     );
@@ -841,11 +899,13 @@ class _StaffInfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.border(context).withValues(alpha: 0.7)),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -856,8 +916,9 @@ class _StaffInfoChip extends StatelessWidget {
             label,
             style: GoogleFonts.anuphan(
               fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               color: AppTheme.textMain,
+              letterSpacing: -0.1,
             ),
           ),
         ],

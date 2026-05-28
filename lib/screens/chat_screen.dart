@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -23,9 +24,16 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
-  // Fallback poll interval — keeps the room live even when the realtime
-  // socket can't connect (mobile network, proxy, missing build config).
-  static const _pollInterval = Duration(seconds: 3);
+  // Slow fallback poll cadence — only used when the realtime socket hasn't
+  // delivered anything recently. When Reverb is alive we lengthen this so we
+  // don't burn battery/data on a duplicate channel.
+  static const _pollIdle = Duration(seconds: 4);
+  static const _pollSocketActive = Duration(seconds: 20);
+  // Window during which an incoming socket event suppresses aggressive polling.
+  static const _socketFreshWindow = Duration(seconds: 30);
+  // Messages within this gap from the same sender visually group into one
+  // unit (no avatar/name repeat) — iMessage/LINE convention.
+  static const _groupGap = Duration(minutes: 2);
 
   final List<Map<String, dynamic>> _messages = [];
   final _input = TextEditingController();
@@ -37,9 +45,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _hasMore = false;
   bool _sending = false;
   bool _polling = false;
+  bool _isForeground = true;
   String? _error;
   VoidCallback? _disposer;
   Timer? _pollTimer;
+  DateTime? _lastSocketAt;
 
   @override
   void initState() {
@@ -63,9 +73,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!mounted) return;
-    if (state == AppLifecycleState.resumed) {
+    _isForeground = state == AppLifecycleState.resumed;
+    if (_isForeground) {
       _startPolling();
       _poll();
+      // Refresh server-side read marker — the user is looking at the chat now.
+      _markRead();
     } else {
       _stopPolling();
     }
@@ -74,6 +87,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   Future<void> _init() async {
     final app = context.read<AppProvider>();
     await _load();
+    // Bind realtime *after* the initial HTTP load so the socket has no chance
+    // to deliver a message that arrives before the history is rendered.
     _disposer = await app.subscribeChat(widget.scheduleId, _onIncoming);
     _startPolling();
   }
@@ -95,7 +110,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _error = null;
       });
       _scrollToBottom();
-      app.markChatRead(widget.scheduleId);
+      _markRead();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -127,6 +142,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _onIncoming(Map<String, dynamic> data) {
+    _lastSocketAt = DateTime.now();
+    // Bump cadence back down to the slow track since we know the socket works.
+    _startPolling();
     _ingest([
       {...data, 'is_mine': false},
     ]);
@@ -134,7 +152,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _startPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(_pollInterval, (_) => _poll());
+    final socketAlive = _lastSocketAt != null &&
+        DateTime.now().difference(_lastSocketAt!) < _socketFreshWindow;
+    final interval = socketAlive ? _pollSocketActive : _pollIdle;
+    _pollTimer = Timer.periodic(interval, (_) => _poll());
   }
 
   void _stopPolling() {
@@ -144,6 +165,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Future<void> _poll() async {
     if (!mounted || _polling || _loading || _messages.isEmpty) return;
+    if (!_isForeground) return;
     _polling = true;
     try {
       final afterId = _latestId();
@@ -163,16 +185,32 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   /// Append messages we don't already have, then update the UI / read state.
+  /// Dedupe on both `id` (server-assigned) and `client_token` (echo of an
+  /// optimistic send) so a socket broadcast arriving before the HTTP response
+  /// returns can't double-paint the message.
   void _ingest(List<Map<String, dynamic>> incoming) {
     if (!mounted || incoming.isEmpty) return;
-    final fresh = incoming
-        .where((m) => m['id'] == null || !_messages.any((e) => e['id'] == m['id']))
-        .toList();
+    final fresh = incoming.where((m) {
+      final id = m['id'];
+      if (id != null && _messages.any((e) => e['id'] == id)) return false;
+      final token = m['client_token']?.toString();
+      if (token != null &&
+          token.isNotEmpty &&
+          _messages.any((e) => e['client_token']?.toString() == token)) {
+        return false;
+      }
+      return true;
+    }).toList();
     if (fresh.isEmpty) return;
     final wasAtBottom = _isNearBottom();
     setState(() => _messages.addAll(fresh));
-    context.read<AppProvider>().markChatRead(widget.scheduleId);
+    _markRead();
     if (wasAtBottom) _scrollToBottom();
+  }
+
+  void _markRead() {
+    if (!_isForeground) return;
+    context.read<AppProvider>().markChatRead(widget.scheduleId);
   }
 
   int _latestId() {
@@ -259,7 +297,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.photo_camera_rounded),
-              title: Text('ถ่ายรูป', style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+              title: Text(
+                'ถ่ายรูป',
+                style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _pickAndSendImage(ImageSource.camera);
@@ -267,8 +308,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_rounded),
-              title: Text('เลือกจากคลังรูปภาพ',
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+              title: Text(
+                'เลือกจากคลังรูปภาพ',
+                style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _pickAndSendImage(ImageSource.gallery);
@@ -285,8 +328,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (_scroll.position.pixels <= 80) _loadMore();
   }
 
+  /// Conservative auto-scroll: only treat the user as "at the bottom" if we
+  /// actually know the scroll position. Returning `true` when there's no
+  /// client (e.g. first frame) was causing surprise jumps when the keyboard
+  /// opened on a long history.
   bool _isNearBottom() {
-    if (!_scroll.hasClients) return true;
+    if (!_scroll.hasClients) return false;
     return _scroll.position.pixels >=
         _scroll.position.maxScrollExtent - 120;
   }
@@ -304,21 +351,26 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
+        titleSpacing: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               widget.title ?? 'แชทกลุ่มทริป',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.anuphan(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
               ),
             ),
             Text(
               'ลูกค้า · สตาฟ · ทีมงาน',
               style: GoogleFonts.anuphan(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
                 color: AppTheme.mutedText(context),
               ),
             ),
@@ -336,7 +388,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(strokeWidth: 2.5),
+      );
     }
     if (_error != null) {
       return Center(
@@ -353,16 +407,34 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 textAlign: TextAlign.center,
                 style: GoogleFonts.anuphan(
                   fontSize: 13,
+                  fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
+                  height: 1.4,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
                   setState(() => _loading = true);
                   _load();
                 },
-                child: const Text('ลองอีกครั้ง'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 11,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'ลองอีกครั้ง',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
@@ -371,35 +443,176 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
     if (_messages.isEmpty) {
       return Center(
-        child: Text(
-          'ยังไม่มีข้อความ เริ่มทักทายเพื่อนร่วมทริปได้เลย',
-          style: GoogleFonts.anuphan(
-            fontSize: 13.5,
-            color: AppTheme.mutedText(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'ยังไม่มีข้อความ',
+                style: GoogleFonts.anuphan(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.onSurface(context),
+                  letterSpacing: -0.1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'เริ่มทักทายเพื่อนร่วมทริปได้เลย',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.anuphan(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
+
+    final items = _buildItems();
+
     return ListView.builder(
       controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-      itemCount: _messages.length + (_loadingMore ? 1 : 0),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      itemCount: items.length + (_loadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (_loadingMore && index == 0) {
           return const Padding(
             padding: EdgeInsets.all(8),
             child: Center(
               child: SizedBox(
-                width: 18,
-                height: 18,
+                width: 16,
+                height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
           );
         }
-        final m = _messages[index - (_loadingMore ? 1 : 0)];
-        return _MessageBubble(message: m);
+        return items[index - (_loadingMore ? 1 : 0)];
       },
+    );
+  }
+
+  /// Builds the flat widget list for the message ListView, weaving in date
+  /// separators and computing grouping flags so consecutive messages from the
+  /// same sender within [_groupGap] collapse into one visual unit.
+  List<Widget> _buildItems() {
+    final items = <Widget>[];
+    DateTime? lastDay;
+
+    for (var i = 0; i < _messages.length; i++) {
+      final m = _messages[i];
+      final at = _parseTime(m['created_at']);
+      final day = at == null ? null : DateTime(at.year, at.month, at.day);
+
+      if (day != null && (lastDay == null || day != lastDay)) {
+        items.add(_DateSeparator(day: day));
+        lastDay = day;
+      }
+
+      final role = m['sender_role']?.toString() ?? 'customer';
+
+      // System messages render as a centered pill, never as a chat bubble —
+      // they're notices (e.g. "เจ้าหน้าที่เข้าร่วมแชท"), not conversation.
+      if (role == 'system') {
+        items.add(_SystemMessage(message: m));
+        continue;
+      }
+
+      final prev = _previousSameAuthor(i);
+      final next = _nextSameAuthor(i);
+      final isFirstInGroup = prev == null;
+      final isLastInGroup = next == null;
+
+      items.add(
+        _MessageBubble(
+          message: m,
+          showAuthor: isFirstInGroup,
+          showAvatar: isLastInGroup,
+          showTimestamp: isLastInGroup,
+          isFirstInGroup: isFirstInGroup,
+          isLastInGroup: isLastInGroup,
+          onCopy: _copyMessage,
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  /// Returns the previous message if it's from the same sender and within
+  /// the grouping window, else null.
+  Map<String, dynamic>? _previousSameAuthor(int index) {
+    if (index == 0) return null;
+    final cur = _messages[index];
+    final prev = _messages[index - 1];
+    if (!_isSameSender(prev, cur)) return null;
+    if (_minutesBetween(prev, cur) > _groupGap.inMinutes) return null;
+    if (prev['sender_role']?.toString() == 'system') return null;
+    return prev;
+  }
+
+  Map<String, dynamic>? _nextSameAuthor(int index) {
+    if (index >= _messages.length - 1) return null;
+    final cur = _messages[index];
+    final next = _messages[index + 1];
+    if (!_isSameSender(cur, next)) return null;
+    if (_minutesBetween(cur, next) > _groupGap.inMinutes) return null;
+    if (next['sender_role']?.toString() == 'system') return null;
+    return next;
+  }
+
+  bool _isSameSender(Map<String, dynamic> a, Map<String, dynamic> b) {
+    if (a['is_mine'] == true && b['is_mine'] == true) return true;
+    if (a['is_mine'] == true || b['is_mine'] == true) {
+      return a['is_mine'] == b['is_mine'];
+    }
+    final userA = (a['user'] is Map ? (a['user'] as Map)['id'] : null)
+        ?.toString();
+    final userB = (b['user'] is Map ? (b['user'] as Map)['id'] : null)
+        ?.toString();
+    return userA != null && userA == userB;
+  }
+
+  int _minutesBetween(Map<String, dynamic> a, Map<String, dynamic> b) {
+    final da = _parseTime(a['created_at']);
+    final db = _parseTime(b['created_at']);
+    if (da == null || db == null) return 9999;
+    return db.difference(da).inMinutes.abs();
+  }
+
+  void _copyMessage(String body) {
+    if (body.isEmpty) return;
+    HapticFeedback.selectionClick();
+    Clipboard.setData(ClipboardData(text: body));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'คัดลอกข้อความแล้ว',
+          style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 
@@ -411,7 +624,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
           border: Border(
-            top: BorderSide(color: AppTheme.border(context)),
+            top: BorderSide(
+              color: AppTheme.border(context).withValues(alpha: 0.55),
+              width: 0.5,
+            ),
           ),
         ),
         child: Row(
@@ -420,7 +636,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             IconButton(
               onPressed: _sending ? null : _showImageSourceSheet,
               icon: Icon(
-                Icons.add_photo_alternate_rounded,
+                Icons.add_circle_outline_rounded,
+                size: 26,
                 color: _sending
                     ? AppTheme.mutedText(context)
                     : AppTheme.primaryColor,
@@ -434,17 +651,28 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 maxLines: 4,
                 maxLength: 2000,
                 textInputAction: TextInputAction.newline,
-                style: GoogleFonts.anuphan(fontSize: 14),
+                style: GoogleFonts.anuphan(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
                 decoration: InputDecoration(
                   hintText: 'พิมพ์ข้อความ...',
+                  hintStyle: GoogleFonts.anuphan(
+                    color: AppTheme.mutedText(context),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
                   counterText: '',
                   isDense: true,
                   filled: true,
                   fillColor: AppTheme.subtleSurface(context),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 11,
+                  ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(20),
                     borderSide: BorderSide.none,
                   ),
                 ),
@@ -458,7 +686,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 customBorder: const CircleBorder(),
                 onTap: _sending ? null : _send,
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(11),
                   child: _sending
                       ? const SizedBox(
                           width: 20,
@@ -468,8 +696,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 20),
+                      : const Icon(
+                          Icons.arrow_upward_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                 ),
               ),
             ),
@@ -480,10 +711,135 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 }
 
-class _MessageBubble extends StatelessWidget {
+DateTime? _parseTime(dynamic raw) {
+  final text = raw?.toString();
+  if (text == null) return null;
+  return DateTime.tryParse(text)?.toLocal();
+}
+
+/// Apple-style date divider: a centered tinted pill containing "วันนี้",
+/// "เมื่อวาน", a weekday name within the past week, or a full date for older
+/// conversations.
+class _DateSeparator extends StatelessWidget {
+  final DateTime day;
+
+  const _DateSeparator({required this.day});
+
+  String _label() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = today.difference(day).inDays;
+    if (diff == 0) return 'วันนี้';
+    if (diff == 1) return 'เมื่อวาน';
+    if (diff > 1 && diff < 7) {
+      const weekdays = [
+        'วันจันทร์',
+        'วันอังคาร',
+        'วันพุธ',
+        'วันพฤหัสบดี',
+        'วันศุกร์',
+        'วันเสาร์',
+        'วันอาทิตย์',
+      ];
+      return weekdays[day.weekday - 1];
+    }
+    const months = [
+      '',
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.',
+    ];
+    return '${day.day} ${months[day.month]} ${day.year + 543}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppTheme.mutedText(context).withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            _label(),
+            style: GoogleFonts.anuphan(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.mutedText(context),
+              letterSpacing: -0.1,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Centered notice (role == system) — e.g. "เจ้าหน้าที่เข้าร่วมแชท".
+class _SystemMessage extends StatelessWidget {
   final Map<String, dynamic> message;
 
-  const _MessageBubble({required this.message});
+  const _SystemMessage({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final body = message['body']?.toString() ?? '';
+    if (body.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            body,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.anuphan(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryColor,
+              letterSpacing: -0.1,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageBubble extends StatelessWidget {
+  final Map<String, dynamic> message;
+  final bool showAuthor;
+  final bool showAvatar;
+  final bool showTimestamp;
+  final bool isFirstInGroup;
+  final bool isLastInGroup;
+  final ValueChanged<String> onCopy;
+
+  const _MessageBubble({
+    required this.message,
+    required this.showAuthor,
+    required this.showAvatar,
+    required this.showTimestamp,
+    required this.isFirstInGroup,
+    required this.isLastInGroup,
+    required this.onCopy,
+  });
 
   static const _roleLabels = {
     'customer': 'ลูกค้า',
@@ -493,8 +849,7 @@ class _MessageBubble extends StatelessWidget {
   };
 
   String _timeText() {
-    final raw = message['created_at']?.toString();
-    final dt = raw == null ? null : DateTime.tryParse(raw)?.toLocal();
+    final dt = _parseTime(message['created_at']);
     if (dt == null) return '';
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
@@ -518,93 +873,133 @@ class _MessageBubble extends StatelessWidget {
     final hasText = body.isNotEmpty;
     final hasImage = imageUrl.isNotEmpty;
 
-    final bg = isMine ? AppTheme.primaryColor : AppTheme.surface(context);
+    final isDark = AppTheme.isDark(context);
+    final bg = isMine
+        ? AppTheme.primaryColor
+        : (isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : const Color(0xFFF1F3F4));
     final fg = isMine ? Colors.white : AppTheme.onSurface(context);
 
+    // iMessage-style asymmetric corners: the "tail" corner (bottom on the
+    // sender's side) tightens on the last bubble of a group so the cluster
+    // reads as a single utterance.
+    const r = Radius.circular(18);
+    const rTight = Radius.circular(6);
+    final shape = isMine
+        ? BorderRadius.only(
+            topLeft: r,
+            topRight: r,
+            bottomLeft: r,
+            bottomRight: isLastInGroup ? rTight : r,
+          )
+        : BorderRadius.only(
+            topLeft: r,
+            topRight: r,
+            bottomLeft: isLastInGroup ? rTight : r,
+            bottomRight: r,
+          );
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      // Grouped messages sit tighter; the gap before a new sender opens up.
+      padding: EdgeInsets.only(top: isFirstInGroup ? 8 : 2, bottom: 0),
       child: Row(
         mainAxisAlignment:
             isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!isMine) ...[
-            _Avatar(url: avatarUrl, name: author),
-            const SizedBox(width: 8),
-          ],
+          if (!isMine)
+            SizedBox(
+              width: 34,
+              child: showAvatar
+                  ? _Avatar(url: avatarUrl, name: author)
+                  : const SizedBox.shrink(),
+            ),
+          if (!isMine) const SizedBox(width: 8),
           ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: MediaQuery.sizeOf(context).width * 0.74,
             ),
-            child: Container(
-              padding: hasImage && !hasText
-                  ? const EdgeInsets.all(4)
-                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(16),
-                border: isMine
-                    ? null
-                    : Border.all(color: AppTheme.border(context)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!isMine) ...[
-                    Padding(
-                      padding: hasImage && !hasText
-                          ? const EdgeInsets.fromLTRB(8, 6, 8, 4)
-                          : EdgeInsets.zero,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              author,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.anuphan(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w900,
-                                color: AppTheme.onSurface(context),
-                              ),
+            child: Column(
+              crossAxisAlignment:
+                  isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                if (showAuthor && !isMine) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, bottom: 3),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            author,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.anuphan(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.onSurface(context),
+                              letterSpacing: -0.1,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          _RoleTag(role: role),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 6),
+                        _RoleTag(role: role),
+                      ],
                     ),
-                    const SizedBox(height: 3),
-                  ],
-                  if (hasImage) ...[
-                    _ChatImage(url: imageUrl),
-                    if (hasText) const SizedBox(height: 6),
-                  ],
-                  if (hasText)
-                    Text(
-                      body,
-                      style: GoogleFonts.anuphan(
-                        fontSize: 14,
-                        height: 1.4,
-                        color: fg,
-                      ),
-                    ),
-                  Padding(
+                  ),
+                ],
+                GestureDetector(
+                  onLongPress: hasText ? () => onCopy(body) : null,
+                  child: Container(
                     padding: hasImage && !hasText
-                        ? const EdgeInsets.fromLTRB(8, 4, 8, 6)
-                        : const EdgeInsets.only(top: 3),
+                        ? const EdgeInsets.all(4)
+                        : const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                    decoration: BoxDecoration(
+                      color: bg,
+                      borderRadius: shape,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (hasImage) ...[
+                          _ChatImage(url: imageUrl),
+                          if (hasText) const SizedBox(height: 6),
+                        ],
+                        if (hasText)
+                          Text(
+                            body,
+                            style: GoogleFonts.anuphan(
+                              fontSize: 15,
+                              height: 1.4,
+                              color: fg,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (showTimestamp) ...[
+                  const SizedBox(height: 3),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: isMine ? 0 : 12,
+                      right: isMine ? 4 : 0,
+                    ),
                     child: Text(
                       _timeText(),
                       style: GoogleFonts.anuphan(
-                        fontSize: 10,
-                        color: isMine
-                            ? Colors.white.withValues(alpha: 0.75)
-                            : AppTheme.mutedText(context),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.mutedText(context),
                       ),
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
           ),
         ],
@@ -623,23 +1018,23 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final initial = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
     final fallback = Container(
-      width: 32,
-      height: 32,
+      width: 34,
+      height: 34,
       alignment: Alignment.center,
       color: AppTheme.primaryColor.withValues(alpha: 0.12),
       child: Text(
         initial,
         style: GoogleFonts.anuphan(
-          fontSize: 13,
-          fontWeight: FontWeight.w900,
+          fontSize: 13.5,
+          fontWeight: FontWeight.w700,
           color: AppTheme.primaryColor,
         ),
       ),
     );
     return ClipOval(
       child: SizedBox(
-        width: 32,
-        height: 32,
+        width: 34,
+        height: 34,
         child: url.isEmpty
             ? fallback
             : CachedNetworkImage(
@@ -755,9 +1150,10 @@ class _RoleTag extends StatelessWidget {
       child: Text(
         _MessageBubble._roleLabels[role] ?? role,
         style: GoogleFonts.anuphan(
-          fontSize: 9.5,
-          fontWeight: FontWeight.w800,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
           color: color,
+          letterSpacing: -0.1,
         ),
       ),
     );

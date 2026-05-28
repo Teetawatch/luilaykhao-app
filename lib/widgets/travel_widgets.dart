@@ -342,15 +342,15 @@ class TravelSliverAppBar extends StatelessWidget {
                     : Colors.transparent,
                 child: IconButton(
                   icon: Icon(
-                    Icons.arrow_back,
+                    Icons.arrow_back_ios_new_rounded,
                     color: isTransparent
                         ? Colors.white
                         : isDark
                         ? colorScheme.onSurface
                         : AppTheme.textMain,
-                    size: 20,
+                    size: 19,
                   ),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.maybePop(context),
                 ),
               ),
             )

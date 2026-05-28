@@ -580,6 +580,9 @@ class _ScheduleChip extends StatelessWidget {
     final monthLabel = departureDate != null
         ? DateFormat('MMM', 'th_TH').format(departureDate)
         : '—';
+    final weekdayLabel = departureDate != null
+        ? _shortThaiWeekday(departureDate)
+        : '';
 
     // Night count for multi-day trips
     String? nightsLabel;
@@ -592,12 +595,12 @@ class _ScheduleChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 170),
-        width: 70,
-        height: 88,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        width: 84,
+        height: 122,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: border, width: 1.5),
           boxShadow: isSelected
               ? [
@@ -610,14 +613,26 @@ class _ScheduleChip extends StatelessWidget {
               : null,
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Weekday (Apple Calendar-style abbreviation)
+            if (weekdayLabel.isNotEmpty)
+              Text(
+                weekdayLabel,
+                style: GoogleFonts.anuphan(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: sub,
+                  letterSpacing: 0.4,
+                  height: 1.0,
+                ),
+              ),
+            const SizedBox(height: 4),
             // Day number
             Text(
               dayLabel,
               style: GoogleFonts.anuphan(
-                fontSize: 22,
+                fontSize: 26,
                 fontWeight: FontWeight.w900,
                 color: fg,
                 height: 1.0,
@@ -631,39 +646,50 @@ class _ScheduleChip extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: sub,
+                height: 1.1,
               ),
             ),
-            // Duration badge
+            // Duration badge — wrapped in FittedBox to guarantee it never
+            // overflows the chip (e.g. "10 คืน" on long expeditions).
             if (nightsLabel != null) ...[
-              const SizedBox(height: 5),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Colors.white.withValues(alpha: 0.22)
-                      : isDark
-                          ? _softAccent.withValues(alpha: 0.14)
-                          : const Color(0xFFD1FAE5),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Text(
-                  nightsLabel,
-                  style: GoogleFonts.anuphan(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    color: isSelected ? Colors.white : _softAccent,
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.white.withValues(alpha: 0.22)
+                        : isDark
+                            ? _softAccent.withValues(alpha: 0.14)
+                            : const Color(0xFFD1FAE5),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    nightsLabel,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: GoogleFonts.anuphan(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected ? Colors.white : _softAccent,
+                      height: 1.0,
+                    ),
                   ),
                 ),
               ),
             ],
             // Seat count — always shown for non-charter schedules
             if (!isCharter) ...[
-              const SizedBox(height: 5),
+              const SizedBox(height: 6),
               if (isPast)
                 Text(
                   'ผ่านแล้ว',
                   style: GoogleFonts.anuphan(
-                    fontSize: 9,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w700,
                     color: sub,
                   ),
@@ -672,7 +698,7 @@ class _ScheduleChip extends StatelessWidget {
                 Text(
                   'เต็ม',
                   style: GoogleFonts.anuphan(
-                    fontSize: 9,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w700,
                     color: isSelected
                         ? Colors.white.withValues(alpha: 0.75)
@@ -680,44 +706,49 @@ class _ScheduleChip extends StatelessWidget {
                   ),
                 )
               else
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 5,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? Colors.white.withValues(alpha: 0.80)
-                            : isLowSeats
-                                ? const Color(0xFFF59E0B)
-                                : _softAccent,
-                        shape: BoxShape.circle,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.80)
+                              : isLowSeats
+                                  ? const Color(0xFFF59E0B)
+                                  : _softAccent,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      'ว่าง $seats ที่',
-                      style: GoogleFonts.anuphan(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected
-                            ? Colors.white.withValues(alpha: 0.88)
-                            : isLowSeats
-                                ? const Color(0xFFF59E0B)
-                                : sub,
+                      const SizedBox(width: 4),
+                      Text(
+                        'ว่าง $seats ที่',
+                        maxLines: 1,
+                        softWrap: false,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.88)
+                              : isLowSeats
+                                  ? const Color(0xFFF59E0B)
+                                  : sub,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
             ],
             // Charter label
             if (isCharter) ...[
-              const SizedBox(height: 5),
+              const SizedBox(height: 6),
               Text(
                 'เหมา',
                 style: GoogleFonts.anuphan(
-                  fontSize: 9,
+                  fontSize: 9.5,
                   fontWeight: FontWeight.w700,
                   color: sub,
                 ),
@@ -728,6 +759,14 @@ class _ScheduleChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Apple Calendar–style Thai weekday abbreviation
+/// (จ. / อ. / พ. / พฤ. / ศ. / ส. / อา.).
+String _shortThaiWeekday(DateTime date) {
+  const labels = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'];
+  // DateTime.weekday: 1 = Monday … 7 = Sunday.
+  return labels[date.weekday - 1];
 }
 
 // ─── Pickup point selector ────────────────────────────────────────────────────

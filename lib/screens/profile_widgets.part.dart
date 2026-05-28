@@ -46,15 +46,17 @@ class _SectionHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Apple Settings–style inset group label: muted, semibold, tighter letter
+    // spacing so it reads as a section header rather than a content title.
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: 12, bottom: 2),
       child: Text(
         title,
         style: GoogleFonts.anuphan(
-          fontSize: 15,
-          fontWeight: FontWeight.w900,
-          color: AppTheme.textMain,
-          letterSpacing: 0.1,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.mutedText(context),
+          letterSpacing: -0.1,
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -100,6 +101,8 @@ class PushNotificationService {
     description: 'Booking, payment, cancellation, and trip reminders.',
     importance: Importance.high,
   );
+
+  static const _badgeChannel = MethodChannel('luilaykhao/badge');
 
   final _localNotifications = FlutterLocalNotificationsPlugin();
 
@@ -340,6 +343,21 @@ class PushNotificationService {
         >()
         ?.requestNotificationsPermission();
   }
+
+  /// Sets the iOS app-icon badge to [count]. APNs only updates the badge when
+  /// a new push arrives, so reading notifications in-app would otherwise leave
+  /// the previous count stuck on the home-screen icon.
+  Future<void> setBadgeCount(int count) async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+    final safe = count < 0 ? 0 : count;
+    try {
+      await _badgeChannel.invokeMethod('setBadgeCount', {'count': safe});
+    } catch (e) {
+      debugPrint('[FCM] setBadgeCount failed: $e');
+    }
+  }
+
+  Future<void> clearBadge() => setBadgeCount(0);
 
   Future<void> _showForegroundNotification(RemoteMessage message) async {
     final notification = message.notification;

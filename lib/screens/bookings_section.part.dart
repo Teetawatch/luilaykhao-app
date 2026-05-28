@@ -99,7 +99,7 @@ class _NextTripHeroCard extends StatelessWidget {
         height: 132,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           color: const Color(0xFF0B3D42),
         ),
         child: Stack(
@@ -138,10 +138,10 @@ class _NextTripHeroCard extends StatelessWidget {
                         Text(
                           'ทริปถัดไปของคุณ',
                           style: GoogleFonts.anuphan(
-                            color: Colors.white.withValues(alpha: 0.72),
+                            color: Colors.white.withValues(alpha: 0.70),
                             fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -153,7 +153,8 @@ class _NextTripHeroCard extends StatelessWidget {
                             color: Colors.white,
                             fontSize: 17,
                             height: 1.2,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
                           ),
                         ),
                         if (travelDate != null) ...[
@@ -189,17 +190,17 @@ class _NextTripHeroCard extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
+                          horizontal: 12,
+                          vertical: 8,
                         ),
                         decoration: BoxDecoration(
                           color: badgeColor,
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: badgeColor.withValues(alpha: 0.45),
-                              blurRadius: 14,
-                              offset: const Offset(0, 5),
+                              color: badgeColor.withValues(alpha: 0.30),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
@@ -207,8 +208,9 @@ class _NextTripHeroCard extends StatelessWidget {
                           badge,
                           style: GoogleFonts.anuphan(
                             color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.1,
                           ),
                         ),
                       ),
@@ -218,7 +220,7 @@ class _NextTripHeroCard extends StatelessWidget {
                         style: GoogleFonts.anuphan(
                           color: Colors.white.withValues(alpha: 0.60),
                           fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -252,28 +254,30 @@ class _SummaryPill extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border(context)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(
-              alpha: AppTheme.isDark(context) ? 0.14 : 0.04,
+              alpha: AppTheme.isDark(context) ? 0.12 : 0.03,
             ),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: accent, size: 20),
+            child: Icon(icon, color: accent, size: 18),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -284,9 +288,10 @@ class _SummaryPill extends StatelessWidget {
                   value,
                   style: TextStyle(
                     color: AppTheme.onSurface(context),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
                     height: 1,
+                    letterSpacing: -0.3,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -296,8 +301,8 @@ class _SummaryPill extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: AppTheme.mutedText(context),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -339,18 +344,20 @@ class ReservationSegmentTabs extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Container(
-        padding: const EdgeInsets.all(5),
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border(context)),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.border(context).withValues(alpha: 0.55),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(
-                alpha: AppTheme.isDark(context) ? 0.14 : 0.04,
+                alpha: AppTheme.isDark(context) ? 0.12 : 0.03,
               ),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -365,7 +372,7 @@ class ReservationSegmentTabs extends StatelessWidget {
                   showCheckmark: false,
                   avatar: Icon(
                     tab.$3,
-                    size: 15,
+                    size: 14,
                     color: selected == tab.$1
                         ? Colors.white
                         : AppTheme.mutedText(context),
@@ -378,15 +385,16 @@ class ReservationSegmentTabs extends StatelessWidget {
                     color: selected == tab.$1
                         ? Colors.white
                         : AppTheme.mutedText(context),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.1,
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
-                    vertical: 10,
+                    vertical: 9,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
@@ -423,34 +431,43 @@ class _BookingUtilityBar extends StatelessWidget {
         Expanded(
           child: TextField(
             onChanged: onQueryChanged,
+            style: GoogleFonts.anuphan(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.onSurface(context),
+            ),
             decoration: InputDecoration(
               hintText: 'ค้นหาการจอง',
               hintStyle: GoogleFonts.anuphan(
                 color: AppTheme.mutedText(context),
-                fontSize: 14,
+                fontSize: 14.5,
                 fontWeight: FontWeight.w500,
               ),
               prefixIcon: Icon(
                 Icons.search_rounded,
                 color: AppTheme.mutedText(context),
-                size: 20,
+                size: 18,
               ),
               filled: true,
               fillColor: AppTheme.surface(context),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
+                horizontal: 14,
+                vertical: 12,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: BorderSide(color: AppTheme.border(context)),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: AppTheme.border(context).withValues(alpha: 0.55),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: BorderSide(color: AppTheme.border(context)),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: AppTheme.border(context).withValues(alpha: 0.55),
+                ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(14),
                 borderSide: const BorderSide(
                   color: AppTheme.primaryColor,
                   width: 1.5,
@@ -501,14 +518,16 @@ class _UtilityIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 48,
-      height: 48,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.border(context)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
       ),
-      child: Icon(icon, color: AppTheme.onSurface(context)),
+      child: Icon(icon, color: AppTheme.onSurface(context), size: 20),
     );
   }
 }
@@ -574,9 +593,9 @@ class BookingSection extends StatelessWidget {
                     eyebrow,
                     style: TextStyle(
                       color: AppTheme.mutedText(context),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.4,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -584,26 +603,26 @@ class BookingSection extends StatelessWidget {
                     title,
                     style: TextStyle(
                       color: AppTheme.onSurface(context),
-                      fontSize: 21,
-                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
                 ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: AppTheme.surface(context),
+                color: AppTheme.primaryColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: AppTheme.border(context)),
               ),
               child: Text(
                 '${bookings.length} รายการ',
-                style: TextStyle(
-                  color: AppTheme.mutedText(context),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
+                style: const TextStyle(
+                  color: AppTheme.primaryColor,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -645,19 +664,21 @@ class ReservationCard extends StatelessWidget {
 
     return InkWell(
       onTap: () => _openDetail(context, bookingRef),
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: BorderRadius.circular(22),
       child: Ink(
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppTheme.border(context)),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: AppTheme.border(context).withValues(alpha: 0.55),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(
-                alpha: AppTheme.isDark(context) ? 0.20 : 0.06,
+                alpha: AppTheme.isDark(context) ? 0.16 : 0.05,
               ),
-              blurRadius: 32,
-              offset: const Offset(0, 14),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -667,7 +688,7 @@ class ReservationCard extends StatelessWidget {
             // ── Hero image ──
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(28),
+                top: Radius.circular(22),
               ),
               child: Stack(
                 children: [
@@ -725,21 +746,16 @@ class ReservationCard extends StatelessWidget {
                   if (isPast && !isCancelled)
                     Positioned.fill(
                       child: Container(
-                        color: Colors.black.withValues(alpha: 0.38),
+                        color: Colors.black.withValues(alpha: 0.42),
                         alignment: Alignment.center,
                         child: Text(
                           'ยินดีที่ได้พบกันครับ',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.anuphan(
                             color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.45),
-                                blurRadius: 8,
-                              ),
-                            ],
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
                           ),
                         ),
                       ),
@@ -761,9 +777,10 @@ class ReservationCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: AppTheme.onSurface(context),
-                      fontSize: 19,
+                      fontSize: 18,
                       height: 1.22,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -776,7 +793,8 @@ class ReservationCard extends StatelessWidget {
                           style: TextStyle(
                             color: AppTheme.mutedText(context),
                             fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
                           ),
                         ),
                       ),
@@ -911,7 +929,7 @@ class _MetaStripItem extends StatelessWidget {
             style: TextStyle(
               color: AppTheme.onSurface(context),
               fontSize: 11.5,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -1014,7 +1032,7 @@ class _PendingPaymentBar extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     color: const Color(0xFF92400E),
                     fontSize: 12,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
@@ -1022,8 +1040,9 @@ class _PendingPaymentBar extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     color: const Color(0xFFD97706),
                     fontSize: 17,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     height: 1.1,
+                    letterSpacing: -0.3,
                   ),
                 ),
               ],
@@ -1033,9 +1052,9 @@ class _PendingPaymentBar extends StatelessWidget {
             onPressed: onPay,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFD97706),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1044,7 +1063,7 @@ class _PendingPaymentBar extends StatelessWidget {
               'ชำระเงิน',
               style: GoogleFonts.anuphan(
                 fontSize: 13,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -1083,7 +1102,7 @@ class _PaidFullBar extends StatelessWidget {
             style: GoogleFonts.anuphan(
               color: AppTheme.primaryColor,
               fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
           Text(
@@ -1091,7 +1110,8 @@ class _PaidFullBar extends StatelessWidget {
             style: GoogleFonts.anuphan(
               color: AppTheme.primaryColor,
               fontSize: 14,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
             ),
           ),
         ],
@@ -1133,7 +1153,7 @@ class _DepositBar extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     color: const Color(0xFF065F46),
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
@@ -1141,8 +1161,9 @@ class _DepositBar extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     color: AppTheme.primaryColor,
                     fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     height: 1.1,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ],
@@ -1167,7 +1188,7 @@ class _DepositBar extends StatelessWidget {
                       style: GoogleFonts.anuphan(
                         color: const Color(0xFF92400E),
                         fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -1177,8 +1198,9 @@ class _DepositBar extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     color: const Color(0xFFD97706),
                     fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     height: 1.1,
+                    letterSpacing: -0.2,
                   ),
                 ),
                 Text(
@@ -1243,7 +1265,7 @@ class _InstallmentBar extends StatelessWidget {
                 style: GoogleFonts.anuphan(
                   color: AppTheme.mutedText(context),
                   fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
@@ -1254,7 +1276,8 @@ class _InstallmentBar extends StatelessWidget {
                       ? AppTheme.primaryColor
                       : AppTheme.onSurface(context),
                   fontSize: 13,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.1,
                 ),
               ),
             ],
@@ -1279,7 +1302,7 @@ class _InstallmentBar extends StatelessWidget {
                 style: GoogleFonts.anuphan(
                   color: AppTheme.primaryColor,
                   fontSize: 12,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const Spacer(),
@@ -1288,7 +1311,7 @@ class _InstallmentBar extends StatelessWidget {
                 style: GoogleFonts.anuphan(
                   color: AppTheme.mutedText(context),
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -1411,16 +1434,17 @@ class _CompactCheckInRow extends StatelessWidget {
                     'พร้อมเช็คอิน',
                     style: GoogleFonts.anuphan(
                       color: AppTheme.primaryColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.1,
                     ),
                   ),
                   Text(
                     bookingRef,
                     style: GoogleFonts.anuphan(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.75),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.72),
                       fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -1449,8 +1473,8 @@ class _CompactCheckInRow extends StatelessWidget {
                       'แสดง QR',
                       style: GoogleFonts.anuphan(
                         color: Colors.white,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],

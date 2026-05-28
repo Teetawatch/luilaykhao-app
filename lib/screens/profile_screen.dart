@@ -100,21 +100,21 @@ class ProfilePage extends StatelessWidget {
                       ProfileHeader(user: user),
                       const SizedBox(height: 16),
                       ProfileStatsSection(app: app, loyalty: loyalty),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       QuickActionsSection(app: app),
                       if (app.canUseStaffCheckIn) ...[
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 28),
                         StaffDashboardSection(app: app),
                       ],
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 28),
                       AccountMenu(user: user),
-                      const SizedBox(height: 20),
-                      const TravelMenu(),
-                      const SizedBox(height: 20),
-                      const SettingsMenu(),
-                      const SizedBox(height: 20),
-                      const SupportMenu(),
                       const SizedBox(height: 24),
+                      const TravelMenu(),
+                      const SizedBox(height: 24),
+                      const SettingsMenu(),
+                      const SizedBox(height: 24),
+                      const SupportMenu(),
+                      const SizedBox(height: 28),
                       LogoutSection(onLogout: app.logout),
                     ],
                   ),
@@ -148,22 +148,19 @@ class ProfileHeader extends StatelessWidget {
     final email = _cleanText(user['email']);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: AppTheme.isDark(context)
-              ? [AppTheme.surface(context), const Color(0xFF12352D)]
-              : [const Color(0xFFFFFFFF), const Color(0xFFEAF7F1)],
+        borderRadius: BorderRadius.circular(20),
+        color: AppTheme.surface(context),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+          width: 1,
         ),
-        border: Border.all(color: AppTheme.border(context), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.055),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -171,85 +168,83 @@ class ProfileHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _Avatar(imageUrl: avatar, name: name),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${_greeting()} 👋',
-                        style: GoogleFonts.anuphan(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.mutedText(context),
-                        ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _greeting(),
+                      style: GoogleFonts.anuphan(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.mutedText(context),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(
-                          fontSize: 22,
-                          height: 1.2,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.onSurface(context),
-                        ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 21,
+                        height: 1.2,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                        letterSpacing: -0.2,
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        email.isNotEmpty
-                            ? email
-                            : 'พร้อมออกผจญภัยครั้งต่อไปไหม?',
-                        style: GoogleFonts.anuphan(
-                          fontSize: 14,
-                          height: 1.45,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.mutedText(context),
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      email.isNotEmpty
+                          ? email
+                          : 'พร้อมออกผจญภัยครั้งต่อไปไหม?',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 13.5,
+                        height: 1.4,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.mutedText(context),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
           if (location != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             _IdentityPill(
               icon: Icons.location_on_outlined,
               label: location,
               color: AppTheme.primaryColor,
             ),
           ],
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: TextButton.icon(
               onPressed: () =>
                   _pushPremium(context, EditProfileScreen(initialUser: user)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.onSurface(context),
-                side: BorderSide(color: AppTheme.border(context)),
-                backgroundColor: AppTheme.surface(
-                  context,
-                ).withValues(alpha: 0.78),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.primaryColor,
+                backgroundColor:
+                    AppTheme.primaryColor.withValues(alpha: 0.08),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: const Icon(Icons.edit_outlined, size: 18),
+              icon: const Icon(Icons.edit_outlined, size: 17),
               label: Text(
                 'แก้ไขโปรไฟล์',
                 style: GoogleFonts.anuphan(
                   fontSize: 14,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -271,31 +266,23 @@ class _Avatar extends StatelessWidget {
     final initial = name.trim().isEmpty ? 'ล' : name.trim().characters.first;
 
     return Container(
-      width: 88,
-      height: 88,
-      padding: const EdgeInsets.all(3),
+      width: 72,
+      height: 72,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppTheme.surface(context),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: AppTheme.subtleSurface(context),
       ),
       child: ClipOval(
         child: imageUrl.isEmpty
             ? ColoredBox(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                color: AppTheme.primaryColor.withValues(alpha: 0.10),
                 child: Center(
                   child: Text(
                     initial,
                     style: GoogleFonts.anuphan(
                       color: AppTheme.primaryColor,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -304,20 +291,20 @@ class _Avatar extends StatelessWidget {
                 imageUrl: imageUrl,
                 fit: BoxFit.cover,
                 errorWidget: (_, _, _) => ColoredBox(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
                   child: Center(
                     child: Text(
                       initial,
                       style: GoogleFonts.anuphan(
                         color: AppTheme.primaryColor,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
                 ),
                 placeholder: (_, _) => ColoredBox(
-                  color: AppTheme.outlineColor.withValues(alpha: 0.45),
+                  color: AppTheme.outlineColor.withValues(alpha: 0.35),
                 ),
               ),
       ),
@@ -353,64 +340,71 @@ class ProfileStatsSection extends StatelessWidget {
     final remaining = (nextLevelPoints - points).clamp(0, nextLevelPoints);
 
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: _sectionDecoration(context: context),
+      padding: const EdgeInsets.all(18),
+      decoration: _sectionDecoration(context: context, radius: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Text(
-                  'สมาชิกลุยเลเขา',
-                  style: GoogleFonts.anuphan(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: AppTheme.textMain,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'สมาชิกลุยเลเขา',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textMain,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                    if (tier.isEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'สะสมแต้มเพื่อปลดล็อกสิทธิพิเศษ',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              if (tier.isNotEmpty) ...[
+              if (tier.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
-                    vertical: 4,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF059669), Color(0xFF047857)],
-                    ),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: Text(
-                    tier,
-                    style: GoogleFonts.anuphan(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.workspace_premium_rounded,
+                        size: 13,
+                        color: AppTheme.primaryColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        tier,
+                        style: GoogleFonts.anuphan(
+                          color: AppTheme.primaryColor,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-              ],
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  'สะสมรางวัล',
-                  style: GoogleFonts.anuphan(
-                    color: AppTheme.primaryColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -439,10 +433,10 @@ class ProfileStatsSection extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              minHeight: 8,
+              minHeight: 6,
               value: progress,
               color: AppTheme.primaryColor,
-              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.10),
             ),
           ),
           const SizedBox(height: 10),
@@ -451,8 +445,8 @@ class ProfileStatsSection extends StatelessWidget {
                 ? 'พร้อมปลดล็อกสิทธิพิเศษถัดไป'
                 : 'อีก ${_formatCompact(remaining)} แต้ม ถึงระดับถัดไป',
             style: GoogleFonts.anuphan(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,
             ),
           ),
@@ -491,28 +485,29 @@ class _StatMetric extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppTheme.border(context).withValues(alpha: 0.7),
+            color: AppTheme.border(context).withValues(alpha: 0.55),
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 12),
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 10),
             FittedBox(
               alignment: Alignment.centerLeft,
               fit: BoxFit.scaleDown,
               child: Text(
                 value,
                 style: GoogleFonts.anuphan(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
+                  letterSpacing: -0.4,
                 ),
               ),
             ),
@@ -524,7 +519,7 @@ class _StatMetric extends StatelessWidget {
               style: GoogleFonts.anuphan(
                 fontSize: 12,
                 color: AppTheme.mutedText(context),
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -620,69 +615,78 @@ class _QuickActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(20),
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      elevation: 1,
-      child: InkWell(
-        onTap: action.onTap,
-        borderRadius: BorderRadius.circular(20),
-        splashColor: AppTheme.primaryColor.withValues(alpha: 0.06),
-        highlightColor: AppTheme.primaryColor.withValues(alpha: 0.04),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      action.icon,
-                      color: AppTheme.primaryColor,
-                      size: 22,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (action.badge != null)
+      borderRadius: BorderRadius.circular(16),
+      shadowColor: Colors.black.withValues(alpha: 0.05),
+      elevation: 0,
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.border(context).withValues(alpha: 0.55),
+          ),
+        ),
+        child: InkWell(
+          onTap: action.onTap,
+          borderRadius: BorderRadius.circular(16),
+          splashColor: AppTheme.primaryColor.withValues(alpha: 0.06),
+          highlightColor: AppTheme.primaryColor.withValues(alpha: 0.04),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        color: AppTheme.warningTint(context),
-                        borderRadius: BorderRadius.circular(999),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
-                        action.badge!,
-                        style: GoogleFonts.anuphan(
-                          color: AppTheme.warningColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
+                      child: Icon(
+                        action.icon,
+                        color: AppTheme.primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (action.badge != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warningTint(context),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          action.badge!,
+                          style: GoogleFonts.anuphan(
+                            color: AppTheme.warningColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-              const Spacer(),
-              Text(
-                action.label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
-                  fontSize: 14,
-                  height: 1.25,
-                  color: AppTheme.textMain,
-                  fontWeight: FontWeight.w800,
+                  ],
                 ),
-              ),
-            ],
+                const Spacer(),
+                Text(
+                  action.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.anuphan(
+                    fontSize: 14,
+                    height: 1.25,
+                    color: AppTheme.textMain,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -844,9 +848,9 @@ class MenuSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeading(title),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Container(
-          decoration: _sectionDecoration(context: context, radius: 22),
+          decoration: _sectionDecoration(context: context, radius: 16),
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
@@ -854,12 +858,12 @@ class MenuSection extends StatelessWidget {
                 _MenuTile(item: items[index]),
                 if (index < items.length - 1)
                   Divider(
-                    height: 1,
-                    indent: 64,
-                    endIndent: 16,
+                    height: 0.5,
+                    indent: 58,
+                    endIndent: 14,
                     color: Theme.of(
                       context,
-                    ).colorScheme.outline.withValues(alpha: 0.65),
+                    ).colorScheme.outline.withValues(alpha: 0.45),
                   ),
               ],
             ],
@@ -887,11 +891,20 @@ class _MenuTile extends StatelessWidget {
         splashColor: AppTheme.primaryColor.withValues(alpha: 0.05),
         highlightColor: AppTheme.primaryColor.withValues(alpha: 0.03),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              Icon(item.icon, color: colorScheme.primary, size: 23),
-              const SizedBox(width: 16),
+              // iOS Settings-style tinted icon plate (SF Symbols in filled rect)
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(item.icon, color: colorScheme.primary, size: 18),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -905,19 +918,22 @@ class _MenuTile extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: colorScheme.onSurface,
+                        letterSpacing: -0.1,
                       ),
                     ),
-                    if (item.subtitle != null)
+                    if (item.subtitle != null) ...[
+                      const SizedBox(height: 1),
                       Text(
                         item.subtitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.anuphan(
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -926,8 +942,8 @@ class _MenuTile extends StatelessWidget {
                 Text(
                   item.trailing!,
                   style: GoogleFonts.anuphan(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -937,11 +953,13 @@ class _MenuTile extends StatelessWidget {
                 item.trailingWidget!,
               ],
               if (item.showChevron) ...[
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Icon(
-                  Icons.chevron_right,
-                  color: isDark ? Colors.white24 : Colors.grey[300],
-                  size: 22,
+                  Icons.chevron_right_rounded,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.28)
+                      : const Color(0xFFC7C7CC), // iOS tertiary label grey
+                  size: 20,
                 ),
               ],
             ],
@@ -1240,27 +1258,43 @@ class _AccountActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           child: Row(
             children: [
-              Icon(icon, color: color, size: 23),
-              const SizedBox(width: 16),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   label,
                   style: GoogleFonts.anuphan(
                     fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: color,
+                    letterSpacing: -0.1,
                   ),
                 ),
               ),
-              Icon(Icons.chevron_right, color: Colors.grey[300], size: 22),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.28)
+                    : const Color(0xFFC7C7CC),
+                size: 20,
+              ),
             ],
           ),
         ),
