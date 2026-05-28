@@ -1031,7 +1031,7 @@ class _Avatar extends StatelessWidget {
         ),
       ),
     );
-    return ClipOval(
+    final avatar = ClipOval(
       child: SizedBox(
         width: 34,
         height: 34,
@@ -1044,6 +1044,20 @@ class _Avatar extends StatelessWidget {
                 errorWidget: (_, _, _) => fallback,
               ),
       ),
+    );
+    // Only open the viewer when there is a real photo to enlarge — tapping
+    // the initial-letter placeholder has nothing useful to show.
+    if (url.isEmpty) return avatar;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => _ImageViewer(url: url, title: name),
+          ),
+        );
+      },
+      child: avatar,
     );
   }
 }
@@ -1094,37 +1108,75 @@ class _ChatImage extends StatelessWidget {
 
 class _ImageViewer extends StatelessWidget {
   final String url;
+  final String? title;
 
-  const _ImageViewer({required this.url});
+  const _ImageViewer({required this.url, this.title});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      // Floating close button over the photo, iOS Photos style.
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          tooltip: 'ปิด',
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: title == null || title!.trim().isEmpty
+            ? null
+            : Text(
+                title!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.anuphan(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -0.1,
+                ),
+              ),
       ),
-      body: Center(
-        child: InteractiveViewer(
-          minScale: 0.8,
-          maxScale: 4,
-          child: CachedNetworkImage(
-            imageUrl: url,
-            fit: BoxFit.contain,
-            placeholder: (_, _) => const SizedBox(
-              width: 32,
-              height: 32,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            ),
-            errorWidget: (_, _, _) => const Icon(
-              Icons.broken_image_rounded,
-              color: Colors.white54,
-              size: 48,
+      // Stack so tapping the surrounding black area dismisses, while
+      // gestures on the image itself are absorbed by InteractiveViewer for
+      // pan and pinch-zoom.
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).maybePop(),
             ),
           ),
-        ),
+          Center(
+            child: InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4,
+              child: CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.contain,
+                placeholder: (_, _) => const SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                errorWidget: (_, _, _) => const Icon(
+                  Icons.broken_image_rounded,
+                  color: Colors.white54,
+                  size: 48,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
