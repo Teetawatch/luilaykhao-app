@@ -31,6 +31,7 @@ class NotificationNavigator {
       case 'booking_reminder':
       case 'trip_reminder':
       case 'trip_checklist':
+      case 'weather_alert':
       case 'vehicle_departed':
       case 'vehicle_approaching':
         _openBookingDetail(data);
@@ -53,6 +54,26 @@ class NotificationNavigator {
 
   static NavigatorState? get _nav => appNavigatorKey.currentState;
 
+  /// Runs [action] once the root navigator is mounted. On a cold launch from a
+  /// killed state the tap is replayed during `CustomerAppScreen.initState`,
+  /// before the first frame — so `appNavigatorKey.currentState` is still null.
+  /// Retry briefly instead of silently dropping the navigation.
+  static void _withNav(
+    void Function(NavigatorState nav) action, {
+    int attempt = 0,
+  }) {
+    final nav = _nav;
+    if (nav != null) {
+      action(nav);
+      return;
+    }
+    if (attempt >= 20) return; // give up after ~5s
+    Future.delayed(
+      const Duration(milliseconds: 250),
+      () => _withNav(action, attempt: attempt + 1),
+    );
+  }
+
   static void _openBookingDetail(Map<String, dynamic> data) {
     final ref = data['booking_ref']?.toString();
     // If no booking_ref, fall back to bookings tab.
@@ -73,28 +94,30 @@ class NotificationNavigator {
   }
 
   static void _openChat(Map<String, dynamic> data) {
-    final nav = _nav;
-    if (nav == null) return;
     final id = int.tryParse('${data['schedule_id']}') ?? 0;
     if (id == 0) {
       _openNotifications();
       return;
     }
-    nav.push(
-      MaterialPageRoute(builder: (_) => ChatScreen(scheduleId: id)),
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => ChatScreen(scheduleId: id)),
+      ),
     );
   }
 
   static void _openSosAlert(Map<String, dynamic> data) {
-    final nav = _nav;
-    if (nav == null) return;
     final alert = SosAlert.fromNotificationData(data);
     SosAlarmService.instance.start(senderName: alert.userName);
-    nav.push(
-      MaterialPageRoute(
-        builder: (_) => SosAlertScreen(alert: alert),
-      ),
-    ).then((_) => SosAlarmService.instance.stop());
+    _withNav(
+      (nav) => nav
+          .push(
+            MaterialPageRoute(
+              builder: (_) => SosAlertScreen(alert: alert),
+            ),
+          )
+          .then((_) => SosAlarmService.instance.stop()),
+    );
   }
 
   static void _openNotifications() {
@@ -162,10 +185,10 @@ class NotificationNavigator {
   }
 
   static void _openGroup(String code) {
-    final nav = _nav;
-    if (nav == null) return;
-    nav.push(
-      MaterialPageRoute(builder: (_) => GroupRoomScreen(inviteCode: code)),
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => GroupRoomScreen(inviteCode: code)),
+      ),
     );
   }
 
@@ -176,10 +199,10 @@ class NotificationNavigator {
   }
 
   static void _openTrip(String slug) {
-    final nav = _nav;
-    if (nav == null) return;
-    nav.push(
-      MaterialPageRoute(builder: (_) => TripDetailScreen(slug: slug)),
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => TripDetailScreen(slug: slug)),
+      ),
     );
   }
 

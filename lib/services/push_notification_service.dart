@@ -116,6 +116,7 @@ class PushNotificationService {
   VoidCallback? _onRefreshRequested;
   NotificationTapCallback? _onNotificationTap;
   ForegroundNotificationCallback? _onForegroundNotification;
+  Map<String, dynamic>? _pendingTapData;
 
   Future<void> initialize({
     VoidCallback? onRefreshRequested,
@@ -127,6 +128,11 @@ class PushNotificationService {
     }
     if (onNotificationTap != null) {
       _onNotificationTap = onNotificationTap;
+      // A tap may have been processed before any UI listener was registered —
+      // most often a cold launch from a killed state, where main()'s early
+      // initialize() consumes getInitialMessage() before CustomerAppScreen
+      // mounts and registers this callback. Replay it now.
+      _flushPendingTap();
     }
     if (onForegroundNotification != null) {
       _onForegroundNotification = onForegroundNotification;
@@ -216,8 +222,22 @@ class PushNotificationService {
   }
 
   void _handleNotificationTap(Map<String, dynamic> data) {
+    final callback = _onNotificationTap;
+    if (callback == null) {
+      // No UI listener yet — hold the tap so it isn't lost, and replay it
+      // once initialize() is called with an onNotificationTap callback.
+      _pendingTapData = data;
+      return;
+    }
     final type = data['type']?.toString() ?? '';
-    _onNotificationTap?.call(type, data);
+    callback(type, data);
+  }
+
+  void _flushPendingTap() {
+    final pending = _pendingTapData;
+    if (pending == null) return;
+    _pendingTapData = null;
+    _handleNotificationTap(pending);
   }
 
   void _fireForegroundCallback(RemoteMessage message) {
