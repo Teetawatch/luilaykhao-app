@@ -284,6 +284,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
                   color: AppTheme.onSurface(context),
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
+                  letterSpacing: -0.2,
                 ),
               ),
               leading: Navigator.canPop(context)
@@ -508,7 +509,8 @@ class _ToggleChip extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.anuphan(
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.1,
                     color: selected
                         ? Colors.white
                         : AppTheme.mutedText(context),
@@ -533,12 +535,15 @@ class _GuestHeroHeader extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 24,
-            offset: Offset(0, 10),
+            color: Color(0x0A000000),
+            blurRadius: 16,
+            offset: Offset(0, 8),
           ),
         ],
       ),
@@ -546,16 +551,16 @@ class _GuestHeroHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
+              color: AppTheme.primaryColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.confirmation_number_outlined,
               color: AppTheme.primaryColor,
-              size: 28,
+              size: 26,
             ),
           ),
           const SizedBox(height: 16),
@@ -564,8 +569,9 @@ class _GuestHeroHeader extends StatelessWidget {
             style: GoogleFonts.anuphan(
               fontSize: 22,
               height: 1.25,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
+              letterSpacing: -0.4,
             ),
           ),
           const SizedBox(height: 8),
@@ -809,21 +815,16 @@ class _InputBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      height: 56,
+      height: 54,
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: hasError ? AppTheme.errorColor : AppTheme.border(context),
+          color: hasError
+              ? AppTheme.errorColor
+              : AppTheme.border(context).withValues(alpha: 0.55),
           width: hasError ? 1.4 : 1,
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 14,
-            offset: Offset(0, 6),
-          ),
-        ],
       ),
       child: child,
     );
@@ -869,16 +870,16 @@ class _LookupButton extends StatelessWidget {
       scale: isLoading ? 0.99 : 1,
       duration: const Duration(milliseconds: 140),
       child: Container(
-        height: 56,
+        height: 54,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(16),
           color: enabled ? AppTheme.primaryColor : const Color(0xFFD0D5DD),
           boxShadow: enabled
               ? [
                   BoxShadow(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.22),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.28),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
                   ),
                 ]
               : null,
@@ -892,7 +893,7 @@ class _LookupButton extends StatelessWidget {
             disabledForegroundColor: Colors.white.withValues(alpha: 0.82),
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
           child: AnimatedSwitcher(
@@ -917,7 +918,8 @@ class _LookupButton extends StatelessWidget {
                         'ค้นหาการจอง',
                         style: GoogleFonts.anuphan(
                           fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ],
@@ -974,15 +976,18 @@ class _GuestBookingResultCard extends StatelessWidget {
       children: [
         // Trip info card
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.55),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.055),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -996,9 +1001,10 @@ class _GuestBookingResultCard extends StatelessWidget {
                       tripTitle,
                       style: GoogleFonts.anuphan(
                         fontSize: 18,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor,
                         height: 1.25,
+                        letterSpacing: -0.3,
                       ),
                     ),
                   ),
@@ -1069,22 +1075,12 @@ class _GuestBookingResultCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isDark
-                    ? [
-                        AppTheme.primaryColor.withValues(alpha: 0.22),
-                        AppTheme.accentColor.withValues(alpha: 0.10),
-                      ]
-                    : [
-                        AppTheme.primaryColor.withValues(alpha: 0.08),
-                        AppTheme.accentColor.withValues(alpha: 0.04),
-                      ],
-              ),
-              borderRadius: BorderRadius.circular(28),
+              color: isDark
+                  ? AppTheme.primaryColor.withValues(alpha: 0.14)
+                  : AppTheme.primaryColor.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(20),
               border:
-                  Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.18)),
+                  Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.16)),
             ),
             child: Column(
               children: [
@@ -1110,7 +1106,8 @@ class _GuestBookingResultCard extends StatelessWidget {
                       style: GoogleFonts.anuphan(
                         color: AppTheme.onSurface(context),
                         fontSize: 16,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
                       ),
                     ),
                   ],
@@ -1131,14 +1128,14 @@ class _GuestBookingResultCard extends StatelessWidget {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                         color:
-                            AppTheme.primaryColor.withValues(alpha: 0.15)),
+                            AppTheme.primaryColor.withValues(alpha: 0.14)),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.08),
-                        blurRadius: 16,
+                        color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                        blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
                     ],
@@ -1157,8 +1154,8 @@ class _GuestBookingResultCard extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     color: AppTheme.primaryColor,
                     fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.4,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ],
@@ -1170,15 +1167,15 @@ class _GuestBookingResultCard extends StatelessWidget {
         if (hasVehicle && isConfirmed) ...[
           const SizedBox(height: 16),
           Container(
-            height: 56,
+            height: 54,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(16),
               color: AppTheme.primaryColor,
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.22),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.28),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
@@ -1188,14 +1185,15 @@ class _GuestBookingResultCard extends StatelessWidget {
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              icon: const Icon(Icons.near_me_rounded, size: 20),
+              icon: const Icon(Icons.near_me_rounded, size: 19),
               label: Text(
                 'ติดตามรถของฉัน',
                 style: GoogleFonts.anuphan(
-                    fontSize: 16, fontWeight: FontWeight.w900),
+                    fontSize: 16, fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2),
               ),
             ),
           ),
@@ -1270,19 +1268,23 @@ class _EmptyNameResult extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.55),
+            ),
           ),
           child: Column(
             children: [
               Icon(Icons.search_off_rounded,
-                  size: 48, color: AppTheme.mutedText(context)),
+                  size: 44, color: AppTheme.mutedText(context)),
               const SizedBox(height: 12),
               Text(
                 'ไม่พบข้อมูลการจอง',
                 style: GoogleFonts.anuphan(
                   fontSize: 16,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
+                  letterSpacing: -0.2,
                 ),
               ),
               const SizedBox(height: 6),
@@ -1292,6 +1294,7 @@ class _EmptyNameResult extends StatelessWidget {
                 style: GoogleFonts.anuphan(
                   fontSize: 13,
                   height: 1.5,
+                  fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
                 ),
               ),
@@ -1303,13 +1306,15 @@ class _EmptyNameResult extends StatelessWidget {
           onPressed: onReset,
           icon: const Icon(Icons.search_rounded, size: 18),
           label: Text('ค้นหาใหม่',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w800)),
+              style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.primaryColor,
-            side: BorderSide(color: AppTheme.border(context)),
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            side: BorderSide(
+              color: AppTheme.border(context).withValues(alpha: 0.55),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 13),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ],
@@ -1342,7 +1347,8 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: GoogleFonts.anuphan(
-            fontSize: 11, fontWeight: FontWeight.w900, color: color),
+            fontSize: 11, fontWeight: FontWeight.w700, color: color,
+            letterSpacing: -0.1),
       ),
     );
   }
@@ -1357,8 +1363,10 @@ class _GuestHelpCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppTheme.border(context)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1366,14 +1374,15 @@ class _GuestHelpCard extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.help_outline_rounded,
-                  color: AppTheme.primaryColor, size: 20),
+                  color: AppTheme.primaryColor, size: 19),
               const SizedBox(width: 8),
               Text(
                 'หาข้อมูลไม่เจอ?',
                 style: GoogleFonts.anuphan(
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                   fontSize: 15,
                   color: AppTheme.textMain,
+                  letterSpacing: -0.2,
                 ),
               ),
             ],
@@ -1396,14 +1405,18 @@ class _GuestHelpCard extends StatelessWidget {
 
           // ── ติดต่อเจ้าหน้าที่ ──────────────────────────────────────────
           const SizedBox(height: 16),
-          Divider(color: AppTheme.border(context), height: 1),
+          Divider(
+            color: AppTheme.border(context).withValues(alpha: 0.45),
+            height: 0.5,
+          ),
           const SizedBox(height: 14),
           Text(
             'ต้องการความช่วยเหลือ?',
             style: GoogleFonts.anuphan(
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               fontSize: 13.5,
               color: AppTheme.textMain,
+              letterSpacing: -0.1,
             ),
           ),
           const SizedBox(height: 10),

@@ -41,7 +41,7 @@ class TravelerCounter extends StatelessWidget {
                 child: Text(
                   '$count',
                   style: GoogleFonts.anuphan(
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     fontSize: 17,
                     color: _premiumText(context),
                   ),
@@ -337,7 +337,8 @@ class AddonSelectionSection extends StatelessWidget {
                               style: GoogleFonts.anuphan(
                                 color: AppTheme.onSurface(context),
                                 fontSize: 14,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.1,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -356,7 +357,7 @@ class AddonSelectionSection extends StatelessWidget {
                         '+${money(addon.totalFor(travelerCount))}',
                         style: GoogleFonts.anuphan(
                           color: const Color(0xFFB45309),
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w800,
                           fontSize: 13,
                         ),
                       ),
@@ -487,7 +488,8 @@ class StickyCheckoutBar extends StatelessWidget {
                         style: GoogleFonts.anuphan(
                           color: _premiumText(context),
                           fontSize: priceFontSize,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
                         ),
                       ),
                     ],
@@ -592,20 +594,20 @@ class _SectionShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: _premiumDecoration(context, radius: 28),
+      decoration: _premiumDecoration(context, radius: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: _softAccent.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: _softAccent, size: 20),
+                child: Icon(icon, color: _softAccent, size: 19),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -613,8 +615,9 @@ class _SectionShell extends StatelessWidget {
                   title,
                   style: GoogleFonts.anuphan(
                     fontSize: 17,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     color: _premiumText(context),
+                    letterSpacing: -0.3,
                   ),
                 ),
               ),
@@ -623,8 +626,8 @@ class _SectionShell extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Divider(
-            height: 1,
-            color: AppTheme.border(context).withValues(alpha: 0.5),
+            height: 0.5,
+            color: AppTheme.border(context).withValues(alpha: 0.45),
           ),
           const SizedBox(height: 14),
           child,
@@ -657,7 +660,7 @@ class _SeatDrivenTravelerCount extends StatelessWidget {
             style: GoogleFonts.anuphan(
               color: _softAccent,
               fontSize: 12,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

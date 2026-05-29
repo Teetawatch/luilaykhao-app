@@ -15,7 +15,6 @@ import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
@@ -33,7 +32,9 @@ import 'profile_screen.dart' show ProfileScreen, ContactUsScreen, NotificationsS
 import 'guest_booking_lookup_screen.dart';
 import 'staff_check_in_screen.dart';
 import 'chat_screen.dart';
+import 'pre_trip_checklist_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
+import '../services/checklist_storage.dart';
 
 part 'my_bookings_screen.dart';
 part 'home_explore.part.dart';

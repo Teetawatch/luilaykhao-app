@@ -16,7 +16,7 @@ class BookingProgressStepper extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: _premiumDecoration(context, radius: 24),
+      decoration: _premiumDecoration(context, radius: 16),
       child: Row(
         children: List.generate(steps.length, (index) {
           final isActive = index == currentStep;
@@ -519,7 +519,8 @@ class _JoinTripSwitch extends StatelessWidget {
                     style: GoogleFonts.anuphan(
                       color: _premiumText(context),
                       fontSize: 14,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.1,
                     ),
                   ),
                   const SizedBox(height: 2),

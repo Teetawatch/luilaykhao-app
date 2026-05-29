@@ -99,6 +99,14 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 20),
                 ],
 
+                // Pre-trip checklist — available the whole time the trip is
+                // still ahead, so travellers can prepare well in advance.
+                if (textOf(booking['status']) == 'confirmed' &&
+                    !_isTripFinished(schedule)) ...[
+                  _ChecklistEntryRow(booking: booking),
+                  const SizedBox(height: 20),
+                ],
+
                 // Pre-trip Briefing Card — confirmed, 0-3 days before departure
                 if (textOf(booking['status']) == 'confirmed' &&
                     _isPreTripWindow(schedule)) ...[
@@ -1039,25 +1047,6 @@ class _PreTripBriefingCard extends StatelessWidget {
                   const SizedBox(height: 14),
                 ],
 
-                // Preparations checklist
-                if (preparations.isNotEmpty) ...[
-                  _BriefingSection(
-                    icon: Icons.checklist_rounded,
-                    title: 'สิ่งที่ต้องเตรียม',
-                    child: _PreparationsChecklist(
-                      bookingRef: textOf(booking['booking_ref']),
-                      items: preparations
-                          .map(
-                            (item) => item is Map
-                                ? textOf(item['text'] ?? item['title'] ?? item)
-                                : item.toString(),
-                          )
-                          .where((t) => t.trim().isNotEmpty)
-                          .toList(),
-                    ),
-                  ),
-                  if (mustKnow.isNotEmpty) const SizedBox(height: 14),
-                ],
 
                 // Must know
                 if (mustKnow.isNotEmpty) ...[
@@ -1169,136 +1158,173 @@ class _BriefingSection extends StatelessWidget {
 /// Interactive pre-departure checklist. Items come from the trip's
 /// `preparations`; the tick state is stored locally per booking in
 /// SharedPreferences (no backend), keyed by item text so it survives reorder.
-class _PreparationsChecklist extends StatefulWidget {
-  final String bookingRef;
-  final List<String> items;
+/// Tappable summary that opens the full pre-trip checklist. Shows live
+/// progress (ticked / total, including the traveller's personal items) so the
+/// row itself nudges them to finish packing.
+class _ChecklistEntryRow extends StatefulWidget {
+  final Map<String, dynamic> booking;
 
-  const _PreparationsChecklist({required this.bookingRef, required this.items});
+  const _ChecklistEntryRow({required this.booking});
 
   @override
-  State<_PreparationsChecklist> createState() => _PreparationsChecklistState();
+  State<_ChecklistEntryRow> createState() => _ChecklistEntryRowState();
 }
 
-class _PreparationsChecklistState extends State<_PreparationsChecklist> {
-  final Set<String> _checked = {};
-  SharedPreferences? _prefs;
+class _ChecklistEntryRowState extends State<_ChecklistEntryRow> {
+  ChecklistState _state = ChecklistState.empty;
 
-  String get _storeKey => 'prep_checklist_${widget.bookingRef}';
+  String get _ref => textOf(widget.booking['booking_ref']);
+
+  List<String> get _prep {
+    final schedule = asMap(widget.booking['schedule']);
+    final trip = asMap(schedule['trip']);
+    return asList(trip['preparations'])
+        .map(
+          (item) => item is Map
+              ? textOf(item['text'] ?? item['title'] ?? item['name'])
+              : item.toString(),
+        )
+        .where((t) => t.trim().isNotEmpty)
+        .toList();
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadChecked();
+    _load();
   }
 
-  Future<void> _loadChecked() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList(_storeKey) ?? const [];
-    if (!mounted) return;
-    setState(() {
-      _prefs = prefs;
-      _checked
-        ..clear()
-        ..addAll(saved.where(widget.items.contains));
-    });
+  Future<void> _load() async {
+    final state = await ChecklistStorage.instance.read(_ref);
+    if (mounted) setState(() => _state = state);
   }
 
-  void _toggle(String item) {
-    setState(() {
-      if (!_checked.add(item)) _checked.remove(item);
-    });
-    _prefs?.setStringList(_storeKey, _checked.toList());
+  int get _total => _prep.length + _state.customItems.length;
+
+  int get _done {
+    final prepDone = _prep.where(_state.checkedPrep.contains).length;
+    final customDone = _state.customItems.where((c) => c.checked).length;
+    return prepDone + customDone;
+  }
+
+  Future<void> _open() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PreTripChecklistScreen.fromBooking(widget.booking),
+      ),
+    );
+    _load(); // refresh progress after returning
   }
 
   @override
   Widget build(BuildContext context) {
-    final total = widget.items.length;
-    final done = _checked.length;
+    final total = _total;
+    final done = _done;
     final allDone = total > 0 && done == total;
+    final progress = total == 0 ? 0.0 : done / total;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // progress
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: total == 0 ? 0 : done / total,
-                    minHeight: 5,
-                    backgroundColor: AppTheme.mutedText(
-                      context,
-                    ).withValues(alpha: 0.15),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      allDone ? AppTheme.primaryColor : const Color(0xFFE8A117),
-                    ),
+    return Material(
+      color: AppTheme.surface(context),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: _open,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.55),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(
+                    Icons.checklist_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 20,
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                allDone ? 'พร้อมแล้ว 🎉' : 'เตรียมแล้ว $done/$total',
-                style: GoogleFonts.anuphan(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w800,
-                  color: allDone
-                      ? AppTheme.primaryColor
-                      : AppTheme.mutedText(context),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'เช็กของก่อนเดินทาง',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.onSurface(context),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        total == 0
+                            ? 'แตะเพื่อเพิ่มของที่ต้องเตรียม'
+                            : allDone
+                                ? 'เตรียมของครบแล้ว 🎒'
+                                : 'เตรียมแล้ว $done จาก $total รายการ',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: allDone
+                              ? AppTheme.primaryColor
+                              : AppTheme.mutedText(context),
+                        ),
+                      ),
+                      if (total > 0) ...[
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 5,
+                            backgroundColor: AppTheme.primaryColor
+                                .withValues(alpha: 0.10),
+                            valueColor: const AlwaysStoppedAnimation(
+                              AppTheme.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppTheme.mutedText(context).withValues(alpha: 0.7),
+                ),
+              ],
+            ),
           ),
         ),
-        ...widget.items.map((item) {
-          final checked = _checked.contains(item);
-          return InkWell(
-            onTap: () => _toggle(item),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Icon(
-                      checked
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked_rounded,
-                      size: 18,
-                      color: checked
-                          ? AppTheme.primaryColor
-                          : AppTheme.mutedText(context).withValues(alpha: 0.5),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: GoogleFonts.anuphan(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        height: 1.4,
-                        color: checked
-                            ? AppTheme.mutedText(context)
-                            : AppTheme.onSurface(context),
-                        decoration: checked ? TextDecoration.lineThrough : null,
-                        decorationColor: AppTheme.mutedText(context),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ],
+      ),
     );
   }
+}
+
+/// True once the trip is over (its return date — or departure date if there's
+/// no return — is in the past). Used to hide the pre-trip checklist afterwards.
+bool _isTripFinished(Map<String, dynamic> schedule) {
+  final dep = DateTime.tryParse(textOf(schedule['departure_date']));
+  if (dep == null) return false;
+  final ret = DateTime.tryParse(textOf(schedule['return_date'])) ?? dep;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final end = DateTime(ret.year, ret.month, ret.day);
+  return today.isAfter(end);
 }
 
 /// True when today falls between the schedule's departure and return dates

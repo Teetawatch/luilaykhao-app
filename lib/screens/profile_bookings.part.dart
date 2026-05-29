@@ -83,7 +83,7 @@ class _BookingSummaryCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _sectionDecoration(context: context, radius: 22),
+      decoration: _sectionDecoration(context: context, radius: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -96,8 +96,9 @@ class _BookingSummaryCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.anuphan(
                     fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     color: AppTheme.textMain,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ),

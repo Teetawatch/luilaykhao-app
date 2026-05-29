@@ -106,7 +106,8 @@ class _StaffDashboardSectionState extends State<StaffDashboardSection> {
               const SizedBox(height: 10),
             ],
           ],
-          if (schedules.isEmpty)
+          if (schedules.isEmpty) ...[
+            const SizedBox(height: 16),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
@@ -138,6 +139,7 @@ class _StaffDashboardSectionState extends State<StaffDashboardSection> {
                 ],
               ),
             ),
+          ],
         ],
       ],
     );

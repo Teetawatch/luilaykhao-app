@@ -215,11 +215,11 @@ class _PassengerControllers {
   }
 }
 
-BoxDecoration _premiumDecoration(BuildContext context, {double radius = 24}) {
+BoxDecoration _premiumDecoration(BuildContext context, {double radius = 20}) {
   return AppTheme.cardDecoration(
     context,
     radius: radius,
-    borderColor: AppTheme.border(context).withValues(alpha: 0.65),
+    borderColor: AppTheme.border(context).withValues(alpha: 0.55),
   );
 }
 
@@ -237,23 +237,23 @@ InputDecoration _fieldDecoration({
     prefixIcon: Icon(icon, size: 19, color: AppTheme.mutedText(context)),
     prefixIconConstraints: const BoxConstraints(minWidth: 44),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide(color: _cardBorder(context)),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide(color: _cardBorder(context)),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
       borderSide: const BorderSide(color: _softAccent, width: 1.4),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
       borderSide: const BorderSide(color: AppTheme.errorColor),
     ),
     focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
       borderSide: const BorderSide(color: AppTheme.errorColor, width: 1.4),
     ),
     hintStyle: GoogleFonts.anuphan(

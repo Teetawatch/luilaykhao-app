@@ -424,7 +424,7 @@ class _SelectedSeatSummary extends StatelessWidget {
         color: hasSelection
             ? _softAccent.withValues(alpha: 0.08)
             : const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: hasSelection
               ? _softAccent.withValues(alpha: 0.18)
@@ -438,7 +438,7 @@ class _SelectedSeatSummary extends StatelessWidget {
                 ? Icons.airline_seat_recline_extra_rounded
                 : Icons.touch_app_rounded,
             color: hasSelection ? _softAccent : AppTheme.warningColor,
-            size: 20,
+            size: 19,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -450,7 +450,7 @@ class _SelectedSeatSummary extends StatelessWidget {
                 color: hasSelection
                     ? const Color(0xFF126B5B)
                     : const Color(0xFF92400E),
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
                 fontSize: 13,
                 height: 1.35,
               ),
@@ -477,7 +477,7 @@ class _SeatRealtimeSummary extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.selectedTint(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _softAccent.withValues(alpha: 0.16)),
       ),
       child: Column(
@@ -486,14 +486,14 @@ class _SeatRealtimeSummary extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.sync_rounded, color: _softAccent, size: 20),
+              const Icon(Icons.sync_rounded, color: _softAccent, size: 19),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'อัปเดตสถานะที่นั่งทุก ${refreshInterval.inSeconds} วินาที ล็อกที่นั่งชั่วคราวตามจำนวนที่นั่งที่เลือก',
                   style: GoogleFonts.anuphan(
                     color: const Color(0xFF126B5B),
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12.5,
                     height: 1.35,
                   ),
@@ -533,7 +533,7 @@ class _SeatRealtimeSummary extends StatelessWidget {
               style: GoogleFonts.anuphan(
                 color: const Color(0xFF126B5B),
                 fontSize: 12,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 height: 1.35,
               ),
             ),
@@ -560,10 +560,10 @@ class _SeatStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
       ),
       child: Text(
@@ -571,7 +571,7 @@ class _SeatStatusPill extends StatelessWidget {
         style: GoogleFonts.anuphan(
           color: textColor,
           fontSize: 12,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -644,7 +644,7 @@ class _VehicleSeatMap extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: _fieldBackground(context),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: _cardBorder(context)),
       ),
       child: LayoutBuilder(
@@ -876,8 +876,8 @@ class _SeatButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.anuphan(
                   color: labelColor,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -950,7 +950,7 @@ class _VehicleLabel extends StatelessWidget {
         style: GoogleFonts.anuphan(
           color: muted ? _mutedTextColor(context) : _softAccent,
           fontSize: 11,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

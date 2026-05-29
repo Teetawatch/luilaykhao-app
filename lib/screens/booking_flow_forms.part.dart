@@ -299,7 +299,8 @@ class _PriceRow extends StatelessWidget {
             style: GoogleFonts.anuphan(
               color: isTotal ? _premiumText(context) : _mutedTextColor(context),
               fontSize: isTotal ? 16 : 14,
-              fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
+              fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
+              letterSpacing: isTotal ? -0.2 : 0,
             ),
           ),
         ),
@@ -308,7 +309,8 @@ class _PriceRow extends StatelessWidget {
           style: GoogleFonts.anuphan(
             color: valueColor ?? _premiumText(context),
             fontSize: isTotal ? 20 : 14,
-            fontWeight: isTotal ? FontWeight.w900 : FontWeight.w800,
+            fontWeight: isTotal ? FontWeight.w800 : FontWeight.w700,
+            letterSpacing: isTotal ? -0.4 : 0,
           ),
         ),
       ],

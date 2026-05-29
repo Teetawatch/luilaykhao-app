@@ -395,7 +395,7 @@ class ProfileStatsSection extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        tier,
+                        _loyaltyTierLabel(tier),
                         style: GoogleFonts.anuphan(
                           color: AppTheme.primaryColor,
                           fontSize: 11.5,

@@ -350,28 +350,37 @@ class _EmptyProfileState extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: _sectionDecoration(context: context, radius: 22),
+      decoration: _sectionDecoration(context: context, radius: 16),
       child: Column(
         children: [
-          Icon(icon, size: 42, color: AppTheme.primaryColor),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(icon, size: 26, color: AppTheme.primaryColor),
+          ),
           const SizedBox(height: 14),
           Text(
             title,
             textAlign: TextAlign.center,
             style: GoogleFonts.anuphan(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
+              letterSpacing: -0.2,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             body,
             textAlign: TextAlign.center,
             style: GoogleFonts.anuphan(
               fontSize: 13,
               height: 1.45,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,
             ),
           ),
@@ -392,7 +401,7 @@ class _InfoLine extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: AppTheme.textSecondary),
+        Icon(icon, size: 17, color: AppTheme.textSecondary),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -400,7 +409,7 @@ class _InfoLine extends StatelessWidget {
             style: GoogleFonts.anuphan(
               fontSize: 13,
               height: 1.35,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,
             ),
           ),
@@ -434,8 +443,9 @@ class _StatusBadge extends StatelessWidget {
         _statusLabel(status),
         style: GoogleFonts.anuphan(
           fontSize: 11,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
           color: color,
+          letterSpacing: -0.1,
         ),
       ),
     );
@@ -462,7 +472,8 @@ class _SmallActionButton extends StatelessWidget {
       onPressed: onTap,
       labelStyle: GoogleFonts.anuphan(
         color: effectiveColor,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.1,
       ),
       backgroundColor: effectiveColor.withValues(alpha: 0.08),
       side: BorderSide(color: effectiveColor.withValues(alpha: 0.14)),
@@ -897,6 +908,18 @@ String _statusLabel(String status) {
     'refunded' => 'คืนเงินแล้ว',
     'completed' => 'จบทริป',
     _ => status.isEmpty ? 'ไม่ระบุ' : status,
+  };
+}
+
+/// Maps a loyalty tier code from the backend (regular/silver/gold) to its
+/// Thai display label. Falls back to the raw value for any future tier.
+String _loyaltyTierLabel(String tier) {
+  return switch (tier.toLowerCase()) {
+    'regular' => 'สมาชิกทั่วไป',
+    'silver' => 'ระดับเงิน',
+    'gold' => 'ระดับทอง',
+    'platinum' => 'ระดับแพลทินัม',
+    _ => tier,
   };
 }
 
