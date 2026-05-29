@@ -443,7 +443,11 @@ bool _itineraryEntryMatchesRegion(
 
   final entryValues = _itineraryRegionValues(data);
 
-  if (entryValues.isEmpty) return false;
+  // An itinerary entry with no region tagging is a *shared* plan that applies
+  // to every pickup region — it must stay visible when a region is selected,
+  // otherwise the whole programme disappears for trips whose itinerary isn't
+  // split per region (the common case).
+  if (entryValues.isEmpty) return true;
   return entryValues.any(
     (value) =>
         _regionTextMatches(value, regionKey) ||

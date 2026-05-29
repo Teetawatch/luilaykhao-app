@@ -6,7 +6,7 @@ class _PremiumCard extends StatelessWidget {
 
   const _PremiumCard({
     required this.child,
-    this.padding = const EdgeInsets.all(24),
+    this.padding = const EdgeInsets.all(20),
   });
 
   @override
@@ -16,9 +16,9 @@ class _PremiumCard extends StatelessWidget {
       padding: padding,
       decoration: AppTheme.cardDecoration(
         context,
-        radius: 32,
-        borderColor: AppTheme.border(context).withValues(alpha: 0.7),
-        shadowOpacity: 0.045,
+        radius: 20,
+        borderColor: AppTheme.border(context).withValues(alpha: 0.55),
+        shadowOpacity: 0.04,
       ),
       child: child,
     );
@@ -42,28 +42,18 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // colored icon box
+        // tonal icon plate — flatter and calmer than the previous gradient
+        // chip, matching the iOS-style icon plates used elsewhere in the app.
         Container(
-          width: 40,
-          height: 40,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF059669), Color(0xFF10B981)],
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: _softAccent.withValues(alpha: 0.28),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            color: _softAccent.withValues(alpha: isDark ? 0.18 : 0.10),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: 20, color: Colors.white),
+          child: Icon(icon, size: 19, color: _softAccent),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,7 +64,7 @@ class _SectionHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.anuphan(
                   fontSize: 17,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                   color: isDark ? Colors.white : _premiumText,
                   height: 1.2,
                   letterSpacing: -0.3,
@@ -87,7 +77,7 @@ class _SectionHeader extends StatelessWidget {
                   style: GoogleFonts.anuphan(
                     fontSize: 12,
                     color: _mutedText,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -205,8 +195,8 @@ class _InfoChip extends StatelessWidget {
               style: GoogleFonts.anuphan(
                 fontSize: 12,
                 color: isDark ? _softAccent : const Color(0xFF047857),
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.1,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.1,
               ),
             ),
           ),
@@ -226,23 +216,25 @@ class _EmptySelectionNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border(context)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.mutedText(context), size: 20),
+          Icon(icon, color: AppTheme.mutedText(context), size: 19),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
               style: GoogleFonts.anuphan(
                 color: AppTheme.mutedText(context),
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -301,14 +293,15 @@ class _RatingPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, size: 17, color: Color(0xFFE8A117)),
+          const Icon(Icons.star_rounded, size: 16, color: Color(0xFFE8A117)),
           const SizedBox(width: 4),
           Text(
             numberText(rating, fallback: '0'),
             style: GoogleFonts.anuphan(
               color: AppTheme.onSurface(context),
               fontSize: 13,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.1,
             ),
           ),
           const SizedBox(width: 6),
@@ -317,7 +310,7 @@ class _RatingPill extends StatelessWidget {
             style: GoogleFonts.anuphan(
               color: AppTheme.mutedText(context),
               fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

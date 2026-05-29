@@ -123,7 +123,7 @@ class _ReviewRatingSummary extends StatelessWidget {
                   numberText(rating, fallback: '0'),
                   style: GoogleFonts.anuphan(
                     fontSize: 44,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     color: _premiumText,
                     height: 1,
                   ),
@@ -283,7 +283,7 @@ class _CategoryAverageTile extends StatelessWidget {
             numberText(value),
             style: GoogleFonts.anuphan(
               fontSize: 12.5,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
               color: _premiumText,
             ),
           ),
@@ -369,7 +369,7 @@ class _ReviewCard extends StatelessWidget {
                                 initials,
                                 style: GoogleFonts.anuphan(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w800,
                                   fontSize: 17,
                                 ),
                               ),
@@ -381,7 +381,7 @@ class _ReviewCard extends StatelessWidget {
                             initials,
                             style: GoogleFonts.anuphan(
                               color: Colors.white,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w800,
                               fontSize: 17,
                             ),
                           ),
@@ -466,7 +466,7 @@ class _ReviewCard extends StatelessWidget {
                         '$rating.0',
                         style: GoogleFonts.anuphan(
                           fontSize: 11,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w800,
                           color: const Color(0xFF92400E),
                         ),
                       ),
@@ -675,7 +675,7 @@ class CommunityPhotosSection extends StatelessWidget {
                                 style: GoogleFonts.anuphan(
                                   color: Colors.white,
                                   fontSize: 20,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
@@ -728,7 +728,7 @@ class _ReviewBreakdownChip extends StatelessWidget {
             numberText(value),
             style: GoogleFonts.anuphan(
               fontSize: 11,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
               color: const Color(0xFF92400E),
             ),
           ),

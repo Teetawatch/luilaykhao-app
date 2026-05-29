@@ -177,7 +177,7 @@ class StickyBookingBar extends StatelessWidget {
                                       'รอบเหมา',
                                       style: GoogleFonts.anuphan(
                                         fontSize: 13,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w700,
                                         color: const Color(0xFF7C3AED),
                                       ),
                                     ),
@@ -190,8 +190,8 @@ class StickyBookingBar extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.anuphan(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: 25,
+                                  fontWeight: FontWeight.w800,
                                   color: isDark ? Colors.white : _premiumText,
                                   height: 1.1,
                                   letterSpacing: -0.6,
@@ -215,7 +215,7 @@ class StickyBookingBar extends StatelessWidget {
                                     style: GoogleFonts.anuphan(
                                       fontSize: 11,
                                       color: _softAccent,
-                                      fontWeight: FontWeight.w800,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
@@ -241,15 +241,10 @@ class StickyBookingBar extends StatelessWidget {
                         height: 50,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                _softAccent.withValues(alpha: 0.12),
-                                _softAccent.withValues(alpha: 0.06),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(18),
+                            color: _softAccent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: _softAccent.withValues(alpha: 0.25),
+                              color: _softAccent.withValues(alpha: 0.20),
                             ),
                           ),
                           child: TextButton.icon(
@@ -259,17 +254,18 @@ class StickyBookingBar extends StatelessWidget {
                             style: TextButton.styleFrom(
                               foregroundColor: _softAccent,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                             ),
-                            icon: const Icon(Icons.groups_rounded, size: 20),
+                            icon: const Icon(Icons.groups_rounded, size: 19),
                             label: Text(
                               joinTripPrice > 0
                                   ? 'จอยทริป · ${money(joinTripPrice)} / คน'
                                   : 'จอยทริป',
                               style: GoogleFonts.anuphan(
                                 fontSize: 15,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.1,
                               ),
                             ),
                           ),
@@ -314,29 +310,19 @@ class _BookingButtonState extends State<_BookingButton> {
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOutBack,
         child: Container(
-          height: 56,
+          height: 54,
           padding: const EdgeInsets.symmetric(horizontal: 22),
           decoration: BoxDecoration(
-            gradient: widget.enabled
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF059669), Color(0xFF065F46)],
-                  )
-                : null,
-            color: widget.enabled ? null : const Color(0xFFD1D5DB),
-            borderRadius: BorderRadius.circular(22),
+            color: widget.enabled
+                ? AppTheme.primaryColor
+                : const Color(0xFFD1D5DB),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: widget.enabled
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF059669).withValues(alpha: 0.40),
-                      blurRadius: 18,
-                      offset: const Offset(0, 7),
-                    ),
-                    BoxShadow(
-                      color: const Color(0xFF059669).withValues(alpha: 0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.28),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
                     ),
                   ]
                 : null,
@@ -344,13 +330,13 @@ class _BookingButtonState extends State<_BookingButton> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.bolt_rounded, size: 20, color: Colors.white),
+              const Icon(Icons.bolt_rounded, size: 19, color: Colors.white),
               const SizedBox(width: 6),
               Text(
                 'จองเลย',
                 style: GoogleFonts.anuphan(
                   fontSize: 16,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                   color: Colors.white,
                   letterSpacing: -0.2,
                 ),

@@ -55,7 +55,7 @@ class DestinationInfoSection extends StatelessWidget {
         children: [
           // ── top badge row ──────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Row(
               children: [
                 _RatingSummary(trip: trip, reviews: reviews),
@@ -68,17 +68,17 @@ class DestinationInfoSection extends StatelessWidget {
           const SizedBox(height: 16),
           // ── title ──────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               _tripTitle(trip),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.anuphan(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
+                fontSize: 25,
+                fontWeight: FontWeight.w800,
                 color: isDark ? Colors.white : _premiumText,
                 height: 1.2,
-                letterSpacing: -0.4,
+                letterSpacing: -0.5,
               ),
             ),
           ),
@@ -86,7 +86,7 @@ class DestinationInfoSection extends StatelessWidget {
           if (location.isNotEmpty) ...[
             const SizedBox(height: 10),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -125,12 +125,12 @@ class DestinationInfoSection extends StatelessWidget {
           if (chips.isNotEmpty) ...[
             const SizedBox(height: 20),
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.04)
                     : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.06)
@@ -594,7 +594,7 @@ class MustKnowSection extends StatelessWidget {
                         'สิ่งที่ควรรู้ก่อนเดินทาง',
                         style: GoogleFonts.anuphan(
                           fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w800,
                           color: isDark
                               ? const Color(0xFFF59E0B)
                               : const Color(0xFF92400E),
@@ -681,18 +681,16 @@ class PreparationsSection extends StatelessWidget {
                     width: 26,
                     height: 26,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF059669), Color(0xFF10B981)],
-                      ),
+                      color: _softAccent.withValues(alpha: isDark ? 0.18 : 0.10),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
                       child: Text(
                         '${i + 1}',
                         style: GoogleFonts.anuphan(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: _softAccent,
                         ),
                       ),
                     ),

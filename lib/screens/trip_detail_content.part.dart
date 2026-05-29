@@ -170,8 +170,10 @@ class _ItinerarySectorTile extends StatelessWidget {
       margin: EdgeInsets.only(top: index == 0 ? 0 : 10),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border(context)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -181,34 +183,23 @@ class _ItinerarySectorTile extends StatelessWidget {
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           iconColor: _softAccent,
           collapsedIconColor: _mutedText,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           collapsedShape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           leading: Container(
-            width: 40,
-            height: 40,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: grad,
-              ),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: grad[0].withValues(alpha: 0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: grad[0].withValues(alpha: isDark ? 0.20 : 0.12),
+              borderRadius: BorderRadius.circular(11),
             ),
             child: Center(
               child: Text(
                 '${index + 1}',
                 style: GoogleFonts.anuphan(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
+                  color: grad[0],
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
@@ -220,7 +211,8 @@ class _ItinerarySectorTile extends StatelessWidget {
             style: GoogleFonts.anuphan(
               color: isDark ? Colors.white : _premiumText,
               fontSize: 15,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
             ),
           ),
           subtitle: Row(
@@ -310,8 +302,8 @@ class _ItineraryTimelineItem extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.anuphan(
                         color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),

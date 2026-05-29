@@ -207,7 +207,7 @@ class _PlanStepLabel extends StatelessWidget {
               style: GoogleFonts.anuphan(
                 color: Colors.white,
                 fontSize: 11,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -633,7 +633,7 @@ class _ScheduleChip extends StatelessWidget {
               dayLabel,
               style: GoogleFonts.anuphan(
                 fontSize: 26,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w800,
                 color: fg,
                 height: 1.0,
               ),
