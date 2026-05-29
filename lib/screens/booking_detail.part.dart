@@ -156,6 +156,13 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 16),
 
+                // Departure-day weather (only present when the backend resolved
+                // a forecast for the trip's coordinates).
+                if (asMap(schedule['weather']).isNotEmpty) ...[
+                  _WeatherCard(weather: asMap(schedule['weather'])),
+                  const SizedBox(height: 16),
+                ],
+
                 // Group chat — available to members of active bookings
                 if (textOf(booking['status']) == 'pending' ||
                     textOf(booking['status']) == 'confirmed') ...[
@@ -449,7 +456,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ],
 
                 // Booking modification — เปลี่ยนวันเดินทาง / จุดรับ (ในช่วงที่อนุญาต)
-                if (_asBool(booking['can_modify'])) ...[
+                if (_asBool(booking['can_reschedule']) ||
+                    _asBool(booking['can_modify']) ||
+                    textOf(booking['rescheduled_at']).isNotEmpty) ...[
                   const SizedBox(height: 8),
                   const Divider(height: 28),
                   const _SheetSectionTitle(
@@ -458,7 +467,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'เปลี่ยนได้ถึงก่อนวันเดินทาง 1 วัน · คงราคาเดิม',
+                    'เปลี่ยนวันเดินทางได้ครั้งเดียว และต้องก่อนเดินทางอย่างน้อย 20 วัน · คงราคาเดิม',
                     style: GoogleFonts.anuphan(
                       fontSize: 12,
                       color: AppTheme.mutedText(context),
@@ -466,15 +475,38 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _openReschedule(context, booking),
-                      icon: const Icon(Icons.event_repeat_rounded),
-                      label: const Text('เปลี่ยนวันเดินทาง'),
+                  if (_asBool(booking['can_reschedule']))
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openReschedule(context, booking),
+                        icon: const Icon(Icons.event_repeat_rounded),
+                        label: const Text('เปลี่ยนวันเดินทาง'),
+                      ),
+                    )
+                  else if (textOf(booking['rescheduled_at']).isNotEmpty)
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 16,
+                          color: AppTheme.mutedText(context),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'เปลี่ยนวันเดินทางได้ครั้งเดียว · ใช้สิทธิ์ไปแล้ว',
+                            style: GoogleFonts.anuphan(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.mutedText(context),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  if (asList(schedule['pickup_points']).isNotEmpty) ...[
+                  if (_asBool(booking['can_modify']) &&
+                      asList(schedule['pickup_points']).isNotEmpty) ...[
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
@@ -556,6 +588,132 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
       _reload();
       if (context.mounted) showSnack(context, 'เปลี่ยนจุดรับสำเร็จ');
     }
+  }
+}
+
+/// Departure-day weather forecast card. Reads the `schedule['weather']` payload
+/// the backend attaches to a booking detail. Shows the condition, temperature
+/// range and rain chance, plus a coloured advisory banner when the forecast is
+/// rough — informational only; the trip still departs as scheduled.
+class _WeatherCard extends StatelessWidget {
+  final Map<String, dynamic> weather;
+
+  const _WeatherCard({required this.weather});
+
+  @override
+  Widget build(BuildContext context) {
+    final severity = textOf(weather['severity'], 'none');
+    final desc = textOf(weather['description_th']);
+    final pop = num.tryParse(weather['pop']?.toString() ?? '') ?? 0;
+    final popPercent = (pop * 100).round();
+    final tempMin = num.tryParse(weather['temp_min']?.toString() ?? '');
+    final tempMax = num.tryParse(weather['temp_max']?.toString() ?? '');
+    final code = textOf(weather['condition_code']);
+
+    final accent = switch (severity) {
+      'warning' => AppTheme.errorColor,
+      'advisory' => AppTheme.warningColor,
+      _ => AppTheme.primaryColor,
+    };
+
+    final note = switch (severity) {
+      'warning' =>
+        'อากาศไม่ค่อยดี เตรียมเสื้อกันฝน รองเท้ากันลื่น และกันน้ำให้อุปกรณ์',
+      'advisory' => 'มีโอกาสฝน เตรียมเสื้อกันฝนติดไปเผื่อไว้',
+      _ => null,
+    };
+
+    final tempText = (tempMin != null && tempMax != null)
+        ? '${tempMin.round()}–${tempMax.round()}°C'
+        : (tempMax != null ? '${tempMax.round()}°C' : null);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: AppTheme.isDark(context) ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(_iconFor(code), color: accent, size: 30),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'พยากรณ์อากาศวันเดินทาง',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    if (desc.isNotEmpty) desc,
+                    ?tempText,
+                  ].join('  ·  '),
+                  style: GoogleFonts.anuphan(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.isDark(context)
+                        ? Colors.white
+                        : AppTheme.textMain,
+                  ),
+                ),
+                Text(
+                  'โอกาสฝนตก $popPercent%',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: accent,
+                  ),
+                ),
+                if (note != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded, size: 15, color: accent),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          note,
+                          style: GoogleFonts.anuphan(
+                            fontSize: 12.5,
+                            height: 1.35,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _iconFor(String conditionCode) {
+    final group = conditionCode.isNotEmpty ? conditionCode[0] : '';
+    return switch (group) {
+      '2' => Icons.thunderstorm_rounded,
+      '3' => Icons.grain_rounded,
+      '5' => Icons.umbrella_rounded,
+      '6' => Icons.ac_unit_rounded,
+      '7' => Icons.foggy,
+      '8' => conditionCode == '800'
+          ? Icons.wb_sunny_rounded
+          : Icons.cloud_rounded,
+      _ => Icons.cloud_outlined,
+    };
   }
 }
 
@@ -2262,7 +2420,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           ),
           const SizedBox(height: 4),
           Text(
-            'เลือกรอบเดินทางใหม่ของทริปเดียวกัน · คงราคาเดิม',
+            'เลือกรอบเดินทางใหม่ของทริปเดียวกัน · เปลี่ยนได้ครั้งเดียว · คงราคาเดิม',
             style: GoogleFonts.anuphan(
               fontSize: 12.5,
               color: AppTheme.mutedText(context),
