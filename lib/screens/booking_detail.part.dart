@@ -251,6 +251,11 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   ),
                 ],
 
+                // Trip photos taken by staff (R2). Self-loading; returns
+                // an empty widget when there are no photos yet.
+                if (textOf(booking['status']) != 'cancelled')
+                  BookingPhotosSection(bookingRef: widget.bookingRef),
+
                 // Installments section
                 if (installments.isNotEmpty) ...[
                   const SizedBox(height: 16),

@@ -11,7 +11,10 @@ import 'package:provider/provider.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -39,6 +42,7 @@ part 'trip_cards.part.dart';
 part 'bookings_section.part.dart';
 part 'bookings_extras.part.dart';
 part 'booking_detail.part.dart';
+part 'booking_photos.part.dart';
 part 'auth_booking.part.dart';
 part 'package_planner.part.dart';
 part 'customer_app_helpers.part.dart';

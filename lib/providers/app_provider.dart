@@ -710,6 +710,17 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// Customer activity photos for a booking — taken by staff during the trip,
+  /// served from Cloudflare R2. Returns a list of `{id, url, sort_order, ...}`.
+  Future<List<Map<String, dynamic>>> bookingPhotos(String ref) async {
+    final response = await api.get('bookings/$ref/photos');
+    final data = api.data(response);
+    if (data is List) {
+      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return const [];
+  }
+
   /// Triggers an SOS, retrying on network/server failures with backoff.
   ///
   /// SOS must reach the server even on a weak (3G) connection, so each attempt
