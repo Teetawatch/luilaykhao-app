@@ -117,6 +117,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ],
                   ),
+                  _TrustStatsBar(app: app),
                   _CategoryChipsSection(
                     activeType: _activeType,
                     onTypeChanged: (type) {
@@ -130,6 +131,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   _PopularTripsSection(
                     trips: showTrips,
                     activeType: _activeType,
+                  ),
+                  _UpcomingDeparturesSection(app: app),
+                  _CustomerReviewsSection(
+                    reviews: app.reviews
+                        .map(asMap)
+                        .where((r) => r.isNotEmpty)
+                        .toList(),
                   ),
                   PromotionsSection(
                     promotions: app.promotions
@@ -1240,15 +1248,15 @@ class _CategoryChipsSection extends StatelessWidget {
               letterSpacing: 0.2,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 76,
+            height: 44,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
-              padding: const EdgeInsets.only(right: 20, bottom: 4),
+              padding: const EdgeInsets.only(right: 20),
               itemCount: _tripCategories.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final cat = _tripCategories[index];
                 final isSelected = activeType == cat.type;
@@ -1282,59 +1290,49 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Apple-style capsule filter chip (App Store / News / Maps language):
+    // icon + label inline, flat fill, tint to signal selection — no drop
+    // shadow, full 44pt-tall tap target.
+    const accent = Color(0xFF044C4D);
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        width: 68,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF044C4D)
-              : const Color(0xFFF0F4F4),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF044C4D).withValues(alpha: 0.28),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
+          color: isSelected ? accent : const Color(0xFFF1F4F4),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isSelected
+                ? accent
+                : const Color(0xFF0A3D46).withValues(alpha: 0.07),
+            width: 1,
+          ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.15)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                size: 20,
-                color: isSelected
-                    ? Colors.white
-                    : const Color(0xFF044C4D),
-              ),
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? Colors.white : accent,
             ),
-            const SizedBox(height: 5),
+            const SizedBox(width: 7),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.anuphan(
-                fontSize: 10,
+                fontSize: 14,
+                height: 1.0,
                 fontWeight: FontWeight.w700,
-                color: isSelected
-                    ? Colors.white
-                    : const Color(0xFF3D6363),
+                color: isSelected ? Colors.white : const Color(0xFF1C2B2B),
               ),
             ),
           ],
@@ -1402,11 +1400,13 @@ class _PopularTripsSection extends StatelessWidget {
           const SizedBox(height: 22),
           if (trips.isEmpty)
             const Padding(
-              padding: EdgeInsets.only(right: 20),
-              child: _EmptyState(
-                icon: Icons.hiking,
-                title: 'ยังไม่มีทริปที่เปิดขาย',
-                body: 'ลองรีเฟรชหรือตรวจสอบการเชื่อมต่อข้อมูล',
+              padding: EdgeInsets.only(right: 24),
+              child: Center(
+                child: _EmptyState(
+                  icon: Icons.hiking,
+                  title: 'ยังไม่มีทริปนี้',
+                  body: 'ลองรีเฟรชหรือตรวจสอบการเชื่อมต่อข้อมูล',
+                ),
               ),
             )
           else
@@ -1425,6 +1425,615 @@ class _PopularTripsSection extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Trust Stats Bar ─────────────────────────────────────────────────────────
+
+class _TrustStatsBar extends StatelessWidget {
+  final AppProvider app;
+
+  const _TrustStatsBar({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    final trips = app.trips.map(asMap).toList();
+    if (trips.isEmpty) return const SizedBox.shrink();
+
+    num ratingSum = 0;
+    var ratingTrips = 0;
+    var reviewCount = 0;
+    var travelers = 0;
+    for (final t in trips) {
+      final rc = int.tryParse('${t['review_count'] ?? 0}') ?? 0;
+      final r = num.tryParse('${t['rating'] ?? 0}') ?? 0;
+      if (rc > 0 && r > 0) {
+        ratingSum += r;
+        ratingTrips++;
+        reviewCount += rc;
+      }
+      travelers += int.tryParse('${t['confirmed_passengers_count'] ?? 0}') ?? 0;
+    }
+    final avgRating = ratingTrips > 0 ? ratingSum / ratingTrips : 0;
+
+    // Strongest available signals first; capped at the 3 best so the bar reads
+    // cleanly. License + routes are always-true fallbacks.
+    final cells = <({IconData icon, String value, String label})>[
+      if (avgRating > 0)
+        (
+          icon: Icons.star_rounded,
+          value: avgRating.toStringAsFixed(1),
+          label: 'จาก $reviewCount รีวิว',
+        ),
+      if (travelers > 0)
+        (
+          icon: Icons.groups_rounded,
+          value: '${_compactCount(travelers)}+',
+          label: 'นักเดินทาง',
+        ),
+      (
+        icon: Icons.verified_rounded,
+        value: 'ถูกต้อง',
+        label: 'ใบอนุญาตนำเที่ยว',
+      ),
+      (
+        icon: Icons.map_rounded,
+        value: '${trips.length}',
+        label: 'เส้นทางทริป',
+      ),
+    ].take(3).toList();
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF4F8F8),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: const Color(0xFF0A3D46).withValues(alpha: 0.06),
+          ),
+        ),
+        child: Row(
+          children: [
+            for (var i = 0; i < cells.length; i++) ...[
+              if (i > 0)
+                Container(
+                  width: 1,
+                  height: 34,
+                  color: const Color(0xFF0A3D46).withValues(alpha: 0.08),
+                ),
+              Expanded(child: _TrustCell(data: cells[i])),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrustCell extends StatelessWidget {
+  final ({IconData icon, String value, String label}) data;
+
+  const _TrustCell({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF044C4D);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(data.icon, size: 16, color: accent),
+            const SizedBox(width: 4),
+            Text(
+              data.value,
+              style: GoogleFonts.anuphan(
+                fontSize: 16,
+                height: 1.0,
+                fontWeight: FontWeight.w900,
+                color: accent,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(
+          data.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.anuphan(
+            fontSize: 11,
+            height: 1.0,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF5E7777),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _compactCount(int n) {
+  if (n >= 1000) {
+    final v = n / 1000;
+    return '${v.toStringAsFixed(v.truncateToDouble() == v ? 0 : 1)}k';
+  }
+  return '$n';
+}
+
+// ─── Upcoming Departures Section ─────────────────────────────────────────────
+
+const _thaiMonthsShort = [
+  '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+];
+
+class _UpcomingDeparturesSection extends StatelessWidget {
+  final AppProvider app;
+
+  const _UpcomingDeparturesSection({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    // A trip can have many rounds — treat each schedule as its own departure so
+    // every round (including the nearly-full ones) shows on the board.
+    final entries =
+        <({Map<String, dynamic> trip, Map<String, dynamic> schedule, DateTime date})>[];
+    for (final raw in app.trips) {
+      final trip = asMap(raw);
+      for (final s in asList(trip['schedules']).map(asMap)) {
+        final date = DateTime.tryParse(textOf(s['departure_date']));
+        if (date == null) continue;
+        entries.add((trip: trip, schedule: s, date: date));
+      }
+    }
+    entries.sort((a, b) => a.date.compareTo(b.date));
+    if (entries.isEmpty) return const SizedBox.shrink();
+    final shown = entries.take(6).toList();
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 4, 0, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ใกล้ออกเดินทาง',
+                        style: GoogleFonts.anuphan(
+                          color: const Color(0xFF063F46),
+                          fontSize: 22,
+                          height: 1.1,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'จองก่อนที่นั่งเต็ม',
+                        style: GoogleFonts.anuphan(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AllTripsScreen()),
+                  ),
+                  child: Text(
+                    'ดูทั้งหมด',
+                    style: GoogleFonts.anuphan(
+                      color: const Color(0xFF063F46),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 100,
+            child: ListView.separated(
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 20),
+              itemCount: shown.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final e = shown[index];
+                return _DepartureCard(
+                  trip: e.trip,
+                  schedule: e.schedule,
+                  date: e.date,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DepartureCard extends StatelessWidget {
+  final Map<String, dynamic> trip;
+  final Map<String, dynamic> schedule;
+  final DateTime date;
+
+  const _DepartureCard({
+    required this.trip,
+    required this.schedule,
+    required this.date,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = textOf(trip['title'], 'ทริป');
+    final location = textOf(trip['location']);
+    final seats = int.tryParse('${schedule['available_seats'] ?? ''}');
+    final total = int.tryParse('${schedule['total_seats'] ?? ''}');
+    final full = seats != null && seats <= 0;
+    // "ใกล้เต็ม" measured against capacity (≥70% booked) so it stays honest on
+    // both small and large trips — plus an absolute floor of ≤3 seats left.
+    final nearlyFull = seats != null &&
+        seats > 0 &&
+        (seats <= 3 || (total != null && total > 0 && seats <= total * 0.3));
+
+    final (Color badgeBg, Color badgeFg, String seatText) = full
+        ? (const Color(0xFFFDECEC), const Color(0xFFC0392B), 'เต็มแล้ว')
+        : nearlyFull
+            ? (
+                const Color(0xFFFFF1E6),
+                const Color(0xFFC2410C),
+                'เหลือ $seats ที่นั่ง',
+              )
+            : (
+                const Color(0xFFE8F3EF),
+                const Color(0xFF0B6E5A),
+                seats != null ? 'ว่าง $seats ที่นั่ง' : 'เปิดรับสมัคร',
+              );
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TripDetailScreen(
+              slug: textOf(trip['slug']),
+              initialScheduleId: int.tryParse('${schedule['id'] ?? ''}'),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 280,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFEAF0F0)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF082A30).withValues(alpha: 0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 68,
+              decoration: BoxDecoration(
+                color: const Color(0xFF044C4D),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${date.day}',
+                    style: GoogleFonts.anuphan(
+                      color: Colors.white,
+                      fontSize: 24,
+                      height: 1.0,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _thaiMonthsShort[date.month],
+                    style: GoogleFonts.anuphan(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 12,
+                      height: 1.0,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.anuphan(
+                      color: const Color(0xFF111313),
+                      fontSize: 14.5,
+                      height: 1.15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (location.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        const Icon(Icons.place_rounded,
+                            size: 13, color: Color(0xFF8A9FA0)),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.anuphan(
+                              color: const Color(0xFF6B8080),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 7),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      seatText,
+                      style: GoogleFonts.anuphan(
+                        color: badgeFg,
+                        fontSize: 11.5,
+                        height: 1.0,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Customer Reviews Section ────────────────────────────────────────────────
+
+class _CustomerReviewsSection extends StatelessWidget {
+  final List<Map<String, dynamic>> reviews;
+
+  const _CustomerReviewsSection({required this.reviews});
+
+  @override
+  Widget build(BuildContext context) {
+    if (reviews.isEmpty) return const SizedBox.shrink();
+    final items = reviews.take(8).toList();
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 4, 0, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'เสียงจากลูกทริป',
+                  style: GoogleFonts.anuphan(
+                    color: const Color(0xFF063F46),
+                    fontSize: 22,
+                    height: 1.1,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'รีวิวจริงจากผู้ที่เดินทางไปกับเรา',
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 168,
+            child: ListView.separated(
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 20),
+              itemCount: items.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) =>
+                  _HomeReviewCard(review: items[index]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeReviewCard extends StatelessWidget {
+  final Map<String, dynamic> review;
+
+  const _HomeReviewCard({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = asMap(review['user']);
+    final name = textOf(review['user_name'], textOf(user['name'], 'ลูกทริป'));
+    final avatar = ApiConfig.mediaUrl(
+        textOf(review['user_avatar'], textOf(user['avatar_url'])));
+    final rating =
+        (num.tryParse('${review['rating'] ?? 0}') ?? 0).round().clamp(0, 5);
+    final comment = textOf(review['comment']).trim();
+    final tripTitle = textOf(review['trip_title']).trim();
+    final initial = name.isNotEmpty ? name.characters.first.toUpperCase() : '?';
+
+    return Container(
+      width: 300,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFA),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEAF0F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                clipBehavior: Clip.antiAlias,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF044C4D),
+                  shape: BoxShape.circle,
+                ),
+                child: avatar.isNotEmpty
+                    ? Image.network(
+                        avatar,
+                        width: 38,
+                        height: 38,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _avatarInitial(initial),
+                      )
+                    : _avatarInitial(initial),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        color: const Color(0xFF111313),
+                        fontSize: 14,
+                        height: 1.1,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        for (var i = 0; i < 5; i++)
+                          Icon(
+                            i < rating
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 13,
+                            color: const Color(0xFFE8A117),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Text(
+              comment.isNotEmpty ? comment : 'ประทับใจการเดินทางกับเรา',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.anuphan(
+                color: const Color(0xFF44595A),
+                fontSize: 13,
+                height: 1.45,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          if (tripTitle.isNotEmpty && tripTitle != '-') ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.hiking_rounded,
+                    size: 14, color: Color(0xFF0B6E5A)),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    tripTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.anuphan(
+                      color: const Color(0xFF0B6E5A),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _avatarInitial(String initial) {
+    return Text(
+      initial,
+      style: GoogleFonts.anuphan(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
       ),
     );
   }
