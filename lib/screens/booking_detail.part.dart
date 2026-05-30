@@ -1081,6 +1081,19 @@ class _PreTripBriefingCard extends StatelessWidget {
                             height: 1.4,
                           ),
                         ),
+                        if (textOf(pickupPoint['image_url']).trim().isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              textOf(pickupPoint['image_url']).trim(),
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                            ),
+                          ),
+                        ],
                         if (textOf(pickupPoint['notes']).isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
@@ -2777,6 +2790,20 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                   : AppTheme.mutedText(context),
                             ),
                             const SizedBox(width: 12),
+                            if (textOf(p['image_url']).trim().isNotEmpty) ...[
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.network(
+                                  textOf(p['image_url']).trim(),
+                                  width: 48,
+                                  height: 48,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) =>
+                                      const SizedBox.shrink(),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                            ],
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

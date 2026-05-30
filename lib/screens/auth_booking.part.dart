@@ -537,6 +537,46 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                       },
                     ),
             ),
+            if (currentSchedule != null && selectedRegion != null)
+              Builder(
+                builder: (context) {
+                  final points = asList(currentSchedule['pickup_points'])
+                      .map(asMap)
+                      .where((p) => pickupRegionKey(p) == selectedRegion.key)
+                      .toList();
+                  if (points.isEmpty) return const SizedBox.shrink();
+                  final selected = points.firstWhere(
+                    (p) =>
+                        int.tryParse(p['id'].toString()) ==
+                        _selectedPickupPointId,
+                    orElse: () => points.first,
+                  );
+                  final imageUrl = textOf(selected['image_url']).trim();
+                  if (imageUrl.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        imageUrl,
+                        height: 160,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            height: 160,
+                            alignment: Alignment.center,
+                            color: AppTheme.subtleSurface(context),
+                            child: const CircularProgressIndicator(strokeWidth: 2),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
             if (currentSchedule != null && selectedRegion != null) ...[
               const SizedBox(height: 8),
               _SchedulePickupDetailToggle(
