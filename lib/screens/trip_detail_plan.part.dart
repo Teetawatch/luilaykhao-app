@@ -791,6 +791,12 @@ class _PickupPointSelector extends StatelessWidget {
         return aOrder.compareTo(bOrder);
       });
 
+    final selected = sorted.firstWhere(
+      (p) => int.tryParse(p['id'].toString()) == selectedId,
+      orElse: () => const <String, dynamic>{},
+    );
+    final selectedImage = ApiConfig.mediaUrl(selected['image_url']);
+
     return Column(
       children: [
         for (int i = 0; i < sorted.length; i++) ...[
@@ -802,6 +808,25 @@ class _PickupPointSelector extends StatelessWidget {
                 onChanged(int.tryParse(sorted[i]['id'].toString())),
           ),
           if (i < sorted.length - 1) const SizedBox(height: 8),
+        ],
+        if (selectedImage.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: CachedNetworkImage(
+              imageUrl: selectedImage,
+              height: 170,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (context, _) => Container(
+                height: 170,
+                alignment: Alignment.center,
+                color: AppTheme.subtleSurface(context),
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              ),
+              errorWidget: (_, _, _) => const SizedBox.shrink(),
+            ),
+          ),
         ],
       ],
     );

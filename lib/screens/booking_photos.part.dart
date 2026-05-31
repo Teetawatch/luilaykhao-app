@@ -35,16 +35,13 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
         if (snap.connectionState == ConnectionState.waiting) {
           return const SizedBox.shrink();
         }
-        if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
-          return const SizedBox.shrink();
-        }
 
-        final photos = snap.data!;
+        final photos = snap.data ?? const <Map<String, dynamic>>[];
         final urls = photos
             .map((p) => ApiConfig.mediaUrl(p['url'] ?? p['path']))
             .where((u) => u.isNotEmpty)
             .toList();
-        if (urls.isEmpty) return const SizedBox.shrink();
+        if (urls.isEmpty) return _buildEmptyState(context);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,6 +141,88 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const _SheetSectionTitle(
+          icon: Icons.photo_camera_back_rounded,
+          title: 'ภาพจากทริป',
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+          decoration: BoxDecoration(
+            color: AppTheme.subtleSurface(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.6),
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppTheme.accentColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.photo_library_outlined,
+                  size: 24,
+                  color: AppTheme.accentColor,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'รูปจากทริปจะขึ้นที่นี่หลังทีมงานอัปโหลด',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.anuphan(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'ทีมงานจะอัปโหลดภาพกิจกรรมให้หลังจบทริป กลับมาเช็กได้ที่นี่ภายหลัง',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.anuphan(
+                  fontSize: 12.5,
+                  height: 1.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: _reload,
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: Text(
+                  'เช็กอีกครั้ง',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.accentColor,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

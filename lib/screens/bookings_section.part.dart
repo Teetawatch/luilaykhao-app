@@ -808,6 +808,13 @@ class ReservationCard extends StatelessWidget {
                   _BookingMetaStrip(booking: booking),
                   const SizedBox(height: 12),
 
+                  // Vehicle & driver strip (when assigned and still active)
+                  if (!isCancelled &&
+                      _hasVehicleInfo(asMap(schedule['vehicle']))) ...[
+                    _VehicleDriverStrip(vehicle: asMap(schedule['vehicle'])),
+                    const SizedBox(height: 12),
+                  ],
+
                   // Payment status
                   _PaymentStatusRow(
                     booking: booking,
@@ -934,6 +941,66 @@ class _MetaStripItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Vehicle & Driver Strip (card) ────────────────────────────────────────────
+
+class _VehicleDriverStrip extends StatelessWidget {
+  final Map<String, dynamic> vehicle;
+
+  const _VehicleDriverStrip({required this.vehicle});
+
+  @override
+  Widget build(BuildContext context) {
+    final plate = textOf(vehicle['license_plate']).trim();
+    final color = textOf(vehicle['color']).trim();
+    final driverName = textOf(vehicle['driver_name']).trim();
+    final driverPhone = textOf(vehicle['driver_phone']).trim();
+
+    final parts = <String>[
+      if (plate.isNotEmpty) plate,
+      if (color.isNotEmpty) color,
+      if (driverName.isNotEmpty) 'คนขับ $driverName',
+    ];
+    final summary = parts.join(' · ');
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.7),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.airport_shuttle_rounded,
+            size: 16,
+            color: AppTheme.primaryColor,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              summary.isEmpty ? 'รถรับส่งประจำรอบ' : summary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppTheme.onSurface(context),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          if (driverPhone.isNotEmpty) ...[
+            const SizedBox(width: 6),
+            _CallButton(phone: driverPhone),
+          ],
+        ],
+      ),
     );
   }
 }

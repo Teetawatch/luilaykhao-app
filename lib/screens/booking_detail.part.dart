@@ -253,6 +253,18 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   );
                 }),
 
+                // Vehicle & driver section
+                if (textOf(booking['status']) != 'cancelled' &&
+                    _hasVehicleInfo(asMap(schedule['vehicle']))) ...[
+                  const SizedBox(height: 16),
+                  const _SheetSectionTitle(
+                    icon: Icons.directions_car_rounded,
+                    title: 'รถและคนขับ',
+                  ),
+                  const SizedBox(height: 10),
+                  _VehicleDriverCard(vehicle: asMap(schedule['vehicle'])),
+                ],
+
                 // Assigned staff section
                 if (asList(booking['assigned_staff']).isNotEmpty) ...[
                   const SizedBox(height: 16),
@@ -1081,16 +1093,17 @@ class _PreTripBriefingCard extends StatelessWidget {
                             height: 1.4,
                           ),
                         ),
-                        if (textOf(pickupPoint['image_url']).trim().isNotEmpty) ...[
+                        if (ApiConfig.mediaUrl(pickupPoint['image_url']).isNotEmpty) ...[
                           const SizedBox(height: 8),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              textOf(pickupPoint['image_url']).trim(),
+                            child: CachedNetworkImage(
+                              imageUrl:
+                                  ApiConfig.mediaUrl(pickupPoint['image_url']),
                               height: 150,
                               width: double.infinity,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                              errorWidget: (_, _, _) => const SizedBox.shrink(),
                             ),
                           ),
                         ],
@@ -2263,6 +2276,285 @@ class _AssignedStaffList extends StatelessWidget {
   }
 }
 
+bool _hasVehicleInfo(Map<String, dynamic> vehicle) {
+  return textOf(vehicle['license_plate']).trim().isNotEmpty ||
+      textOf(vehicle['color']).trim().isNotEmpty ||
+      textOf(vehicle['driver_name']).trim().isNotEmpty ||
+      textOf(vehicle['driver_phone']).trim().isNotEmpty;
+}
+
+class _VehicleDriverCard extends StatelessWidget {
+  final Map<String, dynamic> vehicle;
+
+  const _VehicleDriverCard({required this.vehicle});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = textOf(vehicle['name']).trim();
+    final type = textOf(vehicle['type']).trim();
+    final plate = textOf(vehicle['license_plate']).trim();
+    final color = textOf(vehicle['color']).trim();
+    final driverName = textOf(vehicle['driver_name']).trim();
+    final driverPhone = textOf(vehicle['driver_phone']).trim();
+    final hasDriver = driverName.isNotEmpty || driverPhone.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.7),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Vehicle row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.airport_shuttle_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name.isNotEmpty
+                          ? name
+                          : (type.isNotEmpty ? type : 'รถรับส่ง'),
+                      style: GoogleFonts.anuphan(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    if (plate.isNotEmpty || color.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          if (plate.isNotEmpty) _PlateChip(plate: plate),
+                          if (color.isNotEmpty) _ColorChip(color: color),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // Driver row
+          if (hasDriver) ...[
+            const SizedBox(height: 12),
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: AppTheme.border(context).withValues(alpha: 0.6),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.person_rounded,
+                  size: 18,
+                  color: AppTheme.mutedText(context),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'คนขับ',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                      Text(
+                        driverName.isNotEmpty ? driverName : '-',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (driverPhone.isNotEmpty)
+                  _CallButton(phone: driverPhone),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PlateChip extends StatelessWidget {
+  final String plate;
+
+  const _PlateChip({required this.plate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppTheme.border(context),
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.pin_rounded,
+            size: 13,
+            color: AppTheme.mutedText(context),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            plate,
+            style: GoogleFonts.anuphan(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+              color: AppTheme.onSurface(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ColorChip extends StatelessWidget {
+  final String color;
+
+  const _ColorChip({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final swatch = _swatchFor(color);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.border(context)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: swatch,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppTheme.border(context),
+                width: 0.8,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            color,
+            style: GoogleFonts.anuphan(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.onSurface(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Best-effort mapping of common Thai/English colour names to a swatch.
+  static Color? _swatchFor(String raw) {
+    final c = raw.toLowerCase();
+    bool has(List<String> keys) => keys.any(c.contains);
+    if (has(['ขาว', 'white'])) return const Color(0xFFF8FAFC);
+    if (has(['ดำ', 'black'])) return const Color(0xFF1F2937);
+    if (has(['เทา', 'gray', 'grey', 'silver', 'เงิน'])) {
+      return const Color(0xFF9CA3AF);
+    }
+    if (has(['แดง', 'red'])) return const Color(0xFFEF4444);
+    if (has(['น้ำเงิน', 'ฟ้า', 'blue'])) return const Color(0xFF3B82F6);
+    if (has(['เขียว', 'green'])) return const Color(0xFF10B981);
+    if (has(['เหลือง', 'yellow'])) return const Color(0xFFF59E0B);
+    if (has(['ส้ม', 'orange'])) return const Color(0xFFF97316);
+    if (has(['น้ำตาล', 'brown'])) return const Color(0xFF92400E);
+    if (has(['ทอง', 'gold', 'แชมเปญ', 'champagne', 'บรอนซ์', 'bronze'])) {
+      return const Color(0xFFD4AF37);
+    }
+    return null;
+  }
+}
+
+class _CallButton extends StatelessWidget {
+  final String phone;
+
+  const _CallButton({required this.phone});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.primaryColor,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () async {
+          final uri = Uri(scheme: 'tel', path: phone);
+          if (await canLaunchUrl(uri)) await launchUrl(uri);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.call_rounded, size: 16, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(
+                'โทร',
+                style: GoogleFonts.anuphan(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StaffAvatar extends StatelessWidget {
   final String url;
   final String name;
@@ -2790,15 +3082,15 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                   : AppTheme.mutedText(context),
                             ),
                             const SizedBox(width: 12),
-                            if (textOf(p['image_url']).trim().isNotEmpty) ...[
+                            if (ApiConfig.mediaUrl(p['image_url']).isNotEmpty) ...[
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: Image.network(
-                                  textOf(p['image_url']).trim(),
+                                child: CachedNetworkImage(
+                                  imageUrl: ApiConfig.mediaUrl(p['image_url']),
                                   width: 48,
                                   height: 48,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) =>
+                                  errorWidget: (_, _, _) =>
                                       const SizedBox.shrink(),
                                 ),
                               ),

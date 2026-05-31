@@ -551,27 +551,24 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                         _selectedPickupPointId,
                     orElse: () => points.first,
                   );
-                  final imageUrl = textOf(selected['image_url']).trim();
+                  final imageUrl = ApiConfig.mediaUrl(selected['image_url']);
                   if (imageUrl.isEmpty) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        imageUrl,
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl,
                         height: 160,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return Container(
-                            height: 160,
-                            alignment: Alignment.center,
-                            color: AppTheme.subtleSurface(context),
-                            child: const CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        },
+                        errorWidget: (_, _, _) => const SizedBox.shrink(),
+                        placeholder: (context, _) => Container(
+                          height: 160,
+                          alignment: Alignment.center,
+                          color: AppTheme.subtleSurface(context),
+                          child: const CircularProgressIndicator(strokeWidth: 2),
+                        ),
                       ),
                     ),
                   );
