@@ -1206,6 +1206,8 @@ class AppProvider extends ChangeNotifier {
     );
     await loadPublicData();
     await loadMyReviews();
+    // รีโหลดรายการจองด้วย เพื่อให้ can_review อัปเดต (ปุ่มรีวิวหายหลังรีวิวแล้ว)
+    await loadAccountData();
     await AnalyticsService.instance.logReviewSubmitted(bookingId, rating);
     if (rating >= 4) {
       unawaited(RatingPromptService.instance.maybeRequest());

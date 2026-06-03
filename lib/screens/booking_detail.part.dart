@@ -456,9 +456,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   ),
                 ],
 
-                // Review CTA — not offered for trips that have already passed.
-                if (_asBool(booking['can_review']) &&
-                    !_isPastBooking(booking)) ...[
+                // Review CTA — available once the trip is over (backend gates
+                // via can_review: confirmed + after the last day, not yet reviewed).
+                if (_asBool(booking['can_review'])) ...[
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
@@ -561,6 +561,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
       );
       if (context.mounted) {
         showSnack(context, 'ส่งรีวิวแล้ว ขอบคุณที่ช่วยแชร์ประสบการณ์');
+        _reload(); // refetch — can_review flips to false once reviewed
       }
     } catch (e) {
       if (context.mounted) showSnack(context, e.toString());
@@ -1514,15 +1515,21 @@ bool _isTripFinished(Map<String, dynamic> schedule) {
   return today.isAfter(end);
 }
 
-/// True when today falls between the schedule's departure and return dates
-/// (inclusive). The SOS button is only shown inside this window.
+/// True when today falls within the SOS window: from one day before the
+/// schedule's departure through the return date (inclusive). The SOS button is
+/// shown a day early so travellers can reach help while heading to the pickup.
 bool _isWithinTripWindow(Map<String, dynamic> schedule) {
   final dep = DateTime.tryParse(textOf(schedule['departure_date']));
   if (dep == null) return false;
   final ret = DateTime.tryParse(textOf(schedule['return_date'])) ?? dep;
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
-  final start = DateTime(dep.year, dep.month, dep.day);
+  // เปิด SOS ตั้งแต่ 1 วันก่อนเดินทาง
+  final start = DateTime(
+    dep.year,
+    dep.month,
+    dep.day,
+  ).subtract(const Duration(days: 1));
   final end = DateTime(ret.year, ret.month, ret.day);
   return !today.isBefore(start) && !today.isAfter(end);
 }

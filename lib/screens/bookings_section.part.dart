@@ -741,8 +741,8 @@ class ReservationCard extends StatelessWidget {
                       child: _CountdownPill(booking: booking),
                     ),
                   ),
-                  // Past, completed trips: a gentle farewell instead of a
-                  // review prompt — these trips can no longer be reviewed.
+                  // Past, completed trips: a gentle farewell banner over the
+                  // header image. Reviewing is offered via the CTA in the body.
                   if (isPast && !isCancelled)
                     Positioned.fill(
                       child: Container(
@@ -838,7 +838,20 @@ class ReservationCard extends StatelessWidget {
                   // Action deck (chat, SOS, pre-trip briefing, reschedule)
                   _BookingActionDeck(booking: booking),
 
-                  // Refund CTA (past trips are no longer reviewable)
+                  // Review CTA — finished trips can be reviewed until done once.
+                  if (_asBool(booking['can_review'])) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openDetail(context, bookingRef),
+                        icon: const Icon(Icons.star_rounded, size: 18),
+                        label: const Text('รีวิวทริปนี้'),
+                      ),
+                    ),
+                  ],
+
+                  // Refund CTA
                   _RefundStatusCallToAction(booking: booking),
                 ],
               ),
