@@ -32,6 +32,7 @@ import 'profile_screen.dart' show ProfileScreen, ContactUsScreen, NotificationsS
 import 'guest_booking_lookup_screen.dart';
 import 'staff_check_in_screen.dart';
 import 'chat_screen.dart';
+import 'join_booking_screen.dart';
 import 'pre_trip_checklist_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 import '../services/checklist_storage.dart';

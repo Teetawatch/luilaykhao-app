@@ -350,6 +350,307 @@ class _TripChatButton extends StatelessWidget {
   }
 }
 
+/// "สมาชิกในการจอง" — เจ้าของเชิญเพื่อนเข้าการจองเดียวกันเพื่อให้เพื่อนเข้า
+/// กลุ่มแชทและติดตามรถได้จากบัญชีของตัวเอง โดยไม่ต้องแยกการจอง/แยกจ่ายเงิน
+class _BookingMembersSection extends StatefulWidget {
+  final Map<String, dynamic> booking;
+
+  const _BookingMembersSection({required this.booking});
+
+  @override
+  State<_BookingMembersSection> createState() => _BookingMembersSectionState();
+}
+
+class _BookingMembersSectionState extends State<_BookingMembersSection> {
+  bool _loading = true;
+  bool _busy = false;
+  Map<String, dynamic>? _roster;
+
+  String get _ref => textOf(widget.booking['booking_ref']);
+  bool get _isOwner => widget.booking['viewer_is_owner'] == true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await context.read<AppProvider>().bookingMembers(_ref);
+      if (!mounted) return;
+      setState(() {
+        _roster = data;
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _invite() async {
+    final label = await _askLabel();
+    if (label == null || !mounted) return; // ยกเลิก
+    setState(() => _busy = true);
+    try {
+      final data = await context.read<AppProvider>().createBookingInvite(
+        _ref,
+        label: label.isEmpty ? null : label,
+      );
+      await _shareInvite(data);
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<String?> _askLabel() {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('เชิญเพื่อน', style: GoogleFonts.anuphan(fontWeight: FontWeight.w800)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ตั้งชื่อเล่นให้คำเชิญนี้ (ไม่บังคับ) แล้วส่งลิงก์ให้เพื่อน '
+              'เพื่อนกดเข้าร่วมด้วยบัญชีของตัวเองได้ทุกวิธีล็อกอิน',
+              style: GoogleFonts.anuphan(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'เช่น บอม, พี่หนึ่ง',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('สร้างลิงก์เชิญ'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _shareInvite(Map<String, dynamic> data) async {
+    final schedule = asMap(widget.booking['schedule']);
+    final trip = asMap(schedule['trip']);
+    final title = textOf(trip['title'], 'ทริป');
+    final token = textOf(data['invite_token']);
+    final url = textOf(data['invite_url']);
+    final text =
+        'มาลุยทริป "$title" ด้วยกัน! 🏞️\n'
+        'เปิดแอปลุยเลเขา > การจองของฉัน > ปุ่มเข้าร่วม แล้ววางรหัสนี้:\n$token'
+        '${url.isEmpty ? '' : '\n\nหรือลิงก์: $url'}';
+    try {
+      await SharePlus.instance.share(ShareParams(text: text, subject: title));
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('คัดลอกลิงก์ชวนเพื่อนแล้ว')),
+        );
+      }
+    }
+  }
+
+  Future<void> _revoke(int memberId) async {
+    setState(() => _busy = true);
+    try {
+      await context.read<AppProvider>().revokeBookingMember(_ref, memberId);
+      await _load();
+    } catch (_) {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final roster = _roster;
+    final members = roster == null ? const [] : asList(roster['members']);
+    final canInviteMore = roster?['can_invite_more'] == true;
+    final owner = roster == null ? null : asMap(roster['owner']);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SheetSectionTitle(
+          icon: Icons.diversity_3_rounded,
+          title: 'สมาชิกในการจอง',
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'เชิญเพื่อนร่วมเดินทางเข้าการจองนี้ เพื่อนจะเข้ากลุ่มแชทและติดตามรถ '
+          'ได้จากบัญชีของตัวเอง (ใช้การจองและการชำระเงินใบเดียวกัน)',
+          style: GoogleFonts.anuphan(
+            fontSize: 12.5,
+            color: AppTheme.mutedText(context),
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else ...[
+          if (owner != null && owner.isNotEmpty)
+            _MemberTile(
+              name: textOf(owner['nickname']).isNotEmpty
+                  ? textOf(owner['nickname'])
+                  : textOf(owner['name'], 'เจ้าของการจอง'),
+              subtitle: 'เจ้าของการจอง',
+              statusColor: AppTheme.primaryColor,
+            ),
+          ...members.map((m) {
+            final member = asMap(m);
+            final user = asMap(member['user']);
+            final isActive = textOf(member['status']) == 'active';
+            final name = textOf(user['nickname']).isNotEmpty
+                ? textOf(user['nickname'])
+                : textOf(user['name']).isNotEmpty
+                ? textOf(user['name'])
+                : textOf(member['invite_label']).isNotEmpty
+                ? textOf(member['invite_label'])
+                : textOf(member['passenger_name'], 'เพื่อนที่ถูกเชิญ');
+            return _MemberTile(
+              name: name,
+              subtitle: isActive ? 'เข้าร่วมแล้ว' : 'รอเข้าร่วม',
+              statusColor: isActive ? Colors.green : Colors.orange,
+              onRemove: _isOwner && !_busy
+                  ? () => _revoke(int.tryParse(textOf(member['id'])) ?? 0)
+                  : null,
+            );
+          }),
+          if (_isOwner) ...[
+            const SizedBox(height: 8),
+            if (canInviteMore)
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _invite,
+                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                label: const Text('เชิญเพื่อน'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(46),
+                ),
+              )
+            else
+              Text(
+                'เชิญสมาชิกครบตามจำนวนผู้เดินทางแล้ว',
+                style: GoogleFonts.anuphan(
+                  fontSize: 12,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _MemberTile extends StatelessWidget {
+  final String name;
+  final String subtitle;
+  final Color statusColor;
+  final VoidCallback? onRemove;
+
+  const _MemberTile({
+    required this.name,
+    required this.subtitle,
+    required this.statusColor,
+    this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.subtleSurface(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.border(context).withValues(alpha: 0.6),
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: statusColor.withValues(alpha: 0.12),
+              child: Icon(Icons.person_rounded, size: 17, color: statusColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.anuphan(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13.5,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.anuphan(
+                      fontSize: 11.5,
+                      color: statusColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (onRemove != null)
+              IconButton(
+                tooltip: 'นำออก',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: AppTheme.mutedText(context),
+                ),
+                onPressed: onRemove,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Surfaces a booking's key actions directly on the reservation card so the
 /// most-used flows are reachable without opening the detail sheet. Each item
 /// is gated by booking status / trip-time window.

@@ -55,6 +55,15 @@ class ApiEndpoints {
   static String bookingChangePickup(String ref) =>
       'bookings/$ref/change-pickup';
 
+  // Booking members / companion invites (เชิญเพื่อนเข้าการจองเดียวกัน)
+  static String bookingMembers(String ref) => 'bookings/$ref/members';
+  static String bookingInvites(String ref) => 'bookings/$ref/invites';
+  static String bookingMember(String ref, int id) =>
+      'bookings/$ref/members/$id';
+  static String bookingInvite(String token) => 'booking-invites/$token';
+  static String bookingInviteAccept(String token) =>
+      'booking-invites/$token/accept';
+
   // Payments
   static const paymentsCharge = 'payments/charge';
   static const paymentsChargeBalance = 'payments/charge-balance';

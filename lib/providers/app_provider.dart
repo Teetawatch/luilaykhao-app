@@ -872,6 +872,46 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  // ─── Booking members / companion invites ───────────────────────────────
+
+  /// รายชื่อสมาชิกของการจอง (เจ้าของ + เพื่อนที่ถูกเชิญ/รับแล้ว)
+  Future<Map<String, dynamic>> bookingMembers(String ref) async {
+    final response = await api.get(ApiEndpoints.bookingMembers(ref));
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// เจ้าของสร้างคำเชิญหนึ่งใบ — คืน invite_token + invite_url สำหรับส่งต่อ
+  Future<Map<String, dynamic>> createBookingInvite(
+    String ref, {
+    int? passengerId,
+    String? label,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.bookingInvites(ref),
+      body: {'passenger_id': ?passengerId, 'label': ?label},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// เจ้าของนำสมาชิกออกหรือยกเลิกคำเชิญ
+  Future<void> revokeBookingMember(String ref, int memberId) async {
+    await api.delete(ApiEndpoints.bookingMember(ref, memberId));
+  }
+
+  /// พรีวิวคำเชิญก่อนกดรับ (ผูกจาก user ที่ล็อกอินอยู่ ไม่ว่าจะล็อกอินด้วยวิธีใด)
+  Future<Map<String, dynamic>> previewBookingInvite(String token) async {
+    final response = await api.get(ApiEndpoints.bookingInvite(token));
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// รับคำเชิญ แล้วรีโหลดรายการจองให้เห็นทริปที่เพิ่งเข้าร่วม
+  Future<Map<String, dynamic>> acceptBookingInvite(String token) async {
+    final response = await api.post(ApiEndpoints.bookingInviteAccept(token));
+    final data = Map<String, dynamic>.from(api.data(response) as Map);
+    await loadAccountData();
+    return data;
+  }
+
   // ─── Group chat ─────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> chatMessages(

@@ -61,6 +61,18 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                   letterSpacing: -0.2,
                 ),
               ),
+              actions: [
+                IconButton(
+                  tooltip: 'เข้าร่วมการจองของเพื่อน',
+                  icon: const Icon(Icons.group_add_rounded),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const JoinBookingScreen(),
+                    ),
+                  ),
+                ),
+              ],
             ),
             SliverPadding(
               padding: EdgeInsets.fromLTRB(

@@ -6,6 +6,7 @@ import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../screens/chat_screen.dart';
 import '../screens/group_room_screen.dart';
+import '../screens/join_booking_screen.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/sos_alert_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
@@ -153,6 +154,8 @@ class NotificationNavigator {
 
   static void goToProfile() => _switchTab(3);
 
+  static void goToBookings() => _switchTab(2);
+
   // ignore: prefer_function_declarations_over_variables
   static void Function(int) _switchTab = (_) {};
 
@@ -180,8 +183,23 @@ class NotificationNavigator {
         if (code == null) return false;
         _openGroup(code);
         return true;
+      case 'join':
+        final token = _firstSegment(uri.pathSegments);
+        if (token == null) return false;
+        _openJoinBooking(token);
+        return true;
     }
     return false;
+  }
+
+  static void _openJoinBooking(String token) {
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => JoinBookingScreen(initialToken: token),
+        ),
+      ),
+    );
   }
 
   static void _openGroup(String code) {

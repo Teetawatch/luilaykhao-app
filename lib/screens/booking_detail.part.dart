@@ -168,6 +168,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     textOf(booking['status']) == 'confirmed') ...[
                   _TripChatButton(booking: booking),
                   const SizedBox(height: 16),
+                  // Companion invites — เชิญเพื่อนเข้าการจองเดียวกัน
+                  _BookingMembersSection(booking: booking),
+                  const SizedBox(height: 16),
                 ],
 
                 // Passengers section

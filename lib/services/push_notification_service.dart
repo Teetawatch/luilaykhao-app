@@ -25,10 +25,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       }
     }
 
-    // SOS now arrives as a notification message on the loud `sos_emergency_v2`
-    // channel, which the Android system displays (with siren + vibration) on its
-    // own even when killed. Only fall back to a local notification here for a
-    // data-only SOS (no notification block) so we never show a duplicate.
+    // SOS is delivered DATA-ONLY on Android (no `notification` block) so we
+    // build the alert here ourselves: a fullScreenIntent notification on the
+    // loud alarm-usage channel that plays the siren + vibration and wakes the
+    // screen even when the app is killed. A system-displayed FCM notification
+    // can't set fullScreenIntent/category=alarm and so posts silently, which is
+    // why Android SOS was inaudible until tapped.
     if (message.data['type'] == 'sos_alert' &&
         message.notification == null &&
         defaultTargetPlatform == TargetPlatform.android) {
@@ -180,6 +182,16 @@ class PushNotificationService {
       debugPrint('[FCM] foreground presentation options set');
 
       FirebaseMessaging.onMessage.listen((message) {
+        // SOS arrives data-only on Android (and as an apns alert on iOS), so it
+        // has no `notification` block to drive _showForegroundNotification.
+        // Handle it up front so the looping siren fires regardless of platform.
+        if (message.data['type']?.toString() == 'sos_alert') {
+          final senderName =
+              message.data['sos_user_name']?.toString() ?? 'เพื่อนร่วมทริป';
+          SosAlarmService.instance.start(senderName: senderName);
+          _onRefreshRequested?.call();
+          return;
+        }
         _showForegroundNotification(message);
         _fireForegroundCallback(message);
         _onRefreshRequested?.call();
@@ -383,14 +395,8 @@ class PushNotificationService {
     final notification = message.notification;
     if (notification == null) return;
 
-    // SOS arriving while the app is foregrounded: fire the loud, looping
-    // siren on every platform so it cannot be missed.
-    if (message.data['type']?.toString() == 'sos_alert') {
-      final senderName =
-          message.data['sos_user_name']?.toString() ?? 'เพื่อนร่วมทริป';
-      await SosAlarmService.instance.start(senderName: senderName);
-      return;
-    }
+    // SOS (type 'sos_alert') is handled in the onMessage listener before this
+    // runs, so it never reaches here.
 
     // iOS already shows the banner via setForegroundNotificationPresentationOptions.
     if (defaultTargetPlatform == TargetPlatform.iOS) return;
