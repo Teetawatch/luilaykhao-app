@@ -35,6 +35,7 @@ class NotificationNavigator {
       case 'weather_alert':
       case 'vehicle_departed':
       case 'vehicle_approaching':
+      case 'review_invite':
         _openBookingDetail(data);
       case 'seat_alert':
         _switchTab(2);
