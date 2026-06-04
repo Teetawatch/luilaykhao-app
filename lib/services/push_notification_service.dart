@@ -206,7 +206,13 @@ class PushNotificationService {
       debugPrint('[FCM] initialization complete ✓');
 
       // App launched by tapping an FCM notification (killed state).
-      final initialMessage = await _messaging.getInitialMessage();
+      // iOS resolves this only once an APNs token is available, which can take
+      // a moment (or never arrive if APNs registration stalls). Cap the wait so
+      // initialize() always completes — a missed cold-start tap is acceptable,
+      // a permanently pending init future is not.
+      final initialMessage = await _messaging
+          .getInitialMessage()
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
       if (initialMessage != null) {
         _handleNotificationTap(initialMessage.data);
         _onRefreshRequested?.call();

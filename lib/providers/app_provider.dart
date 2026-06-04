@@ -144,10 +144,25 @@ class AppProvider extends ChangeNotifier {
     _hydrateFromCache();
     notifyListeners();
     _initDeepLinks();
-    await PushNotificationService.instance.initialize(
-      onRefreshRequested: () {
-        if (isLoggedIn) loadAccountData();
-      },
+    // Push init must NOT block the first data load. On iOS real devices the
+    // APNs-dependent calls inside initialize() (getInitialMessage / the
+    // permission prompt) can stall until APNs registration completes, whereas
+    // on the simulator they return instantly because there's no APNs. That
+    // discrepancy is why TestFlight builds showed no data while the simulator
+    // worked: loadPublicData() below was sequenced after this await. Fire it
+    // unawaited and sync the FCM token once it finishes.
+    unawaited(
+      PushNotificationService.instance
+          .initialize(
+            onRefreshRequested: () {
+              if (isLoggedIn) loadAccountData();
+            },
+          )
+          .then((_) {
+            if (isLoggedIn) {
+              unawaited(PushNotificationService.instance.syncToken(api));
+            }
+          }),
     );
     try {
       await Future.wait([loadPublicData(), if (isLoggedIn) refreshMe()]);
@@ -155,7 +170,6 @@ class AppProvider extends ChangeNotifier {
         await loadAccountData();
         await loadActiveSeatLocks();
         startActiveSeatLockPolling();
-        await PushNotificationService.instance.syncToken(api);
         await _bindUserChannel();
       }
     } catch (e) {
@@ -324,30 +338,48 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> loadPublicData({String? search, String? type}) async {
+    // แต่ละ endpoint แยกกันด้วย safe() — ถ้าตัวใดพัง (timeout/สะดุด) จะไม่ทำให้
+    // ตัวอื่นหายไปทั้งหมด โดยเฉพาะรายการทริปหน้าแรก (เคยเป็น Future.wait แบบ
+    // fail-fast ที่ทำให้ทั้งหน้าว่างเมื่อมี endpoint เดียว error)
+    Future<dynamic> safe(Future<dynamic> f) => f.catchError((_) => null);
+
     final results = await Future.wait([
-      api.get(
+      safe(api.get(
         ApiEndpoints.trips,
         query: {'per_page': 30, 'search': search, 'type': type},
-      ),
-      api.get(ApiEndpoints.tripsFeatured),
-      api.get(ApiEndpoints.categories),
-      api.get(ApiEndpoints.reviews, query: {'per_page': 8}),
-      api.get(ApiEndpoints.stats),
-      api.get(ApiEndpoints.promotionsActive),
+      )),
+      safe(api.get(ApiEndpoints.tripsFeatured)),
+      safe(api.get(ApiEndpoints.categories)),
+      safe(api.get(ApiEndpoints.reviews, query: {'per_page': 8})),
+      safe(api.get(ApiEndpoints.stats)),
+      safe(api.get(ApiEndpoints.promotionsActive)),
     ]);
-    trips = List<dynamic>.from(api.data(results[0]) ?? []);
-    featuredTrips = List<dynamic>.from(api.data(results[1]) ?? []);
-    categories = List<dynamic>.from(api.data(results[2]) ?? []);
-    reviews = List<dynamic>.from(api.data(results[3]) ?? []);
-    stats = Map<String, dynamic>.from(api.data(results[4]) ?? {});
-    promotions = List<dynamic>.from(api.data(results[5]) ?? []);
+
     final cache = OfflineCache.instance;
-    cache.writePublic('trips', trips);
-    cache.writePublic('featured', featuredTrips);
-    cache.writePublic('categories', categories);
-    cache.writePublic('reviews', reviews);
-    cache.writePublic('stats', stats);
-    cache.writePublic('promotions', promotions);
+    if (results[0] != null) {
+      trips = List<dynamic>.from(api.data(results[0]) ?? []);
+      cache.writePublic('trips', trips);
+    }
+    if (results[1] != null) {
+      featuredTrips = List<dynamic>.from(api.data(results[1]) ?? []);
+      cache.writePublic('featured', featuredTrips);
+    }
+    if (results[2] != null) {
+      categories = List<dynamic>.from(api.data(results[2]) ?? []);
+      cache.writePublic('categories', categories);
+    }
+    if (results[3] != null) {
+      reviews = List<dynamic>.from(api.data(results[3]) ?? []);
+      cache.writePublic('reviews', reviews);
+    }
+    if (results[4] != null) {
+      stats = Map<String, dynamic>.from(api.data(results[4]) ?? {});
+      cache.writePublic('stats', stats);
+    }
+    if (results[5] != null) {
+      promotions = List<dynamic>.from(api.data(results[5]) ?? []);
+      cache.writePublic('promotions', promotions);
+    }
     notifyListeners();
   }
 

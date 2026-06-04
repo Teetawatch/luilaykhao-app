@@ -545,27 +545,15 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
     BuildContext context,
     Map<String, dynamic> booking,
   ) async {
-    final result = await showDialog<(int, String)>(
-      context: context,
-      builder: (_) => const _ReviewDialog(),
+    final trip = asMap(asMap(booking['schedule'])['trip']);
+    final submitted = await ReviewSubmissionDialog.show(
+      context,
+      bookingId: int.parse(booking['id'].toString()),
+      tripTitle: textOf(trip['title'], 'การจอง'),
     );
-    if (result == null) return;
-    if (!context.mounted) return;
-    final (rating, comment) = result;
-    final app = context.read<AppProvider>();
-    try {
-      await app.submitReview(
-        bookingId: int.parse(booking['id'].toString()),
-        rating: rating,
-        comment: comment,
-      );
-      if (context.mounted) {
-        showSnack(context, 'ส่งรีวิวแล้ว ขอบคุณที่ช่วยแชร์ประสบการณ์');
-        _reload(); // refetch — can_review flips to false once reviewed
-      }
-    } catch (e) {
-      if (context.mounted) showSnack(context, e.toString());
-    }
+    if (!submitted || !context.mounted) return;
+    showSnack(context, 'ส่งรีวิวแล้ว ขอบคุณที่ช่วยแชร์ประสบการณ์');
+    _reload(); // refetch — can_review flips to false once reviewed
   }
 
   void _reload() {
@@ -626,11 +614,7 @@ class _WeatherCard extends StatelessWidget {
     final tempMax = num.tryParse(weather['temp_max']?.toString() ?? '');
     final code = textOf(weather['condition_code']);
 
-    final accent = switch (severity) {
-      'warning' => AppTheme.errorColor,
-      'advisory' => AppTheme.warningColor,
-      _ => AppTheme.primaryColor,
-    };
+    final gradient = _gradientFor(code);
 
     final note = switch (severity) {
       'warning' =>
@@ -640,81 +624,195 @@ class _WeatherCard extends StatelessWidget {
     };
 
     final tempText = (tempMin != null && tempMax != null)
-        ? '${tempMin.round()}–${tempMax.round()}°C'
-        : (tempMax != null ? '${tempMax.round()}°C' : null);
+        ? '${tempMin.round()}° – ${tempMax.round()}°'
+        : (tempMax != null ? '${tempMax.round()}°' : null);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: AppTheme.isDark(context) ? 0.16 : 0.08),
-        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-        border: Border.all(color: accent.withValues(alpha: 0.35)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: gradient.last.withValues(alpha: 0.36),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(_iconFor(code), color: accent, size: 30),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'พยากรณ์อากาศวันเดินทาง',
-                  style: GoogleFonts.anuphan(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.mutedText(context),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    if (desc.isNotEmpty) desc,
-                    ?tempText,
-                  ].join('  ·  '),
-                  style: GoogleFonts.anuphan(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.isDark(context)
-                        ? Colors.white
-                        : AppTheme.textMain,
-                  ),
-                ),
-                Text(
-                  'โอกาสฝนตก $popPercent%',
-                  style: GoogleFonts.anuphan(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: accent,
-                  ),
-                ),
-                if (note != null) ...[
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.info_outline_rounded, size: 15, color: accent),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          note,
+          // Header: label + condition on the left, weather glyph on the right.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.event_rounded,
+                          size: 13,
+                          color: Colors.white.withValues(alpha: 0.75),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'พยากรณ์อากาศวันเดินทาง',
                           style: GoogleFonts.anuphan(
-                            fontSize: 12.5,
-                            height: 1.35,
-                            color: AppTheme.mutedText(context),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                            color: Colors.white.withValues(alpha: 0.75),
                           ),
+                        ),
+                      ],
+                    ),
+                    if (desc.isNotEmpty) ...[
+                      const SizedBox(height: 9),
+                      Text(
+                        desc,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
+                          color: Colors.white,
                         ),
                       ),
                     ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(_iconFor(code), color: Colors.white, size: 30),
+              ),
+            ],
+          ),
+
+          // Temperature — the headline figure.
+          if (tempText != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              tempText,
+              style: GoogleFonts.anuphan(
+                fontSize: 38,
+                fontWeight: FontWeight.w800,
+                height: 1.0,
+                letterSpacing: -1,
+                color: Colors.white,
+              ),
+            ),
+          ],
+
+          // Metric pills.
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _pill(Icons.water_drop_rounded, 'โอกาสฝน $popPercent%'),
+              if (tempMin != null && tempMax != null)
+                _pill(
+                  Icons.thermostat_rounded,
+                  'สูงสุด ${tempMax.round()}°',
+                ),
+            ],
+          ),
+
+          // Advisory — frosted chip, only when the forecast is rough.
+          if (note != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    severity == 'warning'
+                        ? Icons.warning_amber_rounded
+                        : Icons.umbrella_rounded,
+                    size: 17,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      note,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.95),
+                      ),
+                    ),
                   ),
                 ],
-              ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _pill(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: GoogleFonts.anuphan(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Sky-condition gradient in the spirit of Apple Weather — the colour conveys
+  /// the mood (clear/cloud/rain/storm) rather than a flat severity tint.
+  List<Color> _gradientFor(String conditionCode) {
+    final group = conditionCode.isNotEmpty ? conditionCode[0] : '';
+    return switch (group) {
+      '2' => const [Color(0xFF3E4C66), Color(0xFF232C3F)], // thunderstorm
+      '3' => const [Color(0xFF5B7C9D), Color(0xFF3C566F)], // drizzle
+      '5' => const [Color(0xFF4E6E8E), Color(0xFF2F4858)], // rain
+      '6' => const [Color(0xFF7FA8C9), Color(0xFF587FA0)], // snow
+      '7' => const [Color(0xFF8A93A0), Color(0xFF5E6672)], // fog / haze
+      '8' => conditionCode == '800'
+          ? const [Color(0xFF4A95D6), Color(0xFF2C6FB5)] // clear sky
+          : const [Color(0xFF6E8AA8), Color(0xFF4C6582)], // clouds
+      _ => const [Color(0xFF4A95D6), Color(0xFF2C6FB5)],
+    };
   }
 
   IconData _iconFor(String conditionCode) {
@@ -851,91 +949,6 @@ class _BookingDepositRow extends StatelessWidget {
             fontSize: highlight ? 15 : 13,
             fontWeight: FontWeight.w900,
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ReviewDialog extends StatefulWidget {
-  const _ReviewDialog();
-
-  @override
-  State<_ReviewDialog> createState() => _ReviewDialogState();
-}
-
-class _ReviewDialogState extends State<_ReviewDialog> {
-  int _rating = 5;
-  final _commentController = TextEditingController();
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('รีวิวทริป'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'คะแนน',
-            style: GoogleFonts.anuphan(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (i) {
-              final star = i + 1;
-              return IconButton(
-                onPressed: () => setState(() => _rating = star),
-                icon: Icon(
-                  star <= _rating
-                      ? Icons.star_rounded
-                      : Icons.star_border_rounded,
-                  color: star <= _rating
-                      ? const Color(0xFFFFB020)
-                      : AppTheme.textSecondary,
-                  size: 36,
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _commentController,
-            decoration: InputDecoration(
-              hintText: 'เล่าประสบการณ์ของคุณ',
-              hintStyle: GoogleFonts.anuphan(color: AppTheme.textSecondary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            maxLines: 4,
-            style: GoogleFonts.anuphan(),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('ยกเลิก'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final comment = _commentController.text.trim();
-            if (comment.isEmpty) return;
-            Navigator.pop(context, (_rating, comment));
-          },
-          child: const Text('ส่งรีวิว'),
         ),
       ],
     );

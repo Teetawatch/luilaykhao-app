@@ -145,6 +145,15 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  void _handleForgotPassword() {
+    // ยังไม่มีระบบรีเซ็ตรหัสผ่านฝั่งเซิร์ฟเวอร์ — แนะนำทางเลือกที่ใช้งานได้จริง
+    // แทนการปล่อยปุ่มให้กดแล้วไม่เกิดอะไร
+    _showSnack(
+      'ลองเข้าสู่ระบบด้วย Apple หรือ Google หากจำรหัสผ่านไม่ได้ '
+      'หรือติดต่อทีมงานเพื่อขอความช่วยเหลือ',
+    );
+  }
+
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -251,6 +260,7 @@ class _LoginScreenState extends State<LoginScreen>
                   onGoogle: () => _handleSocialLogin('google'),
                   onFacebook: () => _handleSocialLogin('facebook'),
                   onLine: () => _handleSocialLogin('line'),
+                  onForgot: _handleForgotPassword,
                 ),
               ),
             ),
@@ -405,6 +415,7 @@ class _LoginSheet extends StatelessWidget {
   final VoidCallback onGoogle;
   final VoidCallback onFacebook;
   final VoidCallback onLine;
+  final VoidCallback onForgot;
 
   const _LoginSheet({
     required this.size,
@@ -422,6 +433,7 @@ class _LoginSheet extends StatelessWidget {
     required this.onGoogle,
     required this.onFacebook,
     required this.onLine,
+    required this.onForgot,
   });
 
   bool get _isBusy => isLoading || socialLoadingProvider != null;
@@ -463,18 +475,42 @@ class _LoginSheet extends StatelessWidget {
                         ),
                       ),
 
+                      // Brand mark — grounds the sheet and reads as professional.
+                      Center(
+                        child: Container(
+                          width: 58,
+                          height: 58,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Image.asset('logo_ios.png', fit: BoxFit.cover),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
                       // Title
                       Text(
                         'เข้าสู่ระบบ',
+                        textAlign: TextAlign.center,
                         style: GoogleFonts.anuphan(
                           color: AppTheme.textMain,
-                          fontSize: 26,
+                          fontSize: 25,
                           fontWeight: FontWeight.w900,
                           height: 1.1,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 5),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             'ยังไม่มีบัญชี? ',
@@ -492,17 +528,15 @@ class _LoginSheet extends StatelessWidget {
                                 color: AppTheme.primaryColor,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
-                                decoration: TextDecoration.underline,
-                                decorationColor: AppTheme.primaryColor,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 26),
 
-                      // Social login – Apple first (required by Apple guideline 4.8),
-                      // then other providers in a row below.
+                      // Social login – Apple first and most prominent (Apple
+                      // guideline 4.8), other providers in a row below.
                       _SocialRow(
                         socialLoadingProvider: socialLoadingProvider,
                         isBusy: _isBusy,
@@ -512,9 +546,9 @@ class _LoginSheet extends StatelessWidget {
                         onLine: onLine,
                       ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 22),
                       const _DividerOr(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 22),
 
                       // Email field
                       _SheetTextField(
@@ -544,7 +578,7 @@ class _LoginSheet extends StatelessWidget {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {},
+                          onPressed: onForgot,
                           style: TextButton.styleFrom(
                             foregroundColor: AppTheme.primaryColor,
                             padding: const EdgeInsets.symmetric(
@@ -606,15 +640,13 @@ class _SocialRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Apple Sign-In — prominent top row (Apple guideline 4.8)
-        _SocialTile(
-          mark: const _AppleMark(),
-          label: 'Apple',
+        // Sign in with Apple — official black button style, given top billing
+        // and full width so it reads as the primary option (Apple guideline 4.8).
+        _AppleSignInButton(
           isLoading: socialLoadingProvider == 'apple',
           onPressed: isBusy ? null : onApple,
-          fullWidth: true,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
@@ -652,91 +684,122 @@ class _SocialRow extends StatelessWidget {
   }
 }
 
+// ─── Sign in with Apple ───────────────────────────────────────────────────────
+
+/// Follows Apple's official "black" Sign in with Apple button style: solid black
+/// fill, white Apple logo + label, generous touch target. Kept as a custom build
+/// so we control the loading state and Thai localisation while matching the spec.
+class _AppleSignInButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const _AppleSignInButton({required this.isLoading, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: Material(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: isLoading ? null : onPressed,
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Optical nudge — the glyph sits slightly high otherwise.
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 2.5),
+                        child: Icon(Icons.apple, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'ลงชื่อเข้าด้วย Apple',
+                        style: GoogleFonts.anuphan(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SocialTile extends StatelessWidget {
   final Widget mark;
   final String label;
   final bool isLoading;
   final VoidCallback? onPressed;
-  final bool fullWidth;
 
   const _SocialTile({
     required this.mark,
     required this.label,
     required this.isLoading,
     required this.onPressed,
-    this.fullWidth = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tile = Material(
+    return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: isLoading ? null : onPressed,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: Ink(
-          padding: EdgeInsets.symmetric(
-            vertical: fullWidth ? 16 : 14,
-            horizontal: fullWidth ? 20 : 0,
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE3E8EF)),
           ),
-          child: fullWidth
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppTheme.primaryColor,
-                            ),
-                          )
-                        : mark,
-                    const SizedBox(width: 10),
-                    Text(
-                      'เข้าสู่ระบบด้วย $label',
-                      style: GoogleFonts.anuphan(
-                        color: AppTheme.textMain,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  children: [
-                    isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppTheme.primaryColor,
-                            ),
-                          )
-                        : mark,
-                    const SizedBox(height: 6),
-                    Text(
-                      label,
-                      style: GoogleFonts.anuphan(
-                        color: AppTheme.textMain,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+          child: Column(
+            children: [
+              SizedBox(
+                height: 26,
+                child: Center(
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.primaryColor,
+                          ),
+                        )
+                      : mark,
                 ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                label,
+                style: GoogleFonts.anuphan(
+                  color: AppTheme.textMain,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
-
-    return fullWidth ? SizedBox(width: double.infinity, child: tile) : tile;
   }
 }
 
@@ -1058,15 +1121,6 @@ class _GlassBackButton extends StatelessWidget {
 }
 
 // ─── Brand Marks ──────────────────────────────────────────────────────────────
-
-class _AppleMark extends StatelessWidget {
-  const _AppleMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Icon(Icons.apple, size: 26, color: Color(0xFF1D1D1F));
-  }
-}
 
 class _GoogleMark extends StatelessWidget {
   const _GoogleMark();

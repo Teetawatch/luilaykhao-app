@@ -844,7 +844,11 @@ class ReservationCard extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: () => _openDetail(context, bookingRef),
+                        onPressed: () => ReviewSubmissionDialog.show(
+                          context,
+                          bookingId: int.parse(booking['id'].toString()),
+                          tripTitle: textOf(trip['title'], 'การจอง'),
+                        ),
                         icon: const Icon(Icons.star_rounded, size: 18),
                         label: const Text('รีวิวทริปนี้'),
                       ),

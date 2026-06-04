@@ -47,30 +47,27 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
   // Optional per-category ratings (0 = ไม่ระบุ)
   final Map<String, int> _categoryRatings = {
     'guide': 0,
-    'vehicle': 0,
     'food': 0,
-    'value': 0,
+    'vehicle': 0,
   };
 
   static const _categoryLabels = {
-    'guide': 'ไกด์',
-    'vehicle': 'รถ',
+    'guide': 'สตาฟ',
     'food': 'อาหาร',
-    'value': 'ความคุ้มค่า',
+    'vehicle': 'รถ',
   };
 
   static const _categoryIcons = {
-    'guide': Icons.hiking_rounded,
-    'vehicle': Icons.directions_bus_rounded,
+    'guide': Icons.badge_rounded,
     'food': Icons.restaurant_rounded,
-    'value': Icons.savings_rounded,
+    'vehicle': Icons.directions_bus_rounded,
   };
 
   final List<File> _selectedImages = [];
   final List<String> _uploadedUrls = [];
   final List<bool> _uploadingFlags = [];
 
-  static const _maxImages = 5;
+  static const _maxImages = 6;
 
   @override
   void dispose() {
@@ -175,9 +172,6 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 : null,
             ratingFood:
                 _categoryRatings['food']! > 0 ? _categoryRatings['food'] : null,
-            ratingValue: _categoryRatings['value']! > 0
-                ? _categoryRatings['value']
-                : null,
           );
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -272,8 +266,17 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 ),
               ),
 
-              // ── Star rating ──────────────────────────────────────────
-              const SizedBox(height: 18),
+              // ── Star rating (overall) ────────────────────────────────
+              const SizedBox(height: 16),
+              Text(
+                'ภาพรวม',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.anuphan(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(5, (i) {
