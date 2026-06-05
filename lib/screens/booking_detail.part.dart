@@ -2303,7 +2303,22 @@ bool _hasVehicleInfo(Map<String, dynamic> vehicle) {
   return textOf(vehicle['license_plate']).trim().isNotEmpty ||
       textOf(vehicle['color']).trim().isNotEmpty ||
       textOf(vehicle['driver_name']).trim().isNotEmpty ||
-      textOf(vehicle['driver_phone']).trim().isNotEmpty;
+      textOf(vehicle['driver_phone']).trim().isNotEmpty ||
+      _vehicleImageUrls(vehicle).isNotEmpty;
+}
+
+/// Resolves a vehicle's photo list (stored paths or `{url}` maps) to full URLs.
+List<String> _vehicleImageUrls(Map<String, dynamic> vehicle) {
+  final raw = vehicle['images'];
+  if (raw is! List) return const [];
+  final urls = <String>[];
+  for (final e in raw) {
+    final url = e is Map
+        ? ApiConfig.mediaUrl(e['url'] ?? e['path'] ?? e['image'])
+        : ApiConfig.mediaUrl(e);
+    if (url.trim().isNotEmpty) urls.add(url);
+  }
+  return urls;
 }
 
 class _VehicleDriverCard extends StatelessWidget {
@@ -2320,6 +2335,7 @@ class _VehicleDriverCard extends StatelessWidget {
     final driverName = textOf(vehicle['driver_name']).trim();
     final driverPhone = textOf(vehicle['driver_phone']).trim();
     final hasDriver = driverName.isNotEmpty || driverPhone.isNotEmpty;
+    final images = _vehicleImageUrls(vehicle);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -2333,6 +2349,11 @@ class _VehicleDriverCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Vehicle photos
+          if (images.isNotEmpty) ...[
+            _VehicleImages(images: images),
+            const SizedBox(height: 12),
+          ],
           // Vehicle row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2427,6 +2448,77 @@ class _VehicleDriverCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Vehicle photo strip inside the booking detail's "รถและคนขับ" card. A single
+/// photo shows as a wide banner; multiple scroll horizontally. Tap to view full
+/// screen via the shared photo viewer.
+class _VehicleImages extends StatelessWidget {
+  final List<String> images;
+
+  const _VehicleImages({required this.images});
+
+  void _open(BuildContext context, int index) {
+    HapticFeedback.selectionClick();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            _BookingPhotoViewer(urls: images, initialIndex: index),
+      ),
+    );
+  }
+
+  Widget _thumb(BuildContext context, String url) {
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      placeholder: (_, _) => Container(color: AppTheme.subtleSurface(context)),
+      errorWidget: (_, _, _) => Container(
+        color: AppTheme.subtleSurface(context),
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.directions_bus_rounded,
+          color: AppTheme.mutedText(context),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (images.length == 1) {
+      return GestureDetector(
+        onTap: () => _open(context, 0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: _thumb(context, images.first),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 130,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.zero,
+        itemCount: images.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => GestureDetector(
+          onTap: () => _open(context, i),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: 190,
+              child: _thumb(context, images[i]),
+            ),
+          ),
+        ),
       ),
     );
   }

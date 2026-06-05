@@ -62,7 +62,6 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
   @override
   Widget build(BuildContext context) {
     final summary = asMap(_data?['summary']);
-    final bookings = asList(_data?['bookings']).map(asMap).toList();
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
@@ -81,15 +80,12 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         color: AppTheme.primaryColor,
-        child: _buildBody(summary, bookings),
+        child: _buildBody(summary),
       ),
     );
   }
 
-  Widget _buildBody(
-    Map<String, dynamic> summary,
-    List<Map<String, dynamic>> bookings,
-  ) {
+  Widget _buildBody(Map<String, dynamic> summary) {
     if (_loading && _data == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -126,6 +122,10 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       );
     }
 
+    final schedule = asMap(_data?['schedule']);
+    final vehicle = asMap(schedule['vehicle']);
+    final groups = asList(_data?['pickup_groups']).map(asMap).toList();
+
     return ListView(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -134,9 +134,13 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
         24 + MediaQuery.of(context).padding.bottom,
       ),
       children: [
-        _ManifestSummary(summary: summary),
+        if (vehicle.isNotEmpty) ...[
+          _VehicleCard(vehicle: vehicle),
+          const SizedBox(height: 12),
+        ],
+        _ManifestSummary(summary: summary, pickupGroupCount: groups.length),
         const SizedBox(height: 16),
-        if (bookings.isEmpty)
+        if (groups.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 48),
             child: Column(
@@ -159,8 +163,8 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
             ),
           )
         else
-          for (final booking in bookings) ...[
-            _ManifestBookingCard(booking: booking),
+          for (final group in groups) ...[
+            _PickupGroupCard(group: group),
             const SizedBox(height: 12),
           ],
       ],
@@ -168,18 +172,158 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
   }
 }
 
+class _VehicleCard extends StatelessWidget {
+  final Map<String, dynamic> vehicle;
+
+  const _VehicleCard({required this.vehicle});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = textOf(vehicle['name']);
+    final plate = textOf(vehicle['license_plate']);
+    final type = textOf(vehicle['type']);
+    final capacity = textOf(vehicle['capacity']);
+    final color = textOf(vehicle['color']);
+    final driverName = textOf(vehicle['driver_name']);
+    final driverPhone = textOf(vehicle['driver_phone']);
+
+    final meta = <String>[
+      if (type.isNotEmpty) type,
+      if (color.isNotEmpty) color,
+      if (capacity.isNotEmpty) '$capacity ที่นั่ง',
+    ].join(' · ');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D9488).withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFF0D9488).withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.directions_bus_rounded,
+                  color: Color(0xFF0D9488),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name.isEmpty ? 'รถประจำรอบ' : name,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    if (meta.isNotEmpty)
+                      Text(
+                        meta,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (plate.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            // License plate, shown like an actual plate so it stands out.
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.surface(context),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.pin_outlined,
+                      size: 16, color: Color(0xFF0D9488)),
+                  const SizedBox(width: 8),
+                  Text(
+                    plate,
+                    style: GoogleFonts.anuphan(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.onSurface(context),
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (driverName.isNotEmpty || driverPhone.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.person_pin_circle_outlined,
+                    size: 18, color: AppTheme.mutedText(context)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    driverName.isEmpty ? 'คนขับ' : 'คนขับ: $driverName',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                ),
+                if (driverPhone.isNotEmpty) _CallButton(phone: driverPhone),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _ManifestSummary extends StatelessWidget {
   final Map<String, dynamic> summary;
+  final int pickupGroupCount;
 
-  const _ManifestSummary({required this.summary});
+  const _ManifestSummary({
+    required this.summary,
+    required this.pickupGroupCount,
+  });
 
   int _intOf(dynamic v) => int.tryParse(textOf(v, '0')) ?? 0;
 
   @override
   Widget build(BuildContext context) {
-    final bookings = _intOf(summary['bookings']);
-    final checkedIn = _intOf(summary['checked_in']);
     final passengers = _intOf(summary['passengers']);
+    // Prefer passenger-based check-in; fall back to booking-based for safety.
+    final checkedIn = summary['checked_in_passengers'] != null
+        ? _intOf(summary['checked_in_passengers'])
+        : _intOf(summary['checked_in']);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -188,19 +332,19 @@ class _ManifestSummary extends StatelessWidget {
         children: [
           Expanded(
             child: _SummaryStat(
-              icon: Icons.confirmation_number_outlined,
-              value: bookings.toString(),
-              label: 'การจอง',
-              color: const Color(0xFF2563EB),
+              icon: Icons.groups_outlined,
+              value: passengers.toString(),
+              label: 'ผู้โดยสาร',
+              color: const Color(0xFF0D9488),
             ),
           ),
           _divider(context),
           Expanded(
             child: _SummaryStat(
-              icon: Icons.groups_outlined,
-              value: passengers.toString(),
-              label: 'ผู้โดยสาร',
-              color: const Color(0xFF0D9488),
+              icon: Icons.place_outlined,
+              value: pickupGroupCount.toString(),
+              label: 'จุดรับ',
+              color: const Color(0xFF2563EB),
             ),
           ),
           _divider(context),
@@ -269,31 +413,23 @@ class _SummaryStat extends StatelessWidget {
   }
 }
 
-class _ManifestBookingCard extends StatelessWidget {
-  final Map<String, dynamic> booking;
+/// One pickup point with every passenger picked up there — full name, nickname,
+/// callable phone and per-passenger check-in status.
+class _PickupGroupCard extends StatelessWidget {
+  final Map<String, dynamic> group;
 
-  const _ManifestBookingCard({required this.booking});
+  const _PickupGroupCard({required this.group});
 
   @override
   Widget build(BuildContext context) {
-    final ref = textOf(booking['booking_ref'], '-');
-    final contactName = textOf(booking['contact_name'], '-');
-    final contactPhone = textOf(booking['contact_phone']);
-    final isGroup = booking['is_group'] == true;
-    final groupName = textOf(booking['group_name']);
-    final checkedIn = booking['checked_in'] == true;
-    final pickupLocation = textOf(booking['pickup_location']);
-    final pickupRegion = textOf(
-      booking['pickup_region_label'],
-      textOf(booking['pickup_region']),
-    );
-    final pickupMapUrl = textOf(booking['pickup_map_url']);
-    final pickupNotes = textOf(booking['pickup_notes']);
-    final passengers = asList(booking['passengers']).map(asMap).toList();
-
-    final pickupLabel = pickupLocation.isNotEmpty
-        ? pickupLocation
-        : (pickupRegion.isNotEmpty ? pickupRegion : 'ไม่ระบุจุดรับ');
+    final label = textOf(group['label'], 'จุดรับ');
+    final region = textOf(group['region_label']);
+    final mapUrl = textOf(group['map_url']);
+    final notes = textOf(group['notes']);
+    final total = int.tryParse(textOf(group['passenger_count'], '0')) ?? 0;
+    final checkedIn = int.tryParse(textOf(group['checked_in_count'], '0')) ?? 0;
+    final passengers = asList(group['passengers']).map(asMap).toList();
+    final allIn = total > 0 && checkedIn >= total;
 
     return Container(
       decoration: AppTheme.cardDecoration(context, radius: 18),
@@ -301,255 +437,210 @@ class _ManifestBookingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: ref + check-in badge
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          // Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+            color: const Color(0xFF0D9488).withValues(alpha: 0.06),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Text(
-                        ref,
-                        style: GoogleFonts.anuphan(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.onSurface(context),
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      if (isGroup) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF7C3AED).withValues(
-                              alpha: 0.10,
-                            ),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            'กรุ๊ป',
-                            style: GoogleFonts.anuphan(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF7C3AED),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                _CheckInPill(checkedIn: checkedIn),
-              ],
-            ),
-          ),
-
-          // Contact name + phone
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppTheme.primaryColor.withValues(
-                    alpha: 0.10,
-                  ),
-                  child: const Icon(
-                    Icons.person_rounded,
-                    size: 18,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-                const SizedBox(width: 12),
+                const Icon(Icons.place_rounded,
+                    size: 18, color: Color(0xFF0D9488)),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        groupName.isNotEmpty ? groupName : contactName,
+                        label,
                         style: GoogleFonts.anuphan(
-                          fontSize: 15,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
+                          letterSpacing: -0.1,
                         ),
                       ),
-                      if (groupName.isNotEmpty && contactName != '-')
+                      if (region.isNotEmpty && region != label)
                         Text(
-                          'ผู้ติดต่อ: $contactName',
+                          region,
                           style: GoogleFonts.anuphan(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
                           ),
                         ),
+                      if (notes.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            notes,
+                            style: GoogleFonts.anuphan(
+                              fontSize: 12,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
-                if (contactPhone.isNotEmpty)
-                  _CallButton(phone: contactPhone),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: allIn
+                            ? AppTheme.primaryColor.withValues(alpha: 0.12)
+                            : const Color(0xFF0D9488).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        'เช็คอิน $checkedIn/$total',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: allIn
+                              ? AppTheme.primaryColor
+                              : const Color(0xFF0D9488),
+                        ),
+                      ),
+                    ),
+                    if (mapUrl.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: () => launchUrl(
+                          Uri.parse(mapUrl),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          minimumSize: const Size(0, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: const Icon(Icons.map_rounded, size: 15),
+                        label: Text(
+                          'แผนที่',
+                          style: GoogleFonts.anuphan(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
-
-          // Pickup
+          // Passengers
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.subtleSurface(context),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.place_rounded,
-                        size: 16,
-                        color: Color(0xFF0D9488),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              pickupLabel,
-                              style: GoogleFonts.anuphan(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.onSurface(context),
-                              ),
-                            ),
-                            if (pickupRegion.isNotEmpty &&
-                                pickupRegion != pickupLabel)
-                              Text(
-                                pickupRegion,
-                                style: GoogleFonts.anuphan(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppTheme.mutedText(context),
-                                ),
-                              ),
-                            if (pickupNotes.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                pickupNotes,
-                                style: GoogleFonts.anuphan(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.4,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (pickupMapUrl.isNotEmpty)
-                        IconButton(
-                          tooltip: 'เปิดแผนที่',
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => launchUrl(
-                            Uri.parse(pickupMapUrl),
-                            mode: LaunchMode.externalApplication,
-                          ),
-                          icon: const Icon(
-                            Icons.map_rounded,
-                            size: 20,
-                            color: Color(0xFF0D9488),
-                          ),
-                        ),
-                    ],
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            child: Column(
+              children: [
+                for (var i = 0; i < passengers.length; i++) ...[
+                  _ManifestPassengerRow(
+                    passenger: passengers[i],
+                    index: i + 1,
                   ),
+                  if (i < passengers.length - 1)
+                    Divider(
+                      height: 1,
+                      color: AppTheme.border(context).withValues(alpha: 0.45),
+                    ),
                 ],
-              ),
+              ],
             ),
           ),
-
-          // Passengers
-          if (passengers.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ผู้เดินทาง ${passengers.length} คน',
-                    style: GoogleFonts.anuphan(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.mutedText(context),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  for (final p in passengers) _PassengerRow(passenger: p),
-                ],
-              ),
-            )
-          else
-            const SizedBox(height: 14),
         ],
       ),
     );
   }
 }
 
-class _PassengerRow extends StatelessWidget {
+class _ManifestPassengerRow extends StatelessWidget {
   final Map<String, dynamic> passenger;
+  final int index;
 
-  const _PassengerRow({required this.passenger});
+  const _ManifestPassengerRow({required this.passenger, required this.index});
 
   @override
   Widget build(BuildContext context) {
-    final name = textOf(passenger['name'], '-');
+    final fullName = textOf(
+      passenger['full_name'],
+      textOf(passenger['name'], '-'),
+    );
     final nickname = textOf(passenger['nickname']);
     final phone = textOf(passenger['phone']);
+    final checkedIn = passenger['checked_in'] == true;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.person_outline_rounded,
-            size: 15,
-            color: AppTheme.mutedText(context),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: name,
-                    style: GoogleFonts.anuphan(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.onSurface(context),
-                    ),
-                  ),
-                  if (nickname.isNotEmpty)
-                    TextSpan(
-                      text: '  ($nickname)',
-                      style: GoogleFonts.anuphan(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.mutedText(context),
-                      ),
-                    ),
-                ],
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppTheme.subtleSurface(context),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$index',
+              style: GoogleFonts.anuphan(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.mutedText(context),
               ),
             ),
           ),
-          if (phone.isNotEmpty) _CallButton(phone: phone, compact: true),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        fullName,
+                        style: GoogleFonts.anuphan(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                    ),
+                    if (nickname.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '($nickname)',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (phone.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  _CallButton(phone: phone, compact: true),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _CheckInPill(checkedIn: checkedIn),
         ],
       ),
     );
