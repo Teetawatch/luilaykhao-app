@@ -37,6 +37,12 @@ class ApiEndpoints {
   static String chatUnreadCount(int scheduleId) =>
       'schedules/$scheduleId/chat/unread-count';
   static String chatRoom(int scheduleId) => 'schedules/$scheduleId/chat/room';
+  static String chatTyping(int scheduleId) =>
+      'schedules/$scheduleId/chat/typing';
+  static String chatPin(int scheduleId, int messageId) =>
+      'schedules/$scheduleId/chat/messages/$messageId/pin';
+  static String chatReact(int scheduleId, int messageId) =>
+      'schedules/$scheduleId/chat/messages/$messageId/react';
 
   // Schedules / seats
   static String scheduleSeats(int scheduleId) => 'schedules/$scheduleId/seats';

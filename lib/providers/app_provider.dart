@@ -966,11 +966,12 @@ class AppProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>> sendChatMessage(
     int scheduleId,
-    String body,
-  ) async {
+    String body, {
+    int? replyToId,
+  }) async {
     final response = await api.post(
       ApiEndpoints.chatMessages(scheduleId),
-      body: {'body': body},
+      body: {'body': body, 'reply_to_id': ?replyToId},
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
@@ -979,13 +980,53 @@ class AppProvider extends ChangeNotifier {
     int scheduleId,
     String imagePath, {
     String? body,
+    int? replyToId,
   }) async {
     final response = await api.postMultipart(
       ApiEndpoints.chatMessages(scheduleId),
-      fields: {if (body != null && body.isNotEmpty) 'body': body},
+      fields: {
+        if (body != null && body.isNotEmpty) 'body': body,
+        if (replyToId != null) 'reply_to_id': '$replyToId',
+      },
       files: {'image': imagePath},
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// Toggle an emoji reaction on a message. Returns the updated reaction set.
+  Future<List<dynamic>> reactChatMessage(
+    int scheduleId,
+    int messageId,
+    String emoji,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.chatReact(scheduleId, messageId),
+      body: {'emoji': emoji},
+    );
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    return List<dynamic>.from(data['reactions'] ?? const []);
+  }
+
+  /// Pin a message (staff/admin only). Returns the pinned message payload.
+  Future<Map<String, dynamic>?> pinChatMessage(
+    int scheduleId,
+    int messageId,
+  ) async {
+    final response = await api.post(ApiEndpoints.chatPin(scheduleId, messageId));
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    final pinned = data['pinned_message'];
+    return pinned is Map ? Map<String, dynamic>.from(pinned) : null;
+  }
+
+  Future<void> unpinChatMessage(int scheduleId, int messageId) async {
+    await api.delete(ApiEndpoints.chatPin(scheduleId, messageId));
+  }
+
+  /// Fire-and-forget "is typing" ping. Failures are swallowed — it's ephemeral.
+  Future<void> sendChatTyping(int scheduleId) async {
+    try {
+      await api.post(ApiEndpoints.chatTyping(scheduleId));
+    } catch (_) {}
   }
 
   Future<void> markChatRead(int scheduleId) async {
@@ -1016,6 +1057,37 @@ class AppProvider extends ChangeNotifier {
       event: 'chat.message',
       handler: handler,
     );
+  }
+
+  /// Subscribe to the auxiliary chat signals (read receipts, typing, reactions,
+  /// pinned changes) on the same channel. Returns a single combined disposer.
+  Future<VoidCallback> subscribeChatSignals(
+    int scheduleId, {
+    RealtimeEventHandler? onRead,
+    RealtimeEventHandler? onTyping,
+    RealtimeEventHandler? onReaction,
+    RealtimeEventHandler? onPinned,
+  }) async {
+    final channel = 'private-chat.schedule.$scheduleId';
+    final disposers = <VoidCallback>[];
+
+    Future<void> bind(String event, RealtimeEventHandler? h) async {
+      if (h == null) return;
+      disposers.add(
+        await realtime.subscribe(channel: channel, event: event, handler: h),
+      );
+    }
+
+    await bind('chat.read', onRead);
+    await bind('chat.typing', onTyping);
+    await bind('chat.reaction', onReaction);
+    await bind('chat.pinned', onPinned);
+
+    return () {
+      for (final d in disposers) {
+        d();
+      }
+    };
   }
 
   // ── Group trip invite (host-pays-all) ────────────────────────────────────

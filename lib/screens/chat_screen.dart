@@ -59,6 +59,32 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _roomFetching = false;
   static const _roomRefreshGap = Duration(seconds: 8);
 
+  // Pinned announcement, kept in sync with room load + chat.pinned broadcasts.
+  Map<String, dynamic>? _pinned;
+
+  // Reply composer target (the message being quoted), null when not replying.
+  Map<String, dynamic>? _replyingTo;
+
+  // Live "is typing…" — userId → (name, expiry). A 1s sweeper clears stale ones.
+  final Map<int, ({String name, DateTime until})> _typing = {};
+  Timer? _typingSweeper;
+  DateTime? _lastTypingSentAt;
+
+  // Unread divider: messages with id beyond this (and not mine) are "new" since
+  // we opened. Captured once from our own read marker on first room load.
+  int _unreadBoundaryId = 0;
+  bool _unreadBoundaryLocked = false;
+
+  // Jump-to-latest affordance.
+  bool _showJumpButton = false;
+  int _newWhileAway = 0;
+
+  bool _canModerate = false;
+  List<String> _reactionEmojis = const ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+  int? _myUserId;
+
+  VoidCallback? _signalsDisposer;
+
   @override
   void initState() {
     super.initState();
@@ -71,7 +97,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _stopPolling();
+    _typingSweeper?.cancel();
     _disposer?.call();
+    _signalsDisposer?.call();
     _input.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
@@ -94,10 +122,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Future<void> _init() async {
     final app = context.read<AppProvider>();
+    _myUserId = int.tryParse('${app.user?['id']}');
     await _load();
     // Bind realtime *after* the initial HTTP load so the socket has no chance
     // to deliver a message that arrives before the history is rendered.
     _disposer = await app.subscribeChat(widget.scheduleId, _onIncoming);
+    _signalsDisposer = await app.subscribeChatSignals(
+      widget.scheduleId,
+      onRead: _onReadSignal,
+      onTyping: _onTypingSignal,
+      onReaction: _onReactionSignal,
+      onPinned: _onPinnedSignal,
+    );
     _startPolling();
   }
 
@@ -142,13 +178,34 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     try {
       final room = await context.read<AppProvider>().chatRoom(widget.scheduleId);
       if (!mounted) return;
-      setState(() => _room = room);
+      setState(() {
+        _room = room;
+        _pinned = room['pinned_message'] is Map
+            ? Map<String, dynamic>.from(room['pinned_message'] as Map)
+            : null;
+        _canModerate = room['can_moderate'] == true;
+        final emojis = (room['reaction_emojis'] as List? ?? [])
+            .map((e) => e.toString())
+            .toList();
+        if (emojis.isNotEmpty) _reactionEmojis = emojis;
+        _lockUnreadBoundary();
+      });
     } catch (_) {
       // Non-critical — the chat works without the roster; next tick retries.
     } finally {
       _lastRoomFetch = DateTime.now();
       _roomFetching = false;
     }
+  }
+
+  /// Freeze the "new messages" divider at our last-read marker the first time
+  /// the roster loads, so it doesn't keep jumping as we read.
+  void _lockUnreadBoundary() {
+    if (_unreadBoundaryLocked) return;
+    final me = _members.where((m) => m['is_me'] == true).toList();
+    if (me.isEmpty) return;
+    _unreadBoundaryId = int.tryParse('${me.first['last_read_message_id']}') ?? 0;
+    _unreadBoundaryLocked = true;
   }
 
   Future<void> _loadMore() async {
@@ -237,7 +294,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }).toList();
     if (fresh.isEmpty) return;
     final wasAtBottom = _isNearBottom();
-    setState(() => _messages.addAll(fresh));
+    // Count messages from others that arrived while we're scrolled up, to badge
+    // the jump-to-latest button.
+    final incomingFromOthers = fresh.where((m) => m['is_mine'] != true).length;
+    setState(() {
+      _messages.addAll(fresh);
+      if (!wasAtBottom) _newWhileAway += incomingFromOthers;
+    });
     _markRead();
     if (wasAtBottom) _scrollToBottom();
   }
@@ -261,12 +324,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     final app = context.read<AppProvider>();
+    final replyId = _replyingTo == null
+        ? null
+        : int.tryParse('${_replyingTo!['id']}');
     try {
-      final message = await app.sendChatMessage(widget.scheduleId, text);
+      final message = await app.sendChatMessage(
+        widget.scheduleId,
+        text,
+        replyToId: replyId,
+      );
       if (!mounted) return;
       setState(() {
         _messages.add(message);
         _input.clear();
+        _replyingTo = null;
         _sending = false;
       });
       _scrollToBottom();
@@ -300,11 +371,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     setState(() => _sending = true);
     final app = context.read<AppProvider>();
+    final replyId = _replyingTo == null
+        ? null
+        : int.tryParse('${_replyingTo!['id']}');
     try {
-      final message = await app.sendChatImage(widget.scheduleId, picked.path);
+      final message = await app.sendChatImage(
+        widget.scheduleId,
+        picked.path,
+        replyToId: replyId,
+      );
       if (!mounted) return;
       setState(() {
         _messages.add(message);
+        _replyingTo = null;
         _sending = false;
       });
       _scrollToBottom();
@@ -361,6 +440,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _onScroll() {
     if (_scroll.position.pixels <= 80) _loadMore();
+    final nearBottom = _isNearBottom();
+    final shouldShow = !nearBottom;
+    if (shouldShow != _showJumpButton) {
+      setState(() => _showJumpButton = shouldShow);
+    }
+    if (nearBottom && _newWhileAway != 0) {
+      setState(() => _newWhileAway = 0);
+    }
   }
 
   /// Conservative auto-scroll: only treat the user as "at the bottom" if we
@@ -379,6 +466,269 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _scroll.jumpTo(_scroll.position.maxScrollExtent);
       }
     });
+  }
+
+  void _jumpToLatest() {
+    setState(() => _newWhileAway = 0);
+    if (_scroll.hasClients) {
+      _scroll.animateTo(
+        _scroll.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  // ── Realtime signal handlers ──────────────────────────────────────────────
+
+  void _onReadSignal(Map<String, dynamic> data) {
+    final userId = int.tryParse('${data['user_id']}');
+    final lastRead = int.tryParse('${data['last_read_message_id']}') ?? 0;
+    final room = _room;
+    if (userId == null || room == null) return;
+    final members = (room['members'] as List?)?.cast<dynamic>();
+    if (members == null) return;
+    var changed = false;
+    for (final raw in members) {
+      if (raw is Map && int.tryParse('${raw['id']}') == userId) {
+        final cur = int.tryParse('${raw['last_read_message_id']}') ?? 0;
+        if (lastRead > cur) {
+          raw['last_read_message_id'] = lastRead;
+          changed = true;
+        }
+      }
+    }
+    if (changed) setState(() {});
+  }
+
+  void _onTypingSignal(Map<String, dynamic> data) {
+    final userId = int.tryParse('${data['user_id']}');
+    if (userId == null || userId == _myUserId) return;
+    final name = data['name']?.toString() ?? 'สมาชิก';
+    _typing[userId] = (name: name, until: DateTime.now().add(
+      const Duration(seconds: 4),
+    ));
+    _ensureTypingSweeper();
+    setState(() {});
+  }
+
+  void _ensureTypingSweeper() {
+    _typingSweeper ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      final now = DateTime.now();
+      _typing.removeWhere((_, v) => v.until.isBefore(now));
+      if (mounted) setState(() {});
+      if (_typing.isEmpty) {
+        _typingSweeper?.cancel();
+        _typingSweeper = null;
+      }
+    });
+  }
+
+  String? _typingLabel() {
+    if (_typing.isEmpty) return null;
+    final names = _typing.values.map((v) => v.name).toList();
+    if (names.length == 1) return '${names.first} กำลังพิมพ์…';
+    if (names.length == 2) return '${names[0]} และ ${names[1]} กำลังพิมพ์…';
+    return '${names.length} คนกำลังพิมพ์…';
+  }
+
+  void _onReactionSignal(Map<String, dynamic> data) {
+    final messageId = int.tryParse('${data['message_id']}');
+    if (messageId == null) return;
+    final reactions = data['reactions'] as List? ?? const [];
+    final idx = _messages.indexWhere((m) => int.tryParse('${m['id']}') == messageId);
+    if (idx == -1) return;
+    setState(() => _messages[idx]['reactions'] = reactions);
+  }
+
+  void _onPinnedSignal(Map<String, dynamic> data) {
+    final msg = data['message'];
+    setState(() {
+      _pinned = msg is Map ? Map<String, dynamic>.from(msg) : null;
+    });
+  }
+
+  // ── Composer / message actions ────────────────────────────────────────────
+
+  void _onInputChanged(String _) {
+    // Throttle typing pings to at most one every 2.5s while actively typing.
+    final now = DateTime.now();
+    if (_lastTypingSentAt != null &&
+        now.difference(_lastTypingSentAt!) < const Duration(milliseconds: 2500)) {
+      return;
+    }
+    if (_input.text.trim().isEmpty) return;
+    _lastTypingSentAt = now;
+    context.read<AppProvider>().sendChatTyping(widget.scheduleId);
+  }
+
+  Future<void> _toggleReaction(int messageId, String emoji) async {
+    HapticFeedback.selectionClick();
+    try {
+      final reactions = await context
+          .read<AppProvider>()
+          .reactChatMessage(widget.scheduleId, messageId, emoji);
+      if (!mounted) return;
+      final idx = _messages
+          .indexWhere((m) => int.tryParse('${m['id']}') == messageId);
+      if (idx != -1) setState(() => _messages[idx]['reactions'] = reactions);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
+  }
+
+  void _startReply(Map<String, dynamic> message) {
+    setState(() => _replyingTo = message);
+    FocusScope.of(context).requestFocus(FocusNode());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) FocusScope.of(context).unfocus();
+    });
+  }
+
+  void _cancelReply() => setState(() => _replyingTo = null);
+
+  Future<void> _pinMessage(Map<String, dynamic> message) async {
+    final id = int.tryParse('${message['id']}');
+    if (id == null) return;
+    try {
+      final pinned = await context
+          .read<AppProvider>()
+          .pinChatMessage(widget.scheduleId, id);
+      if (!mounted) return;
+      setState(() => _pinned = pinned);
+      _toast('ปักหมุดข้อความแล้ว');
+    } catch (e) {
+      if (mounted) _toast(e.toString());
+    }
+  }
+
+  Future<void> _unpinMessage() async {
+    final id = int.tryParse('${_pinned?['id']}');
+    if (id == null) return;
+    try {
+      await context.read<AppProvider>().unpinChatMessage(widget.scheduleId, id);
+      if (!mounted) return;
+      setState(() => _pinned = null);
+      _toast('ปลดหมุดข้อความแล้ว');
+    } catch (e) {
+      if (mounted) _toast(e.toString());
+    }
+  }
+
+  void _toast(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text, style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  /// Scrolls to a message already loaded in the list (e.g. tapping a reply
+  /// quote). No-op if it's not in the current window.
+  void _scrollToMessage(int messageId) {
+    final idx = _messages.indexWhere((m) => int.tryParse('${m['id']}') == messageId);
+    if (idx == -1 || !_scroll.hasClients) return;
+    // Approximate: jump proportionally. Precise anchoring would need item keys;
+    // this lands close enough for a short reply hop.
+    final ratio = _messages.isEmpty ? 1.0 : idx / _messages.length;
+    _scroll.animateTo(
+      _scroll.position.maxScrollExtent * ratio,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _openMessageMenu(Map<String, dynamic> message) {
+    final role = message['sender_role']?.toString() ?? 'customer';
+    if (role == 'system') return;
+    HapticFeedback.mediumImpact();
+    final body = message['body']?.toString() ?? '';
+    final messageId = int.tryParse('${message['id']}') ?? 0;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            // Quick emoji reaction row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  for (final emoji in _reactionEmojis)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _toggleReaction(messageId, emoji);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Text(emoji, style: const TextStyle(fontSize: 28)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Divider(color: AppTheme.border(context).withValues(alpha: 0.5)),
+            ListTile(
+              leading: const Icon(Icons.reply_rounded),
+              title: Text('ตอบกลับ',
+                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _startReply(message);
+              },
+            ),
+            if (body.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.copy_rounded),
+                title: Text('คัดลอก',
+                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _copyMessage(body);
+                },
+              ),
+            if (_canModerate) ...[
+              if (int.tryParse('${_pinned?['id']}') == messageId)
+                ListTile(
+                  leading: const Icon(Icons.push_pin_outlined),
+                  title: Text('ปลดหมุด',
+                      style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _unpinMessage();
+                  },
+                )
+              else
+                ListTile(
+                  leading: const Icon(Icons.push_pin_rounded),
+                  title: Text('ปักหมุด',
+                      style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _pinMessage(message);
+                  },
+                ),
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Room metadata accessors ───────────────────────────────────────────────
@@ -488,7 +838,33 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       ),
       body: Column(
         children: [
-          Expanded(child: _buildBody()),
+          if (_pinned != null)
+            _PinnedBanner(
+              pinned: _pinned!,
+              canModerate: _canModerate,
+              onTap: () {
+                final id = int.tryParse('${_pinned?['id']}');
+                if (id != null) _scrollToMessage(id);
+              },
+              onUnpin: _canModerate ? _unpinMessage : null,
+            ),
+          Expanded(
+            child: Stack(
+              children: [
+                _buildBody(),
+                if (_showJumpButton)
+                  Positioned(
+                    right: 14,
+                    bottom: 12,
+                    child: _JumpToLatestButton(
+                      newCount: _newWhileAway,
+                      onTap: _jumpToLatest,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (_typingLabel() != null) _TypingIndicator(label: _typingLabel()!),
           _buildInput(),
         ],
       ),
@@ -626,6 +1002,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   List<Widget> _buildItems() {
     final items = <Widget>[];
     DateTime? lastDay;
+    var unreadDividerShown = false;
 
     for (var i = 0; i < _messages.length; i++) {
       final m = _messages[i];
@@ -635,6 +1012,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       if (day != null && (lastDay == null || day != lastDay)) {
         items.add(_DateSeparator(day: day));
         lastDay = day;
+      }
+
+      // "ข้อความใหม่" divider before the first message that arrived after our
+      // last read marker (and isn't our own send).
+      final mId = int.tryParse('${m['id']}') ?? 0;
+      if (!unreadDividerShown &&
+          _unreadBoundaryLocked &&
+          _unreadBoundaryId > 0 &&
+          mId > _unreadBoundaryId &&
+          m['is_mine'] != true) {
+        items.add(const _UnreadDivider());
+        unreadDividerShown = true;
       }
 
       final role = m['sender_role']?.toString() ?? 'customer';
@@ -655,7 +1044,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       // avoid stamping every line. Counts other members who've read this far.
       final isMine = m['is_mine'] == true;
       final readByCount = (isMine && isLastInGroup)
-          ? _readCountFor(int.tryParse('${m['id']}') ?? 0)
+          ? _readCountFor(mId)
           : 0;
 
       items.add(
@@ -667,7 +1056,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           isFirstInGroup: isFirstInGroup,
           isLastInGroup: isLastInGroup,
           readByCount: readByCount,
+          myUserId: _myUserId,
           onCopy: _copyMessage,
+          onLongPress: () => _openMessageMenu(m),
+          onReplyTap: _scrollToMessage,
+          onReactionTap: (emoji) => _toggleReaction(mId, emoji),
         ),
       );
     }
@@ -737,7 +1130,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
           border: Border(
@@ -747,27 +1139,38 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ),
           ),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              onPressed: _sending ? null : _showImageSourceSheet,
-              icon: Icon(
-                Icons.add_circle_outline_rounded,
-                size: 26,
-                color: _sending
-                    ? AppTheme.mutedText(context)
-                    : AppTheme.primaryColor,
+            if (_replyingTo != null)
+              _ReplyPreviewBar(
+                message: _replyingTo!,
+                onCancel: _cancelReply,
               ),
-              tooltip: 'ส่งรูปภาพ',
-            ),
-            Expanded(
-              child: TextField(
-                controller: _input,
-                minLines: 1,
-                maxLines: 4,
-                maxLength: 2000,
-                textInputAction: TextInputAction.newline,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  IconButton(
+                    onPressed: _sending ? null : _showImageSourceSheet,
+                    icon: Icon(
+                      Icons.add_circle_outline_rounded,
+                      size: 26,
+                      color: _sending
+                          ? AppTheme.mutedText(context)
+                          : AppTheme.primaryColor,
+                    ),
+                    tooltip: 'ส่งรูปภาพ',
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _input,
+                      minLines: 1,
+                      maxLines: 4,
+                      maxLength: 2000,
+                      onChanged: _onInputChanged,
+                      textInputAction: TextInputAction.newline,
                 style: GoogleFonts.anuphan(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
@@ -818,7 +1221,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                           color: Colors.white,
                           size: 20,
                         ),
-                ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -947,7 +1353,11 @@ class _MessageBubble extends StatelessWidget {
   final bool isFirstInGroup;
   final bool isLastInGroup;
   final int readByCount;
+  final int? myUserId;
   final ValueChanged<String> onCopy;
+  final VoidCallback onLongPress;
+  final ValueChanged<int> onReplyTap;
+  final ValueChanged<String> onReactionTap;
 
   const _MessageBubble({
     required this.message,
@@ -957,7 +1367,11 @@ class _MessageBubble extends StatelessWidget {
     required this.isFirstInGroup,
     required this.isLastInGroup,
     required this.readByCount,
+    required this.myUserId,
     required this.onCopy,
+    required this.onLongPress,
+    required this.onReplyTap,
+    required this.onReactionTap,
   });
 
   static const _roleLabels = {
@@ -991,6 +1405,14 @@ class _MessageBubble extends StatelessWidget {
     final imageUrl = ApiConfig.mediaUrl(message['image_url']);
     final hasText = body.isNotEmpty;
     final hasImage = imageUrl.isNotEmpty;
+
+    final replyTo = message['reply_to'] is Map
+        ? Map<String, dynamic>.from(message['reply_to'] as Map)
+        : null;
+    final reactions = (message['reactions'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
 
     final isDark = AppTheme.isDark(context);
     final bg = isMine
@@ -1068,7 +1490,7 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
                 GestureDetector(
-                  onLongPress: hasText ? () => onCopy(body) : null,
+                  onLongPress: onLongPress,
                   child: Container(
                     padding: hasImage && !hasText
                         ? const EdgeInsets.all(4)
@@ -1083,6 +1505,17 @@ class _MessageBubble extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (replyTo != null) ...[
+                          _QuotedReply(
+                            reply: replyTo,
+                            isMine: isMine,
+                            onTap: () {
+                              final rid = int.tryParse('${replyTo['id']}');
+                              if (rid != null) onReplyTap(rid);
+                            },
+                          ),
+                          const SizedBox(height: 6),
+                        ],
                         if (hasImage) ...[
                           _ChatImage(url: imageUrl),
                           if (hasText) const SizedBox(height: 6),
@@ -1101,6 +1534,14 @@ class _MessageBubble extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (reactions.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  _ReactionChips(
+                    reactions: reactions,
+                    myUserId: myUserId,
+                    onTap: onReactionTap,
+                  ),
+                ],
                 if (showTimestamp) ...[
                   const SizedBox(height: 3),
                   Padding(
@@ -1609,6 +2050,440 @@ class _RoleTag extends StatelessWidget {
           color: color,
           letterSpacing: -0.1,
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pinned announcement banner
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PinnedBanner extends StatelessWidget {
+  final Map<String, dynamic> pinned;
+  final bool canModerate;
+  final VoidCallback onTap;
+  final VoidCallback? onUnpin;
+
+  const _PinnedBanner({
+    required this.pinned,
+    required this.canModerate,
+    required this.onTap,
+    this.onUnpin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final body = pinned['body']?.toString().trim() ?? '';
+    final hasImage = (pinned['image_url']?.toString().isNotEmpty ?? false);
+    final senderName = pinned['sender_name']?.toString() ?? '';
+    final preview = body.isNotEmpty
+        ? body
+        : (hasImage ? 'รูปภาพ' : 'ข้อความที่ปักหมุด');
+
+    return Material(
+      color: AppTheme.primaryColor.withValues(alpha: 0.08),
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: AppTheme.border(context).withValues(alpha: 0.5),
+              ),
+              left: const BorderSide(color: AppTheme.primaryColor, width: 3),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.push_pin_rounded,
+                  size: 16, color: AppTheme.primaryColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      senderName.isEmpty ? 'ปักหมุด' : 'ปักหมุด · $senderName',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    Text(
+                      preview,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (canModerate && onUnpin != null)
+                IconButton(
+                  tooltip: 'ปลดหมุด',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onUnpin,
+                  icon: Icon(Icons.close_rounded,
+                      size: 18, color: AppTheme.mutedText(context)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Quoted reply (inside a bubble)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _QuotedReply extends StatelessWidget {
+  final Map<String, dynamic> reply;
+  final bool isMine;
+  final VoidCallback onTap;
+
+  const _QuotedReply({
+    required this.reply,
+    required this.isMine,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final name = reply['sender_name']?.toString() ?? 'ผู้ใช้';
+    final body = reply['body']?.toString().trim() ?? '';
+    final hasImage = reply['has_image'] == true;
+    final preview = body.isNotEmpty ? body : (hasImage ? '📷 รูปภาพ' : '');
+
+    // On my (primary-colored) bubbles use translucent white; on others a tint.
+    final barColor = isMine ? Colors.white.withValues(alpha: 0.8) : AppTheme.primaryColor;
+    final bgColor = isMine
+        ? Colors.white.withValues(alpha: 0.16)
+        : AppTheme.primaryColor.withValues(alpha: 0.08);
+    final textColor = isMine ? Colors.white : AppTheme.onSurface(context);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border(left: BorderSide(color: barColor, width: 3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              name,
+              style: GoogleFonts.anuphan(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: textColor.withValues(alpha: 0.9),
+              ),
+            ),
+            if (preview.isNotEmpty)
+              Text(
+                preview,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.anuphan(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                  color: textColor.withValues(alpha: 0.8),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reaction chips (below a bubble)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReactionChips extends StatelessWidget {
+  final List<Map<String, dynamic>> reactions;
+  final int? myUserId;
+  final ValueChanged<String> onTap;
+
+  const _ReactionChips({
+    required this.reactions,
+    required this.myUserId,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (final r in reactions)
+          _ReactionChip(
+            emoji: r['emoji']?.toString() ?? '',
+            count: int.tryParse('${r['count']}') ?? 0,
+            mine: (r['user_ids'] as List? ?? const [])
+                .map((e) => int.tryParse('$e'))
+                .contains(myUserId),
+            onTap: () => onTap(r['emoji']?.toString() ?? ''),
+          ),
+      ],
+    );
+  }
+}
+
+class _ReactionChip extends StatelessWidget {
+  final String emoji;
+  final int count;
+  final bool mine;
+  final VoidCallback onTap;
+
+  const _ReactionChip({
+    required this.emoji,
+    required this.count,
+    required this.mine,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = mine ? AppTheme.primaryColor : AppTheme.mutedText(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: mine
+              ? AppTheme.primaryColor.withValues(alpha: 0.12)
+              : AppTheme.subtleSurface(context),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: mine
+                ? AppTheme.primaryColor.withValues(alpha: 0.4)
+                : AppTheme.border(context).withValues(alpha: 0.6),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 13)),
+            if (count > 1) ...[
+              const SizedBox(width: 3),
+              Text(
+                '$count',
+                style: GoogleFonts.anuphan(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reply preview bar (above the composer)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReplyPreviewBar extends StatelessWidget {
+  final Map<String, dynamic> message;
+  final VoidCallback onCancel;
+
+  const _ReplyPreviewBar({required this.message, required this.onCancel});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = message['user'] is Map
+        ? Map<String, dynamic>.from(message['user'] as Map)
+        : <String, dynamic>{};
+    final name = message['is_mine'] == true
+        ? 'ตัวคุณเอง'
+        : ((user['nickname']?.toString().isNotEmpty ?? false)
+            ? user['nickname'].toString()
+            : (user['name']?.toString() ?? 'ผู้ใช้'));
+    final body = message['body']?.toString().trim() ?? '';
+    final hasImage = (message['image_url']?.toString().isNotEmpty ?? false);
+    final preview = body.isNotEmpty ? body : (hasImage ? '📷 รูปภาพ' : '');
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        border: const Border(
+          left: BorderSide(color: AppTheme.primaryColor, width: 3),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.reply_rounded,
+              size: 16, color: AppTheme.primaryColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ตอบกลับ $name',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                if (preview.isNotEmpty)
+                  Text(
+                    preview,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.anuphan(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'ยกเลิก',
+            visualDensity: VisualDensity.compact,
+            onPressed: onCancel,
+            icon: Icon(Icons.close_rounded,
+                size: 18, color: AppTheme.mutedText(context)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Typing indicator + jump-to-latest + unread divider
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TypingIndicator extends StatelessWidget {
+  final String label;
+
+  const _TypingIndicator({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppTheme.surface(context),
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.anuphan(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _JumpToLatestButton extends StatelessWidget {
+  final int newCount;
+  final VoidCallback onTap;
+
+  const _JumpToLatestButton({required this.newCount, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 3,
+      shape: const CircleBorder(),
+      color: AppTheme.surface(context),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Badge(
+            isLabelVisible: newCount > 0,
+            label: Text(newCount > 99 ? '99+' : '$newCount'),
+            backgroundColor: AppTheme.primaryColor,
+            child: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppTheme.onSurface(context),
+              size: 26,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UnreadDivider extends StatelessWidget {
+  const _UnreadDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(
+              color: AppTheme.primaryColor.withValues(alpha: 0.4),
+              thickness: 1,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              'ข้อความใหม่',
+              style: GoogleFonts.anuphan(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Divider(
+              color: AppTheme.primaryColor.withValues(alpha: 0.4),
+              thickness: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
