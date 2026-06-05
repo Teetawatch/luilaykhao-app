@@ -57,6 +57,9 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> activeSeatLocks = [];
   List<dynamic> staffSchedules = [];
   Map<String, dynamic> staffSummary = {};
+  // Trip group-chat rooms the user belongs to (for the "แชท" tab) + total unread.
+  List<dynamic> chatConversations = [];
+  int chatUnreadTotal = 0;
   Map<String, dynamic>? loyalty;
   Map<String, dynamic>? stats;
   Timer? _activeSeatLockTimer;
@@ -689,6 +692,7 @@ class AppProvider extends ChangeNotifier {
       safe(api.get(ApiEndpoints.loyaltyRewards)),
       safe(api.get(ApiEndpoints.loyaltyCoupons)),
       safe(api.get(ApiEndpoints.reviewsMy)),
+      safe(api.get(ApiEndpoints.chatMyConversations)),
       if (hasStaff) safe(api.get(ApiEndpoints.staffSchedulesMy)),
     ]);
 
@@ -708,8 +712,15 @@ class AppProvider extends ChangeNotifier {
     if (results[5] != null) {
       myReviews = List<dynamic>.from(api.data(results[5]) ?? []);
     }
-    if (hasStaff && results.length > 6 && results[6] != null) {
-      final staffData = api.data(results[6]) as Map?;
+    if (results[6] != null) {
+      chatConversations = List<dynamic>.from(api.data(results[6]) ?? []);
+      chatUnreadTotal = chatConversations.fold<int>(0, (sum, c) {
+        final n = int.tryParse('${(c as Map?)?['unread_count']}') ?? 0;
+        return sum + n;
+      });
+    }
+    if (hasStaff && results.length > 7 && results[7] != null) {
+      final staffData = api.data(results[7]) as Map?;
       staffSchedules = List<dynamic>.from(staffData?['schedules'] ?? []);
       staffSummary = Map<String, dynamic>.from(staffData?['summary'] ?? {});
     }
@@ -1045,6 +1056,25 @@ class AppProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> chatRoom(int scheduleId) async {
     final response = await api.get(ApiEndpoints.chatRoom(scheduleId));
     return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// Loads the user's trip chat rooms and refreshes the bottom-nav unread
+  /// badge. Returns the list so screens can render it directly.
+  Future<List<dynamic>> loadChatConversations() async {
+    if (!isLoggedIn) {
+      chatConversations = [];
+      chatUnreadTotal = 0;
+      notifyListeners();
+      return chatConversations;
+    }
+    final response = await api.get(ApiEndpoints.chatMyConversations);
+    chatConversations = List<dynamic>.from(api.data(response) ?? const []);
+    chatUnreadTotal = chatConversations.fold<int>(0, (sum, c) {
+      final n = int.tryParse('${(c as Map?)?['unread_count']}') ?? 0;
+      return sum + n;
+    });
+    notifyListeners();
+    return chatConversations;
   }
 
   /// Subscribe to a schedule's chat channel. Returns a disposer.

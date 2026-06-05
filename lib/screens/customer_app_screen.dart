@@ -33,6 +33,7 @@ import 'profile_screen.dart'
     show ProfileScreen, ContactUsScreen, NotificationsScreen, StaffWorkScreen;
 import 'guest_booking_lookup_screen.dart';
 import 'chat_screen.dart';
+import 'chat_list_screen.dart';
 import 'join_booking_screen.dart';
 import 'pre_trip_checklist_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
@@ -105,8 +106,17 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
     }
   }
 
+  // Bottom-nav index of the "แชท" tab — also used to refresh unread on open.
+  static const _chatTabIndex = 3;
+
   void selectTab(int value) {
     setState(() => _index = value);
+    // Refresh the chat roster/unread badge whenever the user opens the tab so
+    // counts reflect rooms read on other devices.
+    if (value == _chatTabIndex) {
+      final app = context.read<AppProvider>();
+      if (app.isLoggedIn) unawaited(app.loadChatConversations());
+    }
   }
 
   void _showInAppBanner(_InAppNotification notification) {
@@ -151,6 +161,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
       const ExploreScreen(),
       const AllTripsScreen(),
       const MyBookingsScreen(),
+      const ChatListScreen(),
       const ProfileScreen(),
       if (showStaffCheckIn) const StaffWorkScreen(),
     ];
@@ -169,6 +180,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
         index: _index >= pages.length ? pages.length - 1 : _index,
         showStaffCheckIn: showStaffCheckIn,
         unreadNotificationCount: unreadCount,
+        unreadChatCount: app.chatUnreadTotal,
         onChanged: selectTab,
       ),
     );
@@ -179,6 +191,7 @@ class CustomBottomNav extends StatefulWidget {
   final int index;
   final bool showStaffCheckIn;
   final int unreadNotificationCount;
+  final int unreadChatCount;
   final ValueChanged<int> onChanged;
 
   const CustomBottomNav({
@@ -187,6 +200,7 @@ class CustomBottomNav extends StatefulWidget {
     required this.showStaffCheckIn,
     required this.onChanged,
     this.unreadNotificationCount = 0,
+    this.unreadChatCount = 0,
   });
 
   @override
@@ -284,10 +298,11 @@ class _CustomBottomNavState extends State<CustomBottomNav>
                             activeIcon: items[i].activeIcon,
                             label: items[i].label,
                             isSelected: widget.index == i,
-                            // Profile tab (index 3) shows unread notification badge.
+                            // Chat tab (index 3) → unread messages; account tab
+                            // (index 4) → unread notifications.
                             badge: i == 3
-                                ? widget.unreadNotificationCount
-                                : 0,
+                                ? widget.unreadChatCount
+                                : (i == 4 ? widget.unreadNotificationCount : 0),
                             onTap: () {
                               HapticFeedback.selectionClick();
                               widget.onChanged(i);
@@ -320,6 +335,11 @@ class _CustomBottomNavState extends State<CustomBottomNav>
       icon: Icons.confirmation_number_outlined,
       activeIcon: Icons.confirmation_number_rounded,
       label: 'การจอง',
+    ),
+    const _NavItemData(
+      icon: Icons.forum_outlined,
+      activeIcon: Icons.forum_rounded,
+      label: 'แชท',
     ),
     const _NavItemData(
       icon: Icons.person_outline_rounded,

@@ -123,7 +123,8 @@ class NotificationNavigator {
   }
 
   static void _openNotifications() {
-    _switchTab(3);
+    // Account tab is index 4 after the "แชท" tab was inserted at index 3.
+    _switchTab(4);
     Future.delayed(const Duration(milliseconds: 280), () {
       _nav?.push(
         PageRouteBuilder<void>(
@@ -153,7 +154,7 @@ class NotificationNavigator {
     _switchTab = switcher;
   }
 
-  static void goToProfile() => _switchTab(3);
+  static void goToProfile() => _switchTab(4);
 
   static void goToBookings() => _switchTab(2);
 

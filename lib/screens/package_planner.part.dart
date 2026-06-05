@@ -230,15 +230,6 @@ Color _tripTypeColor(String type) {
   };
 }
 
-String _difficultyLabel(String difficulty) {
-  return switch (difficulty.toLowerCase()) {
-    'easy' => 'ง่าย',
-    'medium' => 'ปานกลาง',
-    'hard' => 'ท้าทาย',
-    _ => difficulty,
-  };
-}
-
 num _tripPrice(Map<String, dynamic> trip) {
   return num.tryParse(
         textOf(
@@ -247,13 +238,6 @@ num _tripPrice(Map<String, dynamic> trip) {
         ),
       ) ??
       0;
-}
-
-String _pricePrefix(Map<String, dynamic> trip) {
-  final min = num.tryParse(textOf(trip['min_price']));
-  final max = num.tryParse(textOf(trip['max_price']));
-  if (min != null && max != null && min != max) return 'ช่วงราคา';
-  return 'เริ่มต้น';
 }
 
 String _priceLabel(Map<String, dynamic> trip) {

@@ -857,6 +857,15 @@ class ReservationCard extends StatelessWidget {
 
                   // Refund CTA
                   _RefundStatusCallToAction(booking: booking),
+
+                  // Explicit affordance into the detail sheet (ticket/QR,
+                  // passengers, pickup, itinerary). The whole card is tappable,
+                  // but this makes "there's more inside" obvious.
+                  const SizedBox(height: 12),
+                  _ViewDetailsButton(
+                    isPast: isPast,
+                    onTap: () => _openDetail(context, bookingRef),
+                  ),
                 ],
               ),
             ),
@@ -872,6 +881,54 @@ class ReservationCard extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BookingDetailSheet(bookingRef: bookingRef),
+    );
+  }
+}
+
+/// Clear "open the detail sheet" affordance at the foot of a reservation card —
+/// the ticket/QR, passenger list, pickup and itinerary live one tap deeper, and
+/// users wouldn't always realise the card itself is tappable.
+class _ViewDetailsButton extends StatelessWidget {
+  final bool isPast;
+  final VoidCallback onTap;
+
+  const _ViewDetailsButton({required this.isPast, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.tonalIcon(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.10),
+          foregroundColor: AppTheme.primaryColor,
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        icon: Icon(
+          isPast
+              ? Icons.receipt_long_rounded
+              : Icons.confirmation_number_rounded,
+          size: 18,
+        ),
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isPast ? 'ดูรายละเอียดการเดินทาง' : 'ดูตั๋ว & รายละเอียด',
+              style: GoogleFonts.anuphan(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const Icon(Icons.chevron_right_rounded, size: 18),
+          ],
+        ),
+      ),
     );
   }
 }

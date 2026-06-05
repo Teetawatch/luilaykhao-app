@@ -37,6 +37,7 @@ class ApiEndpoints {
   static String chatUnreadCount(int scheduleId) =>
       'schedules/$scheduleId/chat/unread-count';
   static String chatRoom(int scheduleId) => 'schedules/$scheduleId/chat/room';
+  static const chatMyConversations = 'chat/my-conversations';
   static String chatTyping(int scheduleId) =>
       'schedules/$scheduleId/chat/typing';
   static String chatPin(int scheduleId, int messageId) =>
