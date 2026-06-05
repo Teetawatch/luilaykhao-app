@@ -1,34 +1,53 @@
 part of 'profile_screen.dart';
 
-class StaffDashboardSection extends StatefulWidget {
-  final AppProvider app;
-
-  const StaffDashboardSection({super.key, required this.app});
+/// Dedicated "งานสตาฟ" tab — the staff work hub. Lists assigned schedules
+/// (grouped today / upcoming / past), surfaces QR check-in, and links each
+/// schedule to its full passenger manifest. Replaces the old in-profile
+/// dashboard section so staff work lives on its own bottom-nav tab.
+class StaffWorkScreen extends StatefulWidget {
+  const StaffWorkScreen({super.key});
 
   @override
-  State<StaffDashboardSection> createState() => _StaffDashboardSectionState();
+  State<StaffWorkScreen> createState() => _StaffWorkScreenState();
 }
 
-class _StaffDashboardSectionState extends State<StaffDashboardSection> {
+class _StaffWorkScreenState extends State<StaffWorkScreen> {
   bool _loading = false;
-  bool _expanded = true;
+  bool _loadedOnce = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final app = context.read<AppProvider>();
+      // Pull a fresh manifest snapshot when the tab first opens; the cached
+      // list from app start can be stale by the time staff reach the field.
+      if (app.canUseStaffCheckIn) _refresh();
+    });
+  }
 
   Future<void> _refresh() async {
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      await widget.app.loadStaffSchedules();
+      await context.read<AppProvider>().loadStaffSchedules();
     } catch (e) {
       if (mounted) _showError(context, e);
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadedOnce = true;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final schedules = widget.app.staffSchedules.map((e) => asMap(e)).toList();
-    final summary = widget.app.staffSummary;
+    final app = context.watch<AppProvider>();
+    final schedules = app.staffSchedules.map((e) => asMap(e)).toList();
+    final summary = app.staffSummary;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -56,92 +75,213 @@ class _StaffDashboardSectionState extends State<StaffDashboardSection> {
       }
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _StaffSectionHeader(
-          summary: summary,
-          expanded: _expanded,
-          loading: _loading,
-          onToggle: () => setState(() => _expanded = !_expanded),
-          onRefresh: _refresh,
-        ),
-        if (_expanded) ...[
-          const SizedBox(height: 12),
-          _StaffSummaryRow(
-            summary: summary,
-            totalSchedules: schedules.length,
-            // Derive from actual list groupings so the summary always matches
-            // what the user sees. Includes today's/active trips in "ถัดไป" so
-            // the staff sees their next obligations at a glance.
-            upcomingCount: activeSchedules.length + upcomingSchedules.length,
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        color: AppTheme.primaryColor,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
           ),
-          if (activeSchedules.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const _StaffGroupLabel(
-              label: 'วันนี้ / กำลังเดินทาง',
-              color: Color(0xFFDC2626),
-            ),
-            const SizedBox(height: 8),
-            for (final s in activeSchedules) ...[
-              _StaffScheduleCard(schedule: s, isToday: true),
-              const SizedBox(height: 10),
-            ],
-          ],
-          if (upcomingSchedules.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const _StaffGroupLabel(label: 'กำลังจะมาถึง', color: Color(0xFF2563EB)),
-            const SizedBox(height: 8),
-            for (final s in upcomingSchedules) ...[
-              _StaffScheduleCard(schedule: s),
-              const SizedBox(height: 10),
-            ],
-          ],
-          if (pastSchedules.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const _StaffGroupLabel(label: 'ผ่านมาแล้ว', color: Color(0xFF6B7280)),
-            const SizedBox(height: 8),
-            for (final s in pastSchedules.take(3)) ...[
-              _StaffScheduleCard(schedule: s),
-              const SizedBox(height: 10),
-            ],
-          ],
-          if (schedules.isEmpty) ...[
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-              decoration: _sectionDecoration(context: context, radius: 20),
-              child: Column(
-                children: [
-                  Icon(Icons.work_outline, size: 36, color: AppTheme.mutedText(context)),
-                  const SizedBox(height: 12),
-                  Text(
-                    'ยังไม่มีงานที่ได้รับมอบหมาย',
-                    style: GoogleFonts.anuphan(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textMain,
-                      letterSpacing: -0.1,
-                    ),
+          slivers: [
+            const TravelSliverAppBar(title: 'งานสตาฟ', showBackButton: false),
+            SliverToBoxAdapter(
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 128),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _StaffCheckInCta(
+                        onTap: () => _pushPremium(
+                          context,
+                          const StaffCheckInScreen(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _StaffSummaryRow(
+                        summary: summary,
+                        totalSchedules: schedules.length,
+                        // Derive from the actual list groupings so the summary
+                        // always matches what the user sees. Today's/active
+                        // trips count as "ถัดไป" so staff see their next
+                        // obligations at a glance.
+                        upcomingCount:
+                            activeSchedules.length + upcomingSchedules.length,
+                      ),
+                      if (activeSchedules.isNotEmpty) ...[
+                        const SizedBox(height: 18),
+                        const _StaffGroupLabel(
+                          label: 'วันนี้ / กำลังเดินทาง',
+                          color: Color(0xFFDC2626),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final s in activeSchedules) ...[
+                          _StaffScheduleCard(schedule: s, isToday: true),
+                          const SizedBox(height: 10),
+                        ],
+                      ],
+                      if (upcomingSchedules.isNotEmpty) ...[
+                        const SizedBox(height: 18),
+                        const _StaffGroupLabel(
+                          label: 'กำลังจะมาถึง',
+                          color: Color(0xFF2563EB),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final s in upcomingSchedules) ...[
+                          _StaffScheduleCard(schedule: s),
+                          const SizedBox(height: 10),
+                        ],
+                      ],
+                      if (pastSchedules.isNotEmpty) ...[
+                        const SizedBox(height: 18),
+                        const _StaffGroupLabel(
+                          label: 'ผ่านมาแล้ว',
+                          color: Color(0xFF6B7280),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final s in pastSchedules.take(5)) ...[
+                          _StaffScheduleCard(schedule: s),
+                          const SizedBox(height: 10),
+                        ],
+                      ],
+                      if (schedules.isEmpty && _loadedOnce && !_loading) ...[
+                        const SizedBox(height: 16),
+                        _StaffEmptyState(),
+                      ],
+                      if (schedules.isEmpty && _loading && !_loadedOnce) ...[
+                        const SizedBox(height: 60),
+                        const Center(child: CircularProgressIndicator()),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'งานที่ได้รับมอบหมายจากแอดมินจะปรากฏที่นี่',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.anuphan(
-                      fontSize: 13,
-                      height: 1.45,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StaffCheckInCta extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _StaffCheckInCta({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0D9488), Color(0xFF0F766E)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0D9488).withValues(alpha: 0.30),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.qr_code_scanner_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'เช็คอินลูกค้า',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'สแกน QR หรือกรอกเลขการจองเพื่อเช็คอิน',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.88),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StaffEmptyState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+      decoration: _sectionDecoration(context: context, radius: 20),
+      child: Column(
+        children: [
+          Icon(Icons.work_outline, size: 36, color: AppTheme.mutedText(context)),
+          const SizedBox(height: 12),
+          Text(
+            'ยังไม่มีงานที่ได้รับมอบหมาย',
+            style: GoogleFonts.anuphan(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textMain,
+              letterSpacing: -0.1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'งานที่ได้รับมอบหมายจากแอดมินจะปรากฏที่นี่',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.anuphan(
+              fontSize: 13,
+              height: 1.45,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textSecondary,
+            ),
+          ),
         ],
-      ],
+      ),
     );
   }
 }
@@ -155,88 +295,6 @@ DateTime? _parseScheduleDate(dynamic value) {
   final parsed = DateTime.tryParse(raw);
   if (parsed == null) return null;
   return DateTime(parsed.year, parsed.month, parsed.day);
-}
-
-class _StaffSectionHeader extends StatelessWidget {
-  final Map<String, dynamic> summary;
-  final bool expanded;
-  final bool loading;
-  final VoidCallback onToggle;
-  final VoidCallback onRefresh;
-
-  const _StaffSectionHeader({
-    required this.summary,
-    required this.expanded,
-    required this.loading,
-    required this.onToggle,
-    required this.onRefresh,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: onToggle,
-            behavior: HitTestBehavior.opaque,
-            child: Row(
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0D9488).withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.badge_outlined,
-                    size: 18,
-                    color: Color(0xFF0D9488),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'งานสตาฟ',
-                  style: GoogleFonts.anuphan(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textMain,
-                    letterSpacing: -0.1,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  expanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  size: 18,
-                  color: AppTheme.mutedText(context),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (loading)
-          const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-        else
-          IconButton(
-            onPressed: onRefresh,
-            icon: Icon(
-              Icons.refresh_rounded,
-              size: 18,
-              color: AppTheme.mutedText(context),
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-      ],
-    );
-  }
 }
 
 class _StaffSummaryRow extends StatelessWidget {
@@ -761,7 +819,12 @@ class _StaffScheduleAction extends StatelessWidget {
     final scheduleId = _numberValue(schedule['id']);
     final trip = _toMap(schedule['trip']);
     final tripTitle = _cleanText(trip['title'], fallback: 'แชทกลุ่มทริป');
-    final hasChat = scheduleId > 0;
+    final hasSchedule = scheduleId > 0;
+
+    Widget divider() => Divider(
+      height: 1,
+      color: AppTheme.border(context).withValues(alpha: 0.5),
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -771,8 +834,21 @@ class _StaffScheduleAction extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Passenger manifest — names, callable phones and pickup points so
+          // staff can run the roll-call and coordinate pickups in the field.
+          if (hasSchedule)
+            _StaffActionRow(
+              icon: Icons.groups_outlined,
+              label: 'ดูรายชื่อผู้โดยสาร',
+              color: const Color(0xFF2563EB),
+              onTap: () => _pushPremium(
+                context,
+                StaffManifestScreen(scheduleId: scheduleId, title: tripTitle),
+              ),
+            ),
           // Group chat — available to assigned staff for coordinating the trip
-          if (hasChat)
+          if (hasSchedule) ...[
+            divider(),
             _StaffActionRow(
               icon: Icons.forum_outlined,
               label: 'แชทกลุ่มทริป',
@@ -783,13 +859,10 @@ class _StaffScheduleAction extends StatelessWidget {
                 ChatScreen(scheduleId: scheduleId, title: tripTitle),
               ),
             ),
-          if (hasChat && showCheckIn)
-            Divider(
-              height: 1,
-              color: AppTheme.border(context).withValues(alpha: 0.5),
-            ),
+          ],
           // QR check-in
-          if (showCheckIn)
+          if (showCheckIn) ...[
+            divider(),
             _StaffActionRow(
               icon: Icons.qr_code_scanner,
               label: 'เปิดหน้า QR Check-in',
@@ -797,6 +870,7 @@ class _StaffScheduleAction extends StatelessWidget {
               roundedBottom: true,
               onTap: () => _pushPremium(context, const StaffCheckInScreen()),
             ),
+          ],
         ],
       ),
     );

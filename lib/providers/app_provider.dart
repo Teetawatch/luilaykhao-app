@@ -80,12 +80,10 @@ class AppProvider extends ChangeNotifier {
         .toList(growable: false);
   }
 
-  bool get canUseStaffCheckIn {
-    final roles = roleNames;
-    return roles.contains('staff') ||
-        roles.contains('operator') ||
-        roles.contains('admin');
-  }
+  /// Whether the "งานสตาฟ" tab and staff check-in are available. Gated to the
+  /// `staff` role only — the backend staff manifest endpoint is staff-only, so
+  /// operators/admins (who have their own tooling) shouldn't see this tab.
+  bool get canUseStaffCheckIn => roleNames.contains('staff');
 
   int get unreadNotificationCount =>
       notifications.where((n) => (n as Map?)?['is_read'] != true).length;
@@ -848,6 +846,14 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// Full passenger manifest for a schedule the staff is assigned to —
+  /// contact name, callable phone, pickup point/map/notes per booking.
+  /// Backed by the driver manifest endpoint, which grants staff access.
+  Future<Map<String, dynamic>> loadStaffManifest(int scheduleId) async {
+    final response = await api.get('driver/schedules/$scheduleId/manifest');
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   Future<Map<String, dynamic>> createBooking(
     Map<String, dynamic> payload,
   ) async {
@@ -990,6 +996,14 @@ class AppProvider extends ChangeNotifier {
     final response = await api.get(ApiEndpoints.chatUnreadCount(scheduleId));
     final data = Map<String, dynamic>.from(api.data(response) ?? {});
     return int.tryParse('${data['count']}') ?? 0;
+  }
+
+  /// Room metadata for a chat: members (with per-member read positions),
+  /// member count and the assigned vehicle. Drives the member roster and
+  /// LINE-style "อ่านแล้ว N" read receipts.
+  Future<Map<String, dynamic>> chatRoom(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.chatRoom(scheduleId));
+    return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 
   /// Subscribe to a schedule's chat channel. Returns a disposer.

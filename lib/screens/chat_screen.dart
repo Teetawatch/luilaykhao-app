@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
@@ -50,6 +51,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   VoidCallback? _disposer;
   Timer? _pollTimer;
   DateTime? _lastSocketAt;
+
+  // Room metadata (members + per-member read positions + vehicle). Refreshed
+  // alongside polling so the member roster and read receipts stay live.
+  Map<String, dynamic>? _room;
+  DateTime? _lastRoomFetch;
+  bool _roomFetching = false;
+  static const _roomRefreshGap = Duration(seconds: 8);
 
   @override
   void initState() {
@@ -111,12 +119,35 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       });
       _scrollToBottom();
       _markRead();
+      _refreshRoom(force: true);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = e.toString();
       });
+    }
+  }
+
+  /// Fetches room metadata (members, read positions, vehicle), throttled to
+  /// [_roomRefreshGap] unless [force]d so the live poll doesn't hammer it.
+  Future<void> _refreshRoom({bool force = false}) async {
+    if (_roomFetching) return;
+    if (!force &&
+        _lastRoomFetch != null &&
+        DateTime.now().difference(_lastRoomFetch!) < _roomRefreshGap) {
+      return;
+    }
+    _roomFetching = true;
+    try {
+      final room = await context.read<AppProvider>().chatRoom(widget.scheduleId);
+      if (!mounted) return;
+      setState(() => _room = room);
+    } catch (_) {
+      // Non-critical — the chat works without the roster; next tick retries.
+    } finally {
+      _lastRoomFetch = DateTime.now();
+      _roomFetching = false;
     }
   }
 
@@ -148,6 +179,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _ingest([
       {...data, 'is_mine': false},
     ]);
+    _refreshRoom();
   }
 
   void _startPolling() {
@@ -177,6 +209,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
       _ingest(fresh);
+      // Keep the roster / read receipts current (throttled internally).
+      _refreshRoom();
     } catch (_) {
       // Transient network failure — next tick retries.
     } finally {
@@ -236,6 +270,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _sending = false;
       });
       _scrollToBottom();
+      _refreshRoom();
     } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
@@ -346,36 +381,110 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
   }
 
+  // ── Room metadata accessors ───────────────────────────────────────────────
+
+  List<Map<String, dynamic>> get _members => (_room?['members'] as List? ?? [])
+      .map((e) => Map<String, dynamic>.from(e as Map))
+      .toList();
+
+  int get _memberCount {
+    final raw = _room?['member_count'];
+    final n = int.tryParse('$raw');
+    if (n != null) return n;
+    return _members.length;
+  }
+
+  Map<String, dynamic>? get _vehicle =>
+      _room?['vehicle'] is Map
+          ? Map<String, dynamic>.from(_room!['vehicle'] as Map)
+          : null;
+
+  String get _vehicleName => _vehicle?['name']?.toString().trim() ?? '';
+
+  String _subtitle() {
+    if (_room == null) return 'ลูกค้า · สตาฟ · ทีมงาน';
+    final parts = <String>['สมาชิก $_memberCount คน'];
+    if (_vehicleName.isNotEmpty) parts.add(_vehicleName);
+    return parts.join(' · ');
+  }
+
+  /// How many *other* members have read up to [messageId] — the denominator for
+  /// LINE-style "อ่านแล้ว N" receipts on the current user's own messages.
+  int _readCountFor(int messageId) {
+    if (messageId <= 0) return 0;
+    var count = 0;
+    for (final m in _members) {
+      if (m['is_me'] == true) continue;
+      final lastRead = int.tryParse('${m['last_read_message_id']}') ?? 0;
+      if (lastRead >= messageId) count++;
+    }
+    return count;
+  }
+
+  void _showRoomInfo() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.surface(context),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _RoomInfoSheet(
+        vehicle: _vehicle,
+        members: _members,
+        memberCount: _memberCount,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
         titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.title ?? 'แชทกลุ่มทริป',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.2,
+        title: InkWell(
+          onTap: _room == null ? null : _showRoomInfo,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.title ?? 'แชทกลุ่มทริป',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.anuphan(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
               ),
-            ),
-            Text(
-              'ลูกค้า · สตาฟ · ทีมงาน',
-              style: GoogleFonts.anuphan(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.mutedText(context),
+              Text(
+                _subtitle(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.anuphan(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.mutedText(context),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'สมาชิกในห้อง',
+            onPressed: _room == null ? null : _showRoomInfo,
+            icon: Badge(
+              isLabelVisible: _memberCount > 0,
+              label: Text('$_memberCount'),
+              backgroundColor: AppTheme.primaryColor,
+              child: const Icon(Icons.groups_rounded),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -542,6 +651,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       final isFirstInGroup = prev == null;
       final isLastInGroup = next == null;
 
+      // LINE-style read receipt: only on the last bubble of my own group, to
+      // avoid stamping every line. Counts other members who've read this far.
+      final isMine = m['is_mine'] == true;
+      final readByCount = (isMine && isLastInGroup)
+          ? _readCountFor(int.tryParse('${m['id']}') ?? 0)
+          : 0;
+
       items.add(
         _MessageBubble(
           message: m,
@@ -550,6 +666,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           showTimestamp: isLastInGroup,
           isFirstInGroup: isFirstInGroup,
           isLastInGroup: isLastInGroup,
+          readByCount: readByCount,
           onCopy: _copyMessage,
         ),
       );
@@ -829,6 +946,7 @@ class _MessageBubble extends StatelessWidget {
   final bool showTimestamp;
   final bool isFirstInGroup;
   final bool isLastInGroup;
+  final int readByCount;
   final ValueChanged<String> onCopy;
 
   const _MessageBubble({
@@ -838,6 +956,7 @@ class _MessageBubble extends StatelessWidget {
     required this.showTimestamp,
     required this.isFirstInGroup,
     required this.isLastInGroup,
+    required this.readByCount,
     required this.onCopy,
   });
 
@@ -989,13 +1108,37 @@ class _MessageBubble extends StatelessWidget {
                       left: isMine ? 0 : 12,
                       right: isMine ? 4 : 0,
                     ),
-                    child: Text(
-                      _timeText(),
-                      style: GoogleFonts.anuphan(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.mutedText(context),
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // LINE-style read receipt sits before the timestamp on
+                        // the sender's own messages.
+                        if (isMine && readByCount > 0) ...[
+                          Icon(
+                            Icons.done_all_rounded,
+                            size: 12,
+                            color: AppTheme.primaryColor.withValues(alpha: 0.8),
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            'อ่าน $readByCount',
+                            style: GoogleFonts.anuphan(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryColor.withValues(alpha: 0.8),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          _timeText(),
+                          style: GoogleFonts.anuphan(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -1182,17 +1325,276 @@ class _ImageViewer extends StatelessWidget {
   }
 }
 
-class _RoleTag extends StatelessWidget {
-  final String role;
+/// Bottom sheet with the room roster and the assigned vehicle — opened from the
+/// chat app bar. Mirrors LINE's "members" panel.
+class _RoomInfoSheet extends StatelessWidget {
+  final Map<String, dynamic>? vehicle;
+  final List<Map<String, dynamic>> members;
+  final int memberCount;
 
-  const _RoleTag({required this.role});
+  const _RoomInfoSheet({
+    required this.vehicle,
+    required this.members,
+    required this.memberCount,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (role == 'customer') return const SizedBox.shrink();
+    // Staff first, then everyone else — staff are the trip leads.
+    final sorted = [...members]..sort((a, b) {
+      int rank(Map<String, dynamic> m) => m['role'] == 'staff' ? 0 : 1;
+      return rank(a).compareTo(rank(b));
+    });
+
+    return SafeArea(
+      top: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.mutedText(context).withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.groups_rounded,
+                      size: 20, color: AppTheme.primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'สมาชิกในห้อง',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.onSurface(context),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '$memberCount คน',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                children: [
+                  if (vehicle != null) ...[
+                    _VehicleCard(vehicle: vehicle!),
+                    const SizedBox(height: 14),
+                  ],
+                  for (final m in sorted) _MemberTile(member: m),
+                  if (sorted.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'ยังไม่มีข้อมูลสมาชิก',
+                          style: GoogleFonts.anuphan(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VehicleCard extends StatelessWidget {
+  final Map<String, dynamic> vehicle;
+
+  const _VehicleCard({required this.vehicle});
+
+  String _t(dynamic v) => v?.toString().trim() ?? '';
+
+  @override
+  Widget build(BuildContext context) {
+    final name = _t(vehicle['name']);
+    final plate = _t(vehicle['license_plate']);
+    final driverName = _t(vehicle['driver_name']);
+    final driverPhone = _t(vehicle['driver_phone']);
+
+    final meta = [
+      if (_t(vehicle['type']).isNotEmpty) _t(vehicle['type']),
+      if (plate.isNotEmpty) plate,
+    ].join(' · ');
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.directions_bus_rounded,
+              color: AppTheme.primaryColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name.isEmpty ? 'รถประจำรอบ' : name,
+                  style: GoogleFonts.anuphan(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                    letterSpacing: -0.1,
+                  ),
+                ),
+                if (meta.isNotEmpty)
+                  Text(
+                    meta,
+                    style: GoogleFonts.anuphan(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                if (driverName.isNotEmpty)
+                  Text(
+                    'คนขับ: $driverName',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (driverPhone.isNotEmpty)
+            IconButton(
+              tooltip: 'โทรหาคนขับ',
+              onPressed: () => launchUrl(Uri.parse('tel:$driverPhone')),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.phone_rounded,
+                    color: Colors.white, size: 18),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemberTile extends StatelessWidget {
+  final Map<String, dynamic> member;
+
+  const _MemberTile({required this.member});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = (member['nickname']?.toString().isNotEmpty ?? false)
+        ? member['nickname'].toString()
+        : (member['name']?.toString() ?? 'ผู้ใช้');
+    final role = member['role']?.toString() ?? 'customer';
+    final isMe = member['is_me'] == true;
+    final avatarUrl = ApiConfig.mediaUrl(member['avatar_url']);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        children: [
+          _Avatar(url: avatarUrl, name: name),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    name,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.anuphan(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.onSurface(context),
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ),
+                if (isMe) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '(คุณ)',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _RoleTag(role: role, alwaysShow: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoleTag extends StatelessWidget {
+  final String role;
+  final bool alwaysShow;
+
+  const _RoleTag({required this.role, this.alwaysShow = false});
+
+  @override
+  Widget build(BuildContext context) {
+    // In message bubbles a customer tag is noise; in the roster we always tag.
+    if (role == 'customer' && !alwaysShow) return const SizedBox.shrink();
     final color = role == 'admin'
         ? const Color(0xFFB45309)
-        : const Color(0xFF0E7490);
+        : role == 'staff'
+            ? const Color(0xFF0E7490)
+            : AppTheme.mutedText(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(

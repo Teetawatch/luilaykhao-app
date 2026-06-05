@@ -29,9 +29,9 @@ import '../widgets/travel_widgets.dart';
 import 'login_screen.dart';
 import 'refund_status_screen.dart';
 import 'payment_screen.dart';
-import 'profile_screen.dart' show ProfileScreen, ContactUsScreen, NotificationsScreen;
+import 'profile_screen.dart'
+    show ProfileScreen, ContactUsScreen, NotificationsScreen, StaffWorkScreen;
 import 'guest_booking_lookup_screen.dart';
-import 'staff_check_in_screen.dart';
 import 'chat_screen.dart';
 import 'join_booking_screen.dart';
 import 'pre_trip_checklist_screen.dart';
@@ -152,7 +152,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
       const AllTripsScreen(),
       const MyBookingsScreen(),
       const ProfileScreen(),
-      if (showStaffCheckIn) const StaffCheckInScreen(),
+      if (showStaffCheckIn) const StaffWorkScreen(),
     ];
 
     final unreadCount = app.notifications
@@ -328,9 +328,9 @@ class _CustomBottomNavState extends State<CustomBottomNav>
     ),
     if (widget.showStaffCheckIn)
       const _NavItemData(
-        icon: Icons.qr_code_scanner_rounded,
-        activeIcon: Icons.fact_check_rounded,
-        label: 'เช็คอิน',
+        icon: Icons.badge_outlined,
+        activeIcon: Icons.badge_rounded,
+        label: 'งานสตาฟ',
       ),
   ];
 }

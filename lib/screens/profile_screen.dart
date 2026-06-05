@@ -20,6 +20,7 @@ import 'document_wallet_screen.dart';
 import 'notification_preferences_screen.dart';
 import 'chat_screen.dart' show ChatScreen;
 import 'staff_check_in_screen.dart' show StaffCheckInScreen;
+import 'staff_manifest_screen.dart' show StaffManifestScreen;
 import 'wishlist_screen.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';
@@ -102,10 +103,6 @@ class ProfilePage extends StatelessWidget {
                       ProfileStatsSection(app: app, loyalty: loyalty),
                       const SizedBox(height: 24),
                       QuickActionsSection(app: app),
-                      if (app.canUseStaffCheckIn) ...[
-                        const SizedBox(height: 28),
-                        StaffDashboardSection(app: app),
-                      ],
                       const SizedBox(height: 28),
                       AccountMenu(user: user),
                       const SizedBox(height: 24),
