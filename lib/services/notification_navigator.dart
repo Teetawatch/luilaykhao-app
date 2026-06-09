@@ -42,6 +42,8 @@ class NotificationNavigator {
       case 'seat_alert':
         _switchTab(2);
       case 'trip_alert':
+      case 'new_trip':
+      case 'low_seats':
         _openTripFromData(data);
       case 'sos_alert':
         _openSosAlert(data);
