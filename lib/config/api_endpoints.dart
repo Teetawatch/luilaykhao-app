@@ -21,6 +21,7 @@ class ApiEndpoints {
   static String tripSchedules(String slug) => 'trips/$slug/schedules';
   static const categories = 'categories';
   static const stats = 'stats';
+  static const heroSlides = 'hero-slides';
 
   // Reviews
   static const reviews = 'reviews';
@@ -33,6 +34,8 @@ class ApiEndpoints {
   // Chat (group chat per schedule)
   static String chatMessages(int scheduleId) =>
       'schedules/$scheduleId/chat/messages';
+  static String chatMessage(int scheduleId, int messageId) =>
+      'schedules/$scheduleId/chat/messages/$messageId';
   static String chatRead(int scheduleId) => 'schedules/$scheduleId/chat/read';
   static String chatUnreadCount(int scheduleId) =>
       'schedules/$scheduleId/chat/unread-count';

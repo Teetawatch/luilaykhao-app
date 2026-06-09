@@ -38,6 +38,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   final List<Map<String, dynamic>> _messages = [];
   final _input = TextEditingController();
+  final _inputFocus = FocusNode();
   final _scroll = ScrollController();
   final _picker = ImagePicker();
 
@@ -64,6 +65,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   // Reply composer target (the message being quoted), null when not replying.
   Map<String, dynamic>? _replyingTo;
+
+  // Edit composer target (the message being edited), null when not editing.
+  Map<String, dynamic>? _editing;
+
+  // @mention candidates picked from the suggestion bar this compose session —
+  // {id, label}. On send we keep only those whose "@label" still appears.
+  final List<Map<String, dynamic>> _mentionPicks = [];
+  // Active "@query" the user is typing (null when not mentioning).
+  String? _mentionQuery;
 
   // Live "is typing…" — userId → (name, expiry). A 1s sweeper clears stale ones.
   final Map<int, ({String name, DateTime until})> _typing = {};
@@ -101,6 +111,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _disposer?.call();
     _signalsDisposer?.call();
     _input.dispose();
+    _inputFocus.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     super.dispose();
@@ -133,6 +144,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       onTyping: _onTypingSignal,
       onReaction: _onReactionSignal,
       onPinned: _onPinnedSignal,
+      onUpdated: _onMessageUpdated,
     );
     _startPolling();
   }
@@ -324,6 +336,37 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     final app = context.read<AppProvider>();
+    final mentions = _activeMentionIds(text);
+
+    // Editing an existing message instead of sending a new one.
+    final editing = _editing;
+    if (editing != null) {
+      final id = int.tryParse('${editing['id']}');
+      try {
+        final updated = await app.editChatMessage(
+          widget.scheduleId,
+          id ?? 0,
+          text,
+          mentions: mentions,
+        );
+        if (!mounted) return;
+        final idx = _messages.indexWhere((m) => m['id'] == updated['id']);
+        setState(() {
+          if (idx >= 0) _messages[idx] = {..._messages[idx], ...updated};
+          _editing = null;
+          _input.clear();
+          _mentionPicks.clear();
+          _mentionQuery = null;
+          _sending = false;
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _sending = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+      return;
+    }
+
     final replyId = _replyingTo == null
         ? null
         : int.tryParse('${_replyingTo!['id']}');
@@ -332,12 +375,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         widget.scheduleId,
         text,
         replyToId: replyId,
+        mentions: mentions,
       );
       if (!mounted) return;
       setState(() {
         _messages.add(message);
         _input.clear();
         _replyingTo = null;
+        _mentionPicks.clear();
+        _mentionQuery = null;
         _sending = false;
       });
       _scrollToBottom();
@@ -349,6 +395,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         SnackBar(content: Text(e.toString())),
       );
     }
+  }
+
+  /// Mention ids still relevant to the final text — keep a pick only if its
+  /// "@label" survived in the message the user actually sent.
+  List<int> _activeMentionIds(String text) {
+    final ids = <int>[];
+    for (final pick in _mentionPicks) {
+      final label = pick['label']?.toString() ?? '';
+      final id = int.tryParse('${pick['id']}');
+      if (id != null && label.isNotEmpty && text.contains('@$label')) {
+        ids.add(id);
+      }
+    }
+    return ids.toSet().toList();
   }
 
   Future<void> _pickAndSendImage(ImageSource source) async {
@@ -550,7 +610,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   // ── Composer / message actions ────────────────────────────────────────────
 
-  void _onInputChanged(String _) {
+  void _onInputChanged(String value) {
+    _updateMentionQuery(value);
+
     // Throttle typing pings to at most one every 2.5s while actively typing.
     final now = DateTime.now();
     if (_lastTypingSentAt != null &&
@@ -560,6 +622,66 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (_input.text.trim().isEmpty) return;
     _lastTypingSentAt = now;
     context.read<AppProvider>().sendChatTyping(widget.scheduleId);
+  }
+
+  /// Detect an in-progress "@query" at the caret so the suggestion bar can
+  /// offer room members. Active only when the last token starts with "@" and
+  /// has no whitespace yet.
+  void _updateMentionQuery(String value) {
+    final sel = _input.selection.baseOffset;
+    final caret = (sel >= 0 && sel <= value.length) ? sel : value.length;
+    final upToCaret = value.substring(0, caret);
+    final at = upToCaret.lastIndexOf('@');
+    String? query;
+    if (at >= 0) {
+      final token = upToCaret.substring(at + 1);
+      if (!token.contains(RegExp(r'\s'))) query = token;
+    }
+    if (query != _mentionQuery) {
+      setState(() => _mentionQuery = query);
+    }
+  }
+
+  /// Room members matching the active "@query" (excluding myself).
+  List<Map<String, dynamic>> get _mentionSuggestions {
+    final q = _mentionQuery;
+    if (q == null) return const [];
+    final lower = q.toLowerCase();
+    return _members.where((m) {
+      if (m['is_me'] == true) return false;
+      final label = _mentionLabel(m).toLowerCase();
+      return lower.isEmpty || label.contains(lower);
+    }).take(6).toList();
+  }
+
+  String _mentionLabel(Map<String, dynamic> member) {
+    final nick = member['nickname']?.toString().trim() ?? '';
+    if (nick.isNotEmpty) return nick;
+    final name = member['name']?.toString().trim() ?? '';
+    return name.isEmpty ? 'ผู้ใช้' : name.split(RegExp(r'\s+')).first;
+  }
+
+  /// Replace the active "@query" with "@label " and record the mention pick.
+  void _applyMention(Map<String, dynamic> member) {
+    final label = _mentionLabel(member);
+    final id = int.tryParse('${member['user_id'] ?? member['id']}');
+    final value = _input.text;
+    final sel = _input.selection.baseOffset;
+    final caret = (sel >= 0 && sel <= value.length) ? sel : value.length;
+    final upToCaret = value.substring(0, caret);
+    final at = upToCaret.lastIndexOf('@');
+    if (at < 0) return;
+
+    final newPrefix = '${value.substring(0, at)}@$label ';
+    final newText = newPrefix + value.substring(caret);
+    _input.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newPrefix.length),
+    );
+    setState(() {
+      if (id != null) _mentionPicks.add({'id': id, 'label': label});
+      _mentionQuery = null;
+    });
   }
 
   Future<void> _toggleReaction(int messageId, String emoji) async {
@@ -590,6 +712,72 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _cancelReply() => setState(() => _replyingTo = null);
+
+  /// Realtime: an existing message was edited or deleted — replace it in place.
+  void _onMessageUpdated(Map<String, dynamic> data) {
+    final id = data['id'];
+    if (id == null || !mounted) return;
+    final idx = _messages.indexWhere((m) => m['id'] == id);
+    if (idx < 0) return;
+    setState(() => _messages[idx] = {..._messages[idx], ...data});
+  }
+
+  void _startEdit(Map<String, dynamic> message) {
+    setState(() {
+      _editing = message;
+      _replyingTo = null;
+      _mentionPicks.clear();
+      _input.text = message['body']?.toString() ?? '';
+      _input.selection = TextSelection.fromPosition(
+        TextPosition(offset: _input.text.length),
+      );
+    });
+    FocusScope.of(context).requestFocus(_inputFocus);
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _editing = null;
+      _input.clear();
+      _mentionPicks.clear();
+      _mentionQuery = null;
+    });
+  }
+
+  Future<void> _deleteMessage(Map<String, dynamic> message) async {
+    final id = int.tryParse('${message['id']}');
+    if (id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('ลบข้อความ', style: GoogleFonts.anuphan(fontWeight: FontWeight.w800)),
+        content: Text('ต้องการลบข้อความนี้ใช่ไหม? การลบไม่สามารถย้อนกลับได้',
+            style: GoogleFonts.anuphan()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('ยกเลิก', style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('ลบ', style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final updated = await context
+          .read<AppProvider>()
+          .deleteChatMessage(widget.scheduleId, id);
+      if (!mounted) return;
+      final idx = _messages.indexWhere((m) => m['id'] == id);
+      if (idx >= 0) setState(() => _messages[idx] = {..._messages[idx], ...updated});
+    } catch (e) {
+      if (mounted) _toast(e.toString());
+    }
+  }
 
   Future<void> _pinMessage(Map<String, dynamic> message) async {
     final id = int.tryParse('${message['id']}');
@@ -646,10 +834,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _openMessageMenu(Map<String, dynamic> message) {
     final role = message['sender_role']?.toString() ?? 'customer';
-    if (role == 'system') return;
+    if (role == 'system' || message['is_deleted'] == true) return;
     HapticFeedback.mediumImpact();
     final body = message['body']?.toString() ?? '';
     final messageId = int.tryParse('${message['id']}') ?? 0;
+    final isMine = message['is_mine'] == true;
+    final hasImage = (message['image_url']?.toString() ?? '').isNotEmpty;
+    final canEdit = isMine && body.isNotEmpty && !hasImage;
+    final canDelete = isMine || _canModerate;
 
     showModalBottomSheet<void>(
       context: context,
@@ -724,6 +916,28 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   },
                 ),
             ],
+            if (canEdit)
+              ListTile(
+                leading: const Icon(Icons.edit_rounded),
+                title: Text('แก้ไข',
+                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _startEdit(message);
+                },
+              ),
+            if (canDelete)
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded,
+                    color: AppTheme.errorColor),
+                title: Text('ลบ',
+                    style: GoogleFonts.anuphan(
+                        fontWeight: FontWeight.w600, color: AppTheme.errorColor)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _deleteMessage(message);
+                },
+              ),
             const SizedBox(height: 8),
           ],
         ),
@@ -1126,6 +1340,62 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Member suggestion strip shown above the composer while typing "@…".
+  Widget _buildMentionBar() {
+    final suggestions = _mentionSuggestions;
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 56),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        border: Border(
+          top: BorderSide(color: AppTheme.border(context).withValues(alpha: 0.4)),
+        ),
+      ),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        itemCount: suggestions.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (_, i) {
+          final m = suggestions[i];
+          final label = _mentionLabel(m);
+          return InkWell(
+            onTap: () => _applyMention(m),
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppTheme.surface(context),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('@',
+                      style: GoogleFonts.anuphan(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w800)),
+                  Text(label,
+                      style: GoogleFonts.anuphan(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.onSurface(context))),
+                  if (m['role'] == 'staff') ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.verified_rounded,
+                        size: 13, color: AppTheme.primaryColor),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildInput() {
     return SafeArea(
       top: false,
@@ -1142,6 +1412,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (_mentionSuggestions.isNotEmpty) _buildMentionBar(),
+            if (_editing != null)
+              _EditPreviewBar(
+                message: _editing!,
+                onCancel: _cancelEdit,
+              ),
             if (_replyingTo != null)
               _ReplyPreviewBar(
                 message: _replyingTo!,
@@ -1166,6 +1442,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   Expanded(
                     child: TextField(
                       controller: _input,
+                      focusNode: _inputFocus,
                       minLines: 1,
                       maxLines: 4,
                       maxLength: 2000,
@@ -1389,6 +1666,30 @@ class _MessageBubble extends StatelessWidget {
     return '$h:$m';
   }
 
+  /// Split a message body into spans, bolding "@mention" tokens.
+  List<InlineSpan> _mentionSpans(String text, Color fg) {
+    final spans = <InlineSpan>[];
+    final pattern = RegExp(r'@[^\s@]+');
+    var last = 0;
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > last) {
+        spans.add(TextSpan(text: text.substring(last, match.start)));
+      }
+      spans.add(TextSpan(
+        text: match.group(0),
+        style: GoogleFonts.anuphan(
+          fontWeight: FontWeight.w800,
+          color: AppTheme.primaryColor,
+        ),
+      ));
+      last = match.end;
+    }
+    if (last < text.length) {
+      spans.add(TextSpan(text: text.substring(last)));
+    }
+    return spans;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMine = message['is_mine'] == true;
@@ -1401,9 +1702,11 @@ class _MessageBubble extends StatelessWidget {
         : (user['name']?.toString() ?? 'ผู้ใช้');
     final avatarUrl = ApiConfig.mediaUrl(user['avatar_url']);
 
+    final isDeleted = message['is_deleted'] == true;
+    final isEdited = message['edited_at'] != null;
     final body = message['body']?.toString() ?? '';
-    final imageUrl = ApiConfig.mediaUrl(message['image_url']);
-    final hasText = body.isNotEmpty;
+    final imageUrl = isDeleted ? '' : ApiConfig.mediaUrl(message['image_url']);
+    final hasText = !isDeleted && body.isNotEmpty;
     final hasImage = imageUrl.isNotEmpty;
 
     final replyTo = message['reply_to'] is Map
@@ -1520,9 +1823,43 @@ class _MessageBubble extends StatelessWidget {
                           _ChatImage(url: imageUrl),
                           if (hasText) const SizedBox(height: 6),
                         ],
-                        if (hasText)
-                          Text(
-                            body,
+                        if (isDeleted)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.block_rounded,
+                                  size: 14,
+                                  color: fg.withValues(alpha: 0.6)),
+                              const SizedBox(width: 5),
+                              Text(
+                                'ข้อความนี้ถูกลบ',
+                                style: GoogleFonts.anuphan(
+                                  fontSize: 14,
+                                  height: 1.4,
+                                  color: fg.withValues(alpha: 0.6),
+                                  fontStyle: FontStyle.italic,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          )
+                        else if (hasText)
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                ..._mentionSpans(body, fg),
+                                if (isEdited)
+                                  TextSpan(
+                                    text: '  แก้ไขแล้ว',
+                                    style: GoogleFonts.anuphan(
+                                      fontSize: 11,
+                                      color: fg.withValues(alpha: 0.55),
+                                      fontStyle: FontStyle.italic,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                              ],
+                            ),
                             style: GoogleFonts.anuphan(
                               fontSize: 15,
                               height: 1.4,
@@ -2349,6 +2686,67 @@ class _ReplyPreviewBar extends StatelessWidget {
                 if (preview.isNotEmpty)
                   Text(
                     preview,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.anuphan(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'ยกเลิก',
+            visualDensity: VisualDensity.compact,
+            onPressed: onCancel,
+            icon: Icon(Icons.close_rounded,
+                size: 18, color: AppTheme.mutedText(context)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Banner above the composer while editing an existing message.
+class _EditPreviewBar extends StatelessWidget {
+  final Map<String, dynamic> message;
+  final VoidCallback onCancel;
+
+  const _EditPreviewBar({required this.message, required this.onCancel});
+
+  @override
+  Widget build(BuildContext context) {
+    final body = message['body']?.toString().trim() ?? '';
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        border: const Border(
+          left: BorderSide(color: Color(0xFFD97706), width: 3),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.edit_rounded, size: 16, color: Color(0xFFD97706)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'กำลังแก้ไขข้อความ',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFFD97706),
+                  ),
+                ),
+                if (body.isNotEmpty)
+                  Text(
+                    body,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.anuphan(

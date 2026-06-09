@@ -303,73 +303,92 @@ class _CustomBottomNavState extends State<CustomBottomNav>
     final isDark = AppTheme.isDark(context);
     final items = _buildItems();
 
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: ScaleTransition(
-          scale: _scaleAnim,
+    // Anchored to the bottom edge: full width, rounded only on the top corners
+    // using Apple-style continuous (superellipse) curves. The shadow lives on
+    // an OUTER layer (outside the clip) so it isn't clipped away — giving a
+    // crisp lifted edge that follows the smooth corner.
+    const topCorners = BorderRadius.vertical(top: Radius.circular(28));
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: const RoundedSuperellipseBorder(borderRadius: topCorners),
+        shadows: isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 30,
+                  spreadRadius: 1,
+                  offset: const Offset(0, -8),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.16),
+                  blurRadius: 32,
+                  spreadRadius: 1,
+                  offset: const Offset(0, -9),
+                ),
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                  blurRadius: 18,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+      ),
+      child: ClipRSuperellipse(
+        borderRadius: topCorners,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
-            height: 68,
             decoration: BoxDecoration(
               color: isDark
                   ? AppTheme.surfaceDark.withValues(alpha: 0.97)
                   : Colors.white.withValues(alpha: 0.97),
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(
-                color: isDark
-                    ? AppTheme.outlineDark.withValues(alpha: 0.6)
-                    : const Color(0xFFE2E8F0).withValues(alpha: 0.8),
-                width: 1,
+              border: Border(
+                top: BorderSide(
+                  color: isDark
+                      ? AppTheme.outlineDark.withValues(alpha: 0.7)
+                      : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
               ),
-              boxShadow: isDark
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: const Color(0xFF0F172A).withValues(alpha: 0.08),
-                        blurRadius: 28,
-                        offset: const Offset(0, 8),
-                      ),
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.06),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(32),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    children: [
-                      for (int i = 0; i < items.length; i++)
-                        Expanded(
-                          child: _NavItem(
-                            icon: items[i].icon,
-                            activeIcon: items[i].activeIcon,
-                            label: items[i].label,
-                            isSelected: widget.index == i,
-                            // Chat tab (index 3) → unread messages; account tab
-                            // (index 4) → unread notifications.
-                            badge: i == 3
-                                ? widget.unreadChatCount
-                                : (i == 4 ? widget.unreadNotificationCount : 0),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              widget.onChanged(i);
-                            },
+            // Keep clearance from the home indicator, but trim a little of the
+            // bottom inset so the icons sit lower instead of floating high.
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: (MediaQuery.viewPaddingOf(context).bottom - 4)
+                    .clamp(0.0, double.infinity),
+              ),
+              child: ScaleTransition(
+                scale: _scaleAnim,
+                child: SizedBox(
+                  height: 68,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        for (int i = 0; i < items.length; i++)
+                          Expanded(
+                            child: _NavItem(
+                              icon: items[i].icon,
+                              activeIcon: items[i].activeIcon,
+                              label: items[i].label,
+                              isSelected: widget.index == i,
+                              // Chat tab (index 3) → unread messages; account
+                              // tab (index 4) → unread notifications.
+                              badge: i == 3
+                                  ? widget.unreadChatCount
+                                  : (i == 4
+                                        ? widget.unreadNotificationCount
+                                        : 0),
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                widget.onChanged(i);
+                              },
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

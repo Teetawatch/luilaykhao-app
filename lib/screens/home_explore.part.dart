@@ -41,10 +41,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final notificationCount = app.notifications
         .where((item) => asMap(item)['is_read'] != true)
         .length;
-    final heroTrip =
-        (app.featuredTrips.isNotEmpty ? app.featuredTrips : app.trips)
-            .map(asMap)
-            .firstOrNull;
     final hasFilter = _activeSearch != null || _activeType != null;
     final showTrips = (hasFilter
             ? app.trips
@@ -98,7 +94,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 children: [
                   Stack(
                     children: [
-                      HeroHeader(trip: heroTrip),
+                      HeroHeader(slides: app.heroSlides),
                       Container(
                         margin: EdgeInsets.only(top: heroHeight - 64),
                         child: _HomeInspiredTopSection(
@@ -168,14 +164,67 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 }
 
-class HeroHeader extends StatelessWidget {
-  final Map<String, dynamic>? trip;
+class HeroHeader extends StatefulWidget {
+  /// Admin-managed hero slides ({image_url, alt_text}); falls back to the
+  /// bundled background when empty.
+  final List<dynamic> slides;
 
-  const HeroHeader({super.key, required this.trip});
+  const HeroHeader({super.key, this.slides = const []});
+
+  @override
+  State<HeroHeader> createState() => _HeroHeaderState();
+}
+
+class _HeroHeaderState extends State<HeroHeader> {
+  int _index = 0;
+  Timer? _timer;
+
+  static const _interval = Duration(seconds: 5);
+
+  List<String> get _images => widget.slides
+      .map((s) => ApiConfig.mediaUrl(asMap(s)['image_url']?.toString() ?? ''))
+      .where((url) => url.isNotEmpty)
+      .toList();
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeStartTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant HeroHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Slides arrived (or changed count) after the first build — (re)evaluate.
+    if (widget.slides.length != oldWidget.slides.length) {
+      if (_index >= _images.length) _index = 0;
+      _maybeStartTimer();
+    }
+  }
+
+  void _maybeStartTimer() {
+    _timer?.cancel();
+    if (_images.length <= 1) return;
+    _timer = Timer.periodic(_interval, (_) {
+      if (!mounted) return;
+      setState(() => _index = (_index + 1) % _images.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final image = ApiConfig.mediaUrl('/images/bgoverlaymobile.png');
+    final images = _images;
+    // Fall back to the bundled overlay image when no slides are configured.
+    final fallback = ApiConfig.mediaUrl('/images/bgoverlaymobile.png');
+    final currentImage = images.isEmpty
+        ? fallback
+        : images[_index.clamp(0, images.length - 1)];
     final size = MediaQuery.of(context).size;
     final heroHeight = (size.height * 0.50).clamp(420.0, 540.0);
     final compactWidth = size.width < 390;
@@ -198,7 +247,7 @@ class HeroHeader extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (image.isEmpty)
+                if (currentImage.isEmpty)
                   Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
@@ -209,17 +258,27 @@ class HeroHeader extends StatelessWidget {
                     ),
                   )
                 else
-                  CachedNetworkImage(
-                    imageUrl: image,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) =>
-                        Container(color: const Color(0xFF0A3D46)),
-                    errorWidget: (_, _, _) => Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [AppTheme.primaryColor, AppTheme.accentColor],
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 700),
+                    child: CachedNetworkImage(
+                      // Key by URL so the switcher cross-fades between slides.
+                      key: ValueKey(currentImage),
+                      imageUrl: currentImage,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      placeholder: (context, url) =>
+                          Container(color: const Color(0xFF0A3D46)),
+                      errorWidget: (_, _, _) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppTheme.primaryColor,
+                              AppTheme.accentColor,
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -295,6 +354,27 @@ class HeroHeader extends StatelessWidget {
               ),
             ),
           ),
+          // Slide indicator dots (only with more than one slide).
+          if (images.length > 1)
+            Positioned(
+              left: horizontalPadding,
+              bottom: contentBottom - 26,
+              child: Row(
+                children: List.generate(images.length, (i) {
+                  final active = i == _index;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.only(right: 6),
+                    width: active ? 20 : 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: active ? 0.95 : 0.5),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  );
+                }),
+              ),
+            ),
         ],
       ),
     );
@@ -529,7 +609,7 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
         Container(
           width: double.infinity,
           margin: const EdgeInsets.only(top: 40),
-          padding: const EdgeInsets.fromLTRB(20, 70, 20, 22),
+          padding: const EdgeInsets.fromLTRB(20, 58, 20, 22),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),

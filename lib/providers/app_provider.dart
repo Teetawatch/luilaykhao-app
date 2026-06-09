@@ -54,6 +54,7 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> rewards = [];
   List<dynamic> coupons = [];
   List<dynamic> promotions = [];
+  List<dynamic> heroSlides = [];
   List<dynamic> activeSeatLocks = [];
   List<dynamic> staffSchedules = [];
   Map<String, dynamic> staffSummary = {};
@@ -193,6 +194,9 @@ class AppProvider extends ChangeNotifier {
     reviews = List<dynamic>.from(cache.readPublic<List>('reviews') ?? const []);
     promotions = List<dynamic>.from(
       cache.readPublic<List>('promotions') ?? const [],
+    );
+    heroSlides = List<dynamic>.from(
+      cache.readPublic<List>('hero_slides') ?? const [],
     );
     stats = Map<String, dynamic>.from(
       cache.readPublic<Map>('stats') ?? const {},
@@ -354,6 +358,7 @@ class AppProvider extends ChangeNotifier {
       safe(api.get(ApiEndpoints.reviews, query: {'per_page': 8})),
       safe(api.get(ApiEndpoints.stats)),
       safe(api.get(ApiEndpoints.promotionsActive)),
+      safe(api.get(ApiEndpoints.heroSlides)),
     ]);
 
     final cache = OfflineCache.instance;
@@ -380,6 +385,10 @@ class AppProvider extends ChangeNotifier {
     if (results[5] != null) {
       promotions = List<dynamic>.from(api.data(results[5]) ?? []);
       cache.writePublic('promotions', promotions);
+    }
+    if (results[6] != null) {
+      heroSlides = List<dynamic>.from(api.data(results[6]) ?? []);
+      cache.writePublic('hero_slides', heroSlides);
     }
     notifyListeners();
   }
@@ -979,10 +988,44 @@ class AppProvider extends ChangeNotifier {
     int scheduleId,
     String body, {
     int? replyToId,
+    List<int>? mentions,
   }) async {
     final response = await api.post(
       ApiEndpoints.chatMessages(scheduleId),
-      body: {'body': body, 'reply_to_id': ?replyToId},
+      body: {
+        'body': body,
+        'reply_to_id': ?replyToId,
+        if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// Edit the body of one's own text message. Returns the updated message.
+  Future<Map<String, dynamic>> editChatMessage(
+    int scheduleId,
+    int messageId,
+    String body, {
+    List<int>? mentions,
+  }) async {
+    final response = await api.put(
+      ApiEndpoints.chatMessage(scheduleId, messageId),
+      body: {
+        'body': body,
+        if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// Soft-delete a message (own message, or any if staff/admin). Returns the
+  /// updated message (now flagged deleted).
+  Future<Map<String, dynamic>> deleteChatMessage(
+    int scheduleId,
+    int messageId,
+  ) async {
+    final response = await api.delete(
+      ApiEndpoints.chatMessage(scheduleId, messageId),
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
@@ -1097,6 +1140,7 @@ class AppProvider extends ChangeNotifier {
     RealtimeEventHandler? onTyping,
     RealtimeEventHandler? onReaction,
     RealtimeEventHandler? onPinned,
+    RealtimeEventHandler? onUpdated,
   }) async {
     final channel = 'private-chat.schedule.$scheduleId';
     final disposers = <VoidCallback>[];
@@ -1112,6 +1156,7 @@ class AppProvider extends ChangeNotifier {
     await bind('chat.typing', onTyping);
     await bind('chat.reaction', onReaction);
     await bind('chat.pinned', onPinned);
+    await bind('chat.message.updated', onUpdated);
 
     return () {
       for (final d in disposers) {
