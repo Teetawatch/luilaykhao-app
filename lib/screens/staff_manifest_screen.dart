@@ -125,6 +125,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
     final schedule = asMap(_data?['schedule']);
     final vehicle = asMap(schedule['vehicle']);
     final groups = asList(_data?['pickup_groups']).map(asMap).toList();
+    final seatMap = asMap(_data?['seat_map']);
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -140,6 +141,10 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
         ],
         _ManifestSummary(summary: summary, pickupGroupCount: groups.length),
         const SizedBox(height: 16),
+        if (seatMap.isNotEmpty && asList(seatMap['seats']).isNotEmpty) ...[
+          _StaffSeatMap(seatMap: seatMap),
+          const SizedBox(height: 16),
+        ],
         if (groups.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 48),
@@ -684,6 +689,472 @@ class _CheckInPill extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─── Staff Seat Map ───────────────────────────────────────────────────────────
+
+/// Visual vehicle seat map for staff — mirrors the customer booking layout but
+/// labels each booked seat with its occupant (nickname / name), so staff can
+/// see at a glance who sits where. Tap a seat for the full details.
+class _StaffSeatMap extends StatelessWidget {
+  final Map<String, dynamic> seatMap;
+
+  const _StaffSeatMap({required this.seatMap});
+
+  @override
+  Widget build(BuildContext context) {
+    final occupied = int.tryParse(textOf(seatMap['occupied'])) ?? 0;
+    final total = int.tryParse(textOf(seatMap['total'])) ?? 0;
+    final frontSeatId = textOf(seatMap['front_seat']);
+    final frontSeat = frontSeatId.isEmpty
+        ? null
+        : _staffSeatById(seatMap, frontSeatId);
+    final rows = _staffSeatRows(seatMap);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.airline_seat_recline_normal_rounded,
+                size: 18,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'แผนผังที่นั่ง',
+                style: GoogleFonts.anuphan(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'นั่งแล้ว $occupied/$total',
+                style: GoogleFonts.anuphan(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        frontSeat == null
+                            ? const SizedBox(width: 64)
+                            : _StaffSeatTile(seat: frontSeat),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          child: Text(
+                            textOf(seatMap['front_label'], 'หน้ารถ'),
+                            style: GoogleFonts.anuphan(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.mutedText(context),
+                            ),
+                          ),
+                        ),
+                        if (seatMap['show_driver'] != false)
+                          const _DriverBlock()
+                        else
+                          const SizedBox(width: 64),
+                      ],
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: SizedBox(
+                        width: 300,
+                        child: Divider(height: 1),
+                      ),
+                    ),
+                    ...rows.map(
+                      (row) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _StaffSeatRow(row: row, seatMap: seatMap),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverBlock extends StatelessWidget {
+  const _DriverBlock();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 64,
+      height: 54,
+      decoration: BoxDecoration(
+        color: AppTheme.mutedText(context).withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.airline_seat_recline_extra_rounded,
+            size: 18,
+            color: AppTheme.mutedText(context),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'คนขับ',
+            style: GoogleFonts.anuphan(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StaffSeatRow extends StatelessWidget {
+  final _StaffSeatRowData row;
+  final Map<String, dynamic> seatMap;
+
+  const _StaffSeatRow({required this.row, required this.seatMap});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget seats(List<String> ids) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: ids.map((id) {
+        final seat = _staffSeatById(seatMap, id);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: seat == null
+              ? const SizedBox(width: 64, height: 54)
+              : _StaffSeatTile(seat: seat),
+        );
+      }).toList(),
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        seats(row.left),
+        if (row.center.isNotEmpty) ...[
+          const SizedBox(width: 6),
+          seats(row.center),
+        ],
+        SizedBox(
+          width: 36,
+          child: Center(
+            child: row.hasAisle
+                ? Container(
+                    width: 2,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppTheme.border(context),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  )
+                : null,
+          ),
+        ),
+        seats(row.right),
+      ],
+    );
+  }
+}
+
+class _StaffSeatTile extends StatelessWidget {
+  final Map<String, dynamic> seat;
+
+  const _StaffSeatTile({required this.seat});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = textOf(seat['label'], textOf(seat['id']));
+    final occupant = asMap(seat['occupant']);
+    final occupied = occupant.isNotEmpty;
+    final checkedIn = occupant['checked_in'] == true;
+    final display = textOf(
+      occupant['nickname'],
+      _firstWord(textOf(occupant['name'])),
+    );
+
+    final accent = checkedIn ? const Color(0xFF16A34A) : AppTheme.primaryColor;
+
+    return GestureDetector(
+      onTap: occupied ? () => _showSeatDetail(context, label, occupant) : null,
+      child: Container(
+        width: 64,
+        height: 54,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+        decoration: BoxDecoration(
+          color: occupied
+              ? accent.withValues(alpha: 0.10)
+              : AppTheme.mutedText(context).withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: occupied
+                ? accent.withValues(alpha: 0.45)
+                : AppTheme.border(context),
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.anuphan(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: occupied ? accent : AppTheme.mutedText(context),
+                  ),
+                ),
+                if (checkedIn) ...[
+                  const SizedBox(width: 2),
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    size: 10,
+                    color: Color(0xFF16A34A),
+                  ),
+                ],
+              ],
+            ),
+            if (occupied)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  display.isEmpty ? '—' : display,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.anuphan(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSeatDetail(
+    BuildContext context,
+    String label,
+    Map<String, dynamic> occupant,
+  ) {
+    final name = textOf(occupant['name'], '-');
+    final nickname = textOf(occupant['nickname']);
+    final ref = textOf(occupant['booking_ref']);
+    final checkedIn = occupant['checked_in'] == true;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          20,
+          24,
+          24 + MediaQuery.of(context).padding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'ที่นั่ง $label',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (checkedIn)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 16,
+                        color: Color(0xFF16A34A),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'เช็คอินแล้ว',
+                        style: GoogleFonts.anuphan(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF16A34A),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Text(
+                    'ยังไม่เช็คอิน',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              nickname.isEmpty ? name : '$name ($nickname)',
+              style: GoogleFonts.anuphan(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            if (ref.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                ref,
+                style: GoogleFonts.anuphan(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _firstWord(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return '';
+  return trimmed.split(RegExp(r'\s+')).first;
+}
+
+/// Per-row seat arrangement, derived from the layout's columns + aisle markers.
+class _StaffSeatRowData {
+  final List<String> left;
+  final List<String> right;
+  final List<String> center;
+  final bool hasAisle;
+
+  const _StaffSeatRowData({
+    required this.left,
+    required this.right,
+    required this.center,
+    required this.hasAisle,
+  });
+}
+
+Map<String, dynamic>? _staffSeatById(Map<String, dynamic> seatMap, String id) {
+  for (final item in asList(seatMap['seats'])) {
+    final seat = asMap(item);
+    if (textOf(seat['id']) == id) return seat;
+  }
+  return null;
+}
+
+List<_StaffSeatRowData> _staffSeatRows(Map<String, dynamic> seatMap) {
+  final rows = int.tryParse(textOf(seatMap['rows'])) ?? 0;
+  final columns = asList(
+    seatMap['columns'],
+  ).map((item) => item?.toString() ?? '').toList();
+  final frontSeatId = textOf(seatMap['front_seat']);
+  final centerSeatIds = asList(
+    seatMap['last_row_center'],
+  ).map((item) => item?.toString() ?? '').toSet();
+  final result = <_StaffSeatRowData>[];
+
+  for (var rowIndex = 1; rowIndex <= rows; rowIndex++) {
+    final left = <String>[];
+    final right = <String>[];
+    final center = <String>[];
+    var hasAisle = false;
+    var inRight = false;
+
+    for (final column in columns) {
+      if (column.isEmpty) {
+        hasAisle = true;
+        inRight = true;
+        continue;
+      }
+
+      final seatId = '$column$rowIndex';
+      if (seatId == frontSeatId) continue;
+      if (_staffSeatById(seatMap, seatId) == null) continue;
+
+      if (centerSeatIds.contains(seatId)) {
+        center.add(seatId);
+      } else if (inRight) {
+        right.add(seatId);
+      } else {
+        left.add(seatId);
+      }
+    }
+
+    if (left.isEmpty && right.isEmpty && center.isEmpty) continue;
+
+    result.add(
+      _StaffSeatRowData(
+        left: left,
+        right: right,
+        center: center,
+        hasAisle: hasAisle && right.isNotEmpty,
+      ),
+    );
+  }
+
+  return result;
 }
 
 class _CallButton extends StatelessWidget {

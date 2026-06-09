@@ -67,11 +67,18 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
   // In-app foreground notification banner state.
   OverlayEntry? _bannerEntry;
 
+  // Bookings already offered a review prompt this session — so we nudge at most
+  // once per launch (a fresh launch will re-offer until the trip is reviewed,
+  // since the backend keeps `can_review` true until then).
+  final Set<int> _promptedReviewIds = {};
+  bool _reviewDialogOpen = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     NotificationNavigator.registerTabSwitcher((index) => selectTab(index));
+    NotificationNavigator.registerReviewPrompter(_promptReviewFromNotification);
     PushNotificationService.instance.initialize(
       onNotificationTap: (type, data) {
         NotificationNavigator.handle(type, data);
@@ -142,6 +149,52 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
     _bannerEntry = null;
   }
 
+  /// On app open, if a finished trip is waiting to be reviewed, pop the review
+  /// dialog automatically so every traveller gets the chance to review. The
+  /// review window opens at 20:00 (Thai time) on the trip's last day, mirrored
+  /// by the backend `can_review` flag and the 20:05 review-invite push.
+  void _maybePromptReview(AppProvider app) {
+    if (_reviewDialogOpen || !app.isLoggedIn) return;
+
+    for (final raw in app.bookings) {
+      final booking = asMap(raw);
+      if (booking['can_review'] != true) continue;
+      final id = int.tryParse('${booking['id']}');
+      if (id == null || _promptedReviewIds.contains(id)) continue;
+
+      _promptedReviewIds.add(id);
+      _showReviewDialog(booking, id);
+      break; // one nudge at a time
+    }
+  }
+
+  /// Forced prompt from tapping a review-invite notification — re-shows even if
+  /// already offered this session.
+  void _promptReviewFromNotification(Map<String, dynamic> data) {
+    final app = context.read<AppProvider>();
+    final ref = textOf(data['booking_ref']);
+    for (final raw in app.bookings) {
+      final booking = asMap(raw);
+      if (textOf(booking['booking_ref']) != ref) continue;
+      if (booking['can_review'] != true) return;
+      final id = int.tryParse('${booking['id']}');
+      if (id == null) return;
+      _showReviewDialog(booking, id);
+      return;
+    }
+  }
+
+  void _showReviewDialog(Map<String, dynamic> booking, int bookingId) {
+    if (_reviewDialogOpen) return;
+    _reviewDialogOpen = true;
+    final trip = asMap(asMap(booking['schedule'])['trip']);
+    ReviewSubmissionDialog.show(
+      context,
+      bookingId: bookingId,
+      tripTitle: textOf(trip['title'], 'ทริปของคุณ'),
+    ).whenComplete(() => _reviewDialogOpen = false);
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -154,6 +207,13 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
     final app = context.watch<AppProvider>();
     if (app.booting) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // After the frame settles, offer a review for any just-finished trip.
+    if (app.isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _maybePromptReview(app);
+      });
     }
 
     final showStaffCheckIn = app.canUseStaffCheckIn;

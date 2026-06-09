@@ -235,40 +235,54 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.of(context).size.height * 0.85;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: AppTheme.surface(context),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'รีวิวทริปนี้',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
-                  color: AppTheme.onSurface(context),
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                ),
+        constraints: BoxConstraints(maxWidth: 420, maxHeight: maxHeight),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Header (fixed) ─────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
+              child: Column(
+                children: [
+                  Text(
+                    'รีวิวทริปนี้',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.anuphan(
+                      color: AppTheme.onSurface(context),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.tripTitle,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.anuphan(
+                      color: AppTheme.mutedText(context),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                widget.tripTitle,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
-                  color: AppTheme.mutedText(context),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+            ),
 
-              // ── Star rating (overall) ────────────────────────────────
-              const SizedBox(height: 16),
-              Text(
+            // ── Scrollable body ────────────────────────────────────────
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Star rating (overall) ──────────────────────────
+                    Text(
                 'ภาพรวม',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.anuphan(
@@ -487,22 +501,27 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 ),
               ],
 
-              // ── Error ────────────────────────────────────────────────
-              if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _error!,
-                  style: GoogleFonts.anuphan(
-                    color: AppTheme.errorColor,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                  ),
+                    // ── Error ──────────────────────────────────────────
+                    if (_error != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _error!,
+                        style: GoogleFonts.anuphan(
+                          color: AppTheme.errorColor,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
+              ),
+            ),
 
-              // ── Actions ──────────────────────────────────────────────
-              const SizedBox(height: 12),
-              Row(
+            // ── Actions (fixed footer) ─────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
@@ -519,12 +538,12 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
-                    onPressed:
-                        (_submitting || _anyUploading) ? null : _submit,
+                    onPressed: (_submitting || _anyUploading) ? null : _submit,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
-                      disabledBackgroundColor:
-                          AppTheme.primaryColor.withValues(alpha: 0.40),
+                      disabledBackgroundColor: AppTheme.primaryColor.withValues(
+                        alpha: 0.40,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -552,8 +571,8 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

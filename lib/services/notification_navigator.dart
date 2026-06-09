@@ -35,8 +35,10 @@ class NotificationNavigator {
       case 'weather_alert':
       case 'vehicle_departed':
       case 'vehicle_approaching':
-      case 'review_invite':
         _openBookingDetail(data);
+      case 'review_invite':
+        _switchTab(2);
+        _reviewPrompter?.call(data);
       case 'seat_alert':
         _switchTab(2);
       case 'trip_alert':
@@ -153,6 +155,14 @@ class NotificationNavigator {
   static void registerTabSwitcher(void Function(int) switcher) {
     _switchTab = switcher;
   }
+
+  /// Lets the root screen handle a tapped review-invite by popping the review
+  /// dialog for the matching booking.
+  static void registerReviewPrompter(void Function(Map<String, dynamic>) fn) {
+    _reviewPrompter = fn;
+  }
+
+  static void Function(Map<String, dynamic>)? _reviewPrompter;
 
   static void goToProfile() => _switchTab(4);
 

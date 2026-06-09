@@ -409,7 +409,7 @@ class ProfileStatsSection extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatMetric(
-                  icon: Icons.flight_takeoff_rounded,
+                  icon: Icons.backpack_rounded,
                   value: trips.toString(),
                   label: 'ทริปทั้งหมด',
                   color: AppTheme.primaryColor,
