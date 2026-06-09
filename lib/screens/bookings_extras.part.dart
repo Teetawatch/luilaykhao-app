@@ -226,21 +226,43 @@ class _ActionChipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = AppTheme.surface(context);
-    final fg = AppTheme.onSurface(context);
-    return ActionChip(
-      avatar: Icon(icon, size: 17, color: fg),
-      label: Text(label),
-      onPressed: onPressed,
-      backgroundColor: bg,
-      side: BorderSide(color: AppTheme.border(context)),
-      labelStyle: TextStyle(
-        color: fg,
-        fontSize: 12,
-        fontWeight: FontWeight.w900,
+    final fg = AppTheme.mutedText(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+          decoration: BoxDecoration(
+            color: AppTheme.subtleSurface(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.7),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 15, color: fg),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.anuphan(
+                    color: AppTheme.onSurface(context),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
     );
   }
 }
@@ -663,7 +685,6 @@ class _BookingActionDeck extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = textOf(booking['status']);
     final schedule = asMap(booking['schedule']);
-    final isActive = status == 'pending' || status == 'confirmed';
     final confirmed = status == 'confirmed';
     final showBriefing = confirmed && _isPreTripWindow(schedule);
     final showSos = confirmed && _isWithinTripWindow(schedule);
@@ -678,23 +699,14 @@ class _BookingActionDeck extends StatelessWidget {
       if (showTracking) _TrackVehicleButton(booking: booking),
       if (showSos)
         _SosButton(scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0),
-      if (isActive) _TripChatButton(booking: booking),
-      if (canModify)
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+      if (_chipActions(context, confirmed, canModify, hasPickupPoints)
+          case final chips when chips.isNotEmpty)
+        Row(
           children: [
-            _ActionChipButton(
-              icon: Icons.event_repeat_rounded,
-              label: 'เปลี่ยนวันเดินทาง',
-              onPressed: () => _openReschedule(context),
-            ),
-            if (hasPickupPoints)
-              _ActionChipButton(
-                icon: Icons.location_on_rounded,
-                label: 'เปลี่ยนจุดรับ',
-                onPressed: () => _openChangePickup(context),
-              ),
+            for (var i = 0; i < chips.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(child: chips[i]),
+            ],
           ],
         ),
     ];
@@ -713,6 +725,78 @@ class _BookingActionDeck extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Centered pill actions shown under a booking: add-to-calendar (confirmed
+  /// upcoming) plus reschedule / change-pickup when still modifiable.
+  List<Widget> _chipActions(
+    BuildContext context,
+    bool confirmed,
+    bool canModify,
+    bool hasPickupPoints,
+  ) {
+    return [
+      if (confirmed && _isUpcomingBooking(booking))
+        _ActionChipButton(
+          icon: Icons.calendar_month_rounded,
+          label: 'ปฏิทิน',
+          onPressed: () => _addToCalendar(context),
+        ),
+      if (canModify) ...[
+        _ActionChipButton(
+          icon: Icons.event_repeat_rounded,
+          label: 'เปลี่ยนวัน',
+          onPressed: () => _openReschedule(context),
+        ),
+        if (hasPickupPoints)
+          _ActionChipButton(
+            icon: Icons.location_on_rounded,
+            label: 'จุดรับ',
+            onPressed: () => _openChangePickup(context),
+          ),
+      ],
+    ];
+  }
+
+  Future<void> _addToCalendar(BuildContext context) async {
+    final schedule = asMap(booking['schedule']);
+    final trip = asMap(schedule['trip']);
+    final start = bookingTravelDate(booking);
+    if (start == null) {
+      showSnack(context, 'ยังไม่มีวันเดินทาง');
+      return;
+    }
+    // Google Calendar all-day events use an exclusive end date.
+    final end = (_bookingReturnDate(booking) ?? start).add(
+      const Duration(days: 1),
+    );
+    String ymd(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}'
+        '${d.month.toString().padLeft(2, '0')}'
+        '${d.day.toString().padLeft(2, '0')}';
+
+    final location = textOf(
+      trip['departure_point'],
+      textOf(trip['location']),
+    ).trim();
+    final details = [
+      'รหัสการจอง ${textOf(booking['booking_ref'])}',
+      if (location.isNotEmpty) 'จุดนัดพบ: $location',
+    ].join('\n');
+
+    final uri = Uri.https('calendar.google.com', '/calendar/render', {
+      'action': 'TEMPLATE',
+      'text': textOf(trip['title'], 'ทริปลุยลายเขา'),
+      'dates': '${ymd(start)}/${ymd(end)}',
+      'details': details,
+      if (location.isNotEmpty) 'location': location,
+    });
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (context.mounted) {
+      showSnack(context, 'ไม่สามารถเปิดปฏิทินได้');
+    }
   }
 
   Future<void> _openReschedule(BuildContext context) async {

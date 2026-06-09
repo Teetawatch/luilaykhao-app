@@ -1,16 +1,30 @@
 part of 'trip_detail_screen.dart';
 
-class ReviewSection extends StatelessWidget {
+class ReviewSection extends StatefulWidget {
   final Map<String, dynamic> trip;
   final List<dynamic> reviews;
 
   const ReviewSection({super.key, required this.trip, required this.reviews});
 
   @override
+  State<ReviewSection> createState() => _ReviewSectionState();
+}
+
+class _ReviewSectionState extends State<ReviewSection> {
+  static const _initialCount = 3;
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final trip = widget.trip;
+    final reviews = widget.reviews;
     final rating = _ratingValue(trip);
     final count = _reviewCount(trip, reviews);
     final hasReviews = count > 0 && rating > 0;
+    final visibleReviews = _expanded
+        ? reviews
+        : reviews.take(_initialCount).toList();
+    final hiddenCount = reviews.length - _initialCount;
 
     return _PremiumCard(
       child: Column(
@@ -79,12 +93,73 @@ class ReviewSection extends StatelessWidget {
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
             const SizedBox(height: 16),
             // ── review cards ────────────────────────────────────
-            ...reviews.take(3).map((reviewData) {
+            ...visibleReviews.map((reviewData) {
               final review = asMap(reviewData);
               return _ReviewCard(review: review);
             }),
+            if (hiddenCount > 0) ...[
+              const SizedBox(height: 4),
+              _ShowMoreReviewsButton(
+                expanded: _expanded,
+                hiddenCount: hiddenCount,
+                onPressed: () => setState(() => _expanded = !_expanded),
+              ),
+            ],
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _ShowMoreReviewsButton extends StatelessWidget {
+  final bool expanded;
+  final int hiddenCount;
+  final VoidCallback onPressed;
+
+  const _ShowMoreReviewsButton({
+    required this.expanded,
+    required this.hiddenCount,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFEEF2F7)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                expanded ? 'แสดงน้อยลง' : 'แสดงเพิ่มเติม ($hiddenCount)',
+                style: GoogleFonts.anuphan(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  color: _premiumText,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                expanded
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+                size: 20,
+                color: _premiumText,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

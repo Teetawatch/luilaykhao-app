@@ -330,7 +330,7 @@ class _BookingButtonState extends State<_BookingButton> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.bolt_rounded, size: 19, color: Colors.white),
+              const Icon(Icons.hiking_rounded, size: 19, color: Colors.white),
               const SizedBox(width: 6),
               Text(
                 'จองเลย',

@@ -93,6 +93,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                           upcomingCount: allBookings
                               .where(_isUpcomingBooking)
                               .length,
+                          completedCount: allBookings
+                              .where(_isPastBooking)
+                              .length,
+                          provinceCount: _provincesVisited(allBookings),
                           nextTrip: upcoming.firstOrNull,
                         ),
                         const SizedBox(height: 24),
@@ -173,6 +177,17 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     _ReservationSegment.past => 'ความทรงจำที่ผ่านมา',
     _ReservationSegment.cancelled => 'รายการที่ปิดแล้ว',
   };
+
+  /// Distinct provinces/destinations across trips the user has already
+  /// travelled — drives the "จังหวัดที่ไป" stat in the header.
+  int _provincesVisited(List<Map<String, dynamic>> bookings) {
+    return bookings
+        .where(_isPastBooking)
+        .map((b) => textOf(asMap(asMap(b['schedule'])['trip'])['location']).trim())
+        .where((location) => location.isNotEmpty)
+        .toSet()
+        .length;
+  }
 
   List<Map<String, dynamic>> _filteredBookings(
     List<Map<String, dynamic>> bookings,

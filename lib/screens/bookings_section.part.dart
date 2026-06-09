@@ -14,11 +14,15 @@ BoxDecoration _ecoCardDecoration(BuildContext context) {
 class _BookingsHeader extends StatelessWidget {
   final int totalCount;
   final int upcomingCount;
+  final int completedCount;
+  final int provinceCount;
   final Map<String, dynamic>? nextTrip;
 
   const _BookingsHeader({
     required this.totalCount,
     required this.upcomingCount,
+    required this.completedCount,
+    required this.provinceCount,
     this.nextTrip,
   });
 
@@ -44,9 +48,18 @@ class _BookingsHeader extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _SummaryPill(
-                icon: Icons.luggage_rounded,
-                label: 'การจองทั้งหมด',
-                value: '$totalCount',
+                icon: Icons.backpack_rounded,
+                label: 'เดินทางแล้ว',
+                value: '$completedCount',
+                accent: const Color(0xFF16A34A),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SummaryPill(
+                icon: Icons.terrain_rounded,
+                label: 'จังหวัดที่ไป',
+                value: '$provinceCount',
                 accent: const Color(0xFF6366F1),
               ),
             ),
@@ -251,7 +264,7 @@ class _SummaryPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
@@ -268,44 +281,38 @@ class _SummaryPill extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: accent, size: 18),
+            child: Icon(icon, color: accent, size: 19),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: AppTheme.onSurface(context),
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppTheme.mutedText(context),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: AppTheme.onSurface(context),
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              height: 1,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppTheme.mutedText(context),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -806,6 +813,9 @@ class ReservationCard extends StatelessWidget {
 
                   // Meta strip
                   _BookingMetaStrip(booking: booking),
+
+                  // Who's travelling — overlapping passenger avatars
+                  if (!isCancelled) _TravelerAvatars(booking: booking),
                   const SizedBox(height: 12),
 
                   // Vehicle & driver strip (when assigned and still active)
@@ -830,6 +840,15 @@ class ReservationCard extends StatelessWidget {
                   if (status == 'confirmed' && isUpcoming) ...[
                     const SizedBox(height: 12),
                     _CompactCheckInRow(
+                      booking: booking,
+                      onTap: () => _openDetail(context, bookingRef),
+                    ),
+                  ],
+
+                  // Trip readiness checklist (upcoming bookings only)
+                  if (_isUpcomingBooking(booking)) ...[
+                    const SizedBox(height: 12),
+                    _TripReadinessBar(
                       booking: booking,
                       onTap: () => _openDetail(context, bookingRef),
                     ),
@@ -933,6 +952,164 @@ class _ViewDetailsButton extends StatelessWidget {
   }
 }
 
+// ─── Trip Readiness Bar ───────────────────────────────────────────────────────
+
+/// A small "get ready" checklist surfaced on upcoming bookings: payment,
+/// traveller details, and pickup selection. Tapping opens the detail sheet so
+/// the customer can finish whatever's outstanding.
+class _TripReadinessBar extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final VoidCallback onTap;
+
+  const _TripReadinessBar({required this.booking, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _readinessItems(booking);
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final doneCount = items.where((i) => i.$2).length;
+    final allDone = doneCount == items.length;
+    final accent = allDone ? AppTheme.primaryColor : const Color(0xFFD97706);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withValues(alpha: 0.20)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  allDone
+                      ? Icons.verified_rounded
+                      : Icons.checklist_rounded,
+                  size: 16,
+                  color: accent,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  allDone ? 'พร้อมเดินทางแล้ว' : 'เตรียมความพร้อม',
+                  style: GoogleFonts.anuphan(
+                    color: accent,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '$doneCount/${items.length}',
+                  style: GoogleFonts.anuphan(
+                    color: accent,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (!allDone) ...[
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right_rounded, size: 16, color: accent),
+                ],
+              ],
+            ),
+            const SizedBox(height: 9),
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: items
+                  .map((i) => _ReadinessChip(label: i.$1, done: i.$2))
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReadinessChip extends StatelessWidget {
+  final String label;
+  final bool done;
+
+  const _ReadinessChip({required this.label, required this.done});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = done ? const Color(0xFF16A34A) : AppTheme.mutedText(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            done
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
+            size: 13,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.anuphan(
+              color: done ? AppTheme.onSurface(context) : color,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Builds the (label, done) readiness checklist for a booking. Pickup is only
+/// included when the schedule actually offers pickup points to choose from.
+List<(String, bool)> _readinessItems(Map<String, dynamic> booking) {
+  final status = textOf(booking['status']);
+  final passengers = asList(booking['passengers']).map(asMap).toList();
+  final schedule = asMap(booking['schedule']);
+  final hasPickupOptions = asList(schedule['pickup_points']).isNotEmpty;
+
+  final paymentDone = status != 'pending';
+
+  final detailsDone =
+      passengers.isNotEmpty &&
+      passengers.every(
+        (p) =>
+            textOf(p['name']).trim().isNotEmpty &&
+            textOf(p['id_card']).trim().isNotEmpty,
+      );
+
+  final items = <(String, bool)>[
+    ('ชำระเงิน', paymentDone),
+    ('ข้อมูลผู้เดินทาง', detailsDone),
+  ];
+
+  if (hasPickupOptions) {
+    final bookingPickup = asMap(booking['pickup_point']).isNotEmpty;
+    final everyPassengerPickup =
+        passengers.isNotEmpty &&
+        passengers.every(
+          (p) => textOf(p['pickup_point_id']).trim().isNotEmpty,
+        );
+    items.add(('เลือกจุดรับ', bookingPickup || everyPassengerPickup));
+  }
+
+  return items;
+}
+
 // ─── Booking Meta Strip ───────────────────────────────────────────────────────
 
 class _BookingMetaStrip extends StatelessWidget {
@@ -1015,6 +1192,145 @@ class _MetaStripItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Traveler Avatars ─────────────────────────────────────────────────────────
+
+/// Overlapping avatar circles of the people on this booking, giving the card a
+/// sense of "who's going". Hidden for solo bookings to avoid noise.
+class _TravelerAvatars extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _TravelerAvatars({required this.booking});
+
+  static const _gradients = [
+    [Color(0xFF059669), Color(0xFF6EE7B7)],
+    [Color(0xFF0891B2), Color(0xFF67E8F9)],
+    [Color(0xFF7C3AED), Color(0xFFC4B5FD)],
+    [Color(0xFFD97706), Color(0xFFFDE68A)],
+    [Color(0xFFDB2777), Color(0xFFF9A8D4)],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    // ทุกคนที่เดินทางในรอบนี้ (จากทุกการจอง) — แสดงตัวเราเองไว้ก่อน
+    final schedule = asMap(booking['schedule']);
+    final travelers = asList(schedule['travelers']).map(asMap).toList()
+      ..sort((a, b) {
+        final aSelf = a['is_self'] == true ? 0 : 1;
+        final bSelf = b['is_self'] == true ? 0 : 1;
+        return aSelf.compareTo(bSelf);
+      });
+    // เผื่อ API เวอร์ชันเก่าที่ยังไม่มี travelers ให้ย้อนไปใช้ผู้โดยสารในการจองนี้
+    final people = travelers.isNotEmpty
+        ? travelers
+        : asList(booking['passengers']).map(asMap).toList();
+    if (people.length < 2) return const SizedBox.shrink();
+
+    const maxShown = 5;
+    final shown = people.take(maxShown).toList();
+    final extra = people.length - shown.length;
+    const size = 30.0;
+    const overlap = 10.0;
+
+    final circles = <Widget>[];
+    for (var i = 0; i < shown.length; i++) {
+      final name = textOf(
+        shown[i]['name'],
+        textOf(shown[i]['nickname'], '?'),
+      ).trim();
+      final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+      final isSelf = shown[i]['is_self'] == true;
+      final pair = isSelf
+          ? const [AppTheme.primaryColor, AppTheme.primaryColor]
+          : _gradients[initial.codeUnitAt(0) % _gradients.length];
+      circles.add(
+        Positioned(
+          left: i * (size - overlap),
+          child: _AvatarCircle(initial: initial, colors: pair, size: size),
+        ),
+      );
+    }
+    if (extra > 0) {
+      circles.add(
+        Positioned(
+          left: shown.length * (size - overlap),
+          child: _AvatarCircle(
+            initial: '+$extra',
+            colors: const [Color(0xFF94A3B8), Color(0xFFCBD5E1)],
+            size: size,
+          ),
+        ),
+      );
+    }
+
+    final stackWidth =
+        (shown.length + (extra > 0 ? 1 : 0)) * (size - overlap) + overlap;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
+          SizedBox(
+            width: stackWidth,
+            height: size,
+            child: Stack(clipBehavior: Clip.none, children: circles),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              'ร่วมเดินทางในรอบนี้ ${people.length} คน',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppTheme.mutedText(context),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AvatarCircle extends StatelessWidget {
+  final String initial;
+  final List<Color> colors;
+  final double size;
+
+  const _AvatarCircle({
+    required this.initial,
+    required this.colors,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
+        shape: BoxShape.circle,
+        border: Border.all(color: AppTheme.surface(context), width: 2),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: GoogleFonts.anuphan(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          fontSize: initial.length > 1 ? 11 : 13,
+        ),
+      ),
     );
   }
 }
