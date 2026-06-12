@@ -229,7 +229,8 @@ class _InvitePreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final invitedBy = preview['invited_by']?.toString() ?? '';
     final tripTitle = preview['trip_title']?.toString() ?? 'ทริป';
-    final date = preview['departure_date']?.toString() ?? '';
+    // แสดงวัน-เวลาออกรถจริงถ้ารอบนั้นกำหนดไว้
+    final date = departureText(Map<String, dynamic>.from(preview));
     final ref = preview['booking_ref']?.toString() ?? '';
 
     return Container(
@@ -263,7 +264,7 @@ class _InvitePreviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          if (date.isNotEmpty)
+          if (date.isNotEmpty && date != '-')
             _PreviewRow(icon: Icons.event_rounded, text: 'เดินทาง $date'),
           if (ref.isNotEmpty)
             _PreviewRow(icon: Icons.confirmation_number_rounded, text: ref),

@@ -119,7 +119,7 @@ class _BookingSummaryCard extends StatelessWidget {
                     _InfoPill(
                       context: context,
                       icon: Icons.calendar_today_rounded,
-                      text: dateText(schedule['departure_date']),
+                      text: departureText(schedule),
                     ),
                     _InfoPill(
                       context: context,

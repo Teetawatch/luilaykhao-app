@@ -146,6 +146,10 @@ class TravelPlanSelectionSection extends StatelessWidget {
                     onChanged: onScheduleChanged,
                   ),
 
+                // เวลาออกรถจริงของรอบที่เลือก — สำคัญมากเมื่อรถออกคืนก่อน
+                // วันทริป (เช่น ทริปเสาร์ที่ 13 แต่รถออกศุกร์ที่ 12 เวลา 23:30)
+                ..._departureTimeNotice(scheduleMaps, scheduleValue),
+
                 // Step 3 — Pickup point
                 if (scheduleMaps.isNotEmpty) ...[
                   const SizedBox(height: 22),
@@ -170,6 +174,62 @@ class TravelPlanSelectionSection extends StatelessWidget {
       ),
     );
   }
+}
+
+/// แถบแจ้งเวลาออกรถจริงของรอบที่เลือก แสดงเฉพาะเมื่อรอบนั้นกำหนด departs_at
+List<Widget> _departureTimeNotice(
+  List<Map<String, dynamic>> schedules,
+  int? selectedId,
+) {
+  if (selectedId == null) return const [];
+
+  final schedule = schedules.firstWhere(
+    (s) => int.tryParse(s['id'].toString()) == selectedId,
+    orElse: () => const {},
+  );
+  final departsAt = scheduleDepartsAt(schedule);
+  if (departsAt == null) return const [];
+
+  final tripDate = DateTime.tryParse(textOf(schedule['departure_date']));
+  final isNightBefore = tripDate != null &&
+      DateTime(departsAt.year, departsAt.month, departsAt.day)
+          .isBefore(DateTime(tripDate.year, tripDate.month, tripDate.day));
+
+  final label = 'ออกเดินทาง ${departureText(schedule)}'
+      '${isNightBefore ? ' (คืนก่อนวันทริป)' : ''}';
+
+  return [
+    const SizedBox(height: 12),
+    Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFED7AA)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isNightBefore ? Icons.nightlight_round : Icons.departure_board,
+            size: 16,
+            color: const Color(0xFFEA580C),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.anuphan(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF9A3412),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  ];
 }
 
 // ─── Step label ───────────────────────────────────────────────────────────────

@@ -67,6 +67,9 @@ class BookingInfo {
   final LatLng pickupPoint;
   final LatLng? destinationPoint;
   final String departureDate;
+
+  /// วัน-เวลาออกรถจริง (อาจอยู่ก่อนวันทริป เช่น รถออกคืนวันศุกร์ 23:30)
+  final String departsAt;
   final String status;
   final String? driverName;
   final String? driverPhone;
@@ -82,6 +85,7 @@ class BookingInfo {
     required this.pickupPoint,
     this.destinationPoint,
     required this.departureDate,
+    this.departsAt = '',
     required this.status,
     this.driverName,
     this.driverPhone,
@@ -117,6 +121,7 @@ class BookingInfo {
           _pointFromJson(json, 'destination_lat', 'destination_lng') ??
           _pointFromJson(json, 'dest_lat', 'dest_lng'),
       departureDate: json['departure_date']?.toString() ?? '',
+      departsAt: json['departs_at']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
       driverName: json['driver_name']?.toString(),
       driverPhone: json['driver_phone']?.toString(),

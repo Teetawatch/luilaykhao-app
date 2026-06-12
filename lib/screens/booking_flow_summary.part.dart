@@ -187,6 +187,14 @@ class TripSummaryCard extends StatelessWidget {
                   icon: Icons.calendar_month_rounded,
                   text: 'วันที่เดินทาง ${dateText(schedule['departure_date'])}',
                 ),
+                // รถอาจออกคืนก่อนวันทริป — แสดงเวลาออกรถจริงให้ชัดเจน
+                if (scheduleDepartsAt(schedule) != null) ...[
+                  const SizedBox(height: 8),
+                  _SummaryMeta(
+                    icon: Icons.departure_board_rounded,
+                    text: 'ออกเดินทาง ${departureText(schedule)}',
+                  ),
+                ],
                 const SizedBox(height: 8),
                 _SummaryMeta(
                   icon: Icons.location_on_rounded,

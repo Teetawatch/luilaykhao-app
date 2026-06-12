@@ -150,7 +150,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   runSpacing: 8,
                   children: [
                     _StatusChip(status: textOf(booking['status'])),
-                    _Chip('เดินทาง ${dateText(schedule['departure_date'])}'),
+                    _Chip('เดินทาง ${departureText(schedule)}'),
                     _Chip(money(booking['total_amount'])),
                   ],
                 ),
@@ -957,13 +957,20 @@ class _BookingDepositRow extends StatelessWidget {
 
 // ─── Pre-trip Briefing Card ───────────────────────────────────────────────────
 
+/// วันออกเดินทางจริง (ตัดเวลา) — ใช้ departs_at ถ้ารอบนั้นรถออกคืนก่อนวันทริป
+DateTime? _realDepartureDate(Map<String, dynamic> schedule) {
+  final dep = scheduleDepartsAt(schedule) ??
+      DateTime.tryParse(textOf(schedule['departure_date']));
+  if (dep == null) return null;
+  return DateTime(dep.year, dep.month, dep.day);
+}
+
 /// True when departure is 0-3 days away (today through departure day inclusive).
 bool _isPreTripWindow(Map<String, dynamic> schedule) {
-  final dep = DateTime.tryParse(textOf(schedule['departure_date']));
-  if (dep == null) return false;
+  final start = _realDepartureDate(schedule);
+  if (start == null) return false;
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
-  final start = DateTime(dep.year, dep.month, dep.day);
   final diff = start.difference(today).inDays;
   return diff >= 0 && diff <= 3;
 }
@@ -982,16 +989,10 @@ class _PreTripBriefingCard extends StatelessWidget {
     final preparations = asList(trip['preparations']);
     final mustKnow = asList(trip['must_know']);
 
-    final depDate = DateTime.tryParse(textOf(schedule['departure_date']));
+    final depDate = _realDepartureDate(schedule);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final daysLeft = depDate != null
-        ? DateTime(
-            depDate.year,
-            depDate.month,
-            depDate.day,
-          ).difference(today).inDays
-        : null;
+    final daysLeft = depDate?.difference(today).inDays;
 
     final countdownText = switch (daysLeft) {
       0 => 'วันนี้วันเดินทาง!',
@@ -1068,7 +1069,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    dateText(schedule['departure_date']),
+                    departureText(schedule),
                     style: GoogleFonts.anuphan(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w900,
@@ -1532,17 +1533,13 @@ bool _isTripFinished(Map<String, dynamic> schedule) {
 /// schedule's departure through the return date (inclusive). The SOS button is
 /// shown a day early so travellers can reach help while heading to the pickup.
 bool _isWithinTripWindow(Map<String, dynamic> schedule) {
-  final dep = DateTime.tryParse(textOf(schedule['departure_date']));
+  final dep = _realDepartureDate(schedule);
   if (dep == null) return false;
   final ret = DateTime.tryParse(textOf(schedule['return_date'])) ?? dep;
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
-  // เปิด SOS ตั้งแต่ 1 วันก่อนเดินทาง
-  final start = DateTime(
-    dep.year,
-    dep.month,
-    dep.day,
-  ).subtract(const Duration(days: 1));
+  // เปิด SOS ตั้งแต่ 1 วันก่อนวันออกรถจริง
+  final start = dep.subtract(const Duration(days: 1));
   final end = DateTime(ret.year, ret.month, ret.day);
   return !today.isBefore(start) && !today.isAfter(end);
 }
@@ -2935,7 +2932,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            dateText(sched['departure_date']),
+                                            departureText(sched),
                                             style: GoogleFonts.anuphan(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w900,

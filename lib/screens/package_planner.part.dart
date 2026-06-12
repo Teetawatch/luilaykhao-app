@@ -285,8 +285,15 @@ String scheduleRegionSummary(Map<String, dynamic> schedule) {
 }
 
 String scheduleTravelDateText(Map<String, dynamic> schedule) {
-  final start = _compactThaiDate(schedule['departure_date']);
+  var start = _compactThaiDate(schedule['departure_date']);
   if (start == '-') return 'รอระบุวัน';
+
+  // ถ้ารถออกคืนก่อนวันทริป แสดงวัน-เวลาออกรถจริงเป็นจุดเริ่มต้น
+  final departsAt = scheduleDepartsAt(schedule);
+  if (departsAt != null) {
+    start =
+        '${_compactThaiDate(schedule['departs_at'])} ${DateFormat('HH:mm').format(departsAt)} น.';
+  }
 
   final end = _compactThaiDate(schedule['return_date']);
   if (end == '-' || end == start) return start;
@@ -350,9 +357,9 @@ String pickupRegionLabel(Map<String, dynamic> point) {
 
 DateTime? bookingTravelDate(Map<String, dynamic> booking) {
   final schedule = asMap(booking['schedule']);
-  final raw = textOf(schedule['departure_date']);
-  if (raw.isEmpty) return null;
-  final date = DateTime.tryParse(raw);
+  // วันออกรถจริง (departs_at) มาก่อนวันทริปได้ เช่น รถออกคืนวันศุกร์ 23:30
+  final date = scheduleDepartsAt(schedule) ??
+      DateTime.tryParse(textOf(schedule['departure_date']));
   if (date == null) return null;
   return DateTime(date.year, date.month, date.day);
 }
@@ -425,9 +432,10 @@ String _countdownText(Map<String, dynamic> booking) {
 
 String _travelDateText(Map<String, dynamic> booking) {
   final schedule = asMap(booking['schedule']);
-  final start = dateText(schedule['departure_date']);
+  if (dateText(schedule['departure_date']) == '-') return 'รอระบุวัน';
+  // ใช้วัน-เวลาออกรถจริงเป็นจุดเริ่มต้นเมื่อรอบนั้นกำหนดไว้
+  final start = departureText(schedule);
   final end = dateText(schedule['return_date']);
-  if (start == '-') return 'รอระบุวัน';
   if (end == '-' || end == start) return start;
   return '$start - $end';
 }

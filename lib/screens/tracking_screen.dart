@@ -545,7 +545,10 @@ class TrackingBottomSheet extends StatelessWidget {
                 _DetailRow(
                   icon: Icons.schedule_rounded,
                   label: 'เวลานัด',
-                  value: booking?.departureDate ?? 'รอข้อมูล',
+                  // เวลาออกรถจริง (departs_at) มาก่อนวันทริปได้ เช่น 23:30 คืนก่อนหน้า
+                  value: (booking?.departsAt.isNotEmpty ?? false)
+                      ? booking!.departsAt
+                      : booking?.departureDate ?? 'รอข้อมูล',
                 ),
                 _DetailRow(
                   icon: Icons.location_on_rounded,

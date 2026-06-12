@@ -34,9 +34,9 @@ class PreTripChecklistScreen extends StatefulWidget {
     final trip = schedule['trip'] is Map
         ? Map<String, dynamic>.from(schedule['trip'] as Map)
         : <String, dynamic>{};
-    final dep = DateTime.tryParse(
-      (schedule['departure_date'] ?? '').toString(),
-    );
+    // นับถอยหลังถึงวันออกรถจริง (departs_at) ถ้ารอบนั้นกำหนดไว้
+    final dep = scheduleDepartsAt(schedule) ??
+        DateTime.tryParse((schedule['departure_date'] ?? '').toString());
     return PreTripChecklistScreen(
       bookingRef: (booking['booking_ref'] ?? '').toString(),
       tripTitle: (trip['title'] ?? 'ทริปของคุณ').toString(),

@@ -44,7 +44,9 @@ bool _installmentAvailable(Map<String, dynamic> booking) {
 
 int _daysUntilTrip(Map<String, dynamic> booking) {
   final schedule = asMap(booking['schedule']);
-  final dep = DateTime.tryParse(textOf(schedule['departure_date']));
+  // นับถึงวันออกรถจริง (อาจเป็นคืนก่อนวันทริป)
+  final dep = scheduleDepartsAt(schedule) ??
+      DateTime.tryParse(textOf(schedule['departure_date']));
   if (dep == null) return 9999;
   final today = DateTime.now();
   final todayDate = DateTime(today.year, today.month, today.day);
@@ -122,8 +124,8 @@ DateTime? _balanceDueDate(Map<String, dynamic> booking) {
     if (parsed != null) return parsed;
   }
   final schedule = asMap(booking['schedule']);
-  final dep = textOf(schedule['departure_date']);
-  final depDate = DateTime.tryParse(dep);
+  final depDate = scheduleDepartsAt(schedule) ??
+      DateTime.tryParse(textOf(schedule['departure_date']));
   if (depDate == null) return null;
   return depDate.subtract(const Duration(days: 15));
 }

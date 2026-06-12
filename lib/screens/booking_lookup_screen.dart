@@ -333,7 +333,10 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
       return _TrackEntryState.expired;
     }
 
-    final tripDate = DateTime.tryParse(booking.departureDate);
+    // เปิดติดตามตามวันออกรถจริง — รอบที่รถออกคืนก่อนวันทริปต้องติดตามได้คืนนั้น
+    final tripDate = DateTime.tryParse(
+      booking.departsAt.isNotEmpty ? booking.departsAt : booking.departureDate,
+    );
     if (tripDate == null) return _TrackEntryState.ready;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -846,7 +849,11 @@ class _RecentBookingCard extends StatelessWidget {
       trip['title'],
       textOf(booking['trip_title'], 'ทริปของคุณ'),
     );
-    final date = _shortThaiDate(schedule['departure_date']);
+    // แสดงวัน-เวลาออกรถจริงถ้ารอบนั้นกำหนดไว้ (เช่น รถออกคืนก่อนวันทริป)
+    final departsAt = scheduleDepartsAt(schedule);
+    final date = departsAt != null
+        ? '${_shortThaiDate(schedule['departs_at'])} ${DateFormat('HH:mm').format(departsAt)} น.'
+        : _shortThaiDate(schedule['departure_date']);
 
     return Material(
       color: AppTheme.surface(context),

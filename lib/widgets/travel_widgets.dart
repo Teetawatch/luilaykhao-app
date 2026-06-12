@@ -45,6 +45,27 @@ String dateText(dynamic value) {
   return DateFormat('d MMM yyyy', 'th_TH').format(date);
 }
 
+/// วัน-เวลาออกรถจริงของรอบเดินทาง (departs_at) — อาจอยู่ก่อนวันทริป เช่น
+/// ทริปวันเสาร์ที่ 13 แต่รถออกคืนวันศุกร์ที่ 12 เวลา 23:30
+/// ค่าจาก API เป็นเวลาท้องถิ่นไทยแบบไม่มี timezone จึง parse ตรง ๆ ได้เลย
+DateTime? scheduleDepartsAt(Map<String, dynamic> schedule) {
+  final raw = schedule['departs_at']?.toString() ?? '';
+  if (raw.isEmpty) return null;
+  return DateTime.tryParse(raw);
+}
+
+/// ข้อความวันออกเดินทางของรอบ — ถ้ารอบกำหนดเวลาออกรถจริงไว้ จะแสดง
+/// วัน+เวลาออกรถ (เช่น "12 มิ.ย. 2026 23:30 น.") ไม่งั้นแสดงเฉพาะวันทริป
+String departureText(Map<String, dynamic> schedule) {
+  final departsAt = scheduleDepartsAt(schedule);
+  if (departsAt != null) {
+    final datePart = DateFormat('d MMM yyyy', 'th_TH').format(departsAt);
+    final timePart = DateFormat('HH:mm').format(departsAt);
+    return '$datePart $timePart น.';
+  }
+  return dateText(schedule['departure_date']);
+}
+
 class SectionTitle extends StatelessWidget {
   final String text;
   const SectionTitle(this.text, {super.key});

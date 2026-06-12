@@ -847,8 +847,10 @@ bool _isTripToday(Map<String, dynamic> booking) {
     return false;
   }
   final schedule = asMap(booking['schedule']);
-  final rawDate = _cleanText(schedule['departure_date']);
-  final date = DateTime.tryParse(rawDate);
+  // ใช้วันออกรถจริง — รอบที่รถออกคืนก่อนวันทริปถือว่า "เดินทางวันนี้"
+  // ตั้งแต่วันที่รถออก
+  final date = scheduleDepartsAt(schedule) ??
+      DateTime.tryParse(_cleanText(schedule['departure_date']));
   if (date == null) return false;
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
@@ -862,8 +864,8 @@ bool _isUpcomingBooking(Map<String, dynamic> booking) {
   }
 
   final schedule = asMap(booking['schedule']);
-  final rawDate = _cleanText(schedule['departure_date']);
-  final date = DateTime.tryParse(rawDate);
+  final date = scheduleDepartsAt(schedule) ??
+      DateTime.tryParse(_cleanText(schedule['departure_date']));
   if (date == null) {
     return status == 'pending' || status == 'confirmed';
   }
@@ -893,9 +895,10 @@ bool _isPastBooking(Map<String, dynamic> booking) {
 
 String _travelDateText(Map<String, dynamic> booking) {
   final schedule = asMap(booking['schedule']);
-  final start = dateText(schedule['departure_date']);
+  if (dateText(schedule['departure_date']) == '-') return 'รอระบุวันเดินทาง';
+  // ใช้วัน-เวลาออกรถจริงเป็นจุดเริ่มต้นเมื่อรอบนั้นกำหนดไว้
+  final start = departureText(schedule);
   final end = dateText(schedule['return_date']);
-  if (start == '-') return 'รอระบุวันเดินทาง';
   if (end == '-' || end == start) return start;
   return '$start - $end';
 }

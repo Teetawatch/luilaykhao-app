@@ -201,7 +201,11 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
       return;
     }
 
-    final departureDate = result['departure_date']?.toString() ?? '';
+    // เปิดให้ติดตามรถตามวันออกรถจริง (departs_at) — รอบที่รถออกคืนก่อน
+    // วันทริปจะติดตามได้ตั้งแต่คืนนั้น
+    final departureDate = (result['departs_at'] ?? result['departure_date'])
+            ?.toString() ??
+        '';
     final date = DateTime.tryParse(departureDate);
     if (date != null) {
       final today = DateTime.now();
@@ -952,7 +956,10 @@ class _GuestBookingResultCard extends StatelessWidget {
     final status = data['status']?.toString() ?? '';
     final qrCode = data['qr_code']?.toString() ?? '';
     final tripTitle = data['trip_title']?.toString() ?? 'ทริปของคุณ';
-    final departureDate = data['departure_date']?.toString() ?? '';
+    final departsAtRaw = data['departs_at']?.toString() ?? '';
+    final departureDate = departsAtRaw.isNotEmpty
+        ? departsAtRaw
+        : data['departure_date']?.toString() ?? '';
     final driverName = data['driver_name']?.toString();
     final licensePlate = data['license_plate']?.toString();
     final shareUrl = data['share_url']?.toString();
@@ -969,6 +976,12 @@ class _GuestBookingResultCard extends StatelessWidget {
       ];
       formattedDate =
           '${parsed.day} ${months[parsed.month]} ${parsed.year + 543}';
+      // แสดงเวลาออกรถด้วยเมื่อรอบนั้นกำหนดเวลาออกรถจริงไว้
+      if (departsAtRaw.isNotEmpty) {
+        final hh = parsed.hour.toString().padLeft(2, '0');
+        final mm = parsed.minute.toString().padLeft(2, '0');
+        formattedDate = '$formattedDate $hh:$mm น.';
+      }
     }
 
     return Column(
