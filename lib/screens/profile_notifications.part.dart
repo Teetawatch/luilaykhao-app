@@ -10,6 +10,7 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _loading = false;
   bool _saving = false;
+  bool _clearing = false;
   final Set<int> _busyIds = <int>{};
 
   @override
@@ -40,6 +41,48 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (mounted) _showError(context, e);
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _clearAll() async {
+    HapticFeedback.mediumImpact();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'ลบการแจ้งเตือนทั้งหมด',
+          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+        ),
+        content: Text(
+          'การแจ้งเตือนทั้งหมดจะถูกลบและไม่สามารถกู้คืนได้ ต้องการดำเนินการต่อหรือไม่?',
+          style: GoogleFonts.anuphan(height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('ยกเลิก', style: GoogleFonts.anuphan()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
+            child: Text(
+              'ลบทั้งหมด',
+              style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _clearing = true);
+    try {
+      await context.read<AppProvider>().clearAllNotifications();
+      if (mounted) _showSuccess(context, 'ลบการแจ้งเตือนทั้งหมดแล้ว');
+    } catch (e) {
+      if (mounted) _showError(context, e);
+    } finally {
+      if (mounted) setState(() => _clearing = false);
     }
   }
 
@@ -125,10 +168,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               subtitleColor: unread > 0
                   ? AppTheme.primaryColor
                   : AppTheme.mutedText(context),
-              trailing: _MarkAllReadAction(
-                visible: unread > 0,
+              trailing: _NotificationHeaderActions(
+                hasItems: notifications.isNotEmpty,
+                unread: unread,
                 saving: _saving,
-                onPressed: _markAllRead,
+                clearing: _clearing,
+                onMarkAllRead: _markAllRead,
+                onClearAll: _clearAll,
               ),
             ),
             if (_loading && notifications.isEmpty)
@@ -221,6 +267,101 @@ class _NotificationGroup {
   final List<Map<String, dynamic>> items;
 
   const _NotificationGroup({required this.label, required this.items});
+}
+
+/// Header actions for the notifications screen: a "mark all read" pill (shown
+/// while there are unread items) followed by a "clear all" button (shown
+/// whenever any notification exists).
+class _NotificationHeaderActions extends StatelessWidget {
+  final bool hasItems;
+  final int unread;
+  final bool saving;
+  final bool clearing;
+  final VoidCallback onMarkAllRead;
+  final VoidCallback onClearAll;
+
+  const _NotificationHeaderActions({
+    required this.hasItems,
+    required this.unread,
+    required this.saving,
+    required this.clearing,
+    required this.onMarkAllRead,
+    required this.onClearAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _MarkAllReadAction(
+          visible: unread > 0,
+          saving: saving,
+          onPressed: onMarkAllRead,
+        ),
+        _ClearAllAction(
+          visible: hasItems,
+          clearing: clearing,
+          onPressed: onClearAll,
+        ),
+      ],
+    );
+  }
+}
+
+class _ClearAllAction extends StatelessWidget {
+  final bool visible;
+  final bool clearing;
+  final VoidCallback onPressed;
+
+  const _ClearAllAction({
+    required this.visible,
+    required this.clearing,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      transitionBuilder: (child, animation) =>
+          FadeTransition(opacity: animation, child: child),
+      child: !visible
+          ? const SizedBox(width: 12, key: ValueKey('clear-empty'))
+          : Padding(
+              key: const ValueKey('clear-action'),
+              padding: const EdgeInsets.only(right: 12),
+              child: Tooltip(
+                message: 'ลบการแจ้งเตือนทั้งหมด',
+                child: Material(
+                  color: AppTheme.errorColor.withValues(alpha: 0.10),
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: clearing ? null : onPressed,
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: clearing
+                          ? const Padding(
+                              padding: EdgeInsets.all(9),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.errorColor,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.delete_sweep_rounded,
+                              size: 20,
+                              color: AppTheme.errorColor,
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+    );
+  }
 }
 
 class _MarkAllReadAction extends StatelessWidget {

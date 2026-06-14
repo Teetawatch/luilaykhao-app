@@ -1966,7 +1966,7 @@ class _CustomerReviewsSection extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           SizedBox(
-            height: 168,
+            height: 206,
             child: ListView.separated(
               clipBehavior: Clip.none,
               scrollDirection: Axis.horizontal,
@@ -1999,6 +1999,10 @@ class _HomeReviewCard extends StatelessWidget {
     final comment = textOf(review['comment']).trim();
     final tripTitle = textOf(review['trip_title']).trim();
     final initial = name.isNotEmpty ? name.characters.first.toUpperCase() : '?';
+    final images = asList(review['images'])
+        .map((e) => ApiConfig.mediaUrl(e.toString()))
+        .where((s) => s.isNotEmpty)
+        .toList();
 
     return Container(
       width: 300,
@@ -2102,6 +2106,10 @@ class _HomeReviewCard extends StatelessWidget {
               ],
             ),
           ],
+          if (images.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _HomeReviewThumbnails(images: images),
+          ],
         ],
       ),
     );
@@ -2115,6 +2123,87 @@ class _HomeReviewCard extends StatelessWidget {
         fontSize: 16,
         fontWeight: FontWeight.w800,
       ),
+    );
+  }
+}
+
+/// Compact, tappable strip of photos attached to a home-page review.
+/// Shows up to 4 thumbnails; the last one overlays a "+N" badge when there
+/// are more. Tapping any thumbnail opens the fullscreen photo viewer.
+class _HomeReviewThumbnails extends StatelessWidget {
+  final List<String> images;
+
+  const _HomeReviewThumbnails({required this.images});
+
+  static const double _size = 44;
+  static const int _maxThumbs = 4;
+
+  void _open(BuildContext context, int index) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _BookingPhotoViewer(urls: images, initialIndex: index),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = images.take(_maxThumbs).toList();
+    final extra = images.length - shown.length;
+
+    return Row(
+      children: [
+        for (var i = 0; i < shown.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _open(context, i),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Stack(
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: shown[i],
+                    width: _size,
+                    height: _size,
+                    fit: BoxFit.cover,
+                    placeholder: (_, _) => Container(
+                      width: _size,
+                      height: _size,
+                      color: const Color(0xFFEAF0F0),
+                    ),
+                    errorWidget: (_, _, _) => Container(
+                      width: _size,
+                      height: _size,
+                      color: const Color(0xFFEAF0F0),
+                      child: const Icon(
+                        Icons.broken_image_rounded,
+                        size: 18,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ),
+                  if (i == shown.length - 1 && extra > 0)
+                    Positioned.fill(
+                      child: Container(
+                        alignment: Alignment.center,
+                        color: Colors.black.withValues(alpha: 0.45),
+                        child: Text(
+                          '+$extra',
+                          style: GoogleFonts.anuphan(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

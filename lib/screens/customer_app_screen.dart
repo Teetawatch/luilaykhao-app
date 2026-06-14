@@ -304,9 +304,11 @@ class _CustomBottomNavState extends State<CustomBottomNav>
     final items = _buildItems();
 
     // Anchored to the bottom edge: full width, rounded only on the top corners
-    // using Apple-style continuous (superellipse) curves. The shadow lives on
-    // an OUTER layer (outside the clip) so it isn't clipped away — giving a
-    // crisp lifted edge that follows the smooth corner.
+    // using Apple-style continuous (superellipse) curves. Following iOS, the
+    // bar lifts off the page with the translucent blur and a hairline top
+    // border — not a heavy drop shadow. The shadow that remains is a single,
+    // very soft, low-opacity layer (no spread, no colour tint) living on an
+    // OUTER layer outside the clip so it isn't clipped away.
     const topCorners = BorderRadius.vertical(top: Radius.circular(28));
     return DecoratedBox(
       decoration: ShapeDecoration(
@@ -314,23 +316,16 @@ class _CustomBottomNavState extends State<CustomBottomNav>
         shadows: isDark
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  blurRadius: 30,
-                  spreadRadius: 1,
-                  offset: const Offset(0, -8),
+                  color: Colors.black.withValues(alpha: 0.22),
+                  blurRadius: 16,
+                  offset: const Offset(0, -2),
                 ),
               ]
             : [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.16),
-                  blurRadius: 32,
-                  spreadRadius: 1,
-                  offset: const Offset(0, -9),
-                ),
-                BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                  blurRadius: 18,
-                  offset: const Offset(0, -4),
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 14,
+                  offset: const Offset(0, -1),
                 ),
               ],
       ),

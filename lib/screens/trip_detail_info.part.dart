@@ -42,11 +42,9 @@ class DestinationInfoSection extends StatelessWidget {
 
     final chips = _quickInfoItems(trip);
     final location = textOf(trip['location'] ?? trip['destination']).trim();
-    final catLabel = textOf(
-      trip['category_name'] ??
-          asMap(trip['category'])['name'] ??
-          trip['type'],
-    ).trim();
+    final travelers =
+        (num.tryParse('${trip['confirmed_passengers_count'] ?? 0}') ?? 0)
+            .toInt();
 
     return _PremiumCard(
       padding: EdgeInsets.zero,
@@ -60,8 +58,11 @@ class DestinationInfoSection extends StatelessWidget {
               children: [
                 _RatingSummary(trip: trip, reviews: reviews),
                 const Spacer(),
-                if (catLabel.isNotEmpty)
-                  _InfoChip(icon: Icons.tag_rounded, label: catLabel),
+                if (travelers > 0)
+                  _InfoChip(
+                    icon: Icons.groups_rounded,
+                    label: '$travelers คนร่วมเดินทางแล้ว',
+                  ),
               ],
             ),
           ),

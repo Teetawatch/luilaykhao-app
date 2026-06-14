@@ -1369,6 +1369,13 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> clearAllNotifications() async {
+    await api.delete(ApiEndpoints.notifications);
+    notifications = [];
+    _syncAppIconBadge();
+    notifyListeners();
+  }
+
   Future<void> redeemReward(int rewardId) async {
     await api.post(ApiEndpoints.loyaltyRedeem, body: {'reward_id': rewardId});
     await loadAccountData();
