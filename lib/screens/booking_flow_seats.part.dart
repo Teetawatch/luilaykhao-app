@@ -583,27 +583,33 @@ class _SeatLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      _SeatLegendItem(Color(0xFFBBF7D0), 'ว่าง'),
-      _SeatLegendItem(_softAccent, 'กำลังเลือก'),
-      _SeatLegendItem(Color(0xFFF59E0B), 'กำลังจอง'),
-      _SeatLegendItem(Color(0xFFEF4444), 'จองแล้ว'),
+    final items = <_SeatLegendItem>[
+      _SeatLegendItem(_seatVisual(status: 'available', selected: false), 'ว่าง'),
+      _SeatLegendItem(
+        _seatVisual(status: 'available', selected: true),
+        'กำลังเลือก',
+      ),
+      _SeatLegendItem(_seatVisual(status: 'locked', selected: false), 'กำลังจอง'),
+      _SeatLegendItem(_seatVisual(status: 'booked', selected: false), 'จองแล้ว'),
     ];
 
     return Wrap(
-      spacing: 10,
-      runSpacing: 8,
+      spacing: 14,
+      runSpacing: 10,
       children: items.map((item) {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 18,
-              height: 18,
+              width: 22,
+              height: 22,
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: item.color,
-                borderRadius: BorderRadius.circular(6),
+                color: item.visual.fill,
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
               ),
+              child: _SeatGlyph(color: item.visual.glyph),
             ),
             const SizedBox(width: 6),
             Text(
@@ -795,48 +801,61 @@ class _SeatButton extends StatelessWidget {
         seat == null ||
         status == 'booked' ||
         (status == 'locked' && !lockedByCurrentUser);
-    final color = _seatColor(status: status, selected: selected);
-    final muted = disabled && status != 'booked';
-    final seatColor = muted ? color.withValues(alpha: 0.55) : color;
-    final foregroundColor = selected || status == 'booked'
-        ? Colors.white
-        : status == 'locked'
-        ? const Color(0xFF78350F)
-        : const Color(0xFF065F46);
+
+    final visual = _seatVisual(status: status, selected: selected);
+    // Booked seats keep their flat grey; other unavailable seats fade slightly.
+    final softDisabled = disabled && status != 'booked';
+    final tileFill = softDisabled
+        ? visual.fill.withValues(alpha: 0.6)
+        : visual.fill;
+    final glyphColor = softDisabled
+        ? visual.glyph.withValues(alpha: 0.55)
+        : visual.glyph;
+
+    IconData? badgeIcon;
+    if (selected) {
+      badgeIcon = Icons.check_rounded;
+    } else if (status == 'booked') {
+      badgeIcon = Icons.lock_rounded;
+    } else if (status == 'locked') {
+      badgeIcon = Icons.schedule_rounded;
+    }
+
     final labelColor = selected
         ? _softAccent
         : status == 'locked'
-        ? const Color(0xFF92400E).withValues(alpha: muted ? 0.62 : 1)
-        : _mutedTextColor(context).withValues(alpha: muted ? 0.62 : 1);
+        ? const Color(0xFF92400E).withValues(alpha: softDisabled ? 0.62 : 1)
+        : _mutedTextColor(context).withValues(alpha: softDisabled ? 0.62 : 1);
 
     return Tooltip(
       message: _seatTooltip(seat, id, selected: selected),
       child: InkWell(
         onTap: disabled ? null : onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
+        borderRadius: BorderRadius.circular(18),
+        child: SizedBox(
           width: 52,
-          height: 60,
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-          ),
+          height: 62,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                width: 42,
-                height: 38,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                width: 44,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: seatColor,
-                  borderRadius: BorderRadius.circular(14),
+                  color: tileFill,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: selected
+                        ? Colors.transparent
+                        : Colors.black.withValues(alpha: 0.04),
+                  ),
                   boxShadow: selected
                       ? [
                           BoxShadow(
-                            color: _softAccent.withValues(alpha: 0.24),
-                            blurRadius: 10,
+                            color: _softAccent.withValues(alpha: 0.28),
+                            blurRadius: 12,
                             offset: const Offset(0, 5),
                           ),
                         ]
@@ -845,31 +864,33 @@ class _SeatButton extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    Icon(
-                      Icons.airline_seat_recline_extra_rounded,
-                      color: foregroundColor,
-                      size: 20,
+                    Padding(
+                      padding: const EdgeInsets.all(9),
+                      child: _SeatGlyph(color: glyphColor),
                     ),
-                    if (selected || status == 'locked' || status == 'booked')
+                    if (badgeIcon != null)
                       Positioned(
-                        top: 3,
-                        right: 3,
-                        child: Icon(
-                          selected
-                              ? Icons.check_circle
-                              : status == 'booked'
-                              ? Icons.lock_rounded
-                              : Icons.timer_rounded,
-                          color: selected || status == 'booked'
-                              ? Colors.white
-                              : const Color(0xFF78350F),
-                          size: 11,
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          width: 15,
+                          height: 15,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: selected ? Colors.white : visual.badge,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            badgeIcon,
+                            size: 9.5,
+                            color: selected ? _softAccent : Colors.white,
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 5),
               Text(
                 textOf(seat?['label'], id),
                 maxLines: 1,
@@ -888,6 +909,77 @@ class _SeatButton extends StatelessWidget {
   }
 }
 
+/// A clean, front-facing armchair silhouette — backrest, two armrests and a
+/// cushion — drawn as a single-color glyph so it reads crisply at seat size.
+class _SeatGlyph extends StatelessWidget {
+  final Color color;
+
+  const _SeatGlyph({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(size: Size.infinite, painter: _SeatGlyphPainter(color));
+  }
+}
+
+class _SeatGlyphPainter extends CustomPainter {
+  final Color color;
+
+  const _SeatGlyphPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..isAntiAlias = true;
+    final w = size.width;
+    final h = size.height;
+
+    // Backrest — rounded bar across the top.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.18, 0, w * 0.64, h * 0.34),
+        Radius.circular(w * 0.13),
+      ),
+      paint,
+    );
+
+    // Armrests — slim rounded bars hugging each side.
+    final armW = w * 0.15;
+    final armTop = h * 0.32;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(0, armTop, armW, h),
+        Radius.circular(armW * 0.55),
+      ),
+      paint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(w - armW, armTop, w, h),
+        Radius.circular(armW * 0.55),
+      ),
+      paint,
+    );
+
+    // Seat cushion — wider rounded block sitting in the lower middle.
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        Rect.fromLTRB(w * 0.2, h * 0.42, w * 0.8, h),
+        topLeft: Radius.circular(w * 0.1),
+        topRight: Radius.circular(w * 0.1),
+        bottomLeft: Radius.circular(w * 0.2),
+        bottomRight: Radius.circular(w * 0.2),
+      ),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SeatGlyphPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
 class _DriverBlock extends StatelessWidget {
   final bool show;
 
@@ -903,11 +995,12 @@ class _DriverBlock extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 42,
-            height: 38,
+            width: 44,
+            height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(14),
+              color: const Color(0xFFEFEFF1),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
             ),
             child: Icon(
               Icons.drive_eta_rounded,
@@ -1018,10 +1111,10 @@ class _NoSeatMapState extends StatelessWidget {
 }
 
 class _SeatLegendItem {
-  final Color color;
+  final _SeatVisual visual;
   final String label;
 
-  const _SeatLegendItem(this.color, this.label);
+  const _SeatLegendItem(this.visual, this.label);
 }
 
 class _SeatStatusCounts {

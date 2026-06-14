@@ -12,19 +12,81 @@ class ReviewSection extends StatefulWidget {
 
 class _ReviewSectionState extends State<ReviewSection> {
   static const _initialCount = 3;
+  static const _pageSize = 10;
+
+  late List<dynamic> _reviews;
   bool _expanded = false;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  int _page = 1;
+  int? _totalCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromWidget();
+  }
+
+  @override
+  void didUpdateWidget(covariant ReviewSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.reviews, widget.reviews)) {
+      _syncFromWidget();
+    }
+  }
+
+  /// Seeds local state from the first page handed in by the parent. The trip's
+  /// aggregate `review_count` tells us whether the server has more than this
+  /// first page so we can offer to load the rest.
+  void _syncFromWidget() {
+    _reviews = List<dynamic>.of(widget.reviews);
+    _page = 1;
+    _expanded = false;
+    final total = int.tryParse(textOf(widget.trip['review_count']));
+    _totalCount = total;
+    _hasMore = total != null && total > _reviews.length;
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final app = Provider.of<AppProvider>(context, listen: false);
+      final tripId = int.tryParse(textOf(widget.trip['id'])) ?? 0;
+      final result = await app.tripReviewsPage(
+        tripId,
+        page: _page + 1,
+        perPage: _pageSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        _page += 1;
+        _reviews = [..._reviews, ...result.items];
+        _hasMore = result.hasMore;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingMore = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final trip = widget.trip;
-    final reviews = widget.reviews;
+    final reviews = _reviews;
     final rating = _ratingValue(trip);
     final count = _reviewCount(trip, reviews);
     final hasReviews = count > 0 && rating > 0;
     final visibleReviews = _expanded
         ? reviews
         : reviews.take(_initialCount).toList();
-    final hiddenCount = reviews.length - _initialCount;
+    // Total still hidden behind the collapsed preview — counting reviews not
+    // yet fetched from the server, so the button advertises the real remainder.
+    final knownTotal = (_totalCount != null && _totalCount! > reviews.length)
+        ? _totalCount!
+        : reviews.length;
+    final collapsedHidden = knownTotal - _initialCount;
 
     return _PremiumCard(
       child: Column(
@@ -97,12 +159,28 @@ class _ReviewSectionState extends State<ReviewSection> {
               final review = asMap(reviewData);
               return _ReviewCard(review: review);
             }),
-            if (hiddenCount > 0) ...[
+            // ── show more / load more / show less ────────────────
+            if (!_expanded && collapsedHidden > 0) ...[
               const SizedBox(height: 4),
               _ShowMoreReviewsButton(
-                expanded: _expanded,
-                hiddenCount: hiddenCount,
-                onPressed: () => setState(() => _expanded = !_expanded),
+                label: 'แสดงเพิ่มเติม ($collapsedHidden)',
+                icon: Icons.keyboard_arrow_down_rounded,
+                onPressed: () => setState(() => _expanded = true),
+              ),
+            ] else if (_expanded && _hasMore) ...[
+              const SizedBox(height: 4),
+              _ShowMoreReviewsButton(
+                label: 'โหลดรีวิวเพิ่มเติม',
+                icon: Icons.expand_more_rounded,
+                loading: _loadingMore,
+                onPressed: _loadMore,
+              ),
+            ] else if (_expanded && reviews.length > _initialCount) ...[
+              const SizedBox(height: 4),
+              _ShowMoreReviewsButton(
+                label: 'แสดงน้อยลง',
+                icon: Icons.keyboard_arrow_up_rounded,
+                onPressed: () => setState(() => _expanded = false),
               ),
             ],
           ],
@@ -113,13 +191,15 @@ class _ReviewSectionState extends State<ReviewSection> {
 }
 
 class _ShowMoreReviewsButton extends StatelessWidget {
-  final bool expanded;
-  final int hiddenCount;
+  final String label;
+  final IconData icon;
+  final bool loading;
   final VoidCallback onPressed;
 
   const _ShowMoreReviewsButton({
-    required this.expanded,
-    required this.hiddenCount,
+    required this.label,
+    required this.icon,
+    this.loading = false,
     required this.onPressed,
   });
 
@@ -128,7 +208,7 @@ class _ShowMoreReviewsButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
+        onTap: loading ? null : onPressed,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           width: double.infinity,
@@ -140,24 +220,38 @@ class _ShowMoreReviewsButton extends StatelessWidget {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                expanded ? 'แสดงน้อยลง' : 'แสดงเพิ่มเติม ($hiddenCount)',
-                style: GoogleFonts.anuphan(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
-                  color: _premiumText,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                expanded
-                    ? Icons.keyboard_arrow_up_rounded
-                    : Icons.keyboard_arrow_down_rounded,
-                size: 20,
-                color: _premiumText,
-              ),
-            ],
+            children: loading
+                ? [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: _premiumText,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'กำลังโหลด...',
+                      style: GoogleFonts.anuphan(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: _premiumText,
+                      ),
+                    ),
+                  ]
+                : [
+                    Text(
+                      label,
+                      style: GoogleFonts.anuphan(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: _premiumText,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(icon, size: 20, color: _premiumText),
+                  ],
           ),
         ),
       ),
@@ -656,21 +750,84 @@ List<(String, num)> _reviewBreakdown(Map<String, dynamic> review) {
   return result;
 }
 
+/// Flattens the photo URLs out of a list of reviews, in order.
+List<String> _collectReviewPhotos(List<dynamic> reviews) {
+  final photos = <String>[];
+  for (final r in reviews) {
+    for (final img in asList(asMap(r)['images'])) {
+      final url = ApiConfig.mediaUrl(img.toString());
+      if (url.isNotEmpty) photos.add(url);
+    }
+  }
+  return photos;
+}
+
 /// Gallery of photos pulled from all community reviews of this trip.
-class CommunityPhotosSection extends StatelessWidget {
+///
+/// The parent only hands us the first page of reviews, so this seeds from that
+/// for an instant render and then quietly pages through the rest in the
+/// background, collecting every photo so the strip and fullscreen gallery show
+/// the complete set.
+class CommunityPhotosSection extends StatefulWidget {
+  final Map<String, dynamic> trip;
   final List<dynamic> reviews;
 
-  const CommunityPhotosSection({super.key, required this.reviews});
+  const CommunityPhotosSection({
+    super.key,
+    required this.trip,
+    required this.reviews,
+  });
+
+  @override
+  State<CommunityPhotosSection> createState() => _CommunityPhotosSectionState();
+}
+
+class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
+  late List<String> _photos;
+
+  @override
+  void initState() {
+    super.initState();
+    _photos = _collectReviewPhotos(widget.reviews);
+    _loadRemainingPhotos();
+  }
+
+  /// Pages through every remaining review (beyond the first page already in
+  /// hand) and appends any photos we haven't seen yet.
+  Future<void> _loadRemainingPhotos() async {
+    final total = int.tryParse(textOf(widget.trip['review_count'])) ?? 0;
+    if (total <= widget.reviews.length) return;
+
+    final tripId = int.tryParse(textOf(widget.trip['id'])) ?? 0;
+    if (tripId <= 0) return;
+
+    final app = Provider.of<AppProvider>(context, listen: false);
+    final collected = <String>[..._photos];
+    final seen = collected.toSet();
+    var page = 1;
+    var hasMore = true;
+
+    while (hasMore && mounted) {
+      page += 1;
+      try {
+        final result = await app.tripReviewsPage(tripId, page: page);
+        for (final url in _collectReviewPhotos(result.items)) {
+          if (seen.add(url)) collected.add(url);
+        }
+        hasMore = result.hasMore;
+      } catch (_) {
+        break;
+      }
+    }
+
+    if (mounted && collected.length != _photos.length) {
+      setState(() => _photos = collected);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final photos = <String>[];
-    for (final r in reviews) {
-      for (final img in asList(asMap(r)['images'])) {
-        final url = ApiConfig.mediaUrl(img.toString());
-        if (url.isNotEmpty) photos.add(url);
-      }
-    }
+    final photos = _photos;
     if (photos.isEmpty) return const SizedBox.shrink();
 
     const previewCount = 8;

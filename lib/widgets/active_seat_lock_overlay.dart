@@ -314,6 +314,14 @@ int? _scheduleId(Map<String, dynamic> lock) {
 }
 
 int _remainingSeconds(Map<String, dynamic> lock) {
+  // Prefer the device-local deadline (set from the server's relative ttl on
+  // fetch) so the countdown is not thrown off by clock skew between the device
+  // and the Laravel server.
+  final clientDeadlineMs = int.tryParse(textOf(lock['client_deadline_ms']));
+  if (clientDeadlineMs != null) {
+    final ms = clientDeadlineMs - DateTime.now().millisecondsSinceEpoch;
+    return (ms ~/ 1000).clamp(0, 86400);
+  }
   final lockedUntil = DateTime.tryParse(textOf(lock['locked_until']));
   if (lockedUntil != null) {
     return lockedUntil.difference(DateTime.now()).inSeconds.clamp(0, 86400);

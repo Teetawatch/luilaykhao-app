@@ -660,7 +660,10 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
                       ),
                       const SizedBox(height: 16),
                       if (_hasCommunityPhotos) ...[
-                        CommunityPhotosSection(reviews: widget.reviews),
+                        CommunityPhotosSection(
+                          trip: widget.trip,
+                          reviews: widget.reviews,
+                        ),
                         const SizedBox(height: 16),
                       ],
                       ReviewSection(trip: widget.trip, reviews: widget.reviews),

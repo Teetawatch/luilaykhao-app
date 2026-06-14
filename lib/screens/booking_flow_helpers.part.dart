@@ -543,11 +543,49 @@ String _seatLockRemainingText(Map<String, dynamic> seat) {
   return '$minutes:$remainingSeconds นาที';
 }
 
-Color _seatColor({required String status, required bool selected}) {
-  if (selected) return _softAccent;
-  if (status == 'booked') return const Color(0xFFEF4444);
-  if (status == 'locked') return const Color(0xFFF59E0B);
-  return const Color(0xFFBBF7D0);
+/// Fill + glyph colors for a single seat tile, tuned for a soft, iOS-like
+/// palette: muted tints rather than candy-bright blocks, with only the
+/// selected seat carrying the full brand accent.
+class _SeatVisual {
+  final Color fill;
+  final Color glyph;
+  final Color badge;
+
+  const _SeatVisual({
+    required this.fill,
+    required this.glyph,
+    required this.badge,
+  });
+}
+
+_SeatVisual _seatVisual({required String status, required bool selected}) {
+  if (selected) {
+    return const _SeatVisual(
+      fill: _softAccent,
+      glyph: Colors.white,
+      badge: Colors.white,
+    );
+  }
+  switch (status) {
+    case 'booked':
+      return const _SeatVisual(
+        fill: Color(0xFFEFEFF1),
+        glyph: Color(0xFFC4C8CF),
+        badge: Color(0xFF9CA3AF),
+      );
+    case 'locked':
+      return const _SeatVisual(
+        fill: Color(0xFFFFF3E0),
+        glyph: Color(0xFFE08A00),
+        badge: Color(0xFFE08A00),
+      );
+    default: // available
+      return const _SeatVisual(
+        fill: Color(0xFFE7F6EE),
+        glyph: _softAccent,
+        badge: _softAccent,
+      );
+  }
 }
 
 Map<String, dynamic>? _seatById(Map<String, dynamic> seatMap, String id) {

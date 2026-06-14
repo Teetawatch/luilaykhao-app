@@ -411,6 +411,26 @@ class AppProvider extends ChangeNotifier {
     return List<dynamic>.from(api.data(response) ?? []);
   }
 
+  /// Fetches one page of a trip's reviews along with whether more pages remain,
+  /// so the UI can lazily reveal every review instead of capping at the first
+  /// page.
+  Future<({List<dynamic> items, bool hasMore})> tripReviewsPage(
+    int tripId, {
+    int page = 1,
+    int perPage = 10,
+  }) async {
+    final response = await api.get(
+      'reviews',
+      query: {'trip_id': tripId, 'page': page, 'per_page': perPage},
+    );
+    final items = List<dynamic>.from(api.data(response) ?? []);
+    final meta = api.meta(response);
+    final currentPage = int.tryParse('${meta?['current_page'] ?? page}') ?? page;
+    final lastPage =
+        int.tryParse('${meta?['last_page'] ?? currentPage}') ?? currentPage;
+    return (items: items, hasMore: currentPage < lastPage);
+  }
+
   Future<Map<String, dynamic>> seats(int scheduleId) async {
     final response = await api.get('schedules/$scheduleId/seats');
     return Map<String, dynamic>.from(api.data(response) ?? {});
@@ -418,7 +438,21 @@ class AppProvider extends ChangeNotifier {
 
   Future<List<dynamic>> fetchActiveSeatLocks() async {
     final response = await api.get(ApiEndpoints.seatLocksActive);
-    return List<dynamic>.from(api.data(response) ?? []);
+    final list = List<dynamic>.from(api.data(response) ?? []);
+    // Anchor the countdown to a device-local deadline derived from the server's
+    // RELATIVE ttl (locked_ttl_seconds), not its absolute timestamp. This keeps
+    // the displayed time immune to device/server clock skew (which previously
+    // made the app count down faster than the backend lock actually expired).
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    for (final item in list) {
+      if (item is Map) {
+        final ttl = int.tryParse('${item['locked_ttl_seconds'] ?? ''}');
+        if (ttl != null && ttl > 0) {
+          item['client_deadline_ms'] = nowMs + ttl * 1000;
+        }
+      }
+    }
+    return list;
   }
 
   Future<void> loadActiveSeatLocks({bool silent = false}) async {
