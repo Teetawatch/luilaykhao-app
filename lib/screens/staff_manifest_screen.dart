@@ -7,7 +7,6 @@ import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import 'staff_check_in_screen.dart'
     show StaffCheckInScreen, asMap, asList, textOf;
-import 'staff_roll_call_screen.dart';
 
 /// Full passenger manifest for one schedule — shows every confirmed booking
 /// with contact name, callable phone and pickup point so staff can coordinate
@@ -116,18 +115,6 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       appBar: AppBar(
         title: Text(widget.title.isEmpty ? 'รายชื่อผู้โดยสาร' : widget.title),
         actions: [
-          IconButton(
-            tooltip: 'นับหัวผู้โดยสาร',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => StaffRollCallScreen(
-                  scheduleId: widget.scheduleId,
-                  title: 'นับหัว • ${widget.title}',
-                ),
-              ),
-            ),
-            icon: const Icon(Icons.how_to_reg_rounded),
-          ),
           IconButton(
             tooltip: 'เช็คอินด้วย QR',
             onPressed: () => Navigator.of(context).push(

@@ -912,27 +912,6 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
-  /// Roll-call toggle: check a booking in/out by ref (reversible head-count).
-  /// Returns `{ booking_ref, checked_in, summary }`.
-  Future<Map<String, dynamic>> setStaffCheckIn(
-    int scheduleId,
-    String bookingRef,
-    bool checkedIn,
-  ) async {
-    final response = await api.post(
-      'driver/schedules/$scheduleId/check-in/set',
-      body: {'booking_ref': bookingRef, 'checked_in': checkedIn},
-    );
-    return Map<String, dynamic>.from(api.data(response) as Map);
-  }
-
-  /// Notify all passengers (push + group chat) that the vehicle has departed.
-  /// Idempotent server-side for the day. Returns `{ notified, already_sent }`.
-  Future<Map<String, dynamic>> markScheduleDeparted(int scheduleId) async {
-    final response = await api.post('driver/schedules/$scheduleId/depart');
-    return Map<String, dynamic>.from(api.data(response) as Map);
-  }
-
   /// Mark a pickup point done (or undo). On completion, passengers at the next
   /// pending point are notified the van is on its way. Returns
   /// `{ point_id, completed_at, next_point, notified, pickup_points }`.
