@@ -59,7 +59,7 @@ class BookingProgressStepper extends StatelessWidget {
                           )
                         : Text(
                             '${index + 1}',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               color: isActive
                                   ? Colors.white
                                   : _mutedTextColor(context),
@@ -75,7 +75,7 @@ class BookingProgressStepper extends StatelessWidget {
                     steps[index],
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: isActive
                           ? _premiumText(context)
                           : _mutedTextColor(context),
@@ -175,7 +175,7 @@ class TripSummaryCard extends StatelessWidget {
                   textOf(trip['title'], '-'),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     height: 1.25,
@@ -352,7 +352,7 @@ class TravelInfoSection extends StatelessWidget {
                         ),
                         child: Text(
                           'เหมา',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF7C3AED),
@@ -426,7 +426,7 @@ class TravelInfoSection extends StatelessWidget {
                             location,
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               color: _premiumText(context),
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -448,7 +448,7 @@ class TravelInfoSection extends StatelessWidget {
                               location,
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: _premiumText(context),
@@ -458,7 +458,7 @@ class TravelInfoSection extends StatelessWidget {
                               notes.isEmpty ? price : '$notes  ·  $price',
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: _mutedTextColor(context),
@@ -524,7 +524,7 @@ class _JoinTripSwitch extends StatelessWidget {
                 children: [
                   Text(
                     'Join Trip',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: _premiumText(context),
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -534,7 +534,7 @@ class _JoinTripSwitch extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     price > 0 ? '${money(price)} / คน' : 'ใช้ราคาจากรอบเดินทาง',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: _mutedTextColor(context),
                       fontSize: 12,
                       fontWeight: FontWeight.w700,

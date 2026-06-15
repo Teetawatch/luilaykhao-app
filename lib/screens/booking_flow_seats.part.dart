@@ -214,7 +214,7 @@ class _VehiclePhotoPreviewState extends State<_VehiclePhotoPreview> {
                         name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: _premiumText(context),
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -279,7 +279,7 @@ class _VehicleInfoPill extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             text,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
@@ -395,7 +395,7 @@ class SeatSelectionSection extends StatelessWidget {
                   Text(
                     'ที่นั่งว่าง ${textOf(map['available_seats'], '0')} / ${textOf(map['total_seats'], '0')}',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: _mutedTextColor(context),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -446,7 +446,7 @@ class _SelectedSeatSummary extends StatelessWidget {
               hasSelection
                   ? 'ที่นั่งที่เลือก ${seats.join(', ')}'
                   : 'กรุณาเลือกที่นั่งก่อนกรอกข้อมูลผู้เดินทาง',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: hasSelection
                     ? const Color(0xFF126B5B)
                     : const Color(0xFF92400E),
@@ -491,7 +491,7 @@ class _SeatRealtimeSummary extends StatelessWidget {
               Expanded(
                 child: Text(
                   'อัปเดตสถานะที่นั่งทุก ${refreshInterval.inSeconds} วินาที ล็อกที่นั่งชั่วคราวตามจำนวนที่นั่งที่เลือก',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: const Color(0xFF126B5B),
                     fontWeight: FontWeight.w600,
                     fontSize: 12.5,
@@ -530,7 +530,7 @@ class _SeatRealtimeSummary extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'กำลังจองอยู่: ${counts.lockedSeatLabels.take(4).join(', ')}${counts.lockedSeatLabels.length > 4 ? ' ...' : ''}',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: const Color(0xFF126B5B),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -568,7 +568,7 @@ class _SeatStatusPill extends StatelessWidget {
       ),
       child: Text(
         '$label $value',
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: textColor,
           fontSize: 12,
           fontWeight: FontWeight.w700,
@@ -614,7 +614,7 @@ class _SeatLegend extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               item.label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: _mutedTextColor(context),
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -895,7 +895,7 @@ class _SeatButton extends StatelessWidget {
                 textOf(seat?['label'], id),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: labelColor,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
@@ -1011,7 +1011,7 @@ class _DriverBlock extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'คนขับ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: _mutedTextColor(context),
               fontSize: 10,
               fontWeight: FontWeight.w800,
@@ -1040,7 +1040,7 @@ class _VehicleLabel extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: muted ? _mutedTextColor(context) : _softAccent,
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -1087,7 +1087,7 @@ class _SeatErrorState extends StatelessWidget {
           icon: const Icon(Icons.refresh_rounded, size: 18),
           label: Text(
             'โหลดผังที่นั่งอีกครั้ง',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+            style: appFont(fontWeight: FontWeight.w800),
           ),
         ),
       ],

@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -27,7 +26,7 @@ class WishlistScreen extends StatelessWidget {
         iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
         title: Text(
           'ทริปที่ชอบ',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.onSurface(context),
             fontWeight: FontWeight.w900,
           ),
@@ -129,7 +128,7 @@ class _WishlistTile extends StatelessWidget {
                       item['title']?.toString() ?? '-',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.onSurface(context),
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
@@ -140,7 +139,7 @@ class _WishlistTile extends StatelessWidget {
                       item['location']?.toString() ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.mutedText(context),
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -150,7 +149,7 @@ class _WishlistTile extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         '$priceLabel / คน',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.primaryColor,
                           fontSize: 13.5,
                           fontWeight: FontWeight.w900,
@@ -194,7 +193,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'ยังไม่มีทริปที่บันทึกไว้',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.onSurface(context),
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -204,7 +203,7 @@ class _EmptyState extends StatelessWidget {
             Text(
               'เมื่อเจอทริปที่สนใจ กดรูปหัวใจเพื่อบันทึกไว้ดูอีกครั้งภายหลัง',
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.mutedText(context),
                 fontSize: 13,
                 height: 1.5,

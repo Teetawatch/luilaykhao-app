@@ -74,7 +74,7 @@ class DestinationInfoSection extends StatelessWidget {
               _tripTitle(trip),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 25,
                 fontWeight: FontWeight.w800,
                 color: isDark ? Colors.white : _premiumText,
@@ -110,7 +110,7 @@ class DestinationInfoSection extends StatelessWidget {
                       location,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13,
                         color: _mutedText,
                         height: 1.4,
@@ -253,7 +253,7 @@ class _StatTile extends StatelessWidget {
               label,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: isDark ? Colors.white.withValues(alpha: 0.85) : _premiumText,
@@ -319,7 +319,7 @@ class AboutSection extends StatelessWidget {
               description,
               maxLines: isExpanded ? null : 5,
               overflow: isExpanded ? TextOverflow.visible : TextOverflow.fade,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 15,
                 height: 1.75,
                 color: const Color(0xFF374151),
@@ -338,7 +338,7 @@ class AboutSection extends StatelessWidget {
               ),
               child: Text(
                 isExpanded ? 'อ่านน้อยลง' : 'อ่านเพิ่มเติม',
-                style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+                style: appFont(fontWeight: FontWeight.w800),
               ),
             ),
           ],
@@ -518,7 +518,7 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
                 child: Text(
                   '${_currentIndex + 1} / ${widget.images.length}',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -593,7 +593,7 @@ class MustKnowSection extends StatelessWidget {
                     children: [
                       Text(
                         'สิ่งที่ควรรู้ก่อนเดินทาง',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: isDark
@@ -604,7 +604,7 @@ class MustKnowSection extends StatelessWidget {
                       ),
                       Text(
                         'อ่านก่อนทำการจอง',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 11.5,
                           color: isDark
                               ? const Color(0xFFD97706)
@@ -688,7 +688,7 @@ class PreparationsSection extends StatelessWidget {
                     child: Center(
                       child: Text(
                         '${i + 1}',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
                           color: _softAccent,
@@ -702,7 +702,7 @@ class PreparationsSection extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         text,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: isDark

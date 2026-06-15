@@ -256,7 +256,7 @@ InputDecoration _fieldDecoration({
       borderRadius: BorderRadius.circular(14),
       borderSide: const BorderSide(color: AppTheme.errorColor, width: 1.4),
     ),
-    hintStyle: GoogleFonts.anuphan(
+    hintStyle: appFont(
       color: _mutedTextColor(context).withValues(alpha: 0.62),
       fontSize: 14,
       fontWeight: FontWeight.w500,
@@ -265,7 +265,7 @@ InputDecoration _fieldDecoration({
 }
 
 TextStyle _labelStyle(BuildContext context) {
-  return GoogleFonts.anuphan(
+  return appFont(
     color: _mutedTextColor(context),
     fontSize: 12,
     fontWeight: FontWeight.w800,

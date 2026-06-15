@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../models/tracking_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
@@ -112,7 +111,7 @@ class _StatusHeader extends StatelessWidget {
             children: [
               Text(
                 tripTitle,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontWeight: FontWeight.w800,
                   fontSize: 16,
                   color: AppTheme.onSurface(context),
@@ -132,7 +131,7 @@ class _StatusHeader extends StatelessWidget {
                   Expanded(
                     child: Text(
                       pickupLabel,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13,
                         color: AppTheme.mutedText(context),
                         fontWeight: FontWeight.w500,
@@ -175,7 +174,7 @@ class _PhaseBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: color,
           fontSize: 12,
           fontWeight: FontWeight.w800,
@@ -246,7 +245,7 @@ class _StatTile extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 10,
             color: AppTheme.mutedText(context),
             fontWeight: FontWeight.w600,
@@ -255,7 +254,7 @@ class _StatTile extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: isHighlighted ? 18 : 14,
             fontWeight: FontWeight.w800,
             color: isHighlighted

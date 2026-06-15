@@ -150,7 +150,7 @@ class _NextTripHeroCard extends StatelessWidget {
                       children: [
                         Text(
                           'ทริปถัดไปของคุณ',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: Colors.white.withValues(alpha: 0.70),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -162,7 +162,7 @@ class _NextTripHeroCard extends StatelessWidget {
                           title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: Colors.white,
                             fontSize: 17,
                             height: 1.2,
@@ -185,7 +185,7 @@ class _NextTripHeroCard extends StatelessWidget {
                                   'd MMMM yyyy',
                                   'th_TH',
                                 ).format(travelDate),
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   color: Colors.white.withValues(alpha: 0.80),
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
@@ -219,7 +219,7 @@ class _NextTripHeroCard extends StatelessWidget {
                         ),
                         child: Text(
                           badge,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: Colors.white,
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
@@ -230,7 +230,7 @@ class _NextTripHeroCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         'กดดูรายละเอียด',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: Colors.white.withValues(alpha: 0.60),
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -438,14 +438,14 @@ class _BookingUtilityBar extends StatelessWidget {
         Expanded(
           child: TextField(
             onChanged: onQueryChanged,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 14.5,
               fontWeight: FontWeight.w600,
               color: AppTheme.onSurface(context),
             ),
             decoration: InputDecoration(
               hintText: 'ค้นหาการจอง',
-              hintStyle: GoogleFonts.anuphan(
+              hintStyle: appFont(
                 color: AppTheme.mutedText(context),
                 fontSize: 14.5,
                 fontWeight: FontWeight.w500,
@@ -758,7 +758,7 @@ class ReservationCard extends StatelessWidget {
                         child: Text(
                           'ยินดีที่ได้พบกันครับ',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: Colors.white,
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
@@ -938,7 +938,7 @@ class _ViewDetailsButton extends StatelessWidget {
           children: [
             Text(
               isPast ? 'ดูรายละเอียดการเดินทาง' : 'ดูตั๋ว & รายละเอียด',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
               ),
@@ -996,7 +996,7 @@ class _TripReadinessBar extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   allDone ? 'พร้อมเดินทางแล้ว' : 'เตรียมความพร้อม',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: accent,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,
@@ -1006,7 +1006,7 @@ class _TripReadinessBar extends StatelessWidget {
                 const Spacer(),
                 Text(
                   '$doneCount/${items.length}',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: accent,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,
@@ -1062,7 +1062,7 @@ class _ReadinessChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: done ? AppTheme.onSurface(context) : color,
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
@@ -1325,7 +1325,7 @@ class _AvatarCircle extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         initial,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: Colors.white,
           fontWeight: FontWeight.w800,
           fontSize: initial.length > 1 ? 11 : 13,
@@ -1486,7 +1486,7 @@ class _PendingPaymentBar extends StatelessWidget {
               children: [
                 Text(
                   'รอชำระเงิน',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: const Color(0xFF92400E),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -1494,7 +1494,7 @@ class _PendingPaymentBar extends StatelessWidget {
                 ),
                 Text(
                   money(total),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: const Color(0xFFD97706),
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
@@ -1518,7 +1518,7 @@ class _PendingPaymentBar extends StatelessWidget {
             ),
             child: Text(
               'ชำระเงิน',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
@@ -1556,7 +1556,7 @@ class _PaidFullBar extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             'ชำระครบแล้ว · ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.primaryColor,
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -1564,7 +1564,7 @@ class _PaidFullBar extends StatelessWidget {
           ),
           Text(
             money(total),
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.primaryColor,
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -1607,7 +1607,7 @@ class _DepositBar extends StatelessWidget {
               children: [
                 Text(
                   'มัดจำแล้ว',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: const Color(0xFF065F46),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -1615,7 +1615,7 @@ class _DepositBar extends StatelessWidget {
                 ),
                 Text(
                   money(deposit),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.primaryColor,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -1642,7 +1642,7 @@ class _DepositBar extends StatelessWidget {
                     const SizedBox(width: 3),
                     Text(
                       'ค้างชำระ',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: const Color(0xFF92400E),
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -1652,7 +1652,7 @@ class _DepositBar extends StatelessWidget {
                 ),
                 Text(
                   money(balance),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: const Color(0xFFD97706),
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -1662,7 +1662,7 @@ class _DepositBar extends StatelessWidget {
                 ),
                 Text(
                   'ภายใน $dueDateText',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: const Color(0xFF92400E),
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
@@ -1719,7 +1719,7 @@ class _InstallmentBar extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'ผ่อนชำระ',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.mutedText(context),
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
@@ -1728,7 +1728,7 @@ class _InstallmentBar extends StatelessWidget {
               const Spacer(),
               Text(
                 '$paidCount/$totalCount งวด',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: paidCount == totalCount
                       ? AppTheme.primaryColor
                       : AppTheme.onSurface(context),
@@ -1756,7 +1756,7 @@ class _InstallmentBar extends StatelessWidget {
             children: [
               Text(
                 'ชำระแล้ว ${money(paid)}',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.primaryColor,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -1765,7 +1765,7 @@ class _InstallmentBar extends StatelessWidget {
               const Spacer(),
               Text(
                 'รวม ${money(total)}',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.mutedText(context),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -1805,7 +1805,7 @@ class _SimpleStatusBar extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: color,
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -1841,7 +1841,7 @@ class _PaymentTypeBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: color,
           fontSize: 10.5,
           fontWeight: FontWeight.w800,
@@ -1889,7 +1889,7 @@ class _CompactCheckInRow extends StatelessWidget {
                 children: [
                   Text(
                     'พร้อมเช็คอิน',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.primaryColor,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
@@ -1898,7 +1898,7 @@ class _CompactCheckInRow extends StatelessWidget {
                   ),
                   Text(
                     bookingRef,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.primaryColor.withValues(alpha: 0.72),
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -1928,7 +1928,7 @@ class _CompactCheckInRow extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       'แสดง QR',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: Colors.white,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,

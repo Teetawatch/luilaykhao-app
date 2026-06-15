@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -104,7 +103,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
           Text(
             _error!,
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context),
@@ -158,7 +157,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
                 const SizedBox(height: 12),
                 Text(
                   'ยังไม่มีผู้โดยสารที่ยืนยันแล้ว',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
@@ -232,7 +231,7 @@ class _VehicleCard extends StatelessWidget {
                   children: [
                     Text(
                       name.isEmpty ? 'รถประจำรอบ' : name,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
@@ -241,7 +240,7 @@ class _VehicleCard extends StatelessWidget {
                     if (meta.isNotEmpty)
                       Text(
                         meta,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.mutedText(context),
@@ -273,7 +272,7 @@ class _VehicleCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     plate,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.onSurface(context),
@@ -294,7 +293,7 @@ class _VehicleCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     driverName.isEmpty ? 'คนขับ' : 'คนขับ: $driverName',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.onSurface(context),
@@ -396,7 +395,7 @@ class _SummaryStat extends StatelessWidget {
           fit: BoxFit.scaleDown,
           child: Text(
             value,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
@@ -407,7 +406,7 @@ class _SummaryStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
             color: AppTheme.mutedText(context),
@@ -458,7 +457,7 @@ class _PickupGroupCard extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
@@ -468,7 +467,7 @@ class _PickupGroupCard extends StatelessWidget {
                       if (region.isNotEmpty && region != label)
                         Text(
                           region,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
@@ -479,7 +478,7 @@ class _PickupGroupCard extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
                             notes,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 12,
                               height: 1.4,
                               fontWeight: FontWeight.w500,
@@ -507,7 +506,7 @@ class _PickupGroupCard extends StatelessWidget {
                       ),
                       child: Text(
                         'เช็คอิน $checkedIn/$total',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w800,
                           color: allIn
@@ -530,7 +529,7 @@ class _PickupGroupCard extends StatelessWidget {
                         icon: const Icon(Icons.map_rounded, size: 15),
                         label: Text(
                           'แผนที่',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -597,7 +596,7 @@ class _ManifestPassengerRow extends StatelessWidget {
             ),
             child: Text(
               '$index',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.mutedText(context),
@@ -616,7 +615,7 @@ class _ManifestPassengerRow extends StatelessWidget {
                     Flexible(
                       child: Text(
                         fullName,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
@@ -628,7 +627,7 @@ class _ManifestPassengerRow extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text(
                         '($nickname)',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.mutedText(context),
@@ -679,7 +678,7 @@ class _CheckInPill extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             checkedIn ? 'เช็คอินแล้ว' : 'ยังไม่เช็คอิน',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 11,
               fontWeight: FontWeight.w800,
               color: color,
@@ -731,7 +730,7 @@ class _StaffSeatMap extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'แผนผังที่นั่ง',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.onSurface(context),
@@ -740,7 +739,7 @@ class _StaffSeatMap extends StatelessWidget {
               const Spacer(),
               Text(
                 'นั่งแล้ว $occupied/$total',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.mutedText(context),
@@ -768,7 +767,7 @@ class _StaffSeatMap extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           child: Text(
                             textOf(seatMap['front_label'], 'หน้ารถ'),
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.mutedText(context),
@@ -828,7 +827,7 @@ class _DriverBlock extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             'คนขับ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 10,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context),
@@ -934,7 +933,7 @@ class _StaffSeatTile extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w700,
                     color: occupied ? accent : AppTheme.mutedText(context),
@@ -957,7 +956,7 @@ class _StaffSeatTile extends StatelessWidget {
                   display.isEmpty ? '—' : display,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
@@ -1010,7 +1009,7 @@ class _StaffSeatTile extends StatelessWidget {
                   ),
                   child: Text(
                     'ที่นั่ง $label',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.primaryColor,
@@ -1029,7 +1028,7 @@ class _StaffSeatTile extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         'เช็คอินแล้ว',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF16A34A),
@@ -1040,7 +1039,7 @@ class _StaffSeatTile extends StatelessWidget {
                 else
                   Text(
                     'ยังไม่เช็คอิน',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.mutedText(context),
@@ -1051,7 +1050,7 @@ class _StaffSeatTile extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               nickname.isEmpty ? name : '$name ($nickname)',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 17,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
@@ -1061,7 +1060,7 @@ class _StaffSeatTile extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 ref,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
@@ -1187,7 +1186,7 @@ class _CallButton extends StatelessWidget {
             const SizedBox(width: 5),
             Text(
               compact ? 'โทร' : phone,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: compact ? 12 : 13,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.primaryColor,

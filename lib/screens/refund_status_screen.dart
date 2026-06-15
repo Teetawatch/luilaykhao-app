@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -56,7 +55,7 @@ class _RefundStatusScreenState extends State<RefundStatusScreen> {
         elevation: 0,
         title: Text(
           'สถานะการคืนเงิน',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.onSurface(context),
             fontWeight: FontWeight.w900,
           ),
@@ -183,7 +182,7 @@ class _RefundStatusHeader extends StatelessWidget {
                   children: [
                     Text(
                       'สถานะการคืนเงิน',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.mutedText(context),
                         fontSize: 11.5,
                         fontWeight: FontWeight.w800,
@@ -192,7 +191,7 @@ class _RefundStatusHeader extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       label,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: color,
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
@@ -206,7 +205,7 @@ class _RefundStatusHeader extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             hint,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontSize: 13.5,
               height: 1.45,
@@ -225,7 +224,7 @@ class _RefundStatusHeader extends StatelessWidget {
               children: [
                 Text(
                   'ยอดคืน',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,
@@ -234,7 +233,7 @@ class _RefundStatusHeader extends StatelessWidget {
                 const Spacer(),
                 Text(
                   _money(amount),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.onSurface(context),
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -295,7 +294,7 @@ class _RefundTimeline extends StatelessWidget {
         children: [
           Text(
             'ไทม์ไลน์',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontSize: 15,
               fontWeight: FontWeight.w900,
@@ -379,7 +378,7 @@ class _TimelineRow extends StatelessWidget {
                 children: [
                   Text(
                     step.title,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.onSurface(context),
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
@@ -388,7 +387,7 @@ class _TimelineRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     step.subtitle,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.mutedText(context),
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -434,7 +433,7 @@ class _PolicyCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'นโยบายการคืนเงิน',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.onSurface(context),
                   fontSize: 14.5,
                   fontWeight: FontWeight.w900,
@@ -460,7 +459,7 @@ class _PolicyCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       item,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.onSurface(context),
                         fontSize: 12.5,
                         height: 1.5,
@@ -502,7 +501,7 @@ class _MetaCard extends StatelessWidget {
                     width: 110,
                     child: Text(
                       rows[i].label,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.mutedText(context),
                         fontSize: 12.5,
                         fontWeight: FontWeight.w800,
@@ -512,7 +511,7 @@ class _MetaCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       rows[i].value,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.onSurface(context),
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -558,7 +557,7 @@ class _ErrorState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontSize: 14,
               fontWeight: FontWeight.w700,

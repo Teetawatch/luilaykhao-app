@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -473,7 +472,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               leading: const Icon(Icons.photo_camera_rounded),
               title: Text(
                 'ถ่ายรูป',
-                style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+                style: appFont(fontWeight: FontWeight.w600),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -484,7 +483,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               leading: const Icon(Icons.photo_library_rounded),
               title: Text(
                 'เลือกจากคลังรูปภาพ',
-                style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+                style: appFont(fontWeight: FontWeight.w600),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -750,18 +749,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('ลบข้อความ', style: GoogleFonts.anuphan(fontWeight: FontWeight.w800)),
+        title: Text('ลบข้อความ', style: appFont(fontWeight: FontWeight.w800)),
         content: Text('ต้องการลบข้อความนี้ใช่ไหม? การลบไม่สามารถย้อนกลับได้',
-            style: GoogleFonts.anuphan()),
+            style: appFont()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ยกเลิก', style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+            child: Text('ยกเลิก', style: appFont(fontWeight: FontWeight.w600)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('ลบ', style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+            child: Text('ลบ', style: appFont(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -810,7 +809,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void _toast(String text) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(text, style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+        content: Text(text, style: appFont(fontWeight: FontWeight.w600)),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -878,7 +877,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ListTile(
               leading: const Icon(Icons.reply_rounded),
               title: Text('ตอบกลับ',
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+                  style: appFont(fontWeight: FontWeight.w600)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _startReply(message);
@@ -888,7 +887,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               ListTile(
                 leading: const Icon(Icons.copy_rounded),
                 title: Text('คัดลอก',
-                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+                    style: appFont(fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _copyMessage(body);
@@ -899,7 +898,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 ListTile(
                   leading: const Icon(Icons.push_pin_outlined),
                   title: Text('ปลดหมุด',
-                      style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+                      style: appFont(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     _unpinMessage();
@@ -909,7 +908,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 ListTile(
                   leading: const Icon(Icons.push_pin_rounded),
                   title: Text('ปักหมุด',
-                      style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+                      style: appFont(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     _pinMessage(message);
@@ -920,7 +919,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               ListTile(
                 leading: const Icon(Icons.edit_rounded),
                 title: Text('แก้ไข',
-                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
+                    style: appFont(fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _startEdit(message);
@@ -931,7 +930,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 leading: const Icon(Icons.delete_outline_rounded,
                     color: AppTheme.errorColor),
                 title: Text('ลบ',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                         fontWeight: FontWeight.w600, color: AppTheme.errorColor)),
                 onTap: () {
                   Navigator.pop(sheetContext);
@@ -1018,7 +1017,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 widget.title ?? 'แชทกลุ่มทริป',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
@@ -1028,7 +1027,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 _subtitle(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
@@ -1104,7 +1103,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
@@ -1129,7 +1128,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 ),
                 child: Text(
                   'ลองอีกครั้ง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1163,7 +1162,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               const SizedBox(height: 14),
               Text(
                 'ยังไม่มีข้อความ',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.onSurface(context),
@@ -1174,7 +1173,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               Text(
                 'เริ่มทักทายเพื่อนร่วมทริปได้เลย',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
@@ -1331,7 +1330,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       SnackBar(
         content: Text(
           'คัดลอกข้อความแล้ว',
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+          style: appFont(fontWeight: FontWeight.w600),
         ),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
@@ -1372,7 +1371,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   const SizedBox(width: 8),
                   Text(
                     'ไม่มีสมาชิกให้แท็ก',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
@@ -1408,11 +1407,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('@',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                           color: AppTheme.primaryColor,
                           fontWeight: FontWeight.w800)),
                   Text(label,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                           fontWeight: FontWeight.w700,
                           color: AppTheme.primaryColor)),
                   if (m['role'] == 'staff') ...[
@@ -1481,14 +1480,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       maxLength: 2000,
                       onChanged: _onInputChanged,
                       textInputAction: TextInputAction.newline,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   height: 1.4,
                 ),
                 decoration: InputDecoration(
                   hintText: 'พิมพ์ข้อความ...',
-                  hintStyle: GoogleFonts.anuphan(
+                  hintStyle: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -1607,7 +1606,7 @@ class _DateSeparator extends StatelessWidget {
           ),
           child: Text(
             _label(),
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
@@ -1642,7 +1641,7 @@ class _SystemMessage extends StatelessWidget {
           child: Text(
             body,
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppTheme.primaryColor,
@@ -1715,7 +1714,7 @@ class _MessageBubble extends StatelessWidget {
       }
       spans.add(TextSpan(
         text: match.group(0),
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontWeight: FontWeight.w800,
           color: mentionColor,
         ),
@@ -1816,7 +1815,7 @@ class _MessageBubble extends StatelessWidget {
                           child: Text(
                             author,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.onSurface(context),
@@ -1871,7 +1870,7 @@ class _MessageBubble extends StatelessWidget {
                               const SizedBox(width: 5),
                               Text(
                                 'ข้อความนี้ถูกลบ',
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   fontSize: 14,
                                   height: 1.4,
                                   color: fg.withValues(alpha: 0.6),
@@ -1889,7 +1888,7 @@ class _MessageBubble extends StatelessWidget {
                                 if (isEdited)
                                   TextSpan(
                                     text: '  แก้ไขแล้ว',
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontSize: 11,
                                       color: fg.withValues(alpha: 0.55),
                                       fontStyle: FontStyle.italic,
@@ -1898,7 +1897,7 @@ class _MessageBubble extends StatelessWidget {
                                   ),
                               ],
                             ),
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 15,
                               height: 1.4,
                               color: fg,
@@ -1938,7 +1937,7 @@ class _MessageBubble extends StatelessWidget {
                           const SizedBox(width: 2),
                           Text(
                             'อ่าน $readByCount',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.primaryColor.withValues(alpha: 0.8),
@@ -1948,7 +1947,7 @@ class _MessageBubble extends StatelessWidget {
                         ],
                         Text(
                           _timeText(),
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
@@ -1983,7 +1982,7 @@ class _Avatar extends StatelessWidget {
       color: AppTheme.primaryColor.withValues(alpha: 0.12),
       child: Text(
         initial,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 13.5,
           fontWeight: FontWeight.w700,
           color: AppTheme.primaryColor,
@@ -2093,7 +2092,7 @@ class _ImageViewer extends StatelessWidget {
                 title!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -2189,7 +2188,7 @@ class _RoomInfoSheet extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'สมาชิกในห้อง',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
@@ -2199,7 +2198,7 @@ class _RoomInfoSheet extends StatelessWidget {
                   const Spacer(),
                   Text(
                     '$memberCount คน',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
@@ -2223,7 +2222,7 @@ class _RoomInfoSheet extends StatelessWidget {
                       child: Center(
                         child: Text(
                           'ยังไม่มีข้อมูลสมาชิก',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
@@ -2291,7 +2290,7 @@ class _VehicleCard extends StatelessWidget {
               children: [
                 Text(
                   name.isEmpty ? 'รถประจำรอบ' : name,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
@@ -2301,7 +2300,7 @@ class _VehicleCard extends StatelessWidget {
                 if (meta.isNotEmpty)
                   Text(
                     meta,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.mutedText(context),
@@ -2310,7 +2309,7 @@ class _VehicleCard extends StatelessWidget {
                 if (driverName.isNotEmpty)
                   Text(
                     'คนขับ: $driverName',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.mutedText(context),
@@ -2366,7 +2365,7 @@ class _MemberTile extends StatelessWidget {
                   child: Text(
                     name,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.onSurface(context),
@@ -2378,7 +2377,7 @@ class _MemberTile extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     '(คุณ)',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
@@ -2419,7 +2418,7 @@ class _RoleTag extends StatelessWidget {
       ),
       child: Text(
         _MessageBubble._roleLabels[role] ?? role,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 10,
           fontWeight: FontWeight.w700,
           color: color,
@@ -2481,7 +2480,7 @@ class _PinnedBanner extends StatelessWidget {
                   children: [
                     Text(
                       senderName.isEmpty ? 'ปักหมุด' : 'ปักหมุด · $senderName',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor,
@@ -2491,7 +2490,7 @@ class _PinnedBanner extends StatelessWidget {
                       preview,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.onSurface(context),
@@ -2560,7 +2559,7 @@ class _QuotedReply extends StatelessWidget {
           children: [
             Text(
               name,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w800,
                 color: textColor.withValues(alpha: 0.9),
@@ -2571,7 +2570,7 @@ class _QuotedReply extends StatelessWidget {
                 preview,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w500,
                   color: textColor.withValues(alpha: 0.8),
@@ -2658,7 +2657,7 @@ class _ReactionChip extends StatelessWidget {
               const SizedBox(width: 3),
               Text(
                 '$count',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
                   color: color,
@@ -2715,7 +2714,7 @@ class _ReplyPreviewBar extends StatelessWidget {
               children: [
                 Text(
                   'ตอบกลับ $name',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
@@ -2726,7 +2725,7 @@ class _ReplyPreviewBar extends StatelessWidget {
                     preview,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.mutedText(context),
@@ -2776,7 +2775,7 @@ class _EditPreviewBar extends StatelessWidget {
               children: [
                 Text(
                   'กำลังแก้ไขข้อความ',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFFD97706),
@@ -2787,7 +2786,7 @@ class _EditPreviewBar extends StatelessWidget {
                     body,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.mutedText(context),
@@ -2840,7 +2839,7 @@ class _TypingIndicator extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12,
                 fontStyle: FontStyle.italic,
                 fontWeight: FontWeight.w500,
@@ -2906,7 +2905,7 @@ class _UnreadDivider extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(
               'ข้อความใหม่',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.primaryColor,

@@ -87,7 +87,7 @@ class _BookingCardState extends State<BookingCard> {
               const SizedBox(width: 8),
               Text(
                 'อยากไปเที่ยวที่ไหน?',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.primaryColor,
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -188,7 +188,7 @@ class DestinationDropdown extends StatelessWidget {
                       textOf(trip['title'], '-'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.primaryColor,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -198,7 +198,7 @@ class DestinationDropdown extends StatelessWidget {
                 }).toList(),
                 hint: Text(
                   'เลือกทริป',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.textSecondary,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -340,7 +340,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                         ),
                         hint: Text(
                           'เลือกภาค',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.textSecondary,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -353,7 +353,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                               region.label,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 color: AppTheme.primaryColor,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -473,7 +473,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                                       location,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.anuphan(
+                                      style: appFont(
                                         color: AppTheme.primaryColor,
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
@@ -504,7 +504,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                                       location,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.anuphan(
+                                      style: appFont(
                                         color: AppTheme.primaryColor,
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
@@ -520,7 +520,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                                             : priceText,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.anuphan(
+                                        style: appFont(
                                           color: AppTheme.textSecondary,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
@@ -620,7 +620,7 @@ class _ScheduleDropdown extends StatelessWidget {
         ),
         hint: Text(
           'เลือกวันเดินทาง',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.textSecondary,
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -637,7 +637,7 @@ class _ScheduleDropdown extends StatelessWidget {
                     date,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.primaryColor,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -661,7 +661,7 @@ class _ScheduleDropdown extends StatelessWidget {
                     date,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.primaryColor,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -706,7 +706,7 @@ class _SchedulePickupDetailToggle extends StatelessWidget {
             Expanded(
               child: Text(
                 'รายละเอียดจุดรับและราคา',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13,
                   color: AppTheme.textSecondary,
                   fontWeight: FontWeight.w600,
@@ -747,7 +747,7 @@ class _SeatBadge extends StatelessWidget {
       ),
       child: Text(
         'เหลือ $count ที่',
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: isLow ? const Color(0xFF93000A) : AppTheme.primaryColor,
           fontSize: compact ? 10 : 12,
           fontWeight: FontWeight.w800,

@@ -219,7 +219,7 @@ List<Widget> _departureTimeNotice(
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF9A3412),
@@ -264,7 +264,7 @@ class _PlanStepLabel extends StatelessWidget {
           child: Center(
             child: Text(
               step,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: Colors.white,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -275,7 +275,7 @@ class _PlanStepLabel extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           label,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 13,
             fontWeight: FontWeight.w800,
             color: isDark ? Colors.white.withValues(alpha: 0.85) : _premiumText,
@@ -365,7 +365,7 @@ class _RegionPill extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 13,
             fontWeight: FontWeight.w700,
             color: isSelected
@@ -555,7 +555,7 @@ class _MonthHeader extends StatelessWidget {
           children: [
             Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
                 color: muted,
@@ -679,7 +679,7 @@ class _ScheduleChip extends StatelessWidget {
             if (weekdayLabel.isNotEmpty)
               Text(
                 weekdayLabel,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: sub,
@@ -691,7 +691,7 @@ class _ScheduleChip extends StatelessWidget {
             // Day number
             Text(
               dayLabel,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
                 color: fg,
@@ -702,7 +702,7 @@ class _ScheduleChip extends StatelessWidget {
             // Month abbreviation
             Text(
               monthLabel,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: sub,
@@ -732,7 +732,7 @@ class _ScheduleChip extends StatelessWidget {
                     nightsLabel,
                     maxLines: 1,
                     softWrap: false,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 9.5,
                       fontWeight: FontWeight.w800,
                       color: isSelected ? Colors.white : _softAccent,
@@ -748,7 +748,7 @@ class _ScheduleChip extends StatelessWidget {
               if (isPast)
                 Text(
                   'ผ่านแล้ว',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w700,
                     color: sub,
@@ -757,7 +757,7 @@ class _ScheduleChip extends StatelessWidget {
               else if (seats == 0)
                 Text(
                   'เต็ม',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w700,
                     color: isSelected
@@ -788,7 +788,7 @@ class _ScheduleChip extends StatelessWidget {
                         'ว่าง $seats ที่',
                         maxLines: 1,
                         softWrap: false,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w700,
                           color: isSelected
@@ -807,7 +807,7 @@ class _ScheduleChip extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 'เหมา',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 9.5,
                   fontWeight: FontWeight.w700,
                   color: sub,
@@ -956,7 +956,7 @@ class _PickupPointRow extends StatelessWidget {
             Expanded(
               child: Text(
                 location.isNotEmpty ? location : 'ไม่ระบุจุดขึ้นรถ',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                   color: isSelected
@@ -981,7 +981,7 @@ class _PickupPointRow extends StatelessWidget {
                 ),
                 child: Text(
                   price,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: isSelected

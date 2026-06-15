@@ -83,10 +83,10 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
       final go = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('ข้อมูลไม่ครบ', style: GoogleFonts.anuphan(fontWeight: FontWeight.w900)),
+          title: Text('ข้อมูลไม่ครบ', style: appFont(fontWeight: FontWeight.w900)),
           content: Text(
             'กรุณาเพิ่มชื่อและเบอร์โทรศัพท์ในโปรไฟล์ก่อนติดต่อทีมงาน',
-            style: GoogleFonts.anuphan(),
+            style: appFont(),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ปิด')),

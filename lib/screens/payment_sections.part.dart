@@ -69,7 +69,7 @@ class _BookingSummaryCard extends StatelessWidget {
                               ),
                               child: Text(
                                 statusText,
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   color: Colors.white,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w900,
@@ -98,7 +98,7 @@ class _BookingSummaryCard extends StatelessWidget {
                   ),
                 Text(
                   textOf(trip['title'], 'รายละเอียดการจอง'),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.onSurface(context),
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -185,7 +185,7 @@ class _BookingSummaryCard extends StatelessWidget {
                       const SizedBox(width: 10),
                       Text(
                         'ยอดรวมทั้งหมด',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.mutedText(context),
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
@@ -194,7 +194,7 @@ class _BookingSummaryCard extends StatelessWidget {
                       const Spacer(),
                       Text(
                         money(booking['total_amount']),
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: _accent,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
@@ -502,7 +502,7 @@ class _DepositBreakdownRow extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             step,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: highlight ? Colors.white : accent,
               fontSize: 11,
               fontWeight: FontWeight.w900,
@@ -513,7 +513,7 @@ class _DepositBreakdownRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
@@ -522,7 +522,7 @@ class _DepositBreakdownRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: highlight
                 ? _accent
                 : (warn ? AppTheme.warningColor : AppTheme.onSurface(context)),
@@ -572,7 +572,7 @@ class _DepositCancellationClause extends StatelessWidget {
               children: [
                 Text(
                   'เงื่อนไขสำคัญ · กรุณาอ่าน',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: danger,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
@@ -582,7 +582,7 @@ class _DepositCancellationClause extends StatelessWidget {
                 Text(
                   'กรณีขอยกเลิกการเดินทาง ทางทริปขอสงวนสิทธิ์ไม่คืนเงินมัดจำทุกกรณี '
                   'เนื่องจากมีการนำไปสำรองจ่ายค่าอุทยานและยานพาหนะล่วงหน้า',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.onSurface(context),
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -604,7 +604,7 @@ class _DepositCancellationClause extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'ต้องชำระยอดส่วนที่เหลือก่อนเดินทาง 15 วัน (ภายใน $dueText)',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.onSurface(context),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w800,
@@ -777,7 +777,7 @@ class _PromptPayPanel extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'พร้อมเพย์ / e-Wallet',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -786,7 +786,7 @@ class _PromptPayPanel extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             _displayPromptPayId,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontSize: 15,
               fontWeight: FontWeight.w900,
@@ -818,7 +818,7 @@ class _PromptPayPanel extends StatelessWidget {
                   : const Icon(Icons.download_rounded, size: 20),
               label: Text(
                 downloadingQr ? 'กำลังดาวน์โหลด' : 'ดาวน์โหลด QR CODE',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
                 ),
@@ -904,7 +904,7 @@ class _TransferTimeSection extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             'กรอกวันและเวลาตามสลิปโอนเงิน เพื่อให้ทีมงานตรวจสอบได้รวดเร็ว',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -1014,7 +1014,7 @@ class _SlipUploadSection extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Text(
                                   'พร้อมส่งตรวจสอบ',
-                                  style: GoogleFonts.anuphan(
+                                  style: appFont(
                                     color: Colors.white,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w900,
@@ -1048,7 +1048,7 @@ class _SlipUploadSection extends StatelessWidget {
                         const SizedBox(height: 10),
                         Text(
                           'แตะเพื่อแนบรูปภาพสลิป',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.onSurface(context),
                             fontSize: 14,
                             fontWeight: FontWeight.w900,
@@ -1057,7 +1057,7 @@ class _SlipUploadSection extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                           'ต้องแนบทุกครั้งก่อนยืนยันการชำระเงิน',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.mutedText(context),
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

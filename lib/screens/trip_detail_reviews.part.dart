@@ -129,7 +129,7 @@ class _ReviewSectionState extends State<ReviewSection> {
                   const SizedBox(height: 14),
                   Text(
                     'ยังไม่มีรีวิว',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: _premiumText,
@@ -138,7 +138,7 @@ class _ReviewSectionState extends State<ReviewSection> {
                   const SizedBox(height: 6),
                   Text(
                     'เป็นคนแรกที่มาสัมผัสและแชร์ประสบการณ์',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13,
                       color: _mutedText,
                       height: 1.5,
@@ -233,7 +233,7 @@ class _ShowMoreReviewsButton extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       'กำลังโหลด...',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                         color: _premiumText,
@@ -243,7 +243,7 @@ class _ShowMoreReviewsButton extends StatelessWidget {
                 : [
                     Text(
                       label,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                         color: _premiumText,
@@ -290,7 +290,7 @@ class _ReviewRatingSummary extends StatelessWidget {
               children: [
                 Text(
                   numberText(rating, fallback: '0'),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 44,
                     fontWeight: FontWeight.w800,
                     color: _premiumText,
@@ -317,7 +317,7 @@ class _ReviewRatingSummary extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '$count รีวิว',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 12,
                     color: _mutedText,
                     fontWeight: FontWeight.w700,
@@ -339,7 +339,7 @@ class _ReviewRatingSummary extends StatelessWidget {
                       children: [
                         Text(
                           '$star',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: _mutedText,
@@ -370,7 +370,7 @@ class _ReviewRatingSummary extends StatelessWidget {
                           width: 20,
                           child: Text(
                             '$c',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 11,
                               color: _mutedText,
                               fontWeight: FontWeight.w700,
@@ -439,7 +439,7 @@ class _CategoryAverageTile extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: _mutedText,
@@ -450,7 +450,7 @@ class _CategoryAverageTile extends StatelessWidget {
           const SizedBox(width: 2),
           Text(
             numberText(value),
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12.5,
               fontWeight: FontWeight.w800,
               color: _premiumText,
@@ -536,7 +536,7 @@ class _ReviewCard extends StatelessWidget {
                             errorWidget: (_, _, _) => Center(
                               child: Text(
                                 initials,
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 17,
@@ -548,7 +548,7 @@ class _ReviewCard extends StatelessWidget {
                       : Center(
                           child: Text(
                             initials,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
                               fontSize: 17,
@@ -565,7 +565,7 @@ class _ReviewCard extends StatelessWidget {
                         name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: isDark ? Colors.white : _premiumText,
@@ -598,7 +598,7 @@ class _ReviewCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text(
                             date,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 11.5,
                               color: _mutedText,
                               fontWeight: FontWeight.w600,
@@ -633,7 +633,7 @@ class _ReviewCard extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         '$rating.0',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF92400E),
@@ -661,7 +661,7 @@ class _ReviewCard extends StatelessWidget {
                 ),
                 child: Text(
                   comment,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13.5,
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.75)
@@ -848,7 +848,7 @@ class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
               ),
               Text(
                 '${photos.length} รูป',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: _mutedText,
@@ -904,7 +904,7 @@ class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
                               alignment: Alignment.center,
                               child: Text(
                                 '+$extra',
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   color: Colors.white,
                                   fontSize: 20,
                                   fontWeight: FontWeight.w800,
@@ -947,7 +947,7 @@ class _ReviewBreakdownChip extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF92400E),
@@ -958,7 +958,7 @@ class _ReviewBreakdownChip extends StatelessWidget {
           const SizedBox(width: 2),
           Text(
             numberText(value),
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 11,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF92400E),

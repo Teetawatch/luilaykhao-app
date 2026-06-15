@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
@@ -184,7 +183,7 @@ class _ConversationTile extends StatelessWidget {
                             title.isEmpty ? 'แชทกลุ่มทริป' : title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.onSurface(context),
@@ -196,7 +195,7 @@ class _ConversationTile extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             time,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
                               color: unread > 0
@@ -215,7 +214,7 @@ class _ConversationTile extends StatelessWidget {
                             _previewText(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 13,
                               fontWeight:
                                   unread > 0 ? FontWeight.w700 : FontWeight.w500,
@@ -240,7 +239,7 @@ class _ConversationTile extends StatelessWidget {
                             child: Text(
                               unread > 99 ? '99+' : '$unread',
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
@@ -262,7 +261,7 @@ class _ConversationTile extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             vehicle,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w500,
                               color: AppTheme.mutedText(context),
@@ -348,7 +347,7 @@ class _EmptyChats extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             error != null ? 'โหลดแชทไม่สำเร็จ' : 'ยังไม่มีแชททริป',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
@@ -359,7 +358,7 @@ class _EmptyChats extends StatelessWidget {
             error ??
                 'เมื่อคุณจองทริป ห้องแชทกลุ่มสำหรับพูดคุยกับเพื่อนร่วมทริปและทีมงานจะปรากฏที่นี่',
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13.5,
               height: 1.5,
               fontWeight: FontWeight.w500,

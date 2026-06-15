@@ -62,7 +62,7 @@ class _SectionHeader extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
                   color: isDark ? Colors.white : _premiumText,
@@ -74,7 +74,7 @@ class _SectionHeader extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle!,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 12,
                     color: _mutedText,
                     fontWeight: FontWeight.w500,
@@ -134,7 +134,7 @@ class _FeatureRow extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: isDark ? Colors.white.withValues(alpha: 0.9) : _premiumText,
@@ -145,7 +145,7 @@ class _FeatureRow extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       description!,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13,
                         color: _mutedText,
                         height: 1.6,
@@ -192,7 +192,7 @@ class _InfoChip extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12,
                 color: isDark ? _softAccent : const Color(0xFF047857),
                 fontWeight: FontWeight.w700,
@@ -231,7 +231,7 @@ class _EmptySelectionNotice extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.mutedText(context),
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
@@ -258,7 +258,7 @@ class _RatingSummary extends StatelessWidget {
     if (rating <= 0 || count <= 0) {
       return Text(
         'ยังไม่มีรีวิว',
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: _mutedText,
           fontSize: 13,
           fontWeight: FontWeight.w700,
@@ -297,7 +297,7 @@ class _RatingPill extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             numberText(rating, fallback: '0'),
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -307,7 +307,7 @@ class _RatingPill extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             '$count รีวิว',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 12,
               fontWeight: FontWeight.w500,

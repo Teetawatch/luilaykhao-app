@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -113,7 +112,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
         foregroundColor: Colors.white,
         title: Text(
           'สัญญาณ SOS',
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+          style: appFont(fontWeight: FontWeight.w900),
         ),
       ),
       body: ListView(
@@ -134,7 +133,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
           Text(
             '${alert.userName.isEmpty ? 'เพื่อนร่วมทริป' : alert.userName} ขอความช่วยเหลือ',
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 21,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
@@ -144,7 +143,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
           Text(
             'มีเพื่อนร่วมทริปของคุณกำลังต้องการความช่วยเหลือ',
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               color: AppTheme.mutedText(context),
             ),
@@ -156,7 +155,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
               label: 'ข้อความ',
               child: Text(
                 alert.message!,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.onSurface(context),
@@ -171,7 +170,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
               label: 'เบอร์ติดต่อ',
               child: Text(
                 alert.contactPhone!,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.onSurface(context),
@@ -186,7 +185,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
               label: 'ตำแหน่งล่าสุด',
               child: Text(
                 '${alert.latitude!.toStringAsFixed(5)}, ${alert.longitude!.toStringAsFixed(5)}',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.onSurface(context),
@@ -220,7 +219,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
                       child: Center(
                         child: Text(
                           'โหลดรูปไม่สำเร็จ',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.mutedText(context),
                           ),
                         ),
@@ -254,7 +253,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
             Center(
               child: Text(
                 'เคสนี้ถูกปิดแล้ว',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.primaryColor,
@@ -305,7 +304,7 @@ class _InfoCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.mutedText(context),
@@ -354,7 +353,7 @@ class _ActionButton extends StatelessWidget {
               icon: Icon(icon),
               label: Text(
                 label,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
@@ -372,7 +371,7 @@ class _ActionButton extends StatelessWidget {
               icon: Icon(icon),
               label: Text(
                 label,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),

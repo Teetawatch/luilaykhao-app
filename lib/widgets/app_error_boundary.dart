@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_theme.dart';
 
@@ -39,7 +38,7 @@ class _FriendlyErrorScreen extends StatelessWidget {
               Text(
                 'ขออภัย เกิดข้อผิดพลาดบางอย่าง',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.onSurface(context),
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
@@ -49,7 +48,7 @@ class _FriendlyErrorScreen extends StatelessWidget {
               Text(
                 'ทีมงานได้รับรายงานข้อผิดพลาดแล้ว ลองปิดและเปิดแอปอีกครั้ง',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.mutedText(context),
                   fontSize: 13,
                   height: 1.5,

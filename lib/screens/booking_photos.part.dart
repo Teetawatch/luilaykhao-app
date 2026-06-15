@@ -65,7 +65,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                   ),
                   child: Text(
                     '${urls.length}',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.accentColor,
@@ -83,7 +83,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
             const SizedBox(height: 4),
             Text(
               'แตะเพื่อดูเต็มจอ · กดปุ่มดาวน์โหลดเพื่อบันทึก/แชร์',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12,
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
@@ -183,7 +183,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
               Text(
                 'รูปจากทริปจะขึ้นที่นี่หลังทีมงานอัปโหลด',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
@@ -193,7 +193,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
               Text(
                 'ทีมงานจะอัปโหลดภาพกิจกรรมให้หลังจบทริป กลับมาเช็กได้ที่นี่ภายหลัง',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 12.5,
                   height: 1.5,
                   fontWeight: FontWeight.w600,
@@ -206,7 +206,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                 icon: const Icon(Icons.refresh_rounded, size: 16),
                 label: Text(
                   'เช็กอีกครั้ง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                   ),

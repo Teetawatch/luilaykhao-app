@@ -27,7 +27,7 @@ class _IdentityPill extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppTheme.textMain,
@@ -52,7 +52,7 @@ class _SectionHeading extends StatelessWidget {
       padding: const EdgeInsets.only(left: 12, bottom: 2),
       child: Text(
         title,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 13,
           fontWeight: FontWeight.w700,
           color: AppTheme.mutedText(context),
@@ -80,7 +80,7 @@ class _FormCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 16,
               fontWeight: FontWeight.w900,
               color: AppTheme.textMain,
@@ -90,7 +90,7 @@ class _FormCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               subtitle!,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textSecondary,
@@ -212,7 +212,7 @@ class _AvatarInitial extends StatelessWidget {
       child: Center(
         child: Text(
           initial,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.primaryColor,
             fontSize: 38,
             fontWeight: FontWeight.w900,
@@ -251,7 +251,7 @@ class _AvatarSourceTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
@@ -325,7 +325,7 @@ class _ProfileTextFieldState extends State<_ProfileTextField> {
           borderSide: BorderSide.none,
         ),
       ),
-      style: GoogleFonts.anuphan(
+      style: appFont(
         fontSize: 14,
         fontWeight: FontWeight.w700,
         color: AppTheme.textMain,
@@ -366,7 +366,7 @@ class _EmptyProfileState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 17,
               fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
@@ -377,7 +377,7 @@ class _EmptyProfileState extends StatelessWidget {
           Text(
             body,
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               height: 1.45,
               fontWeight: FontWeight.w500,
@@ -406,7 +406,7 @@ class _InfoLine extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               height: 1.35,
               fontWeight: FontWeight.w500,
@@ -441,7 +441,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         _statusLabel(status),
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: color,
@@ -470,7 +470,7 @@ class _SmallActionButton extends StatelessWidget {
       avatar: Icon(icon, size: 17, color: effectiveColor),
       label: Text(label),
       onPressed: onTap,
-      labelStyle: GoogleFonts.anuphan(
+      labelStyle: appFont(
         color: effectiveColor,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.1,
@@ -501,7 +501,7 @@ class _ReviewCard extends StatelessWidget {
             _cleanText(review['trip_title'], fallback: 'ทริปของคุณ'),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 15,
               fontWeight: FontWeight.w900,
               color: AppTheme.textMain,
@@ -523,7 +523,7 @@ class _ReviewCard extends StatelessWidget {
               const Spacer(),
               Text(
                 dateText(review['created_at']),
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textSecondary,
@@ -535,7 +535,7 @@ class _ReviewCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               _cleanText(review['comment']),
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13,
                 height: 1.45,
                 fontWeight: FontWeight.w600,
@@ -576,7 +576,7 @@ class _PaymentMethodCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.textMain,
@@ -585,7 +585,7 @@ class _PaymentMethodCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   body,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13,
                     height: 1.45,
                     fontWeight: FontWeight.w600,
@@ -635,7 +635,7 @@ class _HelpTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.textMain,
@@ -644,7 +644,7 @@ class _HelpTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       body,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 12,
                         height: 1.4,
                         fontWeight: FontWeight.w600,
@@ -1021,7 +1021,7 @@ Future<void> _showLanguagePicker(BuildContext context) async {
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
               child: Text(
                 'เลือกภาษา',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1039,7 +1039,7 @@ Future<void> _showLanguagePicker(BuildContext context) async {
                 ),
                 title: Text(
                   option.$2,
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+                  style: appFont(fontWeight: FontWeight.w800),
                 ),
                 onTap: () => Navigator.of(sheetContext).pop(option.$1),
               ),
@@ -1060,7 +1060,7 @@ void _showSuccess(BuildContext context, String message) {
       SnackBar(
         content: Text(
           message,
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+          style: appFont(fontWeight: FontWeight.w600),
         ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1077,7 +1077,7 @@ void _showError(BuildContext context, Object error) {
       SnackBar(
         content: Text(
           message,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),

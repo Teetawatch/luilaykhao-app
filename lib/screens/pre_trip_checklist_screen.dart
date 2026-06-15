@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../services/checklist_storage.dart';
 import '../theme/app_theme.dart';
@@ -317,7 +316,7 @@ class _ChecklistHeader extends StatelessWidget {
                   tripTitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
@@ -332,7 +331,7 @@ class _ChecklistHeader extends StatelessWidget {
                       : total == 0
                           ? 'เพิ่มของที่ต้องเตรียมไว้กันลืม'
                           : 'เตรียมแล้ว $done จาก $total รายการ',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: allDone
@@ -353,7 +352,7 @@ class _ChecklistHeader extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         'เดินทาง $dateText',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.mutedText(context),
@@ -410,7 +409,7 @@ class _ProgressRing extends StatelessWidget {
                 )
               : Text(
                   '${(progress * 100).round()}%',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
@@ -439,7 +438,7 @@ class _SectionLabel extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context),
@@ -450,7 +449,7 @@ class _SectionLabel extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               '$count',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context).withValues(alpha: 0.7),
@@ -552,7 +551,7 @@ class _ChecklistRow extends StatelessWidget {
               Expanded(
                 child: AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 160),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     height: 1.35,
@@ -612,7 +611,7 @@ class _AddItemRow extends StatelessWidget {
               controller: controller,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => onSubmit(),
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.onSurface(context),
@@ -620,7 +619,7 @@ class _AddItemRow extends StatelessWidget {
               decoration: InputDecoration(
                 isDense: true,
                 hintText: 'เพิ่มของส่วนตัว...',
-                hintStyle: GoogleFonts.anuphan(
+                hintStyle: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
@@ -657,7 +656,7 @@ class _ReminderNote extends StatelessWidget {
         Expanded(
           child: Text(
             'เราจะส่งการแจ้งเตือนเตือนคุณเตรียมของ 1 วันก่อนเดินทาง',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12.5,
               fontWeight: FontWeight.w500,
               height: 1.4,

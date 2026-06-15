@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_theme.dart';
@@ -98,7 +97,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     child: Text(
                       'ข้าม',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),
@@ -222,7 +221,7 @@ class _SlideView extends StatelessWidget {
             Text(
               slide.title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.onSurface(context),
                 fontSize: 27,
                 height: 1.2,
@@ -234,7 +233,7 @@ class _SlideView extends StatelessWidget {
             Text(
               slide.body,
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.mutedText(context),
                 fontSize: 15.5,
                 height: 1.65,
@@ -342,7 +341,7 @@ class _PrimaryButton extends StatelessWidget {
           child: Center(
             child: Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w900,

@@ -40,7 +40,7 @@ class TravelerCounter extends StatelessWidget {
               child: Center(
                 child: Text(
                   '$count',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontWeight: FontWeight.w800,
                     fontSize: 17,
                     color: _premiumText(context),
@@ -219,7 +219,7 @@ class PricingSummaryCard extends StatelessWidget {
                 children: [
                   Text(
                     expanded ? 'ซ่อนรายละเอียดราคา' : 'ดูรายละเอียดราคา',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: _softAccent,
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
@@ -248,7 +248,7 @@ class PricingSummaryCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               'โค้ดส่วนลดจะถูกตรวจสอบเมื่อส่งข้อมูลการจอง',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: _mutedTextColor(context),
                 fontSize: 12,
                 height: 1.35,
@@ -334,7 +334,7 @@ class AddonSelectionSection extends StatelessWidget {
                               addon.name,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 color: AppTheme.onSurface(context),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
@@ -344,7 +344,7 @@ class AddonSelectionSection extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               '${money(addon.price)} ${addon.priceTypeLabel}',
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 color: AppTheme.mutedText(context),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -355,7 +355,7 @@ class AddonSelectionSection extends StatelessWidget {
                       ),
                       Text(
                         '+${money(addon.totalFor(travelerCount))}',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: const Color(0xFFB45309),
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
@@ -402,7 +402,7 @@ class TrustSignalsSection extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 signal.label,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.isDark(context)
                       ? AppTheme.accentColor
                       : const Color(0xFF126B5B),
@@ -476,7 +476,7 @@ class StickyCheckoutBar extends StatelessWidget {
                     children: [
                       Text(
                         'รวมทั้งหมด',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: _mutedTextColor(context),
                           fontSize: labelFontSize,
                           fontWeight: FontWeight.w600,
@@ -485,7 +485,7 @@ class StickyCheckoutBar extends StatelessWidget {
                       const SizedBox(height: 1),
                       Text(
                         money(total),
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: _premiumText(context),
                           fontSize: priceFontSize,
                           fontWeight: FontWeight.w800,
@@ -556,7 +556,7 @@ class StickyCheckoutBar extends StatelessWidget {
                                       primaryLabel,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.anuphan(
+                                      style: appFont(
                                         fontWeight: FontWeight.w800,
                                         fontSize: btnFontSize,
                                       ),
@@ -613,7 +613,7 @@ class _SectionShell extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     color: _premiumText(context),
@@ -657,7 +657,7 @@ class _SeatDrivenTravelerCount extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             count > 0 ? '$count คน' : 'เลือกที่นั่ง',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: _softAccent,
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -707,7 +707,7 @@ class _TravelerCard extends StatelessWidget {
                 child: Center(
                   child: Text(
                     '${index + 1}',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
@@ -719,7 +719,7 @@ class _TravelerCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'ผู้เดินทาง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontWeight: FontWeight.w800,
                     color: _premiumText(context),
                     fontSize: 15,
@@ -739,7 +739,7 @@ class _TravelerCard extends StatelessWidget {
                   ),
                   child: Text(
                     'ที่นั่ง $seatId',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: _mutedTextColor(context),
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
@@ -764,7 +764,7 @@ class _TravelerCard extends StatelessWidget {
                             size: 18, color: _softAccent),
                         const SizedBox(width: 10),
                         Text('ดึงข้อมูลโปรไฟล์',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                                 fontWeight: FontWeight.w700)),
                       ],
                     ),
@@ -777,7 +777,7 @@ class _TravelerCard extends StatelessWidget {
                             size: 18, color: _softAccent),
                         const SizedBox(width: 10),
                         Text('กรอกจาก Wallet',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                                 fontWeight: FontWeight.w700)),
                       ],
                     ),
@@ -798,7 +798,7 @@ class _TravelerCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         'กรอกจาก',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w800,
                           color: _softAccent,
@@ -835,7 +835,7 @@ class _TravelerCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text(
                             'จุดขึ้นรถ',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: _premiumText(context),
@@ -844,7 +844,7 @@ class _TravelerCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             '*',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: Colors.red,
@@ -894,7 +894,7 @@ class _TravelerCard extends StatelessWidget {
                                   const SizedBox(width: 6),
                                   Text(
                                     location,
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
                                       color: isSelected
@@ -905,7 +905,7 @@ class _TravelerCard extends StatelessWidget {
                                   const SizedBox(width: 4),
                                   Text(
                                     money(price),
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontSize: 11,
                                       color: _mutedTextColor(context),
                                     ),
@@ -920,7 +920,7 @@ class _TravelerCard extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           '* กรุณาเลือกจุดขึ้นรถ',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: Colors.red,
@@ -1129,7 +1129,7 @@ class _TravelerCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'ผู้ติดต่อฉุกเฉิน',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: _premiumText(context),
               fontWeight: FontWeight.w800,
               fontSize: 14,

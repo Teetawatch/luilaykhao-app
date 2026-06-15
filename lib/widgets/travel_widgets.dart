@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import '../theme/app_theme.dart';
 
@@ -74,7 +73,7 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: GoogleFonts.anuphan(
+      style: appFont(
         fontSize: 18,
         fontWeight: FontWeight.w800,
         color: const Color(0xFF1A1C1C),
@@ -97,7 +96,7 @@ class TravelChip extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 12,
           color: AppTheme.primaryColor,
           fontWeight: FontWeight.w700,
@@ -124,7 +123,7 @@ class BulletPoint extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.anuphan(color: const Color(0xFF414755)),
+              style: appFont(color: const Color(0xFF414755)),
             ),
           ),
         ],
@@ -160,7 +159,7 @@ class EmptyState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             title,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontWeight: FontWeight.bold,
               fontSize: 20,
               color: const Color(0xFF1A1C1C),
@@ -170,7 +169,7 @@ class EmptyState extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             body,
-            style: GoogleFonts.anuphan(color: const Color(0xFF414755)),
+            style: appFont(color: const Color(0xFF414755)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -268,7 +267,7 @@ class PrimaryCTAButton extends StatelessWidget {
             ],
             Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
@@ -348,7 +347,7 @@ class TravelSliverAppBar extends StatelessWidget {
       centerTitle: true,
       title: Text(
         title,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.w800,
           fontSize: 18,
@@ -479,7 +478,7 @@ class _LargeTitleHeaderDelegate extends SliverPersistentHeaderDelegate {
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                           color: onSurface,
@@ -506,7 +505,7 @@ class _LargeTitleHeaderDelegate extends SliverPersistentHeaderDelegate {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 30,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
@@ -519,7 +518,7 @@ class _LargeTitleHeaderDelegate extends SliverPersistentHeaderDelegate {
                         subtitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: subtitleColor ?? AppTheme.mutedText(context),

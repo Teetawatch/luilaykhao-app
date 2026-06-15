@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/notification_preferences.dart';
@@ -49,7 +48,7 @@ class NotificationPreferencesScreen extends StatelessWidget {
         iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
         title: Text(
           'การแจ้งเตือน',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.onSurface(context),
             fontWeight: FontWeight.w900,
           ),
@@ -116,7 +115,7 @@ class _PreferenceTile extends StatelessWidget {
         ),
         title: Text(
           label,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.onSurface(context),
             fontSize: 14.5,
             fontWeight: FontWeight.w900,
@@ -124,7 +123,7 @@ class _PreferenceTile extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.mutedText(context),
             fontSize: 12.5,
             fontWeight: FontWeight.w600,

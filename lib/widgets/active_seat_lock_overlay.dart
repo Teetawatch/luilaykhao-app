@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
@@ -223,7 +222,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.onSurface(context),
                       fontSize: 13.5,
                       fontWeight: FontWeight.w900,
@@ -234,7 +233,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
                     'เหลือ $remainingText · ที่นั่ง $seats${extraCount > 0 ? ' · อีก $extraCount รายการ' : ''}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: isUrgent
                           ? AppTheme.errorColor
                           : AppTheme.mutedText(context),
@@ -264,7 +263,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    textStyle: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+                    textStyle: appFont(fontWeight: FontWeight.w900),
                   ),
                   child: busy
                       ? const SizedBox(
@@ -292,7 +291,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
                         color: AppTheme.errorColor.withValues(alpha: 0.22),
                       ),
                     ),
-                    textStyle: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+                    textStyle: appFont(fontWeight: FontWeight.w900),
                   ),
                   child: const Text('ยกเลิกการจอง'),
                 ),

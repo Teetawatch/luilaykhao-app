@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
@@ -452,7 +451,7 @@ class _RegisterHeader extends StatelessWidget {
               children: [
                 Text(
                   'สร้างบัญชีใหม่',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 30,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
@@ -468,7 +467,7 @@ class _RegisterHeader extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   'เริ่มต้นการเดินทางไปกับเรา',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 15,
                     color: Colors.white.withValues(alpha: 0.88),
                     fontWeight: FontWeight.w600,
@@ -547,7 +546,7 @@ class _SectionHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.onSurface(context),
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
@@ -555,7 +554,7 @@ class _SectionHeader extends StatelessWidget {
               ),
               Text(
                 subtitle,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.mutedText(context),
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
@@ -670,7 +669,7 @@ class _PasswordStrengthHint extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 c.label,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: color,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
@@ -725,7 +724,7 @@ class _RegisterButton extends StatelessWidget {
             : const Icon(Icons.person_add_rounded, size: 22),
         label: Text(
           loading ? 'กำลังสมัครสมาชิก...' : 'สมัครสมาชิก',
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900, fontSize: 16),
+          style: appFont(fontWeight: FontWeight.w900, fontSize: 16),
         ),
       ),
     );
@@ -744,7 +743,7 @@ class _LoginPrompt extends StatelessWidget {
       children: [
         Text(
           'มีบัญชีอยู่แล้ว? ',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.mutedText(context),
             fontWeight: FontWeight.w600,
           ),
@@ -753,7 +752,7 @@ class _LoginPrompt extends StatelessWidget {
           onTap: () => Navigator.pop(context),
           child: Text(
             'เข้าสู่ระบบ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.primaryColor,
               fontWeight: FontWeight.w900,
             ),
@@ -805,13 +804,13 @@ class _RegisterInput extends StatelessWidget {
       minLines: 1,
       maxLines: isPassword ? 1 : maxLines,
       validator: validator,
-      style: GoogleFonts.anuphan(
+      style: appFont(
         fontWeight: FontWeight.w600,
         color: AppTheme.onSurface(context),
       ),
       decoration: InputDecoration(
         hintText: hint + (required ? ' *' : ''),
-        hintStyle: GoogleFonts.anuphan(
+        hintStyle: appFont(
           color: AppTheme.mutedText(context).withValues(alpha: 0.70),
           fontWeight: FontWeight.w500,
         ),
@@ -866,7 +865,7 @@ class _RegisterInput extends StatelessWidget {
           vertical: maxLines > 1 ? 16 : 18,
           horizontal: 16,
         ),
-        errorStyle: GoogleFonts.anuphan(
+        errorStyle: appFont(
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
         ),
@@ -905,7 +904,7 @@ class _RegisterSelect extends StatelessWidget {
         Icons.keyboard_arrow_down_rounded,
         color: AppTheme.mutedText(context),
       ),
-      style: GoogleFonts.anuphan(
+      style: appFont(
         fontWeight: FontWeight.w700,
         color: AppTheme.onSurface(context),
         fontSize: 14,
@@ -913,7 +912,7 @@ class _RegisterSelect extends StatelessWidget {
       dropdownColor: AppTheme.surface(context),
       decoration: InputDecoration(
         hintText: hint + (required ? ' *' : ''),
-        hintStyle: GoogleFonts.anuphan(
+        hintStyle: appFont(
           color: AppTheme.mutedText(context).withValues(alpha: 0.70),
           fontWeight: FontWeight.w500,
         ),
@@ -956,7 +955,7 @@ class _RegisterSelect extends StatelessWidget {
           vertical: 18,
           horizontal: 16,
         ),
-        errorStyle: GoogleFonts.anuphan(
+        errorStyle: appFont(
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
         ),

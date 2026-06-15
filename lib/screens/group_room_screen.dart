@@ -88,7 +88,7 @@ class _GroupSetupDialogState extends State<_GroupSetupDialog> {
     return AlertDialog(
       title: Text(
         'ชวนเพื่อนมาเป็นกลุ่ม',
-        style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+        style: appFont(fontWeight: FontWeight.w800),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -96,7 +96,7 @@ class _GroupSetupDialogState extends State<_GroupSetupDialog> {
         children: [
           Text(
             'จองที่นั่งสำหรับกี่คน? (รวมคุณ)',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               color: AppTheme.mutedText(context),
             ),
@@ -113,7 +113,7 @@ class _GroupSetupDialogState extends State<_GroupSetupDialog> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   '$_size',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                   ),
@@ -388,7 +388,7 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
         elevation: 0,
         title: Text(
           _plan?.name?.isNotEmpty == true ? _plan!.name! : 'ทริปแบบกลุ่ม',
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+          style: appFont(fontWeight: FontWeight.w800),
         ),
         actions: [
           if (_plan != null && _plan!.isOpen)
@@ -421,7 +421,7 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
           child: Text(
             _error!,
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 15,
               color: AppTheme.mutedText(context),
             ),
@@ -486,7 +486,7 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
           Expanded(
             child: Text(
               'ที่นั่งของคุณ: ${me.seatId}',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+              style: appFont(fontWeight: FontWeight.w700),
             ),
           ),
           TextButton(
@@ -528,7 +528,7 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
         child: Text(
           'รอหัวหน้ากลุ่มชำระเงินเมื่อทุกคนพร้อม',
           textAlign: TextAlign.center,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.mutedText(context),
             fontWeight: FontWeight.w600,
           ),
@@ -626,7 +626,7 @@ class _TripCard extends StatelessWidget {
                     trip?.title ?? '',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
@@ -635,7 +635,7 @@ class _TripCard extends StatelessWidget {
                   if (dateLabel.isNotEmpty)
                     Text(
                       dateLabel,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13,
                         color: AppTheme.mutedText(context),
                       ),
@@ -643,7 +643,7 @@ class _TripCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '฿${NumberFormat('#,###').format(schedule?.effectivePrice ?? 0)} / คน',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.primaryColor,
@@ -678,7 +678,7 @@ class _InviteCard extends StatelessWidget {
         children: [
           Text(
             'รหัสกลุ่ม',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               color: AppTheme.mutedText(context),
             ),
@@ -733,12 +733,12 @@ class _GroupProgress extends StatelessWidget {
       children: [
         Text(
           'สมาชิกในกลุ่ม',
-          style: GoogleFonts.anuphan(fontSize: 16, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: 16, fontWeight: FontWeight.w800),
         ),
         const Spacer(),
         Text(
           'เลือกที่นั่งแล้ว $claimed / ${plan.seatCount}',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 13,
             color: AppTheme.mutedText(context),
           ),
@@ -775,7 +775,7 @@ class _MemberTile extends StatelessWidget {
             child: (member.avatarUrl?.isEmpty != false)
                 ? Text(
                     member.displayName.characters.first,
-                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+                    style: appFont(fontWeight: FontWeight.w700),
                   )
                 : null,
           ),
@@ -790,7 +790,7 @@ class _MemberTile extends StatelessWidget {
                       child: Text(
                         '${member.displayName}${isMe ? ' (คุณ)' : ''}',
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+                        style: appFont(fontWeight: FontWeight.w700),
                       ),
                     ),
                     if (member.isHost) ...[
@@ -801,7 +801,7 @@ class _MemberTile extends StatelessWidget {
                 ),
                 Text(
                   ready ? 'พร้อมแล้ว • ที่นั่ง ${member.seatId}' : 'ยังไม่เลือกที่นั่ง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 12.5,
                     color: ready
                         ? AppTheme.primaryColor
@@ -836,7 +836,7 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: color,
@@ -869,7 +869,7 @@ class _StatusBanner extends StatelessWidget {
       child: Text(
         label,
         textAlign: TextAlign.center,
-        style: GoogleFonts.anuphan(fontWeight: FontWeight.w700, color: color),
+        style: appFont(fontWeight: FontWeight.w700, color: color),
       ),
     );
   }
@@ -908,7 +908,7 @@ class _ActionCard extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 title,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
@@ -918,7 +918,7 @@ class _ActionCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               color: AppTheme.mutedText(context),
             ),
@@ -1002,7 +1002,7 @@ class _SeatPickerSheetState extends State<_SeatPickerSheet> {
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   'เลือกที่นั่ง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1068,7 +1068,7 @@ class _SeatPickerSheetState extends State<_SeatPickerSheet> {
                         alignment: Alignment.center,
                         child: Text(
                           id,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontWeight: FontWeight.w700,
                             color: fg,
                           ),

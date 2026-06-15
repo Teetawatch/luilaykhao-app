@@ -48,7 +48,7 @@ class _SectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontSize: 16,
               fontWeight: FontWeight.w900,
@@ -113,7 +113,7 @@ class _ChoiceTile extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: selected
                           ? _accent
                           : AppTheme.onSurface(context),
@@ -126,7 +126,7 @@ class _ChoiceTile extends StatelessWidget {
                     subtitle,
                     maxLines: compact ? 2 : 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.mutedText(context),
                       fontSize: compact ? 10.5 : 12,
                       fontWeight: FontWeight.w600,
@@ -171,7 +171,7 @@ class _InfoPill extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             text,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
@@ -205,7 +205,7 @@ class _SummaryRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
               fontSize: 13,
@@ -220,7 +220,7 @@ class _SummaryRow extends StatelessWidget {
             textAlign: TextAlign.right,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: valueColor ?? AppTheme.onSurface(context),
               fontWeight: FontWeight.w900,
               fontSize: 13,
@@ -268,7 +268,7 @@ class _InstallmentRow extends StatelessWidget {
             child: Center(
               child: Text(
                 '${row.no}',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: isFirst
                       ? AppTheme.warningColor
                       : AppTheme.mutedText(context),
@@ -285,7 +285,7 @@ class _InstallmentRow extends StatelessWidget {
               children: [
                 Text(
                   'งวดที่ ${row.no}',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.onSurface(context),
                     fontWeight: FontWeight.w900,
                     fontSize: 13,
@@ -293,7 +293,7 @@ class _InstallmentRow extends StatelessWidget {
                 ),
                 Text(
                   dateText(row.dueDate),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
@@ -304,7 +304,7 @@ class _InstallmentRow extends StatelessWidget {
           ),
           Text(
             money(row.amount),
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: isFirst ? AppTheme.warningColor : _accent,
               fontWeight: FontWeight.w900,
               fontSize: 14,
@@ -335,7 +335,7 @@ class _BankInfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -344,7 +344,7 @@ class _BankInfoRow extends StatelessWidget {
           const Spacer(),
           Text(
             value,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontWeight: FontWeight.w900,
             ),
@@ -375,7 +375,7 @@ class _CopyButton extends StatelessWidget {
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: GoogleFonts.anuphan(fontWeight: FontWeight.w800, fontSize: 12),
+        style: appFont(fontWeight: FontWeight.w800, fontSize: 12),
       ),
       style: OutlinedButton.styleFrom(
         foregroundColor: _accent,
@@ -438,7 +438,7 @@ class _PickerTile extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.mutedText(context),
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -449,7 +449,7 @@ class _PickerTile extends StatelessWidget {
                     value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: filled ? _accent : AppTheme.onSurface(context),
                       fontWeight: FontWeight.w900,
                       fontSize: 13,
@@ -482,7 +482,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: color,
           fontSize: 11,
           fontWeight: FontWeight.w900,
@@ -514,7 +514,7 @@ class _RequiredBadge extends StatelessWidget {
       ),
       child: Text(
         done ? 'แนบแล้ว' : 'จำเป็น',
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: done ? _accent : AppTheme.warningColor,
           fontSize: 11,
           fontWeight: FontWeight.w900,
@@ -561,7 +561,7 @@ class _SourceTile extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontWeight: FontWeight.w800,
                 fontSize: 15,
                 color: AppTheme.onSurface(context),

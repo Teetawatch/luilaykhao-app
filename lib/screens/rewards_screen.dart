@@ -55,7 +55,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
         iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
         title: Text(
           'แต้มสะสม',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.onSurface(context),
             fontSize: 18,
             fontWeight: FontWeight.w800,
@@ -137,7 +137,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
           backgroundColor: AppTheme.errorColor,
           content: Text(
             'แลกไม่สำเร็จ ลองอีกครั้ง',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+            style: appFont(fontWeight: FontWeight.w700),
           ),
         ),
       );
@@ -230,7 +230,7 @@ class _PointsHero extends StatelessWidget {
                     const SizedBox(width: 5),
                     Text(
                       tierLabel,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: Colors.white,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w800,
@@ -244,7 +244,7 @@ class _PointsHero extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'แต้มคงเหลือ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: Colors.white.withValues(alpha: 0.85),
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -257,7 +257,7 @@ class _PointsHero extends StatelessWidget {
             children: [
               Text(
                 _format(points),
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: Colors.white,
                   fontSize: 38,
                   fontWeight: FontWeight.w900,
@@ -268,7 +268,7 @@ class _PointsHero extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'แต้ม',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: Colors.white.withValues(alpha: 0.85),
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -291,7 +291,7 @@ class _PointsHero extends StatelessWidget {
             next == null
                 ? 'คุณอยู่ในระดับสูงสุดแล้ว 🎉'
                 : 'อีก ${_format(needed)} แต้ม เลื่อนเป็น ${next['tier']}',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: Colors.white.withValues(alpha: 0.9),
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
@@ -359,7 +359,7 @@ class _Segmented extends StatelessWidget {
                   child: Text(
                     labels[i],
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w800,
                       color: index == i
@@ -469,7 +469,7 @@ class _RewardCard extends StatelessWidget {
                   children: [
                     Text(
                       '${reward['name'] ?? ''}',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
@@ -478,7 +478,7 @@ class _RewardCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       _rewardValue(reward),
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.primaryColor,
@@ -493,7 +493,7 @@ class _RewardCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               desc,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13,
                 height: 1.45,
                 fontWeight: FontWeight.w500,
@@ -512,7 +512,7 @@ class _RewardCard extends StatelessWidget {
               const SizedBox(width: 5),
               Text(
                 '${_PointsHero._format(cost)} แต้ม',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
@@ -541,7 +541,7 @@ class _RewardCard extends StatelessWidget {
                       : affordable
                       ? 'แลกเลย'
                       : 'แต้มไม่พอ',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                   ),
@@ -633,7 +633,7 @@ class _CouponCard extends StatelessWidget {
                 children: [
                   Text(
                     '${coupon['reward_name'] ?? 'คูปอง'}',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
@@ -653,7 +653,7 @@ class _CouponCard extends StatelessWidget {
                                   backgroundColor: AppTheme.primaryColor,
                                   content: Text(
                                     'คัดลอกโค้ดแล้ว',
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -704,7 +704,7 @@ class _CouponStatus extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 11.5,
           fontWeight: FontWeight.w800,
           color: color,
@@ -781,7 +781,7 @@ class _HistoryRow extends StatelessWidget {
           Expanded(
             child: Text(
               '${tx['description'] ?? '-'}',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.onSurface(context),
@@ -791,7 +791,7 @@ class _HistoryRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '${earn ? '+' : ''}${points.abs() * (earn ? 1 : -1)}',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 14.5,
               fontWeight: FontWeight.w900,
               color: color,
@@ -825,7 +825,7 @@ class _ConfirmRedeemSheet extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             'ยืนยันการแลก',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
@@ -835,7 +835,7 @@ class _ConfirmRedeemSheet extends StatelessWidget {
           Text(
             'ใช้ ${_PointsHero._format(cost)} แต้ม แลก "$name" ?',
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 14,
               height: 1.45,
               fontWeight: FontWeight.w500,
@@ -857,7 +857,7 @@ class _ConfirmRedeemSheet extends StatelessWidget {
                   ),
                   child: Text(
                     'ยกเลิก',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontWeight: FontWeight.w700,
                       color: AppTheme.onSurface(context),
                     ),
@@ -877,7 +877,7 @@ class _ConfirmRedeemSheet extends StatelessWidget {
                   ),
                   child: Text(
                     'แลกเลย',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
@@ -921,7 +921,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'แลกสำเร็จ!',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 19,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
@@ -931,7 +931,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
           Text(
             rewardName,
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
@@ -950,7 +950,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
                     backgroundColor: AppTheme.primaryColor,
                     content: Text(
                       'คัดลอกโค้ดแล้ว',
-                      style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+                      style: appFont(fontWeight: FontWeight.w700),
                     ),
                   ),
                 );
@@ -980,7 +980,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'แตะเพื่อคัดลอกโค้ด',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
@@ -1004,7 +1004,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
               ),
               child: Text(
                 'เสร็จสิ้น',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
@@ -1074,7 +1074,7 @@ class _EmptyHint extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             title,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 15.5,
               fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
@@ -1084,7 +1084,7 @@ class _EmptyHint extends StatelessWidget {
           Text(
             body,
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               height: 1.45,
               fontWeight: FontWeight.w500,

@@ -46,7 +46,7 @@ class TravelSliverAppBar extends StatelessWidget {
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: _premiumText,
             fontSize: 16,
             fontWeight: FontWeight.w800,

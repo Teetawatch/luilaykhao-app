@@ -79,3 +79,7 @@ flutter:
     - logo_ios.png
     - assets/audio/sos_siren.wav
     - assets/icons/google_2025.svg
+  fonts:
+    - family: Anuphan
+      fonts:
+        - asset: assets/fonts/Anuphan-Variable.ttf

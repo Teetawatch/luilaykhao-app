@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -70,7 +69,7 @@ class _TrackingScreenState extends State<TrackingScreen>
         SnackBar(
           content: Text(
             'ยังไม่มีลิงก์ติดตามสำหรับการจองนี้',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+            style: appFont(fontWeight: FontWeight.w600),
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -405,7 +404,7 @@ class TrackingTopBar extends StatelessWidget {
                           _headline(eta),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
                             color: AppTheme.onSurface(context),
@@ -416,7 +415,7 @@ class TrackingTopBar extends StatelessWidget {
                           '${eta?.formattedETA ?? '--'} • ${eta?.formattedDistance ?? '--'}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.mutedText(context),
@@ -534,7 +533,7 @@ class TrackingBottomSheet extends StatelessWidget {
                   booking?.tripTitle ?? tracking?.tripTitle ?? 'กำลังโหลดทริป',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 18,
                     height: 1.25,
                     fontWeight: FontWeight.w900,
@@ -635,7 +634,7 @@ class TrackingStatusBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             'รถใกล้ถึงจุดรับแล้ว',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: Colors.white,
               fontWeight: FontWeight.w900,
               fontSize: 14,
@@ -740,7 +739,7 @@ class _MapPin extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.textMain,
               fontWeight: FontWeight.w800,
               fontSize: 10,
@@ -799,7 +798,7 @@ class _MetricCard extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -810,7 +809,7 @@ class _MetricCard extends StatelessWidget {
             value.isEmpty ? '-' : value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: highlighted ? AppTheme.primaryColor : AppTheme.textMain,
               fontSize: highlighted ? 18 : 15,
               fontWeight: FontWeight.w900,
@@ -848,7 +847,7 @@ class _DetailRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -857,7 +856,7 @@ class _DetailRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value.isEmpty ? 'รอข้อมูล' : value,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.textMain,
                     fontSize: 14,
                     height: 1.35,
@@ -898,7 +897,7 @@ class _ActionButton extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.white,
-                textStyle: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+                textStyle: appFont(fontWeight: FontWeight.w900),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(26),
                 ),
@@ -910,7 +909,7 @@ class _ActionButton extends StatelessWidget {
               label: Text(label),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.primaryColor,
-                textStyle: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+                textStyle: appFont(fontWeight: FontWeight.w900),
                 side: const BorderSide(color: AppTheme.primaryColor),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(26),
@@ -999,7 +998,7 @@ class _TrackingLoadingOverlay extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 'กำลังเชื่อมต่อรถ',
-                style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+                style: appFont(fontWeight: FontWeight.w800),
               ),
             ],
           ),

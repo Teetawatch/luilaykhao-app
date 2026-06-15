@@ -144,7 +144,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
           const SizedBox(height: 14),
           Text(
             'พร้อมสำหรับเช็คอิน',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontSize: 20,
               fontWeight: FontWeight.w900,
@@ -154,7 +154,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
           Text(
             'โปรดแสดงรหัสนี้แก่เจ้าหน้าที่เมื่อถึงจุดนัดหมาย',
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
               fontSize: 13,
@@ -212,7 +212,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                     : const Icon(Icons.download_rounded, size: 20),
                 label: Text(
                   _downloadingQr ? 'กำลังดาวน์โหลด' : 'ดาวน์โหลด QR CODE',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                   ),
@@ -233,7 +233,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
               children: [
                 Text(
                   'รหัสการจอง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -243,7 +243,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                 SelectableText(
                   bookingRef,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: _accent,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -310,7 +310,7 @@ class _SubmitButton extends StatelessWidget {
             : const Icon(Icons.verified_user_rounded, size: 22),
         label: Text(
           labelText,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontWeight: FontWeight.w900,
             fontSize: 16,
           ),
@@ -341,7 +341,7 @@ class _HomeButton extends StatelessWidget {
         icon: const Icon(Icons.home_rounded),
         label: Text(
           'กลับหน้าหลัก',
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900, fontSize: 15),
+          style: appFont(fontWeight: FontWeight.w900, fontSize: 15),
         ),
       ),
     );
@@ -383,7 +383,7 @@ class _SuccessDialog extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'แจ้งชำระเงินสำเร็จ',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
@@ -393,7 +393,7 @@ class _SuccessDialog extends StatelessWidget {
             Text(
               'ระบบบันทึกข้อมูลการชำระเงิน ${money(amount)} แล้ว\nทีมงานจะตรวจสอบและยืนยันการจองให้เร็วๆ นี้',
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
                 height: 1.5,
@@ -413,7 +413,7 @@ class _SuccessDialog extends StatelessWidget {
                 ),
                 child: Text(
                   'ตกลง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontWeight: FontWeight.w900,
                     fontSize: 15,
                   ),

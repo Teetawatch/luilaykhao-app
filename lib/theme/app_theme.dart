@@ -1,7 +1,64 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+/// Bundled font family (assets/fonts/Anuphan-Variable.ttf, declared in
+/// pubspec.yaml). Same Anuphan face on both Android and iOS, shipped with the
+/// app so there is no runtime font download.
+const String _fontFamily = 'Anuphan';
+
+/// App-wide text style in [_fontFamily]. Mirrors the `GoogleFonts.*`
+/// named-parameter signature so it is a drop-in replacement at every call site.
+///
+/// Anuphan's weight axis tops out at 700; weights `w800`/`w900` render as 700.
+TextStyle appFont({
+  TextStyle? textStyle,
+  Color? color,
+  Color? backgroundColor,
+  double? fontSize,
+  FontWeight? fontWeight,
+  FontStyle? fontStyle,
+  double? letterSpacing,
+  double? wordSpacing,
+  TextBaseline? textBaseline,
+  double? height,
+  Locale? locale,
+  Paint? foreground,
+  Paint? background,
+  List<Shadow>? shadows,
+  List<FontFeature>? fontFeatures,
+  TextDecoration? decoration,
+  Color? decorationColor,
+  TextDecorationStyle? decorationStyle,
+  double? decorationThickness,
+}) {
+  return (textStyle ?? const TextStyle()).copyWith(
+    fontFamily: _fontFamily,
+    color: color,
+    backgroundColor: backgroundColor,
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    fontStyle: fontStyle,
+    letterSpacing: letterSpacing,
+    wordSpacing: wordSpacing,
+    textBaseline: textBaseline,
+    height: height,
+    locale: locale,
+    foreground: foreground,
+    background: background,
+    shadows: shadows,
+    fontFeatures: fontFeatures,
+    decoration: decoration,
+    decorationColor: decorationColor,
+    decorationStyle: decorationStyle,
+    decorationThickness: decorationThickness,
+  );
+}
 
 class AppTheme {
+  /// Applies the bundled [_fontFamily] across the whole [TextTheme].
+  static TextTheme _textTheme(TextTheme base) {
+    return base.apply(fontFamily: _fontFamily);
+  }
+
   // Premium Emerald & Slate Palette
   static const Color primaryColor = Color(0xFF059669); // Emerald 600
   static const Color accentColor = Color(0xFF10B981); // Emerald 500
@@ -103,17 +160,16 @@ class AppTheme {
         outline: outlineColor,
       ),
       scaffoldBackgroundColor: bgLight,
-      textTheme: GoogleFonts.anuphanTextTheme().apply(
-        bodyColor: textMain,
-        displayColor: textMain,
-      ),
+      textTheme: _textTheme(
+        ThemeData.light().textTheme,
+      ).apply(bodyColor: textMain, displayColor: textMain),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         foregroundColor: textMain,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.anuphan(
+        titleTextStyle: appFont(
           color: textMain,
           fontSize: 20,
           fontWeight: FontWeight.w800,
@@ -125,7 +181,7 @@ class AppTheme {
         indicatorColor: primaryColor.withValues(alpha: 0.1),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
-          return GoogleFonts.anuphan(
+          return appFont(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
             color: isSelected ? primaryColor : textSecondary,
@@ -160,7 +216,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(radiusSmall),
           borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
-        hintStyle: GoogleFonts.anuphan(
+        hintStyle: appFont(
           color: textSecondary.withValues(alpha: 0.5),
         ),
       ),
@@ -173,7 +229,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(radiusSmall),
           ),
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
-          textStyle: GoogleFonts.anuphan(
+          textStyle: appFont(
             fontWeight: FontWeight.w800,
             fontSize: 16,
             letterSpacing: 0.5,
@@ -202,7 +258,7 @@ class AppTheme {
         error: errorColor,
       ),
       scaffoldBackgroundColor: bgDark,
-      textTheme: GoogleFonts.anuphanTextTheme(
+      textTheme: _textTheme(
         ThemeData.dark().textTheme,
       ).apply(bodyColor: darkTextMain, displayColor: darkTextMain),
       appBarTheme: AppBarTheme(
@@ -211,7 +267,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         foregroundColor: darkTextMain,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.anuphan(
+        titleTextStyle: appFont(
           color: darkTextMain,
           fontSize: 20,
           fontWeight: FontWeight.w800,
@@ -223,7 +279,7 @@ class AppTheme {
         indicatorColor: accentColor.withValues(alpha: 0.18),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
-          return GoogleFonts.anuphan(
+          return appFont(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
             color: isSelected ? accentColor : darkTextSecondary,
@@ -258,7 +314,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(radiusSmall),
           borderSide: const BorderSide(color: accentColor, width: 2),
         ),
-        hintStyle: GoogleFonts.anuphan(
+        hintStyle: appFont(
           color: darkTextSecondary.withValues(alpha: 0.62),
         ),
       ),
@@ -271,7 +327,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(radiusSmall),
           ),
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
-          textStyle: GoogleFonts.anuphan(
+          textStyle: appFont(
             fontWeight: FontWeight.w800,
             fontSize: 16,
             letterSpacing: 0.5,

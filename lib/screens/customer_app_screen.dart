@@ -9,7 +9,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
@@ -601,7 +600,7 @@ class _NavItemState extends State<_NavItem>
             const SizedBox(height: 3),
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 220),
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 10.5,
                 fontWeight: widget.isSelected
                     ? FontWeight.w800

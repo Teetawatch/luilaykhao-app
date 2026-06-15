@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen>
       SnackBar(
         content: Text(
           message,
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+          style: appFont(fontWeight: FontWeight.w600),
         ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -358,7 +358,7 @@ class _HeroBg extends StatelessWidget {
                     const SizedBox(width: 7),
                     Text(
                       'พร้อมเดินทางทุกเส้นทาง',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: const Color(0xFF34D399),
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -371,7 +371,7 @@ class _HeroBg extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 'ยินดีต้อนรับ\nกลับมา',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: Colors.white,
                   fontSize: 42,
                   fontWeight: FontWeight.w900,
@@ -382,7 +382,7 @@ class _HeroBg extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 'การผจญภัยครั้งใหม่รอคุณอยู่',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: Colors.white.withValues(alpha: 0.65),
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -500,7 +500,7 @@ class _LoginSheet extends StatelessWidget {
                       Text(
                         'เข้าสู่ระบบ',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.textMain,
                           fontSize: 25,
                           fontWeight: FontWeight.w900,
@@ -514,7 +514,7 @@ class _LoginSheet extends StatelessWidget {
                         children: [
                           Text(
                             'ยังไม่มีบัญชี? ',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               color: AppTheme.textSecondary,
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
@@ -524,7 +524,7 @@ class _LoginSheet extends StatelessWidget {
                             onTap: onRegister,
                             child: Text(
                               'สมัครสมาชิกฟรี',
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 color: AppTheme.primaryColor,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
@@ -590,7 +590,7 @@ class _LoginSheet extends StatelessWidget {
                           ),
                           child: Text(
                             'ลืมรหัสผ่าน?',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.primaryColor,
@@ -727,7 +727,7 @@ class _AppleSignInButton extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         'ลงชื่อเข้าด้วย Apple',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -789,7 +789,7 @@ class _SocialTile extends StatelessWidget {
               const SizedBox(height: 7),
               Text(
                 label,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.textMain,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -817,7 +817,7 @@ class _DividerOr extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             'หรือใช้อีเมล',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -909,14 +909,14 @@ class _SheetTextFieldState extends State<_SheetTextField> {
         textInputAction: widget.textInputAction,
         onSubmitted: widget.onSubmitted,
         cursorColor: AppTheme.primaryColor,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: AppTheme.textMain,
           fontSize: 15,
           fontWeight: FontWeight.w600,
         ),
         decoration: InputDecoration(
           hintText: widget.hint,
-          hintStyle: GoogleFonts.anuphan(
+          hintStyle: appFont(
             color: const Color(0xFF94A3B8),
             fontSize: 15,
             fontWeight: FontWeight.w500,
@@ -1028,7 +1028,7 @@ class _LoginButtonState extends State<_LoginButton> {
                         const SizedBox(width: 10),
                         Text(
                           'กำลังเข้าสู่ระบบ...',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -1042,7 +1042,7 @@ class _LoginButtonState extends State<_LoginButton> {
                       children: [
                         Text(
                           'เข้าสู่ระบบ',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: enabled
                                 ? Colors.white
                                 : const Color(0xFF94A3B8),
@@ -1077,7 +1077,7 @@ class _LegalNote extends StatelessWidget {
     return Text(
       'การเข้าสู่ระบบถือว่าคุณยอมรับนโยบายความเป็นส่วนตัวและเงื่อนไขการใช้งานของเรา',
       textAlign: TextAlign.center,
-      style: GoogleFonts.anuphan(
+      style: appFont(
         color: const Color(0xFF94A3B8),
         fontSize: 11,
         height: 1.5,
@@ -1304,7 +1304,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
         textInputAction: widget.textInputAction,
         onSubmitted: widget.onSubmitted,
         cursorColor: AppTheme.primaryColor,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: AppTheme.textMain,
           fontSize: 15,
           fontWeight: FontWeight.w600,
@@ -1312,7 +1312,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
         ),
         decoration: InputDecoration(
           hintText: widget.hintText,
-          hintStyle: GoogleFonts.anuphan(
+          hintStyle: appFont(
             color: const Color(0xFF9AA0A6),
             fontSize: 15,
             fontWeight: FontWeight.w500,

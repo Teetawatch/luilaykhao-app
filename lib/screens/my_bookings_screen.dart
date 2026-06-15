@@ -319,7 +319,7 @@ class _CheckInTextBlock extends StatelessWidget {
             Text(
               'พร้อมสำหรับเช็คอิน',
               textAlign: centered ? TextAlign.center : TextAlign.start,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.onSurface(context),
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
@@ -332,7 +332,7 @@ class _CheckInTextBlock extends StatelessWidget {
         Text(
           'โปรดแสดงรหัสนี้แก่เจ้าหน้าที่เมื่อถึงจุดนัดหมาย',
           textAlign: centered ? TextAlign.center : TextAlign.start,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.mutedText(context),
             fontSize: 12,
             height: 1.4,
@@ -343,7 +343,7 @@ class _CheckInTextBlock extends StatelessWidget {
           const SizedBox(height: 8),
           SelectableText(
             bookingRef!,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.primaryColor,
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -434,7 +434,7 @@ class _BookingReferencePanel extends StatelessWidget {
         children: [
           Text(
             'รหัสการจอง',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -445,7 +445,7 @@ class _BookingReferencePanel extends StatelessWidget {
           SelectableText(
             bookingRef,
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.primaryColor,
               fontSize: 20,
               fontWeight: FontWeight.w800,

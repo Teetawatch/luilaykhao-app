@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
@@ -230,7 +229,7 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
               centerTitle: true,
               title: Text(
                 'ติดตามรถ',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.onSurface(context),
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
@@ -373,7 +372,7 @@ class HeroTrackingHeader extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             'ติดตามรถของคุณแบบเรียลไทม์',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 26,
               height: 1.16,
               fontWeight: FontWeight.w900,
@@ -383,7 +382,7 @@ class HeroTrackingHeader extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'ดูตำแหน่งรถและเวลาถึงโดยประมาณ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 15,
               height: 1.45,
               fontWeight: FontWeight.w500,
@@ -537,7 +536,7 @@ class BookingCodeField extends StatelessWidget {
       children: [
         Text(
           'รหัสการจอง',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 14,
             fontWeight: FontWeight.w800,
             color: AppTheme.textMain,
@@ -569,7 +568,7 @@ class BookingCodeField extends StatelessWidget {
             autofillHints: const [AutofillHints.oneTimeCode],
             inputFormatters: [_BookingCodeFormatter()],
             textInputAction: TextInputAction.go,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
@@ -577,7 +576,7 @@ class BookingCodeField extends StatelessWidget {
             ),
             decoration: InputDecoration(
               hintText: 'LLK-20250409-0001',
-              hintStyle: GoogleFonts.anuphan(
+              hintStyle: appFont(
                 color: const Color(0xFF98A2B3),
                 fontWeight: FontWeight.w600,
               ),
@@ -604,7 +603,7 @@ class BookingCodeField extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             error!,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.errorColor,
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -680,7 +679,7 @@ class PrimaryTrackButton extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         'ติดตามรถของฉัน',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                         ),
@@ -774,7 +773,7 @@ class _SmartOption extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textMain,
@@ -814,7 +813,7 @@ class RecentBookingsSection extends StatelessWidget {
       children: [
         Text(
           'การจองที่สำเร็จ',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 18,
             fontWeight: FontWeight.w900,
             color: AppTheme.textMain,
@@ -888,7 +887,7 @@ class _RecentBookingCard extends StatelessWidget {
                   '$title • $date',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textMain,
@@ -904,7 +903,7 @@ class _RecentBookingCard extends StatelessWidget {
                 ),
                 child: Text(
                   'ติดตาม',
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+                  style: appFont(fontWeight: FontWeight.w900),
                 ),
               ),
             ],
@@ -949,7 +948,7 @@ class HelpSection extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'หารหัสการจองไม่เจอ?',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontWeight: FontWeight.w900,
                   fontSize: 15,
                   color: AppTheme.textMain,
@@ -960,7 +959,7 @@ class HelpSection extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'รหัสอยู่ในรายละเอียดการจอง หรืออีเมลยืนยันการจองของคุณ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               height: 1.45,
               fontWeight: FontWeight.w500,
@@ -973,7 +972,7 @@ class HelpSection extends StatelessWidget {
             icon: const Icon(Icons.event_note_rounded, size: 18),
             label: Text(
               'ไปที่การจองของฉัน',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+              style: appFont(fontWeight: FontWeight.w800),
             ),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.primaryColor,
@@ -1049,7 +1048,7 @@ class EntryTrackingStatusBanner extends StatelessWidget {
               children: [
                 Text(
                   spec.title,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.textMain,
                     fontWeight: FontWeight.w900,
                     fontSize: 13,
@@ -1058,7 +1057,7 @@ class EntryTrackingStatusBanner extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   spec.body,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w500,
                     fontSize: 12,
@@ -1078,7 +1077,7 @@ class EntryTrackingStatusBanner extends StatelessWidget {
               ),
               child: Text(
                 spec.action,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1136,7 +1135,7 @@ class _QrScanScreenState extends State<_QrScanScreen> {
                   Expanded(
                     child: Text(
                       'สแกน QR เพื่อติดตามรถ',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
@@ -1164,7 +1163,7 @@ class _QrScanScreenState extends State<_QrScanScreen> {
             child: Text(
               'วาง QR ให้อยู่ในกรอบ ระบบจะเปิดแผนที่ให้อัตโนมัติ',
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: Colors.white.withValues(alpha: 0.86),
                 fontWeight: FontWeight.w600,
                 height: 1.45,

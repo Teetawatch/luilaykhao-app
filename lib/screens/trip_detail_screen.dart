@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:luilaykhao_app/providers/app_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -125,7 +124,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     const SizedBox(height: 20),
                     Text(
                       'โหลดข้อมูลไม่สำเร็จ',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                         color: _premiumText,
@@ -135,7 +134,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     Text(
                       'กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต\nแล้วลองใหม่อีกครั้ง',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 14,
                         color: _mutedText,
                         height: 1.6,
@@ -159,7 +158,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       icon: const Icon(Icons.refresh_rounded),
                       label: Text(
                         'ลองใหม่',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
@@ -723,7 +722,7 @@ class _GroupInviteEntry extends StatelessWidget {
                   children: [
                     Text(
                       'ชวนเพื่อนมาเป็นกลุ่ม',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: _premiumText,
@@ -731,7 +730,7 @@ class _GroupInviteEntry extends StatelessWidget {
                     ),
                     Text(
                       'จองที่นั่งติดกัน เพื่อนเลือกที่นั่งเอง คุณจ่ายทีเดียว',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 12.5,
                         color: _mutedText,
                       ),

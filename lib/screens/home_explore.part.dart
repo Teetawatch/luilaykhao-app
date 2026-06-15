@@ -330,7 +330,7 @@ class _HeroHeaderState extends State<HeroHeader> {
                       Text(
                         'การเที่ยวที่ดี เริ่มจาก\nความรู้สึกที่ดี ตั้งแต่การจอง',
                         textAlign: TextAlign.start,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: Colors.white,
                           fontSize: titleSize,
                           height: 1.22,
@@ -342,7 +342,7 @@ class _HeroHeaderState extends State<HeroHeader> {
                       Text(
                         'ค้นหาทริปและประสบการณ์ที่พร้อมเดินทาง',
                         textAlign: TextAlign.start,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: Colors.white.withValues(alpha: 0.88),
                           fontSize: subtitleSize,
                           height: 1.4,
@@ -489,7 +489,7 @@ class _HeroTopBar extends StatelessWidget {
                           children: [
                             Text(
                               'สวัสดี, $firstName',
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 color: textColor,
                                 fontSize: 17,
                                 height: 1.1,
@@ -502,7 +502,7 @@ class _HeroTopBar extends StatelessWidget {
                               'พร้อมออกเดินทางครั้งใหม่?',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 color: Color.lerp(
                                   Colors.white.withValues(alpha: 0.85),
                                   AppTheme.textSecondary,
@@ -736,7 +736,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
               onSubmitted: widget.onSubmitted,
               textInputAction: TextInputAction.search,
               cursorColor: const Color(0xFF0B8A6E),
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: const Color(0xFF111313),
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -744,7 +744,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
               decoration: InputDecoration(
                 isDense: true,
                 hintText: 'ค้นหาทริป ปลายทาง หรือกิจกรรม',
-                hintStyle: GoogleFonts.anuphan(
+                hintStyle: appFont(
                   color: const Color(0xFF111313).withValues(alpha: 0.42),
                   fontSize: 14.5,
                   fontWeight: FontWeight.w500,
@@ -856,7 +856,7 @@ class _LicenseAssuranceBanner extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 'ใบอนุญาตประกอบธุรกิจนำเที่ยว',
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
@@ -917,7 +917,7 @@ class _LicenseAssuranceBanner extends StatelessWidget {
                                     const SizedBox(height: 8),
                                     Text(
                                       'ไม่สามารถโหลดรูปได้',
-                                      style: GoogleFonts.anuphan(
+                                      style: appFont(
                                         color: const Color(0xFF8A9FA0),
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -934,7 +934,7 @@ class _LicenseAssuranceBanner extends StatelessWidget {
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                         child: Text(
                           'เลขที่ใบอนุญาต 12/03773',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF6B8080),
@@ -979,7 +979,7 @@ class _LicenseAssuranceBanner extends StatelessWidget {
                 'จองมั่นใจ ปลอดภัย',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: Colors.white,
                   fontSize: titleSize,
                   fontWeight: FontWeight.w800,
@@ -991,7 +991,7 @@ class _LicenseAssuranceBanner extends StatelessWidget {
                 'ใบอนุญาตประกอบธุรกิจนำเที่ยว\nเลขที่ 12/03773',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: Colors.white.withValues(alpha: 0.86),
                   fontSize: bodySize,
                   height: 1.42,
@@ -1026,7 +1026,7 @@ class _LicenseAssuranceBanner extends StatelessWidget {
               'ดูใบอนุญาต',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: compact ? 12.5 : 13.5,
                 fontWeight: FontWeight.w800,
               ),
@@ -1173,7 +1173,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
           const SizedBox(height: 20),
           Text(
             'ทริปที่กำลังเปิดรับสมัคร',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontSize: 15,
               fontWeight: FontWeight.w800,
@@ -1189,7 +1189,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
             const SizedBox(height: 20),
             Text(
               'เลือกภาคที่จะขึ้นและวันเดินทาง',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.onSurface(context),
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
@@ -1253,7 +1253,7 @@ class HomeHeader extends StatelessWidget {
                 'สวัสดี, $firstName',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.textMain,
                   fontSize: 22,
                   height: 1.16,
@@ -1263,7 +1263,7 @@ class HomeHeader extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 'วันนี้อยากออกเดินทางแบบไหนดี?',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.textSecondary,
                   fontSize: 13,
                   height: 1.4,
@@ -1329,7 +1329,7 @@ class _CategoryChipsSection extends StatelessWidget {
         children: [
           Text(
             'หมวดหมู่',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: const Color(0xFF063F46),
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -1416,7 +1416,7 @@ class _CategoryChip extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 14,
                 height: 1.0,
                 fontWeight: FontWeight.w700,
@@ -1459,7 +1459,7 @@ class _PopularTripsSection extends StatelessWidget {
                         activeType != null
                             ? _tripTypeLabel(activeType!)
                             : 'ทริปแนะนำ',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: const Color(0xFF063F46),
                           fontSize: 25,
                           height: 1.1,
@@ -1475,7 +1475,7 @@ class _PopularTripsSection extends StatelessWidget {
                   ),
                   child: Text(
                     'ดูทั้งหมด',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: const Color(0xFF063F46),
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -1621,7 +1621,7 @@ class _TrustCell extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               data.value,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 16,
                 height: 1.0,
                 fontWeight: FontWeight.w900,
@@ -1636,7 +1636,7 @@ class _TrustCell extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 11,
             height: 1.0,
             fontWeight: FontWeight.w600,
@@ -1702,7 +1702,7 @@ class _UpcomingDeparturesSection extends StatelessWidget {
                     children: [
                       Text(
                         'ใกล้ออกเดินทาง',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: const Color(0xFF063F46),
                           fontSize: 22,
                           height: 1.1,
@@ -1712,7 +1712,7 @@ class _UpcomingDeparturesSection extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         'จองก่อนที่นั่งเต็ม',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.textSecondary,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -1727,7 +1727,7 @@ class _UpcomingDeparturesSection extends StatelessWidget {
                   ),
                   child: Text(
                     'ดูทั้งหมด',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: const Color(0xFF063F46),
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -1841,7 +1841,7 @@ class _DepartureCard extends StatelessWidget {
                 children: [
                   Text(
                     '${date.day}',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: Colors.white,
                       fontSize: 24,
                       height: 1.0,
@@ -1851,7 +1851,7 @@ class _DepartureCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     _thaiMonthsShort[date.month],
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 12,
                       height: 1.0,
@@ -1871,7 +1871,7 @@ class _DepartureCard extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: const Color(0xFF111313),
                       fontSize: 14.5,
                       height: 1.15,
@@ -1890,7 +1890,7 @@ class _DepartureCard extends StatelessWidget {
                             location,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               color: const Color(0xFF6B8080),
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1910,7 +1910,7 @@ class _DepartureCard extends StatelessWidget {
                     ),
                     child: Text(
                       seatText,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: badgeFg,
                         fontSize: 11.5,
                         height: 1.0,
@@ -1953,7 +1953,7 @@ class _CustomerReviewsSection extends StatelessWidget {
               children: [
                 Text(
                   'เสียงจากลูกทริป',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: const Color(0xFF063F46),
                     fontSize: 22,
                     height: 1.1,
@@ -1963,7 +1963,7 @@ class _CustomerReviewsSection extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'รีวิวจริงจากผู้ที่เดินทางไปกับเรา',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.textSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -2053,7 +2053,7 @@ class _HomeReviewCard extends StatelessWidget {
                       name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: const Color(0xFF111313),
                         fontSize: 14,
                         height: 1.1,
@@ -2084,7 +2084,7 @@ class _HomeReviewCard extends StatelessWidget {
               comment.isNotEmpty ? comment : 'ประทับใจการเดินทางกับเรา',
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: const Color(0xFF44595A),
                 fontSize: 13,
                 height: 1.45,
@@ -2104,7 +2104,7 @@ class _HomeReviewCard extends StatelessWidget {
                     tripTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: const Color(0xFF0B6E5A),
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -2126,7 +2126,7 @@ class _HomeReviewCard extends StatelessWidget {
   Widget _avatarInitial(String initial) {
     return Text(
       initial,
-      style: GoogleFonts.anuphan(
+      style: appFont(
         color: Colors.white,
         fontSize: 16,
         fontWeight: FontWeight.w800,
@@ -2198,7 +2198,7 @@ class _HomeReviewThumbnails extends StatelessWidget {
                         color: Colors.black.withValues(alpha: 0.45),
                         child: Text(
                           '+$extra',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: Colors.white,
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
@@ -2255,7 +2255,7 @@ class PromotionsSection extends StatelessWidget {
                     children: [
                       Text(
                         'โปรโมชั่นและสิทธิพิเศษ',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.textMain,
                           fontSize: 22,
                           height: 1.1,
@@ -2265,7 +2265,7 @@ class PromotionsSection extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         'ส่วนลดและโค้ดพิเศษสำหรับการจอง',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.textSecondary,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -2284,7 +2284,7 @@ class PromotionsSection extends StatelessWidget {
                   icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                   label: Text(
                     'ดูทั้งหมด',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.primaryColor,
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -2365,7 +2365,7 @@ class _PromotionCard extends StatelessWidget {
                   name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -2388,7 +2388,7 @@ class _PromotionCard extends StatelessWidget {
                 ),
                 child: Text(
                   _discountLabel(),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
@@ -2405,7 +2405,7 @@ class _PromotionCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   'ใช้ได้ถึง ${_formatDate(endDate.toString())}',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: Colors.white.withValues(alpha: 0.75),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -2456,7 +2456,7 @@ class _CodeChip extends StatelessWidget {
           children: [
             Text(
               code,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
@@ -2478,7 +2478,7 @@ class _CodeChip extends StatelessWidget {
       SnackBar(
         content: Text(
           'คัดลอกโค้ด "$code" แล้ว',
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+          style: appFont(fontWeight: FontWeight.w700),
         ),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
@@ -2559,7 +2559,7 @@ class _PromotionsHintBanner extends StatelessWidget {
           Expanded(
             child: Text(
               'แตะที่โค้ดเพื่อคัดลอก แล้วนำไปกรอกตอนชำระเงินเพื่อรับส่วนลด',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12.5,
                 height: 1.4,
                 fontWeight: FontWeight.w600,
@@ -2601,7 +2601,7 @@ class _PromotionsEmptyState extends StatelessWidget {
             Text(
               'ยังไม่มีโปรโมชั่นตอนนี้',
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
@@ -2611,7 +2611,7 @@ class _PromotionsEmptyState extends StatelessWidget {
             Text(
               'เรากำลังเตรียมดีลและสิทธิพิเศษใหม่ ๆ ไว้ให้ กลับมาเช็กได้เร็ว ๆ นี้',
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 14,
                 height: 1.5,
                 fontWeight: FontWeight.w600,
@@ -2676,7 +2676,7 @@ class _GuestBookingBanner extends StatelessWidget {
                   children: [
                     Text(
                       'มีรหัสการจองอยู่แล้ว?',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
@@ -2686,7 +2686,7 @@ class _GuestBookingBanner extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'ดู QR เช็คอิน และติดตามรถ ไม่ต้องสมัครสมาชิก',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.mutedText(context),

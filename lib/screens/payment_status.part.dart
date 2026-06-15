@@ -13,7 +13,7 @@ class _LoadingState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'กำลังโหลดข้อมูลการจอง...',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
             ),
@@ -53,7 +53,7 @@ class _PaymentEmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'ไม่พบข้อมูลการจอง',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.onSurface(context),
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
@@ -62,7 +62,7 @@ class _PaymentEmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'กรุณาลองใหม่อีกครั้ง',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
               ),
@@ -79,7 +79,7 @@ class _PaymentEmptyState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded),
               label: Text(
                 'ลองใหม่',
-                style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+                style: appFont(fontWeight: FontWeight.w900),
               ),
             ),
           ],
@@ -155,7 +155,7 @@ class _PaymentProgress extends StatelessWidget {
                       step.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: isActive
                             ? _accent
                             : AppTheme.mutedText(context),
@@ -221,7 +221,7 @@ class _PaymentNotice extends StatelessWidget {
           Expanded(
             child: Text(
               'กรุณาชำระเงินและระบุเวลาโอนตามสลิป เพื่อยืนยันสิทธิ์การเดินทาง',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: isDark
                     ? const Color(0xFFFCD34D)
                     : const Color(0xFF92400E),
@@ -300,7 +300,7 @@ class _BalanceDueBanner extends StatelessWidget {
               children: [
                 Text(
                   isOverdue ? 'เลยกำหนดชำระยอดส่วนที่เหลือ' : 'ครบกำหนดชำระยอดส่วนที่เหลือ',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: color,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
@@ -313,7 +313,7 @@ class _BalanceDueBanner extends StatelessWidget {
                       : (isOverdue
                             ? 'กรุณาชำระ ${money(balance)} โดยด่วน (เกินกำหนด ${-daysLeft} วัน)'
                             : 'กรุณาชำระ ${money(balance)} ภายในวันที่ $dueText (อีก $daysLeft วัน)'),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.onSurface(context),
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -386,7 +386,7 @@ class _InstallmentBanner extends StatelessWidget {
               children: [
                 Text(
                   paid ? 'ชำระงวดที่ $no แล้ว' : 'ชำระงวดที่ $no',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: color,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
@@ -397,7 +397,7 @@ class _InstallmentBanner extends StatelessWidget {
                   paid
                       ? 'รับชำระ ${money(amount)} เรียบร้อยแล้ว'
                       : 'ยอดชำระ ${money(amount)} · ครบกำหนด $dueText',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.onSurface(context),
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -479,7 +479,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
               children: [
                 Text(
                   expired ? 'หมดเวลาชำระเงิน' : 'เหลือเวลาชำระเงิน',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: color,
                     fontWeight: FontWeight.w900,
                     fontSize: 13.5,
@@ -490,7 +490,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
                   expired
                       ? 'กรุณาติดต่อเจ้าหน้าที่หากต้องการจองใหม่'
                       : 'การจองจะถูกยกเลิกอัตโนมัติหากไม่ชำระภายใน $_kDeadlineMinutes นาทีจากการจอง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.mutedText(context),
                     fontWeight: FontWeight.w600,
                     fontSize: 11.5,
@@ -503,7 +503,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             timeText,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: color,
               fontWeight: FontWeight.w900,
               fontSize: expired ? 13 : 22,
@@ -651,7 +651,7 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
           padding: const EdgeInsets.only(bottom: 10),
           child: Text(
             'ที่นั่งที่รอการจอง',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 15,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),

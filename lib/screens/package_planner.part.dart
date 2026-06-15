@@ -53,7 +53,7 @@ class PackageListSection extends StatelessWidget {
                     children: [
                       Text(
                         region,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.primaryColor,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -64,7 +64,7 @@ class PackageListSection extends StatelessWidget {
                         location,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.textSecondary,
                           fontSize: 13,
                           height: 1.2,
@@ -76,7 +76,7 @@ class PackageListSection extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   price,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.primaryColor,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
@@ -130,7 +130,7 @@ class PrimaryCTAButton extends StatelessWidget {
         icon: Icon(icon, size: 24),
         label: Text(
           label,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.5,
@@ -182,7 +182,7 @@ class _PlannerSelectFrame extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

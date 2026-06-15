@@ -94,7 +94,7 @@ class _BookingSummaryCard extends StatelessWidget {
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textMain,

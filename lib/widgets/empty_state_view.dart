@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_theme.dart';
 
@@ -47,7 +46,7 @@ class EmptyStateView extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.onSurface(context),
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -58,7 +57,7 @@ class EmptyStateView extends StatelessWidget {
               Text(
                 body!,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.mutedText(context),
                   fontSize: 13,
                   height: 1.55,
@@ -82,7 +81,7 @@ class EmptyStateView extends StatelessWidget {
                 onPressed: onAction,
                 child: Text(
                   actionLabel!,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
                   ),

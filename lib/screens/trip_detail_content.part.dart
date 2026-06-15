@@ -196,7 +196,7 @@ class _ItinerarySectorTile extends StatelessWidget {
             child: Center(
               child: Text(
                 '${index + 1}',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: grad[0],
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -208,7 +208,7 @@ class _ItinerarySectorTile extends StatelessWidget {
             sector.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: isDark ? Colors.white : _premiumText,
               fontSize: 15,
               fontWeight: FontWeight.w800,
@@ -225,7 +225,7 @@ class _ItinerarySectorTile extends StatelessWidget {
                 ),
                 child: Text(
                   '${sector.items.length} รายการ',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: grad[0],
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -300,7 +300,7 @@ class _ItineraryTimelineItem extends StatelessWidget {
                       marker,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: Colors.white,
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
@@ -338,7 +338,7 @@ class _ItineraryTimelineItem extends StatelessWidget {
                 children: [
                   Text(
                     item.title,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: isDark ? Colors.white : _premiumText,
@@ -349,7 +349,7 @@ class _ItineraryTimelineItem extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       item.description,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13.5,
                         color: _mutedText,
                         height: 1.65,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_theme.dart';
@@ -135,7 +134,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('บันทึก Wallet แล้ว',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+              style: appFont(fontWeight: FontWeight.w700)),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -151,9 +150,9 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text('ล้างข้อมูล Wallet',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w900)),
+            style: appFont(fontWeight: FontWeight.w900)),
         content: Text('ข้อมูลผู้เดินทางที่บันทึกไว้จะถูกลบทั้งหมด',
-            style: GoogleFonts.anuphan()),
+            style: appFont()),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -174,7 +173,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('ล้างข้อมูล Wallet แล้ว',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+            style: appFont(fontWeight: FontWeight.w700)),
         behavior: SnackBarBehavior.floating,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -203,7 +202,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
       appBar: AppBar(
         title: Text(
           'Document Wallet',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontWeight: FontWeight.w800,
             fontSize: 18,
             color: AppTheme.onSurface(context),
@@ -251,7 +250,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                             'บันทึกข้อมูลผู้เดินทางไว้ที่นี่เพียงครั้งเดียว '
                             'แล้วกด "กรอกจาก Wallet" ในขั้นตอนจองได้เลย — '
                             'ข้อมูลเก็บไว้บนเครื่องนี้เท่านั้น',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 12.5,
                               color: AppTheme.primaryColor,
                               height: 1.5,
@@ -407,7 +406,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         'ต้องการอาหารฮาลาล',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.onSurface(context),
@@ -441,7 +440,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                           : const Icon(Icons.save_rounded, size: 20),
                       label: Text(
                         _saving ? 'กำลังบันทึก...' : 'บันทึก Wallet',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
                         ),
@@ -487,7 +486,7 @@ class _WalletSectionHeader extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           title,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 14,
             fontWeight: FontWeight.w900,
             color: AppTheme.onSurface(context),
@@ -523,13 +522,13 @@ class _WalletField extends StatelessWidget {
       inputFormatters: inputFormatters,
       minLines: 1,
       maxLines: maxLines,
-      style: GoogleFonts.anuphan(
+      style: appFont(
         fontWeight: FontWeight.w600,
         color: AppTheme.onSurface(context),
       ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.anuphan(
+        hintStyle: appFont(
           color: AppTheme.mutedText(context).withValues(alpha: 0.65),
           fontWeight: FontWeight.w500,
         ),
@@ -586,7 +585,7 @@ class _WalletDropdown extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       icon: Icon(Icons.keyboard_arrow_down_rounded,
           color: AppTheme.mutedText(context)),
-      style: GoogleFonts.anuphan(
+      style: appFont(
         fontWeight: FontWeight.w700,
         color: AppTheme.onSurface(context),
         fontSize: 14,
@@ -594,7 +593,7 @@ class _WalletDropdown extends StatelessWidget {
       dropdownColor: AppTheme.surface(context),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.anuphan(
+        hintStyle: appFont(
           color: AppTheme.mutedText(context).withValues(alpha: 0.65),
           fontWeight: FontWeight.w500,
         ),

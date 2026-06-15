@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
@@ -130,7 +129,7 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
           children: [
             Text(
               'มีเพื่อนเชิญเข้าทริปไหม?',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
@@ -140,7 +139,7 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
             Text(
               'วางลิงก์หรือรหัสคำเชิญที่เจ้าของการจองส่งมา เพื่อเข้ากลุ่มแชท '
               'และติดตามสถานะรถได้จากบัญชีของคุณเอง',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13.5,
                 color: AppTheme.mutedText(context),
                 height: 1.5,
@@ -248,7 +247,7 @@ class _InvitePreviewCard extends StatelessWidget {
           if (invitedBy.isNotEmpty)
             Text(
               '$invitedBy เชิญคุณเข้าร่วม',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13,
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
@@ -257,7 +256,7 @@ class _InvitePreviewCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             tripTitle,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
@@ -290,7 +289,7 @@ class _PreviewRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             text,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13.5,
               color: AppTheme.onSurface(context),
               fontWeight: FontWeight.w600,
@@ -330,7 +329,7 @@ class _InfoBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13,
                 color: AppTheme.onSurface(context),
                 fontWeight: FontWeight.w600,

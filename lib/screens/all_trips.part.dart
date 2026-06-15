@@ -285,7 +285,7 @@ class _AllTripsHero extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'ค้นพบประสบการณ์ใหม่',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.primaryColor,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -298,7 +298,7 @@ class _AllTripsHero extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           'กิจกรรมและทริปทั้งหมด',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.textMain,
             fontSize: 28,
             height: 1.12,
@@ -309,7 +309,7 @@ class _AllTripsHero extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           'สำรวจทริปที่คัดสรรมาเพื่อคุณ ตั้งแต่ดำน้ำตื้น เดินป่า จนถึงบริการรถตู้ระดับพรีเมียม',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.textSecondary,
             fontSize: 14.5,
             height: 1.5,
@@ -375,7 +375,7 @@ class _TripsFilterPanel extends StatelessWidget {
             onSubmitted: (_) => onApply(),
             decoration: InputDecoration(
               hintText: 'ค้นหาทริป...',
-              hintStyle: GoogleFonts.anuphan(
+              hintStyle: appFont(
                 color: AppTheme.mutedText(context),
                 fontSize: 14.5,
                 fontWeight: FontWeight.w500,
@@ -404,7 +404,7 @@ class _TripsFilterPanel extends StatelessWidget {
                 ),
               ),
             ),
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontWeight: FontWeight.w600,
               fontSize: 14.5,
             ),
@@ -460,7 +460,7 @@ class _TripsFilterPanel extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                textStyle: GoogleFonts.anuphan(
+                textStyle: appFont(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.1,
@@ -477,7 +477,7 @@ class _TripsFilterPanel extends StatelessWidget {
                 icon: const Icon(Icons.close_rounded, size: 16),
                 label: Text(
                   'ล้างตัวกรอง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                   ),
@@ -508,7 +508,7 @@ class _FilterTitle extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           label,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.textMain,
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -571,7 +571,7 @@ class _FilterChipButton extends StatelessWidget {
             ],
             Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: selected ? Colors.white : AppTheme.primaryColor,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -632,7 +632,7 @@ class _TripsResultsToolbar extends StatelessWidget {
               icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
               borderRadius: BorderRadius.circular(14),
               isExpanded: true,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.textMain,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
@@ -681,7 +681,7 @@ class _InfoPill extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             text,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.primaryColor,
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
@@ -718,7 +718,7 @@ class _TripsLoadingCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'กำลังค้นหาทริปที่ดีที่สุดให้คุณ...',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.textMain,
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -758,7 +758,7 @@ class _TripsErrorCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'โหลดข้อมูลทริปไม่สำเร็จ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.textMain,
               fontSize: 17,
               fontWeight: FontWeight.w800,
@@ -771,7 +771,7 @@ class _TripsErrorCard extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.textSecondary,
               fontSize: 13.5,
               fontWeight: FontWeight.w500,
@@ -791,7 +791,7 @@ class _TripsErrorCard extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              textStyle: GoogleFonts.anuphan(
+              textStyle: appFont(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
               ),
@@ -922,7 +922,7 @@ class _AllTripGridCard extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.textMain,
                       fontSize: 14.5,
                       height: 1.25,
@@ -944,7 +944,7 @@ class _AllTripGridCard extends StatelessWidget {
                           location,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.textSecondary,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -966,7 +966,7 @@ class _AllTripGridCard extends StatelessWidget {
                         reviewCount > 0
                             ? numberText(trip['rating'], fallback: '0')
                             : 'ใหม่',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.textMain,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -974,7 +974,7 @@ class _AllTripGridCard extends StatelessWidget {
                       ),
                       Text(
                         '  ·  $duration วัน',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -987,7 +987,7 @@ class _AllTripGridCard extends StatelessWidget {
                     _priceLabel(trip),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.textMain,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -1036,7 +1036,7 @@ class _TripsPaginationBar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
                   '…',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.textSecondary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1113,7 +1113,7 @@ class _NumberPageButton extends StatelessWidget {
         ),
         child: Text(
           page.toString(),
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: selected ? Colors.white : AppTheme.textMain,
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
@@ -1241,7 +1241,7 @@ class _PromotionListCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             name,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               color: Colors.white,
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
@@ -1261,7 +1261,7 @@ class _PromotionListCard extends StatelessWidget {
                           ),
                           child: Text(
                             _discountLabel(),
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               color: AppTheme.primaryColor,
                               fontSize: 13,
                               fontWeight: FontWeight.w900,
@@ -1348,7 +1348,7 @@ class _ExpiryChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: Colors.white,
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
@@ -1404,7 +1404,7 @@ class _PromotionUsageBar extends StatelessWidget {
           children: [
             Text(
               'สิทธิ์การใช้งาน',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textSecondary,
@@ -1413,7 +1413,7 @@ class _PromotionUsageBar extends StatelessWidget {
             const Spacer(),
             Text(
               'เหลือ $remaining จาก $max สิทธิ์',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.primaryColor,
@@ -1458,7 +1458,7 @@ class _MetaPill extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             text,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w700,

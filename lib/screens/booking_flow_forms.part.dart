@@ -86,7 +86,7 @@ class _HalalChoiceButton extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: selected ? _softAccent : _mutedTextColor(context),
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
@@ -136,7 +136,7 @@ class _PremiumDropdown<T> extends StatelessWidget {
             icon: icon,
             hint: label,
           ),
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: _premiumText(context),
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -202,7 +202,7 @@ class _PremiumTextField extends StatelessWidget {
             icon: icon,
             hint: hint,
           ),
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: _premiumText(context),
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -263,7 +263,7 @@ class _SummaryMeta extends StatelessWidget {
             text,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: _mutedTextColor(context),
               fontSize: 12.5,
               height: 1.35,
@@ -296,7 +296,7 @@ class _PriceRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: isTotal ? _premiumText(context) : _mutedTextColor(context),
               fontSize: isTotal ? 16 : 14,
               fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
@@ -306,7 +306,7 @@ class _PriceRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: valueColor ?? _premiumText(context),
             fontSize: isTotal ? 20 : 14,
             fontWeight: isTotal ? FontWeight.w800 : FontWeight.w700,
@@ -340,7 +340,7 @@ class _CompactNotice extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: _mutedTextColor(context),
                 fontWeight: FontWeight.w700,
                 fontSize: 13,

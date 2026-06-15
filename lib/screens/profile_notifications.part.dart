@@ -51,23 +51,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(
           'ลบการแจ้งเตือนทั้งหมด',
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+          style: appFont(fontWeight: FontWeight.w900),
         ),
         content: Text(
           'การแจ้งเตือนทั้งหมดจะถูกลบและไม่สามารถกู้คืนได้ ต้องการดำเนินการต่อหรือไม่?',
-          style: GoogleFonts.anuphan(height: 1.45),
+          style: appFont(height: 1.45),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ยกเลิก', style: GoogleFonts.anuphan()),
+            child: Text('ยกเลิก', style: appFont()),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
             child: Text(
               'ลบทั้งหมด',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+              style: appFont(fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -408,7 +408,7 @@ class _MarkAllReadAction extends StatelessWidget {
                       )
                     : Text(
                         'อ่านทั้งหมด',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                         ),
@@ -433,7 +433,7 @@ class _NotificationSectionHeader extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.2,
@@ -443,7 +443,7 @@ class _NotificationSectionHeader extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '$count',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context).withValues(alpha: 0.55),
@@ -483,7 +483,7 @@ class _NotificationsEmptyState extends StatelessWidget {
             Text(
               'ยังไม่มีการแจ้งเตือน',
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
@@ -493,7 +493,7 @@ class _NotificationsEmptyState extends StatelessWidget {
             Text(
               'เมื่อมีอัปเดตการจอง การชำระเงิน หรือโปรโมชันใหม่ จะแสดงที่นี่',
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 14,
                 height: 1.5,
                 fontWeight: FontWeight.w600,
@@ -542,7 +542,7 @@ class _SwipableNotificationCard extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               'ลบ',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
@@ -646,7 +646,7 @@ class _NotificationCard extends StatelessWidget {
                             typeLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.2,
@@ -657,7 +657,7 @@ class _NotificationCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           _notificationTimeAgo(notification['created_at']),
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.mutedText(context),
@@ -670,7 +670,7 @@ class _NotificationCard extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 15.5,
                         fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
                         height: 1.2,
@@ -683,7 +683,7 @@ class _NotificationCard extends StatelessWidget {
                         body,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 13.5,
                           height: 1.45,
                           fontWeight: FontWeight.w500,

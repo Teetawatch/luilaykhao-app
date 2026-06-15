@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -252,7 +251,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
         SnackBar(
           content: Text(
             msg,
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+            style: appFont(fontWeight: FontWeight.w600),
           ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -294,7 +293,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
               centerTitle: true,
               title: Text(
                 'ค้นหาการจอง',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.onSurface(context),
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
@@ -416,7 +415,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
                             icon: const Icon(Icons.search_rounded, size: 18),
                             label: Text(
                               'ค้นหาการจองอื่น',
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -534,7 +533,7 @@ class _ToggleChip extends StatelessWidget {
                 child: Text(
                   label,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.1,
@@ -589,7 +588,7 @@ class _GuestHeroHeader extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'ดู QR และติดตามรถ\nโดยไม่ต้องสมัครสมาชิก',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 22,
               height: 1.25,
               fontWeight: FontWeight.w800,
@@ -600,7 +599,7 @@ class _GuestHeroHeader extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'ค้นหาด้วยรหัสการจอง หรือชื่อ-นามสกุลพร้อมเบอร์โทรที่ให้ไว้',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 14,
               height: 1.45,
               fontWeight: FontWeight.w500,
@@ -636,7 +635,7 @@ class _RefField extends StatelessWidget {
       children: [
         Text(
           'รหัสการจอง',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 14,
             fontWeight: FontWeight.w800,
             color: AppTheme.textMain,
@@ -651,7 +650,7 @@ class _RefField extends StatelessWidget {
             textCapitalization: TextCapitalization.characters,
             inputFormatters: [_BookingRefFormatter()],
             textInputAction: TextInputAction.next,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
@@ -659,7 +658,7 @@ class _RefField extends StatelessWidget {
             ),
             decoration: InputDecoration(
               hintText: 'LLK-20250409-0001',
-              hintStyle: GoogleFonts.anuphan(
+              hintStyle: appFont(
                 color: const Color(0xFF98A2B3),
                 fontWeight: FontWeight.w600,
               ),
@@ -703,7 +702,7 @@ class _NameField extends StatelessWidget {
       children: [
         Text(
           'ชื่อ-นามสกุลผู้เดินทาง',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 14,
             fontWeight: FontWeight.w800,
             color: AppTheme.textMain,
@@ -716,14 +715,14 @@ class _NameField extends StatelessWidget {
             controller: controller,
             focusNode: focusNode,
             textInputAction: TextInputAction.next,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppTheme.textMain,
             ),
             decoration: InputDecoration(
               hintText: 'ชื่อ-นามสกุล ตามที่ให้ไว้กับเจ้าหน้าที่',
-              hintStyle: GoogleFonts.anuphan(
+              hintStyle: appFont(
                 color: const Color(0xFF98A2B3),
                 fontWeight: FontWeight.w500,
               ),
@@ -775,7 +774,7 @@ class _PhoneField extends StatelessWidget {
       children: [
         Text(
           hint,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 14,
             fontWeight: FontWeight.w800,
             color: AppTheme.textMain,
@@ -797,7 +796,7 @@ class _PhoneField extends StatelessWidget {
               if (maxLength != null)
                 LengthLimitingTextInputFormatter(maxLength!),
             ],
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
@@ -805,7 +804,7 @@ class _PhoneField extends StatelessWidget {
             ),
             decoration: InputDecoration(
               hintText: hintPlaceholder,
-              hintStyle: GoogleFonts.anuphan(
+              hintStyle: appFont(
                 color: const Color(0xFF98A2B3),
                 fontWeight: FontWeight.w600,
               ),
@@ -864,7 +863,7 @@ class _ErrorText extends StatelessWidget {
       padding: const EdgeInsets.only(top: 6),
       child: Text(
         text,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: AppTheme.errorColor,
           fontSize: 12,
           fontWeight: FontWeight.w600,
@@ -939,7 +938,7 @@ class _LookupButton extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         'ค้นหาการจอง',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.2,
@@ -1042,7 +1041,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       tripTitle,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor,
@@ -1059,7 +1058,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   ref,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
@@ -1078,7 +1077,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       'เดินทาง $formattedDate',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
@@ -1104,7 +1103,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                         if (licensePlate != null && licensePlate.isNotEmpty)
                           licensePlate,
                       ].join(' • '),
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
@@ -1159,7 +1158,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       'พร้อมสำหรับเช็คอิน',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.onSurface(context),
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -1172,7 +1171,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                 Text(
                   'โปรดแสดงรหัสนี้แก่เจ้าหน้าที่เมื่อถึงจุดนัดหมาย',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: 12,
                     height: 1.4,
@@ -1207,7 +1206,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 SelectableText(
                   ref,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.primaryColor,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -1247,7 +1246,7 @@ class _GuestBookingResultCard extends StatelessWidget {
               icon: const Icon(Icons.near_me_rounded, size: 19),
               label: Text(
                 'ติดตามรถของฉัน',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
@@ -1277,7 +1276,7 @@ class _GuestBookingResultCard extends StatelessWidget {
             icon: const Icon(Icons.ios_share_rounded, size: 18),
             label: Text(
               'แชร์ตำแหน่งรถให้ครอบครัว',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+              style: appFont(fontWeight: FontWeight.w800),
             ),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.primaryColor,
@@ -1297,7 +1296,7 @@ class _GuestBookingResultCard extends StatelessWidget {
             icon: const Icon(Icons.search_rounded, size: 18),
             label: Text(
               'ค้นหาการจองอื่น',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+              style: appFont(fontWeight: FontWeight.w800),
             ),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.primaryColor,
@@ -1341,7 +1340,7 @@ class _EmptyNameResult extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 'ไม่พบข้อมูลการจอง',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
@@ -1352,7 +1351,7 @@ class _EmptyNameResult extends StatelessWidget {
               Text(
                 'ลองตรวจสอบชื่อ-นามสกุลและเบอร์โทรอีกครั้ง\nหรือติดต่อเจ้าหน้าที่',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13,
                   height: 1.5,
                   fontWeight: FontWeight.w500,
@@ -1368,7 +1367,7 @@ class _EmptyNameResult extends StatelessWidget {
           icon: const Icon(Icons.search_rounded, size: 18),
           label: Text(
             'ค้นหาใหม่',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+            style: appFont(fontWeight: FontWeight.w700),
           ),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.primaryColor,
@@ -1410,7 +1409,7 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: color,
@@ -1448,7 +1447,7 @@ class _GuestHelpCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'หาข้อมูลไม่เจอ?',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontWeight: FontWeight.w800,
                   fontSize: 15,
                   color: AppTheme.textMain,
@@ -1483,7 +1482,7 @@ class _GuestHelpCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             'ต้องการความช่วยเหลือ?',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontWeight: FontWeight.w700,
               fontSize: 13.5,
               color: AppTheme.textMain,
@@ -1554,7 +1553,7 @@ class _ContactButton extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontWeight: FontWeight.w800,
                 fontSize: 13,
                 color: color,
@@ -1583,7 +1582,7 @@ class _HelpItem extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               height: 1.45,
               fontWeight: FontWeight.w500,

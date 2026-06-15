@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
@@ -159,7 +158,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
                 const SizedBox(height: 16),
                 Text(
                   'ไม่มีสิทธิ์เข้าถึง',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.onSurface(context),
@@ -169,7 +168,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
                 Text(
                   'บัญชีนี้ไม่มีสิทธิ์เช็คอินลูกค้า กรุณาติดต่อผู้ดูแลระบบ',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.mutedText(context),
                     fontWeight: FontWeight.w600,
                     height: 1.5,
@@ -345,7 +344,7 @@ class _ScannerPanel extends StatelessWidget {
                     children: [
                       Text(
                         'สแกน QR เช็คอิน',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
                           color: AppTheme.onSurface(context),
@@ -353,7 +352,7 @@ class _ScannerPanel extends StatelessWidget {
                       ),
                       Text(
                         'สแกน QR หรือกรอกรหัสการจองด้วยตนเอง',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12,
                           color: AppTheme.mutedText(context),
                           fontWeight: FontWeight.w600,
@@ -384,7 +383,7 @@ class _ScannerPanel extends StatelessWidget {
                   icon: const Icon(Icons.camera_alt_rounded),
                   label: Text(
                     loading ? 'กำลังโหลด...' : 'เปิดกล้องสแกน QR',
-                    style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+                    style: appFont(fontWeight: FontWeight.w800),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -395,7 +394,7 @@ class _ScannerPanel extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Text(
                         'หรือกรอกรหัส',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12,
                           color: AppTheme.mutedText(context),
                           fontWeight: FontWeight.w700,
@@ -412,7 +411,7 @@ class _ScannerPanel extends StatelessWidget {
                   textInputAction: TextInputAction.search,
                   textCapitalization: TextCapitalization.characters,
                   onSubmitted: (_) => onLookup(),
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+                  style: appFont(fontWeight: FontWeight.w800),
                   decoration: InputDecoration(
                     hintText: 'กรอก QR Code หรือเลขการจอง',
                     prefixIcon: Icon(
@@ -482,7 +481,7 @@ class _CheckInButton extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               'เช็คอินเรียบร้อยแล้ว',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.primaryColor,
@@ -520,7 +519,7 @@ class _CheckInButton extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'การจองนี้ยังไม่ได้รับการยืนยัน ไม่สามารถเช็คอินได้',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13,
                       color: AppTheme.warningColor,
                       fontWeight: FontWeight.w700,
@@ -557,7 +556,7 @@ class _CheckInButton extends StatelessWidget {
                       const SizedBox(width: 10),
                       Text(
                         'กำลังเช็คอิน...',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
                         ),
@@ -571,7 +570,7 @@ class _CheckInButton extends StatelessWidget {
                       const SizedBox(width: 10),
                       Text(
                         'ยืนยันเช็คอิน',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
                         ),
@@ -781,7 +780,7 @@ class _BookingHeaderCard extends StatelessWidget {
                         children: [
                           Text(
                             'เลขการจอง',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 11,
                               color: AppTheme.mutedText(context),
                               fontWeight: FontWeight.w700,
@@ -789,7 +788,7 @@ class _BookingHeaderCard extends StatelessWidget {
                           ),
                           Text(
                             textOf(booking['booking_ref'], '-'),
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.onSurface(context),
@@ -820,7 +819,7 @@ class _BookingHeaderCard extends StatelessWidget {
                         children: [
                           Text(
                             textOf(user['name'], '-'),
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.onSurface(context),
@@ -842,7 +841,7 @@ class _BookingHeaderCard extends StatelessWidget {
                                   const SizedBox(width: 4),
                                   Text(
                                     textOf(user['phone']),
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontSize: 13,
                                       color: AppTheme.primaryColor,
                                       fontWeight: FontWeight.w700,
@@ -856,7 +855,7 @@ class _BookingHeaderCard extends StatelessWidget {
                           if (textOf(user['email']).isNotEmpty)
                             Text(
                               textOf(user['email']),
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontSize: 12,
                                 color: AppTheme.mutedText(context),
                                 fontWeight: FontWeight.w600,
@@ -889,7 +888,7 @@ class _BookingHeaderCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           'เช็คอินเมื่อ ${dateTimeText(booking['checked_in_at'])}',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 13,
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.w700,
@@ -950,7 +949,7 @@ class _UserAvatar extends StatelessWidget {
       backgroundColor: backgroundColor,
       child: Text(
         _initials(textOf(user['name'])),
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 15,
           fontWeight: FontWeight.w900,
           color: AppTheme.primaryColor,
@@ -1021,7 +1020,7 @@ class _StaffQrScannerScreenState extends State<_StaffQrScannerScreen> {
                   Expanded(
                     child: Text(
                       'สแกน QR เช็คอินลูกค้า',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
@@ -1054,7 +1053,7 @@ class _StaffQrScannerScreenState extends State<_StaffQrScannerScreen> {
             child: Text(
               'วาง QR ให้อยู่ในกรอบสีขาว\nระบบจะดึงข้อมูลการจองโดยอัตโนมัติ',
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: Colors.white.withValues(alpha: 0.86),
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
@@ -1257,7 +1256,7 @@ class _SectionCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.onSurface(context),
@@ -1276,7 +1275,7 @@ class _SectionCard extends StatelessWidget {
                   ),
                   child: Text(
                     trailingBadge!,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.primaryColor,
@@ -1345,7 +1344,7 @@ class _PassengerTile extends StatelessWidget {
             backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.10),
             child: Text(
               _initials(name),
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.primaryColor,
@@ -1365,7 +1364,7 @@ class _PassengerTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         name,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontWeight: FontWeight.w900,
                           fontSize: 14,
                           color: AppTheme.onSurface(context),
@@ -1376,7 +1375,7 @@ class _PassengerTile extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text(
                         '($nickname)',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.mutedText(context),
@@ -1401,7 +1400,7 @@ class _PassengerTile extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           phone,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 13,
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.w700,
@@ -1417,7 +1416,7 @@ class _PassengerTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     email,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12,
                       color: AppTheme.mutedText(context),
                       fontWeight: FontWeight.w600,
@@ -1433,7 +1432,7 @@ class _PassengerTile extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         'ฉุกเฉิน: $emergencyContact',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12,
                           color: Colors.red.shade400,
                           fontWeight: FontWeight.w600,
@@ -1445,7 +1444,7 @@ class _PassengerTile extends StatelessWidget {
                           onTap: () => launchUrl(Uri.parse('tel:$emergencyPhone')),
                           child: Text(
                             emergencyPhone,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 12,
                               color: AppTheme.primaryColor,
                               fontWeight: FontWeight.w700,
@@ -1494,7 +1493,7 @@ class _NoteChip extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: AppTheme.mutedText(context),
@@ -1528,7 +1527,7 @@ class _InfoRow extends StatelessWidget {
             width: 88,
             child: Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12,
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w700,
@@ -1538,7 +1537,7 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value.isEmpty ? '-' : value,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13,
                 color: AppTheme.onSurface(context),
                 fontWeight: FontWeight.w800,
@@ -1568,7 +1567,7 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 12,
           color: color,
           fontWeight: FontWeight.w900,
@@ -1605,7 +1604,7 @@ class _MessageBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: color,
                 fontWeight: FontWeight.w800,
                 fontSize: 14,
@@ -1630,7 +1629,7 @@ class _LoadingCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'กำลังดึงข้อมูลการจอง...',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
             ),
@@ -1667,7 +1666,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'ยังไม่มีข้อมูลการจอง',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 17,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
@@ -1677,7 +1676,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             'สแกน QR หรือกรอกเลขการจอง\nเพื่อดูรายละเอียดก่อนยืนยันเช็คอิน',
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 14,
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w600,
@@ -1701,7 +1700,7 @@ class _MutedText extends StatelessWidget {
       padding: const EdgeInsets.only(top: 4),
       child: Text(
         text,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           color: AppTheme.mutedText(context),
           fontWeight: FontWeight.w700,
         ),

@@ -218,7 +218,7 @@ class _StaffCheckInCta extends StatelessWidget {
                   children: [
                     Text(
                       'เช็คอินลูกค้า',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
@@ -227,7 +227,7 @@ class _StaffCheckInCta extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'สแกน QR หรือกรอกเลขการจองเพื่อเช็คอิน',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withValues(alpha: 0.88),
@@ -262,7 +262,7 @@ class _StaffEmptyState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'ยังไม่มีงานที่ได้รับมอบหมาย',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: AppTheme.textMain,
@@ -273,7 +273,7 @@ class _StaffEmptyState extends StatelessWidget {
           Text(
             'งานที่ได้รับมอบหมายจากแอดมินจะปรากฏที่นี่',
             textAlign: TextAlign.center,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               height: 1.45,
               fontWeight: FontWeight.w500,
@@ -377,7 +377,7 @@ class _StaffStatBox extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 20,
               fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
@@ -389,7 +389,7 @@ class _StaffStatBox extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
@@ -421,7 +421,7 @@ class _StaffGroupLabel extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: color,
@@ -516,7 +516,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                               ),
                               child: Text(
                                 'กำลังเดินทาง',
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFFDC2626),
@@ -528,7 +528,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                             tripTitle,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
                               height: 1.25,
@@ -548,7 +548,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                                     location,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                       color: AppTheme.textSecondary,
@@ -605,7 +605,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                         const SizedBox(width: 6),
                         Text(
                           'QR Check-in',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.textMain,
@@ -617,7 +617,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                           totalConfirmed == 0
                               ? 'ยังไม่มีผู้โดยสาร'
                               : '$checkedIn / $totalConfirmed คน',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: accentColor,
@@ -644,7 +644,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                         checkedIn == totalConfirmed
                             ? 'เช็คอินครบแล้ว'
                             : 'เหลือ ${totalConfirmed - checkedIn} คน ยังไม่เช็คอิน',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.textSecondary,
@@ -666,7 +666,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                         const SizedBox(width: 6),
                         Text(
                           'จุดรับผู้โดยสาร',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.textMain,
@@ -764,7 +764,7 @@ class _PickupPointRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: isDefault ? AppTheme.textSecondary : AppTheme.textMain,
@@ -774,7 +774,7 @@ class _PickupPointRow extends StatelessWidget {
               if (showRegion)
                 Text(
                   regionLabel,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.textSecondary,
@@ -792,7 +792,7 @@ class _PickupPointRow extends StatelessWidget {
           ),
           child: Text(
             '$count คน',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0D9488),
@@ -907,7 +907,7 @@ class _StaffActionRow extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: color,
@@ -950,7 +950,7 @@ class _StaffScheduleStatusBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: color,
@@ -990,7 +990,7 @@ class _StaffInfoChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppTheme.textMain,

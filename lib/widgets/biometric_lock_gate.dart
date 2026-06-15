@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
@@ -92,7 +91,7 @@ class _BiometricLockGateState extends State<BiometricLockGate> {
                       const SizedBox(height: 18),
                       Text(
                         'ปลดล็อกแอป',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.onSurface(context),
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
@@ -102,7 +101,7 @@ class _BiometricLockGateState extends State<BiometricLockGate> {
                       Text(
                         'ใช้ลายนิ้วมือหรือใบหน้าของคุณเพื่อเข้าใช้งาน',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.mutedText(context),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -124,7 +123,7 @@ class _BiometricLockGateState extends State<BiometricLockGate> {
                         icon: const Icon(Icons.fingerprint_rounded),
                         label: Text(
                           _authenticating ? 'กำลังตรวจสอบ…' : 'ยืนยันตัวตน',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
                           ),
@@ -139,7 +138,7 @@ class _BiometricLockGateState extends State<BiometricLockGate> {
                         },
                         child: Text(
                           'ใช้บัญชีอื่น',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.mutedText(context),
                             fontWeight: FontWeight.w800,
                           ),

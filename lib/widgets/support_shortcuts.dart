@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -72,7 +71,7 @@ class SupportShortcuts extends StatelessWidget {
         children: [
           Text(
             'ติดต่อด่วน',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.onSurface(context),
               fontSize: 15,
               fontWeight: FontWeight.w900,
@@ -81,7 +80,7 @@ class SupportShortcuts extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'เลือกช่องทางที่สะดวกที่สุด ทีมงานพร้อมตอบทุกวัน 08:00–22:00',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
@@ -198,7 +197,7 @@ class _ShortcutTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.onSurface(context),
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
@@ -206,7 +205,7 @@ class _ShortcutTile extends StatelessWidget {
                   ),
                   Text(
                     subtitle,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.mutedText(context),
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,

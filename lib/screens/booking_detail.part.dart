@@ -126,7 +126,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 // Trip title + booking ref
                 Text(
                   textOf(trip['title'], 'รายละเอียดการจอง'),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.primaryColor,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -136,7 +136,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 const SizedBox(height: 4),
                 Text(
                   textOf(booking['booking_ref']),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -220,7 +220,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                               children: [
                                 Text(
                                   name.isEmpty ? '-' : name,
-                                  style: GoogleFonts.anuphan(
+                                  style: appFont(
                                     fontWeight: FontWeight.w900,
                                     fontSize: 14,
                                     color: AppTheme.onSurface(context),
@@ -229,7 +229,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                                 const SizedBox(height: 2),
                                 Text(
                                   phone,
-                                  style: GoogleFonts.anuphan(
+                                  style: appFont(
                                     fontSize: 12,
                                     color: AppTheme.mutedText(context),
                                     fontWeight: FontWeight.w600,
@@ -333,7 +333,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                                 children: [
                                   Text(
                                     'งวดที่ ${textOf(inst['installment_no'])}  ·  ${money(inst['amount'])}',
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontWeight: FontWeight.w900,
                                       fontSize: 13,
                                       color: AppTheme.onSurface(context),
@@ -341,7 +341,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                                   ),
                                   Text(
                                     'ครบกำหนด ${dateText(inst['due_date'])}',
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontSize: 12,
                                       color: AppTheme.mutedText(context),
                                       fontWeight: FontWeight.w600,
@@ -483,7 +483,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 6),
                   Text(
                     'เปลี่ยนวันเดินทางได้ครั้งเดียว และต้องก่อนเดินทางอย่างน้อย 20 วัน · คงราคาเดิม',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 12,
                       color: AppTheme.mutedText(context),
                       fontWeight: FontWeight.w600,
@@ -511,7 +511,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                         Expanded(
                           child: Text(
                             'เปลี่ยนวันเดินทางได้ครั้งเดียว · ใช้สิทธิ์ไปแล้ว',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.mutedText(context),
@@ -665,7 +665,7 @@ class _WeatherCard extends StatelessWidget {
                         const SizedBox(width: 5),
                         Text(
                           'พยากรณ์อากาศวันเดินทาง',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.2,
@@ -678,7 +678,7 @@ class _WeatherCard extends StatelessWidget {
                       const SizedBox(height: 9),
                       Text(
                         desc,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           height: 1.1,
@@ -707,7 +707,7 @@ class _WeatherCard extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               tempText,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 38,
                 fontWeight: FontWeight.w800,
                 height: 1.0,
@@ -756,7 +756,7 @@ class _WeatherCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       note,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 12.5,
                         height: 1.4,
                         fontWeight: FontWeight.w600,
@@ -787,7 +787,7 @@ class _WeatherCard extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             text,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: Colors.white,
@@ -866,7 +866,7 @@ class _BookingDepositSummary extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'จ่ายมัดจำแล้ว · มียอดส่วนที่เหลือต้องชำระ',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: warning,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
@@ -899,7 +899,7 @@ class _BookingDepositSummary extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'ครบกำหนดชำระภายใน $dueText',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.onSurface(context),
                       fontSize: 11.5,
                       fontWeight: FontWeight.w800,
@@ -933,7 +933,7 @@ class _BookingDepositRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
@@ -942,7 +942,7 @@ class _BookingDepositRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: highlight
                 ? AppTheme.warningColor
                 : AppTheme.onSurface(context),
@@ -1042,7 +1042,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                     children: [
                       Text(
                         'เตรียมพร้อมก่อนเดินทาง',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: AppTheme.primaryColor,
@@ -1050,7 +1050,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                       ),
                       Text(
                         countdownText,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.primaryColor.withValues(alpha: 0.75),
@@ -1070,7 +1070,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                   ),
                   child: Text(
                     departureText(schedule),
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.primaryColor,
@@ -1104,7 +1104,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                             pickupPoint['pickup_location'],
                             textOf(pickupPoint['region']),
                           ),
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.onSurface(context),
@@ -1129,7 +1129,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             textOf(pickupPoint['notes']),
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 12.5,
                               color: AppTheme.mutedText(context),
                               height: 1.4,
@@ -1161,7 +1161,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Text(
                                   'เปิดแผนที่',
-                                  style: GoogleFonts.anuphan(
+                                  style: appFont(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.primaryColor,
@@ -1231,7 +1231,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                                 ],
                                 Text(
                                   phone.isNotEmpty ? '$name  $phone' : name,
-                                  style: GoogleFonts.anuphan(
+                                  style: appFont(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w800,
                                     color: phone.isNotEmpty
@@ -1278,7 +1278,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   text,
-                                  style: GoogleFonts.anuphan(
+                                  style: appFont(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                     color: AppTheme.mutedText(context),
@@ -1301,7 +1301,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                     mustKnow.isEmpty)
                   Text(
                     'ข้อมูลจะถูกอัปเดตโดยทีมงานก่อนวันเดินทาง',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13,
                       color: AppTheme.mutedText(context),
                       fontStyle: FontStyle.italic,
@@ -1340,7 +1340,7 @@ class _BriefingSection extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.mutedText(context),
@@ -1462,7 +1462,7 @@ class _ChecklistEntryRowState extends State<_ChecklistEntryRow> {
                     children: [
                       Text(
                         'เช็กของก่อนเดินทาง',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.onSurface(context),
@@ -1476,7 +1476,7 @@ class _ChecklistEntryRowState extends State<_ChecklistEntryRow> {
                             : allDone
                                 ? 'เตรียมของครบแล้ว 🎒'
                                 : 'เตรียมแล้ว $done จาก $total รายการ',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w500,
                           color: allDone
@@ -1632,7 +1632,7 @@ class _SosButtonState extends State<_SosButton> {
             const SizedBox(width: 8),
             Text(
               'ส่ง SOS แล้ว',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+              style: appFont(fontWeight: FontWeight.w900),
             ),
           ],
         ),
@@ -1641,7 +1641,7 @@ class _SosButtonState extends State<_SosButton> {
               ? 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนพร้อมตำแหน่งของคุณแล้ว'
               : 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนแล้ว '
                     '(ไม่สามารถระบุตำแหน่ง GPS ได้)',
-          style: GoogleFonts.anuphan(fontSize: 13, height: 1.5),
+          style: appFont(fontSize: 13, height: 1.5),
         ),
         actions: [
           FilledButton(
@@ -1716,7 +1716,7 @@ class _SosButtonState extends State<_SosButton> {
                   children: [
                     Text(
                       'ขอความช่วยเหลือฉุกเฉิน',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                         color: _sosRed,
@@ -1727,7 +1727,7 @@ class _SosButtonState extends State<_SosButton> {
                       _sending
                           ? 'กำลังส่งสัญญาณ SOS...'
                           : 'แจ้งเตือนสตาฟและเพื่อนร่วมทริปทันที',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 12,
                         color: AppTheme.mutedText(context),
                       ),
@@ -1848,7 +1848,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                 ),
                 title: Text(
                   'ถ่ายรูป',
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+                  style: appFont(fontWeight: FontWeight.w700),
                 ),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
@@ -1859,7 +1859,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                 ),
                 title: Text(
                   'เลือกจากคลังภาพ',
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+                  style: appFont(fontWeight: FontWeight.w700),
                 ),
                 onTap: () => Navigator.pop(ctx, ImageSource.gallery),
               ),
@@ -1913,7 +1913,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                   const SizedBox(width: 10),
                   Text(
                     'ขอความช่วยเหลือ SOS',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: _sosRed,
@@ -1924,7 +1924,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
               const SizedBox(height: 6),
               Text(
                 'เลือกข้อความที่ต้องการส่งให้สตาฟและผู้ร่วมทริป',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13,
                   color: Colors.grey.shade600,
                   height: 1.4,
@@ -1970,7 +1970,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                           Flexible(
                             child: Text(
                               opt.label,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 color: selected
@@ -1996,10 +1996,10 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                   maxLength: 255,
                   maxLines: 2,
                   onChanged: (_) => setState(() {}),
-                  style: GoogleFonts.anuphan(fontSize: 14),
+                  style: appFont(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'อธิบายสถานการณ์โดยย่อ...',
-                    hintStyle: GoogleFonts.anuphan(color: Colors.grey.shade400),
+                    hintStyle: appFont(color: Colors.grey.shade400),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(color: Colors.grey.shade300),
@@ -2037,7 +2037,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                     Expanded(
                       child: Text(
                         'สตาฟและผู้โดยสารในทริปจะได้รับการแจ้งเตือนพร้อมตำแหน่ง GPS ทันที',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12,
                           color: Colors.grey.shade600,
                           height: 1.4,
@@ -2075,7 +2075,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                         ),
                   label: Text(
                     'แนบรูปสถานที่ (ไม่บังคับ)',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: Colors.grey.shade700,
@@ -2134,7 +2134,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                       ),
                       child: Text(
                         'ยกเลิก',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontWeight: FontWeight.w700,
                           color: Colors.grey.shade700,
                         ),
@@ -2165,7 +2165,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                       icon: const Icon(Icons.sos_rounded, size: 20),
                       label: Text(
                         'ส่งสัญญาณ SOS',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
@@ -2223,7 +2223,7 @@ class _AssignedStaffList extends StatelessWidget {
                           Expanded(
                             child: Text(
                               name.isEmpty ? '-' : name,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 14,
                                 color: AppTheme.onSurface(context),
@@ -2245,7 +2245,7 @@ class _AssignedStaffList extends StatelessWidget {
                               ),
                               child: Text(
                                 nickname,
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
                                   color: AppTheme.primaryColor,
@@ -2272,7 +2272,7 @@ class _AssignedStaffList extends StatelessWidget {
                               const SizedBox(width: 4),
                               Text(
                                 phone,
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: AppTheme.primaryColor,
@@ -2377,7 +2377,7 @@ class _VehicleDriverCard extends StatelessWidget {
                       name.isNotEmpty
                           ? name
                           : (type.isNotEmpty ? type : 'รถรับส่ง'),
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontWeight: FontWeight.w900,
                         fontSize: 14,
                         color: AppTheme.onSurface(context),
@@ -2422,7 +2422,7 @@ class _VehicleDriverCard extends StatelessWidget {
                     children: [
                       Text(
                         'คนขับ',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.mutedText(context),
@@ -2430,7 +2430,7 @@ class _VehicleDriverCard extends StatelessWidget {
                       ),
                       Text(
                         driverName.isNotEmpty ? driverName : '-',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
@@ -2549,7 +2549,7 @@ class _PlateChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             plate,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 13,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.5,
@@ -2595,7 +2595,7 @@ class _ColorChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             color,
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: AppTheme.onSurface(context),
@@ -2653,7 +2653,7 @@ class _CallButton extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'โทร',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
@@ -2702,7 +2702,7 @@ class _StaffAvatar extends StatelessWidget {
       child: Center(
         child: Text(
           initial,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 18,
             fontWeight: FontWeight.w900,
             color: Colors.white,
@@ -2829,7 +2829,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           const SizedBox(height: 16),
           Text(
             'เปลี่ยนวันเดินทาง',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
@@ -2838,7 +2838,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           const SizedBox(height: 4),
           Text(
             'เลือกรอบเดินทางใหม่ของทริปเดียวกัน · เปลี่ยนได้ครั้งเดียว · คงราคาเดิม',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12.5,
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w600,
@@ -2872,7 +2872,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           child: Text(
                             'ไม่มีรอบเดินทางอื่นให้เลือกในขณะนี้',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               fontSize: 13,
                               color: AppTheme.mutedText(context),
                             ),
@@ -2933,7 +2933,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                                         children: [
                                           Text(
                                             departureText(sched),
-                                            style: GoogleFonts.anuphan(
+                                            style: appFont(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w900,
                                               color: AppTheme.onSurface(
@@ -2946,7 +2946,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                                             enough
                                                 ? 'ว่าง $avail ที่นั่ง'
                                                 : 'ที่นั่งไม่พอ (ว่าง $avail)',
-                                            style: GoogleFonts.anuphan(
+                                            style: appFont(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
                                               color: enough
@@ -2970,7 +2970,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                     const SizedBox(height: 8),
                     Text(
                       'เลือกที่นั่งใหม่ (${_selectedSeats.length}/$_passengerCount)',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.onSurface(context),
@@ -3016,7 +3016,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                               ),
                               child: Text(
                                 label,
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                   color: picked
@@ -3135,7 +3135,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
           const SizedBox(height: 16),
           Text(
             'เปลี่ยนจุดรับ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
@@ -3144,7 +3144,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
           const SizedBox(height: 4),
           Text(
             'เลือกจุดรับใหม่สำหรับรอบเดินทางนี้ · คงราคาเดิม',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               fontSize: 12.5,
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w600,
@@ -3220,7 +3220,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                             p['pickup_location'],
                                             textOf(p['region_label']),
                                           ),
-                                          style: GoogleFonts.anuphan(
+                                          style: appFont(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w900,
                                             color: AppTheme.onSurface(context),
@@ -3243,7 +3243,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                           ),
                                           child: Text(
                                             'ปัจจุบัน',
-                                            style: GoogleFonts.anuphan(
+                                            style: appFont(
                                               fontSize: 10.5,
                                               fontWeight: FontWeight.w800,
                                               color: AppTheme.mutedText(
@@ -3258,7 +3258,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                     const SizedBox(height: 2),
                                     Text(
                                       textOf(p['region_label']),
-                                      style: GoogleFonts.anuphan(
+                                      style: appFont(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                         color: AppTheme.mutedText(context),

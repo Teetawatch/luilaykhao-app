@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -177,7 +176,7 @@ class ProfileHeader extends StatelessWidget {
                   children: [
                     Text(
                       _greeting(),
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.mutedText(context),
@@ -188,7 +187,7 @@ class ProfileHeader extends StatelessWidget {
                       name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 21,
                         height: 1.2,
                         fontWeight: FontWeight.w800,
@@ -201,7 +200,7 @@ class ProfileHeader extends StatelessWidget {
                       email.isNotEmpty ? email : 'พร้อมออกผจญภัยครั้งต่อไปไหม?',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 13.5,
                         height: 1.4,
                         fontWeight: FontWeight.w500,
@@ -238,7 +237,7 @@ class ProfileHeader extends StatelessWidget {
               icon: const Icon(Icons.edit_outlined, size: 17),
               label: Text(
                 'แก้ไขโปรไฟล์',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -275,7 +274,7 @@ class _Avatar extends StatelessWidget {
                 child: Center(
                   child: Text(
                     initial,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.primaryColor,
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -291,7 +290,7 @@ class _Avatar extends StatelessWidget {
                   child: Center(
                     child: Text(
                       initial,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.primaryColor,
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -352,7 +351,7 @@ class ProfileStatsSection extends StatelessWidget {
                     children: [
                       Text(
                         'สมาชิกลุยเลเขา',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 15.5,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.textMain,
@@ -363,7 +362,7 @@ class ProfileStatsSection extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           'สะสมแต้มเพื่อปลดล็อกสิทธิพิเศษ',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
@@ -394,7 +393,7 @@ class ProfileStatsSection extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           _loyaltyTierLabel(tier),
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.primaryColor,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w800,
@@ -442,7 +441,7 @@ class ProfileStatsSection extends StatelessWidget {
               remaining == 0
                   ? 'พร้อมปลดล็อกสิทธิพิเศษถัดไป'
                   : 'อีก ${_formatCompact(remaining)} แต้ม ถึงระดับถัดไป',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.textSecondary,
@@ -459,7 +458,7 @@ class ProfileStatsSection extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   'แลกของรางวัล',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
@@ -527,7 +526,7 @@ class _StatMetric extends StatelessWidget {
               fit: BoxFit.scaleDown,
               child: Text(
                 value,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
@@ -540,7 +539,7 @@ class _StatMetric extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12,
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
@@ -687,7 +686,7 @@ class _QuickActionTile extends StatelessWidget {
                         ),
                         child: Text(
                           action.badge!,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.warningColor,
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
@@ -701,7 +700,7 @@ class _QuickActionTile extends StatelessWidget {
                   action.label,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 14,
                     height: 1.25,
                     color: AppTheme.textMain,
@@ -950,7 +949,7 @@ class _MenuTile extends StatelessWidget {
                       item.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: colorScheme.onSurface,
@@ -963,7 +962,7 @@ class _MenuTile extends StatelessWidget {
                         item.subtitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: colorScheme.onSurfaceVariant,
@@ -977,7 +976,7 @@ class _MenuTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   item.trailing!,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w500,
                     color: colorScheme.onSurfaceVariant,
@@ -1020,11 +1019,11 @@ class LogoutSection extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: Text(
           'ออกจากระบบ',
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+          style: appFont(fontWeight: FontWeight.w900),
         ),
         content: Text(
           'คุณต้องการออกจากระบบใช่หรือไม่?',
-          style: GoogleFonts.anuphan(),
+          style: appFont(),
         ),
         actions: [
           TextButton(
@@ -1179,7 +1178,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           Expanded(
             child: Text(
               'ลบบัญชีเรียบร้อยแล้ว',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+              style: appFont(fontWeight: FontWeight.w900),
             ),
           ),
         ],
@@ -1187,7 +1186,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
       content: Text(
         'บัญชีและข้อมูลทั้งหมดของคุณถูกลบออกจากระบบอย่างถาวรเรียบร้อยแล้ว '
         'ขอบคุณที่ใช้บริการลุยเลเขา',
-        style: GoogleFonts.anuphan(fontSize: 14, height: 1.5),
+        style: appFont(fontSize: 14, height: 1.5),
       ),
       actions: [
         FilledButton(
@@ -1195,7 +1194,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           style: FilledButton.styleFrom(backgroundColor: AppTheme.primaryColor),
           child: Text(
             'ปิด',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+            style: appFont(fontWeight: FontWeight.w800),
           ),
         ),
       ],
@@ -1206,7 +1205,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
     return AlertDialog(
       title: Text(
         'ลบบัญชีถาวร',
-        style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+        style: appFont(fontWeight: FontWeight.w900),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1215,7 +1214,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           Text(
             'การลบบัญชีจะลบข้อมูลส่วนตัว ประวัติการจอง แต้มสะสม และรีวิวทั้งหมดอย่างถาวร '
             'การดำเนินการนี้ไม่สามารถย้อนกลับได้',
-            style: GoogleFonts.anuphan(fontSize: 14, height: 1.5),
+            style: appFont(fontSize: 14, height: 1.5),
           ),
           if (widget.requiresPassword) ...[
             const SizedBox(height: 16),
@@ -1223,10 +1222,10 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
               controller: _passwordController,
               obscureText: _obscure,
               enabled: !_loading,
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+              style: appFont(fontWeight: FontWeight.w600),
               decoration: InputDecoration(
                 labelText: 'ยืนยันด้วยรหัสผ่าน',
-                labelStyle: GoogleFonts.anuphan(),
+                labelStyle: appFont(),
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   icon: Icon(
@@ -1243,7 +1242,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             const SizedBox(height: 12),
             Text(
               _error!,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.errorColor,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
@@ -1255,7 +1254,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
       actions: [
         TextButton(
           onPressed: _loading ? null : () => Navigator.pop(context, false),
-          child: Text('ยกเลิก', style: GoogleFonts.anuphan()),
+          child: Text('ยกเลิก', style: appFont()),
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
@@ -1271,7 +1270,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                 )
               : Text(
                   'ลบบัญชี',
-                  style: GoogleFonts.anuphan(fontWeight: FontWeight.w800),
+                  style: appFont(fontWeight: FontWeight.w800),
                 ),
         ),
       ],
@@ -1316,7 +1315,7 @@ class _AccountActionTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: color,

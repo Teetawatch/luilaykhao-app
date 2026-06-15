@@ -138,7 +138,7 @@ class StickyBookingBar extends StatelessWidget {
                                     priceLabel,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontSize: 11.5,
                                       color: AppTheme.mutedText(context),
                                       fontWeight: FontWeight.w700,
@@ -175,7 +175,7 @@ class StickyBookingBar extends StatelessWidget {
                                     const SizedBox(width: 5),
                                     Text(
                                       'รอบเหมา',
-                                      style: GoogleFonts.anuphan(
+                                      style: appFont(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
                                         color: const Color(0xFF7C3AED),
@@ -189,7 +189,7 @@ class StickyBookingBar extends StatelessWidget {
                                 priceValue,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.anuphan(
+                                style: appFont(
                                   fontSize: 25,
                                   fontWeight: FontWeight.w800,
                                   color: isDark ? Colors.white : _premiumText,
@@ -212,7 +212,7 @@ class StickyBookingBar extends StatelessWidget {
                                     'Join Trip ${_priceText(trip, schedule: selectedSchedule, isJoinTrip: true)}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.anuphan(
+                                    style: appFont(
                                       fontSize: 11,
                                       color: _softAccent,
                                       fontWeight: FontWeight.w700,
@@ -262,7 +262,7 @@ class StickyBookingBar extends StatelessWidget {
                               joinTripPrice > 0
                                   ? 'จอยทริป · ${money(joinTripPrice)} / คน'
                                   : 'จอยทริป',
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -0.1,
@@ -334,7 +334,7 @@ class _BookingButtonState extends State<_BookingButton> {
               const SizedBox(width: 6),
               Text(
                 'จองเลย',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,

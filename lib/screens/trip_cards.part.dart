@@ -107,7 +107,7 @@ class PopularTripCardLegacy extends StatelessWidget {
                     textOf(trip['title'], '-'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.textMain,
                       fontSize: 18,
                       height: 1.1,
@@ -128,7 +128,7 @@ class PopularTripCardLegacy extends StatelessWidget {
                           location,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: AppTheme.textSecondary,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -154,7 +154,7 @@ class PopularTripCardLegacy extends StatelessWidget {
                             const SizedBox(width: 4),
                             Text(
                               numberText(trip['rating'], fallback: '5.0'),
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 color: const Color(0xFF92400E),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
@@ -198,7 +198,7 @@ class _ParticipantRow extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           '$joined คน ร่วมเดินทางแล้ว',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -292,7 +292,7 @@ class _ReferenceTripCard extends StatelessWidget {
                 ),
                 child: Text(
                   _tripTypeLabel(type),
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: const Color(0xFF087C68),
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
@@ -311,7 +311,7 @@ class _ReferenceTripCard extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: Colors.white,
                       fontSize: 16,
                       height: 1.15,
@@ -323,7 +323,7 @@ class _ReferenceTripCard extends StatelessWidget {
                     duration,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: Colors.white,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -358,7 +358,7 @@ class _ReferenceTripCard extends StatelessWidget {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(fontSize: 14),
+                          style: appFont(fontSize: 14),
                         ),
                       ),
                       const Icon(
@@ -369,7 +369,7 @@ class _ReferenceTripCard extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         '${numberText(trip['rating'], fallback: '4.9')} ($reviewCount รีวิว)',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -507,7 +507,7 @@ class FeaturedTripCard extends StatelessWidget {
                           textOf(trip['location'], 'ประเทศไทย'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: Colors.white70,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -521,7 +521,7 @@ class FeaturedTripCard extends StatelessWidget {
                     textOf(trip['title'], '-'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: Colors.white,
                       fontSize: 24,
                       height: 1.1,
@@ -534,7 +534,7 @@ class FeaturedTripCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           money(trip['price_per_person']),
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -549,7 +549,7 @@ class FeaturedTripCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         numberText(trip['rating'], fallback: '5.0'),
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),

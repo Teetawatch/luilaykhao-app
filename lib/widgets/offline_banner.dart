@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../services/connectivity_service.dart';
 import '../theme/app_theme.dart';
@@ -47,7 +46,7 @@ class OfflineBanner extends StatelessWidget {
                         Flexible(
                           child: Text(
                             'ออฟไลน์อยู่ ข้อมูลบางส่วนอาจไม่อัปเดต',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               color: Colors.white,
                               fontSize: 12.5,
                               fontWeight: FontWeight.w800,

@@ -70,7 +70,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
           backgroundColor: AppTheme.primaryColor,
           content: Text(
             'คัดลอกโค้ดแล้ว',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+            style: appFont(fontWeight: FontWeight.w700),
           ),
         ),
       );
@@ -100,7 +100,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
         iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
         title: Text(
           'ชวนเพื่อน',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             color: AppTheme.onSurface(context),
             fontSize: 18,
             fontWeight: FontWeight.w800,
@@ -202,7 +202,7 @@ class _HeroCard extends StatelessWidget {
           const SizedBox(height: 18),
           Text(
             'ชวนเพื่อน รับแต้มฟรีทั้งคู่',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.w900,
@@ -214,7 +214,7 @@ class _HeroCard extends StatelessWidget {
           Text(
             'เมื่อเพื่อนสมัครด้วยโค้ดของคุณและจองทริปแรกสำเร็จ '
             'คุณรับ $referrerPoints แต้ม และเพื่อนรับ $refereePoints แต้มทันที',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: Colors.white.withValues(alpha: 0.92),
               fontSize: 14,
               height: 1.5,
@@ -255,7 +255,7 @@ class _CodeCard extends StatelessWidget {
         children: [
           Text(
             'โค้ดเชิญเพื่อนของคุณ',
-            style: GoogleFonts.anuphan(
+            style: appFont(
               color: AppTheme.mutedText(context),
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -312,7 +312,7 @@ class _CodeCard extends StatelessWidget {
               icon: const Icon(Icons.ios_share_rounded, size: 19),
               label: Text(
                 'แชร์คำเชิญ',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 15.5,
                   fontWeight: FontWeight.w800,
                 ),
@@ -393,7 +393,7 @@ class _SummaryTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
@@ -402,7 +402,7 @@ class _SummaryTile extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               label,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
@@ -477,7 +477,7 @@ class _HowItWorks extends StatelessWidget {
                       children: [
                         Text(
                           '${i + 1}. ${steps[i].title}',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.onSurface(context),
@@ -486,7 +486,7 @@ class _HowItWorks extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           steps[i].body,
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                             fontSize: 13,
                             height: 1.4,
                             fontWeight: FontWeight.w500,
@@ -541,7 +541,7 @@ class _FriendsList extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'ยังไม่มีเพื่อนที่ชวน',
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.onSurface(context),
@@ -551,7 +551,7 @@ class _FriendsList extends StatelessWidget {
             Text(
               'แชร์โค้ดของคุณให้เพื่อน แล้วมาดูความคืบหน้าที่นี่',
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13,
                 height: 1.45,
                 fontWeight: FontWeight.w500,
@@ -609,7 +609,7 @@ class _FriendTile extends StatelessWidget {
             backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.10),
             child: Text(
               name.characters.isEmpty ? '?' : name.characters.first,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 color: AppTheme.primaryColor,
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
@@ -623,7 +623,7 @@ class _FriendTile extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.onSurface(context),
@@ -632,7 +632,7 @@ class _FriendTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   rewarded ? 'จองทริปแรกแล้ว' : 'รอจองทริปแรก',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.mutedText(context),
@@ -665,7 +665,7 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         rewarded ? '+$points แต้ม' : 'รอดำเนินการ',
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 12,
           fontWeight: FontWeight.w800,
           color: color,
@@ -686,7 +686,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: GoogleFonts.anuphan(
+      style: appFont(
         fontSize: 13,
         fontWeight: FontWeight.w700,
         color: AppTheme.mutedText(context),
@@ -718,7 +718,7 @@ class _ErrorView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
@@ -732,7 +732,7 @@ class _ErrorView extends StatelessWidget {
               ),
               child: Text(
                 'ลองอีกครั้ง',
-                style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+                style: appFont(fontWeight: FontWeight.w700),
               ),
             ),
           ],

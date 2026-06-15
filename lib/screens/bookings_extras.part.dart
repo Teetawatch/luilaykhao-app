@@ -54,7 +54,7 @@ class _RefundStatusCallToAction extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.onSurface(context),
                     fontSize: 13.5,
                     fontWeight: FontWeight.w900,
@@ -252,7 +252,7 @@ class _ActionChipButton extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.onSurface(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -333,7 +333,7 @@ class _TripChatButton extends StatelessWidget {
                   children: [
                     Text(
                       'แชทกลุ่มทริป',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: Colors.white,
                         fontSize: 15.5,
                         fontWeight: FontWeight.w900,
@@ -342,7 +342,7 @@ class _TripChatButton extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'พูดคุยกับเพื่อนร่วมทริปและทีมงาน',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: Colors.white.withValues(alpha: 0.88),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -439,7 +439,7 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('เชิญเพื่อน', style: GoogleFonts.anuphan(fontWeight: FontWeight.w800)),
+        title: Text('เชิญเพื่อน', style: appFont(fontWeight: FontWeight.w800)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,7 +447,7 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
             Text(
               'ตั้งชื่อเล่นให้คำเชิญนี้ (ไม่บังคับ) แล้วส่งลิงก์ให้เพื่อน '
               'เพื่อนกดเข้าร่วมด้วยบัญชีของตัวเองได้ทุกวิธีล็อกอิน',
-              style: GoogleFonts.anuphan(fontSize: 13, height: 1.4),
+              style: appFont(fontSize: 13, height: 1.4),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -524,7 +524,7 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
         Text(
           'เชิญเพื่อนร่วมเดินทางเข้าการจองนี้ เพื่อนจะเข้ากลุ่มแชทและติดตามรถ '
           'ได้จากบัญชีของตัวเอง (ใช้การจองและการชำระเงินใบเดียวกัน)',
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 12.5,
             color: AppTheme.mutedText(context),
             height: 1.45,
@@ -585,7 +585,7 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
             else
               Text(
                 'เชิญสมาชิกครบตามจำนวนผู้เดินทางแล้ว',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 12,
                   color: AppTheme.mutedText(context),
                 ),
@@ -637,7 +637,7 @@ class _MemberTile extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontWeight: FontWeight.w800,
                       fontSize: 13.5,
                       color: AppTheme.onSurface(context),
@@ -646,7 +646,7 @@ class _MemberTile extends StatelessWidget {
                   const SizedBox(height: 1),
                   Text(
                     subtitle,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 11.5,
                       color: statusColor,
                       fontWeight: FontWeight.w700,
@@ -946,7 +946,7 @@ class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
             provider.errorMessage.isNotEmpty
                 ? provider.errorMessage
                 : 'ไม่พบข้อมูลติดตามรถ',
-            style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+            style: appFont(fontWeight: FontWeight.w600),
           ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -1022,7 +1022,7 @@ class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
                   children: [
                     Text(
                       'ติดตามรถแบบเรียลไทม์',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.onSurface(context),
                         fontSize: 15.5,
                         fontWeight: FontWeight.w900,
@@ -1031,7 +1031,7 @@ class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
                     const SizedBox(height: 2),
                     Text(
                       'ดูตำแหน่งรถและเวลาถึงโดยประมาณ',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.mutedText(context),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

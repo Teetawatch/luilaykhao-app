@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/version_gate_service.dart';
@@ -30,7 +29,7 @@ class ForceUpdateScreen extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 'มีเวอร์ชันใหม่',
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.onSurface(context),
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -40,7 +39,7 @@ class ForceUpdateScreen extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   color: AppTheme.mutedText(context),
                   fontSize: 14,
                   height: 1.55,
@@ -51,7 +50,7 @@ class ForceUpdateScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   'ต้องใช้เวอร์ชัน ${result.minVersion} ขึ้นไป',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,
@@ -81,7 +80,7 @@ class ForceUpdateScreen extends StatelessWidget {
                 icon: const Icon(Icons.shop_rounded, color: Colors.white),
                 label: Text(
                   'อัปเดตทันที',
-                  style: GoogleFonts.anuphan(
+                  style: appFont(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,

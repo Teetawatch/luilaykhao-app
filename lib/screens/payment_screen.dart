@@ -6,7 +6,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -344,7 +343,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         foregroundColor: AppTheme.onSurface(context),
         title: Text(
           'ชำระเงิน',
-          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900),
+          style: appFont(fontWeight: FontWeight.w900),
         ),
       ),
       body: FutureBuilder<Map<String, dynamic>>(

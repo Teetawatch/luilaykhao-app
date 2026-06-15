@@ -108,7 +108,7 @@ class _EmptyState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.2,
@@ -121,7 +121,7 @@ class _EmptyState extends StatelessWidget {
               child: Text(
                 body,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 14,
                   height: 1.45,
                   fontWeight: FontWeight.w500,
@@ -350,7 +350,7 @@ class _SheetSectionTitle extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           title,
-          style: GoogleFonts.anuphan(
+          style: appFont(
             fontSize: 15,
             fontWeight: FontWeight.w900,
             color: AppTheme.onSurface(context),
@@ -379,7 +379,7 @@ class _InlineBadge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.anuphan(
+        style: appFont(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: AppTheme.mutedText(context),
@@ -562,7 +562,7 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
                               widget.notification.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
                                 color: isDark
@@ -576,7 +576,7 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
                               widget.notification.body,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.anuphan(
+                              style: appFont(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w500,
                                 color: AppTheme.textSecondary,

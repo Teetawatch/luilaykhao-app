@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -119,7 +118,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('อัปโหลดรูปภาพล้มเหลว',
-                style: GoogleFonts.anuphan()),
+                style: appFont()),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14)),
@@ -197,7 +196,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
             width: 78,
             child: Text(
               _categoryLabels[key]!,
-              style: GoogleFonts.anuphan(
+              style: appFont(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.onSurface(context),
@@ -253,7 +252,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                   Text(
                     'รีวิวทริปนี้',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.onSurface(context),
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
@@ -263,7 +262,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                   Text(
                     widget.tripTitle,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       color: AppTheme.mutedText(context),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -285,7 +284,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                     Text(
                 'ภาพรวม',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.anuphan(
+                style: appFont(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.mutedText(context),
@@ -327,7 +326,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'ให้คะแนนแยกหมวด (ไม่บังคับ)',
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.mutedText(context),
@@ -372,7 +371,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 children: [
                   Text(
                     'รูปภาพ (${_selectedImages.length}/$_maxImages)',
-                    style: GoogleFonts.anuphan(
+                    style: appFont(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
@@ -385,7 +384,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                       icon: const Icon(Icons.add_photo_alternate_outlined,
                           size: 17),
                       label: Text('เพิ่มรูป',
-                          style: GoogleFonts.anuphan(
+                          style: appFont(
                               fontWeight: FontWeight.w800)),
                       style: TextButton.styleFrom(
                         foregroundColor: AppTheme.primaryColor,
@@ -506,7 +505,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                       const SizedBox(height: 8),
                       Text(
                         _error!,
-                        style: GoogleFonts.anuphan(
+                        style: appFont(
                           color: AppTheme.errorColor,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w800,
@@ -530,7 +529,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                         : () => Navigator.of(context).pop(false),
                     child: Text(
                       'ยกเลิก',
-                      style: GoogleFonts.anuphan(
+                      style: appFont(
                         color: AppTheme.mutedText(context),
                         fontWeight: FontWeight.w800,
                       ),
@@ -563,7 +562,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                           )
                         : Text(
                             'ส่งรีวิว',
-                            style: GoogleFonts.anuphan(
+                            style: appFont(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
                             ),
