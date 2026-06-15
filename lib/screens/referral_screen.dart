@@ -102,7 +102,8 @@ class _ReferralScreenState extends State<ReferralScreen> {
           'ชวนเพื่อน',
           style: GoogleFonts.anuphan(
             color: AppTheme.onSurface(context),
-            fontWeight: FontWeight.w900,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),
@@ -686,10 +687,9 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       text,
       style: GoogleFonts.anuphan(
-        fontSize: 16,
-        fontWeight: FontWeight.w900,
-        letterSpacing: -0.2,
-        color: AppTheme.onSurface(context),
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: AppTheme.mutedText(context),
       ),
     );
   }
