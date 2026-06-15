@@ -213,6 +213,91 @@ class _PremiumTextField extends StatelessWidget {
   }
 }
 
+/// Tap-to-pick birth date field, styled to match [_PremiumTextField]. Backed by a
+/// [ValueNotifier] so it stays in sync when the traveler card autofills from the
+/// user's profile/wallet, and integrates with the surrounding [Form] for validation.
+class _PremiumDatePicker extends StatelessWidget {
+  final ValueNotifier<DateTime?> value;
+  final String label;
+  final IconData icon;
+  final String? Function(DateTime?)? validator;
+
+  const _PremiumDatePicker({
+    required this.value,
+    required this.label,
+    required this.icon,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<DateTime?>(
+      valueListenable: value,
+      builder: (context, current, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: _labelStyle(context)),
+            const SizedBox(height: 8),
+            FormField<DateTime>(
+              // Re-create when the value changes so initialValue applies and any
+              // prior validation error clears once a date is chosen.
+              key: ValueKey(current),
+              initialValue: current,
+              validator: validator,
+              builder: (field) {
+                return InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate:
+                          current ?? DateTime(now.year - 25, now.month, now.day),
+                      firstDate: DateTime(now.year - 100),
+                      lastDate: now,
+                      helpText: 'เลือกวัน/เดือน/ปีเกิด',
+                    );
+                    if (picked != null) {
+                      value.value =
+                          DateTime(picked.year, picked.month, picked.day);
+                    }
+                  },
+                  child: InputDecorator(
+                    isEmpty: current == null,
+                    decoration: _fieldDecoration(
+                      context: context,
+                      icon: icon,
+                      hint: 'แตะเพื่อเลือกวันเกิด',
+                    ).copyWith(
+                      errorText: field.errorText,
+                      suffixIcon: Icon(
+                        Icons.calendar_month_rounded,
+                        size: 18,
+                        color: _mutedTextColor(context),
+                      ),
+                    ),
+                    child: current == null
+                        ? null
+                        : Text(
+                            _birthDateLabel(current),
+                            style: appFont(
+                              color: _premiumText(context),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _CounterButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onPressed;

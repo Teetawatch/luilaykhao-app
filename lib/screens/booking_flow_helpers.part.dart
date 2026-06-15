@@ -123,6 +123,7 @@ class _PassengerControllers {
   final phone = TextEditingController();
   final email = TextEditingController();
   final idCard = TextEditingController();
+  final birthDate = ValueNotifier<DateTime?>(null);
   final bloodGroup = TextEditingController();
   final emergencyContact = TextEditingController();
   final emergencyPhone = TextEditingController();
@@ -142,6 +143,8 @@ class _PassengerControllers {
     if (p.isNotEmpty) phone.text = p;
     final id = (wallet['id_card'] as String? ?? '').trim();
     if (id.isNotEmpty) idCard.text = id;
+    final bd = _parseBirthDate(wallet['birth_date']);
+    if (bd != null) birthDate.value = bd;
     final bg = (wallet['blood_group'] as String? ?? '').trim();
     if (bg.isNotEmpty) bloodGroup.text = bg;
     final ec = (wallet['emergency_contact'] as String? ?? '').trim();
@@ -162,6 +165,7 @@ class _PassengerControllers {
     phone.text = textOf(user['phone']);
     email.text = textOf(user['email']);
     idCard.text = textOf(user['id_card']);
+    birthDate.value = _parseBirthDate(user['birth_date']);
     bloodGroup.text = _profileBloodGroup(user['blood_group']);
     emergencyContact.text = textOf(user['emergency_contact']);
     emergencyPhone.text = textOf(user['emergency_phone']);
@@ -181,6 +185,7 @@ class _PassengerControllers {
     'phone': phone.text.trim(),
     'email': email.text.trim().isEmpty ? null : email.text.trim(),
     'id_card': idCard.text.trim().isEmpty ? null : idCard.text.trim(),
+    'birth_date': _formatBirthDate(birthDate.value),
     'blood_group': bloodGroup.text.trim().isEmpty
         ? null
         : bloodGroup.text.trim(),
@@ -205,6 +210,7 @@ class _PassengerControllers {
     phone.dispose();
     email.dispose();
     idCard.dispose();
+    birthDate.dispose();
     bloodGroup.dispose();
     emergencyContact.dispose();
     emergencyPhone.dispose();
@@ -329,6 +335,48 @@ String? _bloodGroupValue(String value) {
 String _profileBloodGroup(dynamic value) {
   final group = textOf(value).trim().toUpperCase();
   return _bloodGroupOptions.contains(group) ? group : '';
+}
+
+/// Parse a stored birth date (ISO 'YYYY-MM-DD' or full ISO timestamp) into a
+/// local DateTime, or null when missing/unparseable.
+DateTime? _parseBirthDate(dynamic value) {
+  final raw = value?.toString().trim() ?? '';
+  if (raw.isEmpty) return null;
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return null;
+  return DateTime(parsed.year, parsed.month, parsed.day);
+}
+
+/// Format a birth date as the 'YYYY-MM-DD' string the API expects, or null.
+String? _formatBirthDate(DateTime? date) {
+  if (date == null) return null;
+  final m = date.month.toString().padLeft(2, '0');
+  final d = date.day.toString().padLeft(2, '0');
+  return '${date.year}-$m-$d';
+}
+
+const _thaiMonthsAbbr = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+];
+
+/// Whole years between [birth] and today.
+int _ageFromBirthDate(DateTime birth) {
+  final now = DateTime.now();
+  var age = now.year - birth.year;
+  if (now.month < birth.month ||
+      (now.month == birth.month && now.day < birth.day)) {
+    age--;
+  }
+  return age;
+}
+
+/// Human label for a chosen birth date, e.g. "15 ม.ค. 2543 · อายุ 25 ปี"
+/// (Buddhist era year for display, with the computed age).
+String _birthDateLabel(DateTime date) {
+  final month = _thaiMonthsAbbr[date.month - 1];
+  final buddhistYear = date.year + 543;
+  return '${date.day} $month $buddhistYear · อายุ ${_ageFromBirthDate(date)} ปี';
 }
 
 bool _asBool(dynamic value) {

@@ -100,6 +100,10 @@ class ProfilePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       ProfileHeader(user: user),
+                      if (_parseProfileBirthDate(user['birth_date']) == null) ...[
+                        const SizedBox(height: 16),
+                        _BirthDatePromptBanner(user: user),
+                      ],
                       const SizedBox(height: 16),
                       ProfileStatsSection(app: app, loyalty: loyalty),
                       const SizedBox(height: 24),
@@ -245,6 +249,69 @@ class ProfileHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shown on the profile screen for accounts created before birth date was
+/// collected — nudges the customer to add it so future bookings prefill and
+/// trips that require it (parks/insurers) have the data ready.
+class _BirthDatePromptBanner extends StatelessWidget {
+  final Map<String, dynamic> user;
+
+  const _BirthDatePromptBanner({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.primaryColor.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _pushPremium(context, EditProfileScreen(initialUser: user)),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.cake_outlined,
+                size: 22,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'เพิ่มวัน/เดือน/ปีเกิด',
+                      style: appFont(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'บางทริปต้องใช้ข้อมูลวันเกิด กรอกไว้เพื่อให้จองครั้งต่อไปสะดวกขึ้น',
+                      style: appFont(
+                        fontSize: 12.5,
+                        height: 1.35,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.primaryColor,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

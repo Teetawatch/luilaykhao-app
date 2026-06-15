@@ -25,6 +25,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _passwordConfirmation;
   final _imagePicker = ImagePicker();
   String? _avatarImagePath;
+  DateTime? _birthDate;
   bool _saving = false;
 
   @override
@@ -36,6 +37,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _title = TextEditingController(text: _cleanText(user['title']));
     _nickname = TextEditingController(text: _cleanText(user['nickname']));
     _idCard = TextEditingController(text: _cleanText(user['id_card']));
+    _birthDate = _parseProfileBirthDate(user['birth_date']);
     _bloodGroup = TextEditingController(text: _cleanText(user['blood_group']));
     _emergencyContact = TextEditingController(
       text: _cleanText(user['emergency_contact']),
@@ -78,6 +80,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       'title': _nullableText(_title),
       'nickname': _nullableText(_nickname),
       'id_card': _nullableText(_idCard),
+      'birth_date': _formatProfileBirthDate(_birthDate),
       'blood_group': _nullableText(_bloodGroup),
       'emergency_contact': _nullableText(_emergencyContact),
       'emergency_phone': _nullableText(_emergencyPhone),
@@ -232,6 +235,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   ? null
                                   : 'กรุณากรอกเลขบัตรประชาชน 13 หลัก';
                             },
+                          ),
+                          _ProfileDateField(
+                            value: _birthDate,
+                            label: 'วัน/เดือน/ปีเกิด',
+                            icon: Icons.cake_outlined,
+                            onPicked: (date) =>
+                                setState(() => _birthDate = date),
                           ),
                         ],
                       ),

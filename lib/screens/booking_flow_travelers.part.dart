@@ -1104,6 +1104,14 @@ class _TravelerCard extends StatelessWidget {
             },
           ),
           const SizedBox(height: 12),
+          _PremiumDatePicker(
+            value: controllers.birthDate,
+            label: 'วัน/เดือน/ปีเกิด',
+            icon: Icons.cake_rounded,
+            validator: (date) =>
+                date == null ? 'กรุณาเลือกวัน/เดือน/ปีเกิด' : null,
+          ),
+          const SizedBox(height: 12),
           _HalalFoodSelector(
             selected: controllers.halalFood,
             onChanged: (value) => controllers.halalFood.value = value,

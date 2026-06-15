@@ -817,6 +817,97 @@ String? Function(String?) _required(String message) {
   };
 }
 
+/// Parse a stored birth date ('YYYY-MM-DD' or ISO timestamp) into a date, or null.
+DateTime? _parseProfileBirthDate(dynamic value) {
+  final raw = _cleanText(value);
+  if (raw.isEmpty) return null;
+  final parsed = DateTime.tryParse(raw);
+  return parsed == null ? null : DateTime(parsed.year, parsed.month, parsed.day);
+}
+
+/// Format a date as the 'YYYY-MM-DD' string the API expects, or null.
+String? _formatProfileBirthDate(DateTime? date) {
+  if (date == null) return null;
+  final m = date.month.toString().padLeft(2, '0');
+  final d = date.day.toString().padLeft(2, '0');
+  return '${date.year}-$m-$d';
+}
+
+const _profileThaiMonths = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+];
+
+/// Human label "15 ม.ค. 2543 · อายุ 25 ปี" (Buddhist era year + computed age).
+String _profileBirthDateLabel(DateTime date) {
+  final now = DateTime.now();
+  var age = now.year - date.year;
+  if (now.month < date.month ||
+      (now.month == date.month && now.day < date.day)) {
+    age--;
+  }
+  return '${date.day} ${_profileThaiMonths[date.month - 1]} ${date.year + 543} · อายุ $age ปี';
+}
+
+/// Tap-to-pick birth date field styled to match [_ProfileTextField].
+class _ProfileDateField extends StatelessWidget {
+  final DateTime? value;
+  final String label;
+  final IconData icon;
+  final ValueChanged<DateTime> onPicked;
+
+  const _ProfileDateField({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.onPicked,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () async {
+        final now = DateTime.now();
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: value ?? DateTime(now.year - 25, now.month, now.day),
+          firstDate: DateTime(now.year - 100),
+          lastDate: now,
+          helpText: 'เลือกวัน/เดือน/ปีเกิด',
+        );
+        if (picked != null) {
+          onPicked(DateTime(picked.year, picked.month, picked.day));
+        }
+      },
+      child: InputDecorator(
+        isEmpty: value == null,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, size: 20),
+          suffixIcon: const Icon(Icons.calendar_month_outlined, size: 20),
+          filled: true,
+          fillColor: AppTheme.fieldSurface(context),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        child: value == null
+            ? null
+            : Text(
+                _profileBirthDateLabel(value!),
+                style: appFont(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textMain,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
 int _numberValue(dynamic value, {int fallback = 0}) {
   final number = num.tryParse(value?.toString() ?? '');
   return number?.round() ?? fallback;
