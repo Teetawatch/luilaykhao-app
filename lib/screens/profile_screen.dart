@@ -28,6 +28,7 @@ import 'sos_alert_screen.dart';
 import 'tracking_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 import 'referral_screen.dart' show ReferralScreen;
+import 'rewards_screen.dart' show RewardsScreen;
 
 part 'profile_edit.part.dart';
 part 'profile_bookings.part.dart';
@@ -334,118 +335,146 @@ class ProfileStatsSection extends StatelessWidget {
         : (points / nextLevelPoints).clamp(0.0, 1.0).toDouble();
     final remaining = (nextLevelPoints - points).clamp(0, nextLevelPoints);
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: _sectionDecoration(context: context, radius: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'สมาชิกลุยเลเขา',
-                      style: GoogleFonts.anuphan(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textMain,
-                        letterSpacing: -0.1,
-                      ),
-                    ),
-                    if (tier.isEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        'สะสมแต้มเพื่อปลดล็อกสิทธิพิเศษ',
-                        style: GoogleFonts.anuphan(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.mutedText(context),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (tier.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+    return GestureDetector(
+      onTap: () => _pushPremium(context, const RewardsScreen()),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: _sectionDecoration(context: context, radius: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.workspace_premium_rounded,
-                        size: 13,
-                        color: AppTheme.primaryColor,
-                      ),
-                      const SizedBox(width: 4),
                       Text(
-                        _loyaltyTierLabel(tier),
+                        'สมาชิกลุยเลเขา',
                         style: GoogleFonts.anuphan(
-                          color: AppTheme.primaryColor,
-                          fontSize: 11.5,
+                          fontSize: 15.5,
                           fontWeight: FontWeight.w800,
+                          color: AppTheme.textMain,
+                          letterSpacing: -0.1,
                         ),
                       ),
+                      if (tier.isEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'สะสมแต้มเพื่อปลดล็อกสิทธิพิเศษ',
+                          style: GoogleFonts.anuphan(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _StatMetric(
-                  icon: Icons.backpack_rounded,
-                  value: trips.toString(),
-                  label: 'ทริปทั้งหมด',
+                if (tier.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.workspace_premium_rounded,
+                          size: 13,
+                          color: AppTheme.primaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _loyaltyTierLabel(tier),
+                          style: GoogleFonts.anuphan(
+                            color: AppTheme.primaryColor,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatMetric(
+                    icon: Icons.backpack_rounded,
+                    value: trips.toString(),
+                    label: 'ทริปทั้งหมด',
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatMetric(
+                    icon: Icons.stars_rounded,
+                    value: _formatCompact(points),
+                    label: 'แต้มสะสม',
+                    color: AppTheme.warningColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                minHeight: 6,
+                value: progress,
+                color: AppTheme.primaryColor,
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              remaining == 0
+                  ? 'พร้อมปลดล็อกสิทธิพิเศษถัดไป'
+                  : 'อีก ${_formatCompact(remaining)} แต้ม ถึงระดับถัดไป',
+              style: GoogleFonts.anuphan(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(
+                  Icons.redeem_rounded,
+                  size: 16,
                   color: AppTheme.primaryColor,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatMetric(
-                  icon: Icons.stars_rounded,
-                  value: _formatCompact(points),
-                  label: 'แต้มสะสม',
-                  color: AppTheme.warningColor,
+                const SizedBox(width: 6),
+                Text(
+                  'แลกของรางวัล',
+                  style: GoogleFonts.anuphan(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 6,
-              value: progress,
-              color: AppTheme.primaryColor,
-              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.10),
+                const Spacer(),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppTheme.primaryColor,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            remaining == 0
-                ? 'พร้อมปลดล็อกสิทธิพิเศษถัดไป'
-                : 'อีก ${_formatCompact(remaining)} แต้ม ถึงระดับถัดไป',
-            style: GoogleFonts.anuphan(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -715,6 +744,12 @@ class AccountMenu extends StatelessWidget {
           label: 'Document Wallet',
           subtitle: 'ข้อมูลผู้เดินทางสำหรับ auto-fill',
           onTap: () => _pushPremium(context, const DocumentWalletScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.redeem_rounded,
+          label: 'แลกของรางวัล',
+          subtitle: 'ใช้แต้มสะสมแลกคูปองส่วนลดและสิทธิพิเศษ',
+          onTap: () => _pushPremium(context, const RewardsScreen()),
         ),
         _MenuItem(
           icon: Icons.card_giftcard_rounded,

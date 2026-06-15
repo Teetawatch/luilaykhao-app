@@ -1416,9 +1416,15 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> redeemReward(int rewardId) async {
-    await api.post(ApiEndpoints.loyaltyRedeem, body: {'reward_id': rewardId});
+  /// Redeems a reward for points and returns the issued coupon details
+  /// ({coupon_code, reward, expires_at, points_remaining}).
+  Future<Map<String, dynamic>> redeemReward(int rewardId) async {
+    final response = await api.post(
+      ApiEndpoints.loyaltyRedeem,
+      body: {'reward_id': rewardId},
+    );
     await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 
   /// Loads the user's referral snapshot (code, share copy, invited friends).
