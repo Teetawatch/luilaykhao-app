@@ -62,6 +62,7 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> chatConversations = [];
   int chatUnreadTotal = 0;
   Map<String, dynamic>? loyalty;
+  Map<String, dynamic>? referral;
   Map<String, dynamic>? stats;
   Timer? _activeSeatLockTimer;
   bool _activeSeatLocksLoading = false;
@@ -349,10 +350,12 @@ class AppProvider extends ChangeNotifier {
     Future<dynamic> safe(Future<dynamic> f) => f.catchError((_) => null);
 
     final results = await Future.wait([
-      safe(api.get(
-        ApiEndpoints.trips,
-        query: {'per_page': 30, 'search': search, 'type': type},
-      )),
+      safe(
+        api.get(
+          ApiEndpoints.trips,
+          query: {'per_page': 30, 'search': search, 'type': type},
+        ),
+      ),
       safe(api.get(ApiEndpoints.tripsFeatured)),
       safe(api.get(ApiEndpoints.categories)),
       safe(api.get(ApiEndpoints.reviews, query: {'per_page': 8})),
@@ -425,7 +428,8 @@ class AppProvider extends ChangeNotifier {
     );
     final items = List<dynamic>.from(api.data(response) ?? []);
     final meta = api.meta(response);
-    final currentPage = int.tryParse('${meta?['current_page'] ?? page}') ?? page;
+    final currentPage =
+        int.tryParse('${meta?['current_page'] ?? page}') ?? page;
     final lastPage =
         int.tryParse('${meta?['last_page'] ?? currentPage}') ?? currentPage;
     return (items: items, hasMore: currentPage < lastPage);
@@ -1100,7 +1104,9 @@ class AppProvider extends ChangeNotifier {
     int scheduleId,
     int messageId,
   ) async {
-    final response = await api.post(ApiEndpoints.chatPin(scheduleId, messageId));
+    final response = await api.post(
+      ApiEndpoints.chatPin(scheduleId, messageId),
+    );
     final data = Map<String, dynamic>.from(api.data(response) ?? {});
     final pinned = data['pinned_message'];
     return pinned is Map ? Map<String, dynamic>.from(pinned) : null;
@@ -1413,6 +1419,15 @@ class AppProvider extends ChangeNotifier {
   Future<void> redeemReward(int rewardId) async {
     await api.post(ApiEndpoints.loyaltyRedeem, body: {'reward_id': rewardId});
     await loadAccountData();
+  }
+
+  /// Loads the user's referral snapshot (code, share copy, invited friends).
+  /// Fetched on demand when the referral screen opens.
+  Future<Map<String, dynamic>> fetchReferral() async {
+    final response = await api.get(ApiEndpoints.referral);
+    referral = Map<String, dynamic>.from(api.data(response) ?? {});
+    notifyListeners();
+    return referral!;
   }
 
   Future<void> submitReview({

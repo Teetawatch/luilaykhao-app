@@ -27,6 +27,7 @@ import 'payment_screen.dart';
 import 'sos_alert_screen.dart';
 import 'tracking_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
+import 'referral_screen.dart' show ReferralScreen;
 
 part 'profile_edit.part.dart';
 part 'profile_bookings.part.dart';
@@ -196,9 +197,7 @@ class ProfileHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      email.isNotEmpty
-                          ? email
-                          : 'พร้อมออกผจญภัยครั้งต่อไปไหม?',
+                      email.isNotEmpty ? email : 'พร้อมออกผจญภัยครั้งต่อไปไหม?',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.anuphan(
@@ -229,8 +228,7 @@ class ProfileHeader extends StatelessWidget {
                   _pushPremium(context, EditProfileScreen(initialUser: user)),
               style: TextButton.styleFrom(
                 foregroundColor: AppTheme.primaryColor,
-                backgroundColor:
-                    AppTheme.primaryColor.withValues(alpha: 0.08),
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.08),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -717,6 +715,12 @@ class AccountMenu extends StatelessWidget {
           label: 'Document Wallet',
           subtitle: 'ข้อมูลผู้เดินทางสำหรับ auto-fill',
           onTap: () => _pushPremium(context, const DocumentWalletScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.card_giftcard_rounded,
+          label: 'ชวนเพื่อน รับแต้มฟรี',
+          subtitle: 'เพื่อนจองทริปแรกสำเร็จ รับแต้มทั้งคู่',
+          onTap: () => _pushPremium(context, const ReferralScreen()),
         ),
       ],
     );

@@ -40,6 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Security
   final _passwordController = TextEditingController();
   final _passwordConfirmationController = TextEditingController();
+  final _referralController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isPasswordConfirmVisible = false;
 
@@ -58,6 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _healthNotesController.dispose();
     _passwordController.dispose();
     _passwordConfirmationController.dispose();
+    _referralController.dispose();
     super.dispose();
   }
 
@@ -94,6 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'health_notes': healthNotes,
         'password': password,
         'password_confirmation': passwordConfirmation,
+        'referral_code': _referralController.text.trim(),
       });
       if (mounted) {
         HapticFeedback.heavyImpact();
@@ -344,6 +347,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
 
+                      const SizedBox(height: 24),
+                      // ── Section: โค้ดเชิญเพื่อน (optional) ───────────────
+                      const _SectionHeader(
+                        icon: Icons.card_giftcard_rounded,
+                        title: 'โค้ดเชิญจากเพื่อน',
+                        subtitle: 'มีโค้ดไหม? รับแต้มสะสมเมื่อจองทริปแรกสำเร็จ',
+                      ),
+                      const SizedBox(height: 14),
+                      _RegisterInput(
+                        controller: _referralController,
+                        hint: 'โค้ดเชิญ (ถ้ามี)',
+                        icon: Icons.confirmation_number_outlined,
+                        inputFormatters: [
+                          UpperCaseTextFormatter(),
+                          LengthLimitingTextInputFormatter(16),
+                        ],
+                      ),
+
                       const SizedBox(height: 32),
                       // ── CTA ────────────────────────────────────────────
                       _RegisterButton(
@@ -419,11 +440,7 @@ class _RegisterHeader extends StatelessWidget {
             ),
           ),
           // Back button
-          Positioned(
-            top: topPad + 8,
-            left: 12,
-            child: _BackButton(),
-          ),
+          Positioned(top: topPad + 8, left: 12, child: _BackButton()),
           // Title
           Positioned(
             left: 24,
@@ -581,8 +598,7 @@ class _TitleAndNameRow extends StatelessWidget {
             items: const ['นาย', 'นาง', 'นางสาว'],
             onChanged: onTitleChanged,
             required: true,
-            validator: (v) =>
-                v == null ? 'กรุณาเลือกคำนำหน้า' : null,
+            validator: (v) => v == null ? 'กรุณาเลือกคำนำหน้า' : null,
           ),
         ),
         const SizedBox(width: 12),
@@ -592,8 +608,9 @@ class _TitleAndNameRow extends StatelessWidget {
             hint: 'ชื่อ-นามสกุล',
             icon: Icons.person_outline_rounded,
             required: true,
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'กรุณากรอกชื่อ-นามสกุล' : null,
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'กรุณากรอกชื่อ-นามสกุล'
+                : null,
           ),
         ),
       ],
@@ -629,18 +646,24 @@ class _PasswordStrengthHint extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border(context).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.5),
+        ),
       ),
       child: Wrap(
         spacing: 12,
         runSpacing: 6,
         children: checks.map((c) {
-          final color = c.pass ? AppTheme.primaryColor : AppTheme.mutedText(context);
+          final color = c.pass
+              ? AppTheme.primaryColor
+              : AppTheme.mutedText(context);
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                c.pass ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                c.pass
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
                 color: color,
                 size: 14,
               ),
@@ -669,10 +692,7 @@ class _RegisterButton extends StatelessWidget {
   final bool loading;
   final VoidCallback onPressed;
 
-  const _RegisterButton({
-    required this.loading,
-    required this.onPressed,
-  });
+  const _RegisterButton({required this.loading, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -683,7 +703,9 @@ class _RegisterButton extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.40),
+          disabledBackgroundColor: AppTheme.primaryColor.withValues(
+            alpha: 0.40,
+          ),
           disabledForegroundColor: Colors.white.withValues(alpha: 0.70),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
@@ -703,10 +725,7 @@ class _RegisterButton extends StatelessWidget {
             : const Icon(Icons.person_add_rounded, size: 22),
         label: Text(
           loading ? 'กำลังสมัครสมาชิก...' : 'สมัครสมาชิก',
-          style: GoogleFonts.anuphan(
-            fontWeight: FontWeight.w900,
-            fontSize: 16,
-          ),
+          style: GoogleFonts.anuphan(fontWeight: FontWeight.w900, fontSize: 16),
         ),
       ),
     );
@@ -944,13 +963,25 @@ class _RegisterSelect extends StatelessWidget {
       ),
       items: items
           .map(
-            (item) => DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            ),
+            (item) => DropdownMenuItem<String>(value: item, child: Text(item)),
           )
           .toList(),
       onChanged: onChanged,
+    );
+  }
+}
+
+/// Forces referral-code input to uppercase as the user types so it matches the
+/// stored code regardless of keyboard casing.
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }

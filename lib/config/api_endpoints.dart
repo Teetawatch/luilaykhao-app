@@ -111,6 +111,9 @@ class ApiEndpoints {
   static const loyaltyCoupons = 'loyalty/coupons';
   static const loyaltyRedeem = 'loyalty/redeem';
 
+  // Referral
+  static const referral = 'referral';
+
   // Misc
   static const contacts = 'contacts';
   static const broadcastingAuth = 'broadcasting/auth';
