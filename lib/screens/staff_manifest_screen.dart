@@ -7,6 +7,7 @@ import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import 'staff_check_in_screen.dart'
     show StaffCheckInScreen, asMap, asList, textOf;
+import 'staff_roll_call_screen.dart';
 
 /// Full passenger manifest for one schedule — shows every confirmed booking
 /// with contact name, callable phone and pickup point so staff can coordinate
@@ -29,6 +30,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
   Map<String, dynamic>? _data;
   String? _error;
   bool _loading = true;
+  final Set<int> _completingPoints = {};
 
   @override
   void initState() {
@@ -58,6 +60,53 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
     }
   }
 
+  Future<void> _togglePickupComplete(
+    Map<String, dynamic> group,
+    bool complete,
+  ) async {
+    final pointId = group['id'];
+    if (pointId is! int || _completingPoints.contains(pointId)) return;
+
+    setState(() => _completingPoints.add(pointId));
+    try {
+      final result = await context.read<AppProvider>().setPickupCompleted(
+        widget.scheduleId,
+        pointId,
+        complete,
+      );
+      if (!mounted) return;
+      setState(() => group['completed_at'] = result['completed_at']);
+      final notified = int.tryParse(textOf(result['notified'], '0')) ?? 0;
+      final next = asMap(result['next_point']);
+      if (complete) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.primaryColor,
+            content: Text(
+              next.isNotEmpty
+                  ? 'แจ้งจุดถัดไป "${textOf(next['label'])}" แล้ว ($notified คน)'
+                  : 'รับครบทุกจุดแล้ว',
+              style: appFont(color: Colors.white),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.errorColor,
+          content: Text(
+            e is ApiException ? e.message : 'อัปเดตไม่สำเร็จ',
+            style: appFont(color: Colors.white),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _completingPoints.remove(pointId));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final summary = asMap(_data?['summary']);
@@ -67,6 +116,18 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       appBar: AppBar(
         title: Text(widget.title.isEmpty ? 'รายชื่อผู้โดยสาร' : widget.title),
         actions: [
+          IconButton(
+            tooltip: 'นับหัวผู้โดยสาร',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => StaffRollCallScreen(
+                  scheduleId: widget.scheduleId,
+                  title: 'นับหัว • ${widget.title}',
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.how_to_reg_rounded),
+          ),
           IconButton(
             tooltip: 'เช็คอินด้วย QR',
             onPressed: () => Navigator.of(context).push(
@@ -168,7 +229,13 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
           )
         else
           for (final group in groups) ...[
-            _PickupGroupCard(group: group),
+            _PickupGroupCard(
+              group: group,
+              busy: _completingPoints.contains(group['id']),
+              onToggleComplete: (group['id'] is int)
+                  ? (complete) => _togglePickupComplete(group, complete)
+                  : null,
+            ),
             const SizedBox(height: 12),
           ],
       ],
@@ -328,6 +395,7 @@ class _ManifestSummary extends StatelessWidget {
     final checkedIn = summary['checked_in_passengers'] != null
         ? _intOf(summary['checked_in_passengers'])
         : _intOf(summary['checked_in']);
+    final careAlerts = _intOf(summary['care_alerts']);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -360,6 +428,17 @@ class _ManifestSummary extends StatelessWidget {
               color: AppTheme.primaryColor,
             ),
           ),
+          if (careAlerts > 0) ...[
+            _divider(context),
+            Expanded(
+              child: _SummaryStat(
+                icon: Icons.health_and_safety_outlined,
+                value: careAlerts.toString(),
+                label: 'ต้องดูแล',
+                color: AppTheme.errorColor,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -421,8 +500,17 @@ class _SummaryStat extends StatelessWidget {
 /// callable phone and per-passenger check-in status.
 class _PickupGroupCard extends StatelessWidget {
   final Map<String, dynamic> group;
+  final bool busy;
 
-  const _PickupGroupCard({required this.group});
+  /// Called with the desired completed state. Null when the pickup point has no
+  /// id (e.g. the "ไม่ระบุจุดรับ" group), in which case no action is shown.
+  final void Function(bool completed)? onToggleComplete;
+
+  const _PickupGroupCard({
+    required this.group,
+    this.busy = false,
+    this.onToggleComplete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -434,6 +522,7 @@ class _PickupGroupCard extends StatelessWidget {
     final checkedIn = int.tryParse(textOf(group['checked_in_count'], '0')) ?? 0;
     final passengers = asList(group['passengers']).map(asMap).toList();
     final allIn = total > 0 && checkedIn >= total;
+    final isCompleted = textOf(group['completed_at']).isNotEmpty;
 
     return Container(
       decoration: AppTheme.cardDecoration(context, radius: 18),
@@ -559,8 +648,95 @@ class _PickupGroupCard extends StatelessWidget {
               ],
             ),
           ),
+          if (onToggleComplete != null)
+            _PickupCompleteFooter(
+              completed: isCompleted,
+              busy: busy,
+              onToggle: onToggleComplete!,
+            ),
         ],
       ),
+    );
+  }
+}
+
+/// Footer action on a pickup group: mark the point picked-up (notifying the
+/// next stop) or undo it.
+class _PickupCompleteFooter extends StatelessWidget {
+  final bool completed;
+  final bool busy;
+  final void Function(bool completed) onToggle;
+
+  const _PickupCompleteFooter({
+    required this.completed,
+    required this.busy,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: AppTheme.border(context).withValues(alpha: 0.45),
+          ),
+        ),
+      ),
+      child: completed
+          ? Row(
+              children: [
+                const Icon(Icons.check_circle_rounded,
+                    size: 18, color: AppTheme.primaryColor),
+                const SizedBox(width: 6),
+                Text(
+                  'รับครบจุดนี้แล้ว',
+                  style: appFont(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: busy ? null : () => onToggle(false),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'ยกเลิก',
+                    style: appFont(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            )
+          : SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: busy ? null : () => onToggle(true),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryColor,
+                  side: BorderSide(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.5),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                icon: busy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.task_alt_rounded, size: 18),
+                label: Text(
+                  busy ? 'กำลังอัปเดต...' : 'รับครบแล้ว • แจ้งจุดถัดไป',
+                  style: appFont(fontSize: 13, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
     );
   }
 }
@@ -580,6 +756,13 @@ class _ManifestPassengerRow extends StatelessWidget {
     final nickname = textOf(passenger['nickname']);
     final phone = textOf(passenger['phone']);
     final checkedIn = passenger['checked_in'] == true;
+
+    final allergies = textOf(passenger['allergies']);
+    final healthNotes = textOf(passenger['health_notes']);
+    final bloodGroup = textOf(passenger['blood_group']);
+    final halal = passenger['halal_food'] == true;
+    final emergencyContact = textOf(passenger['emergency_contact']);
+    final emergencyPhone = textOf(passenger['emergency_phone']);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -640,6 +823,14 @@ class _ManifestPassengerRow extends StatelessWidget {
                   const SizedBox(height: 4),
                   _CallButton(phone: phone, compact: true),
                 ],
+                _SafetyBadges(
+                  allergies: allergies,
+                  healthNotes: healthNotes,
+                  bloodGroup: bloodGroup,
+                  halal: halal,
+                  emergencyContact: emergencyContact,
+                  emergencyPhone: emergencyPhone,
+                ),
               ],
             ),
           ),
@@ -681,6 +872,138 @@ class _CheckInPill extends StatelessWidget {
             style: appFont(
               fontSize: 11,
               fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Care/safety badges for a manifest passenger: allergies, health notes, halal
+/// meal, blood group, and a quick-dial emergency contact. Renders nothing when
+/// the passenger has no flags, so ordinary rows stay clean.
+class _SafetyBadges extends StatelessWidget {
+  final String allergies;
+  final String healthNotes;
+  final String bloodGroup;
+  final bool halal;
+  final String emergencyContact;
+  final String emergencyPhone;
+
+  const _SafetyBadges({
+    required this.allergies,
+    required this.healthNotes,
+    required this.bloodGroup,
+    required this.halal,
+    required this.emergencyContact,
+    required this.emergencyPhone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <Widget>[
+      if (allergies.isNotEmpty)
+        _CareChip(
+          icon: Icons.warning_amber_rounded,
+          label: 'แพ้ $allergies',
+          color: AppTheme.errorColor,
+        ),
+      if (healthNotes.isNotEmpty)
+        _CareChip(
+          icon: Icons.medical_services_rounded,
+          label: healthNotes,
+          color: AppTheme.warningColor,
+        ),
+      if (halal)
+        const _CareChip(
+          icon: Icons.restaurant_rounded,
+          label: 'ฮาลาล',
+          color: AppTheme.primaryColor,
+        ),
+      if (bloodGroup.isNotEmpty)
+        _CareChip(
+          icon: Icons.bloodtype_rounded,
+          label: 'กรุ๊ปเลือด $bloodGroup',
+          color: AppTheme.errorColor,
+        ),
+    ];
+
+    final hasEmergency = emergencyPhone.isNotEmpty || emergencyContact.isNotEmpty;
+    if (chips.isEmpty && !hasEmergency) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (chips.isNotEmpty)
+            Wrap(spacing: 6, runSpacing: 6, children: chips),
+          if (hasEmergency) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(
+                  Icons.emergency_rounded,
+                  size: 13,
+                  color: AppTheme.errorColor,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    emergencyContact.isNotEmpty
+                        ? 'ฉุกเฉิน: $emergencyContact'
+                        : 'ติดต่อฉุกเฉิน',
+                    style: appFont(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ),
+                if (emergencyPhone.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  _CallButton(phone: emergencyPhone, compact: true),
+                ],
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CareChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _CareChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: appFont(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
               color: color,
             ),
           ),
