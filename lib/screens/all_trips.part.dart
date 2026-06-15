@@ -120,12 +120,16 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
       _selectedType = _selectedType == value ? '' : value;
       if (_selectedType != 'trekking') _selectedDifficulty = '';
     });
+    // Apply immediately so picking a category (including ones with no trips)
+    // refreshes the list right away instead of leaving the previous results.
+    _fetchTrips();
   }
 
   void _toggleDifficulty(String value) {
     setState(() {
       _selectedDifficulty = _selectedDifficulty == value ? '' : value;
     });
+    _fetchTrips();
   }
 
   void _clearFilters() {
@@ -413,11 +417,15 @@ class _TripsFilterPanel extends StatelessWidget {
             runSpacing: 8,
             children: [
               for (final category in categories)
-                _FilterChipButton(
-                  label: textOf(category['name'], textOf(category['slug'])),
-                  selected: selectedType == textOf(category['slug']),
-                  onTap: () => onToggleType(textOf(category['slug'])),
-                ),
+                if (textOf(category['slug']).isNotEmpty)
+                  _FilterChipButton(
+                    label: textOf(category['name'], textOf(category['slug'])),
+                    icon: categoryIcon(textOf(category['icon']).isEmpty
+                        ? null
+                        : textOf(category['icon'])),
+                    selected: selectedType == textOf(category['slug']),
+                    onTap: () => onToggleType(textOf(category['slug'])),
+                  ),
             ],
           ),
           if (selectedType == 'trekking') ...[
@@ -517,10 +525,15 @@ class _FilterChipButton extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Optional leading glyph (used by category chips). When absent the chip
+  /// shows a check mark while selected instead.
+  final IconData? icon;
+
   const _FilterChipButton({
     required this.label,
     required this.selected,
     required this.onTap,
+    this.icon,
   });
 
   @override
@@ -545,7 +558,14 @@ class _FilterChipButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (selected) ...[
+            if (icon != null) ...[
+              Icon(
+                icon,
+                color: selected ? Colors.white : AppTheme.primaryColor,
+                size: 15,
+              ),
+              const SizedBox(width: 5),
+            ] else if (selected) ...[
               const Icon(Icons.check_rounded, color: Colors.white, size: 14),
               const SizedBox(width: 5),
             ],

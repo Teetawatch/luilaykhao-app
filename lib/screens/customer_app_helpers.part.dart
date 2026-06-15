@@ -79,24 +79,58 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = AppTheme.mutedText(context);
+
+    // Apple-style empty state: a single soft-tinted glyph, a concise bold
+    // headline, and a lighter one-line explainer — all centred with generous
+    // breathing room (HIG: clear, calm, plenty of negative space).
     return Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        children: [
-          Icon(icon, size: 56, color: AppTheme.textSecondary),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            body,
-            style: const TextStyle(color: AppTheme.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 56),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.primaryColor.withValues(alpha: 0.07),
+              ),
+              child: Icon(
+                icon,
+                size: 40,
+                color: AppTheme.primaryColor.withValues(alpha: 0.55),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.anuphan(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 280),
+              child: Text(
+                body,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.anuphan(
+                  fontSize: 14,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                  color: muted,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
