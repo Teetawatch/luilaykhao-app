@@ -115,6 +115,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
                   _TrustStatsBar(app: app),
                   _CategoryChipsSection(
+                    categories: app.categories.map(asMap).toList(),
                     activeType: _activeType,
                     onTypeChanged: (type) {
                       setState(() {
@@ -1290,29 +1291,36 @@ class HomeHeader extends StatelessWidget {
   }
 }
 
-// ─── Trip type helpers ────────────────────────────────────────────────────────
-
-const _tripCategories = [
-  (type: null, label: 'ทั้งหมด', icon: Icons.explore_rounded),
-  (type: 'trekking', label: 'เดินป่า', icon: Icons.forest_rounded),
-  (type: 'snorkeling', label: 'ดำน้ำตื้น', icon: Icons.waves_rounded),
-  (type: 'camping', label: 'แคมป์ปิ้ง', icon: Icons.cabin_rounded),
-  (type: 'van_service', label: 'รถตู้นำเที่ยว', icon: Icons.airport_shuttle_rounded),
-];
-
 // ─── Category Chips Section ───────────────────────────────────────────────────
 
 class _CategoryChipsSection extends StatelessWidget {
+  /// Backend categories (id/name/slug/icon), already mapped from the API.
+  final List<Map<String, dynamic>> categories;
   final String? activeType;
   final ValueChanged<String?> onTypeChanged;
 
   const _CategoryChipsSection({
+    required this.categories,
     required this.activeType,
     required this.onTypeChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    // "ทั้งหมด" always leads, followed by the backend-managed categories.
+    final chips = <({String? type, String label, IconData icon})>[
+      (type: null, label: 'ทั้งหมด', icon: Icons.explore_rounded),
+      for (final cat in categories)
+        if (textOf(cat['slug']).isNotEmpty)
+          (
+            type: textOf(cat['slug']),
+            label: textOf(cat['name'], textOf(cat['slug'])),
+            icon: categoryIcon(textOf(cat['icon']).isEmpty
+                ? null
+                : textOf(cat['icon'])),
+          ),
+    ];
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(20, 20, 0, 4),
@@ -1335,10 +1343,10 @@ class _CategoryChipsSection extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
               padding: const EdgeInsets.only(right: 20),
-              itemCount: _tripCategories.length,
+              itemCount: chips.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
-                final cat = _tripCategories[index];
+                final cat = chips[index];
                 final isSelected = activeType == cat.type;
                 return _CategoryChip(
                   label: cat.label,

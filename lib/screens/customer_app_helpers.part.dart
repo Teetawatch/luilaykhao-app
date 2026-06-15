@@ -119,6 +119,106 @@ String textOf(dynamic value, [String fallback = '']) {
   return text.isEmpty ? fallback : text;
 }
 
+/// Maps a backend category `icon` (a Google Material Symbols name, set freely by
+/// admins) to a Flutter [IconData]. Flutter can't resolve icon fonts by name at
+/// runtime, so we translate the common symbols the admin picker offers and fall
+/// back to a neutral activity glyph for anything unmapped.
+IconData categoryIcon(String? name) {
+  switch (name?.trim()) {
+    case 'hiking':
+      return Icons.hiking_rounded;
+    case 'forest':
+      return Icons.forest_rounded;
+    case 'terrain':
+      return Icons.terrain_rounded;
+    case 'landscape':
+      return Icons.landscape_rounded;
+    case 'park':
+    case 'nature':
+      return Icons.park_rounded;
+    case 'eco':
+      return Icons.eco_rounded;
+    case 'camping':
+    case 'cabin':
+      return Icons.cabin_rounded;
+    case 'scuba_diving':
+      return Icons.scuba_diving_rounded;
+    case 'waves':
+    case 'water':
+      return Icons.waves_rounded;
+    case 'pool':
+      return Icons.pool_rounded;
+    case 'surfing':
+      return Icons.surfing_rounded;
+    case 'kayaking':
+      return Icons.kayaking_rounded;
+    case 'sailing':
+      return Icons.sailing_rounded;
+    case 'directions_boat':
+      return Icons.directions_boat_rounded;
+    case 'beach_access':
+      return Icons.beach_access_rounded;
+    case 'phishing':
+      return Icons.phishing_rounded;
+    case 'set_meal':
+      return Icons.set_meal_rounded;
+    case 'downhill_skiing':
+      return Icons.downhill_skiing_rounded;
+    case 'snowboarding':
+      return Icons.snowboarding_rounded;
+    case 'paragliding':
+      return Icons.paragliding_rounded;
+    case 'pedal_bike':
+      return Icons.pedal_bike_rounded;
+    case 'directions_bike':
+      return Icons.directions_bike_rounded;
+    case 'airport_shuttle':
+      return Icons.airport_shuttle_rounded;
+    case 'directions_bus':
+      return Icons.directions_bus_rounded;
+    case 'local_taxi':
+      return Icons.local_taxi_rounded;
+    case 'directions_car':
+      return Icons.directions_car_rounded;
+    case 'two_wheeler':
+      return Icons.two_wheeler_rounded;
+    case 'flight':
+      return Icons.flight_rounded;
+    case 'train':
+      return Icons.train_rounded;
+    case 'restaurant':
+      return Icons.restaurant_rounded;
+    case 'hotel':
+      return Icons.hotel_rounded;
+    case 'temple_buddhist':
+      return Icons.temple_buddhist_rounded;
+    case 'festival':
+      return Icons.festival_rounded;
+    case 'photo_camera':
+      return Icons.photo_camera_rounded;
+    case 'map':
+      return Icons.map_rounded;
+    case 'explore':
+      return Icons.explore_rounded;
+    case 'groups':
+      return Icons.groups_rounded;
+    case 'stars':
+    case 'star':
+      return Icons.star_rounded;
+    case 'shield_person':
+    case 'shield':
+      return Icons.shield_rounded;
+    case 'verified_user':
+      return Icons.verified_user_rounded;
+    case 'badge':
+      return Icons.badge_rounded;
+    case 'schedule':
+      return Icons.schedule_rounded;
+    default:
+      return Icons.local_activity_rounded;
+  }
+}
+
 String money(dynamic value) {
   final number = num.tryParse(value?.toString() ?? '');
   if (number == null) return _moneyFormat.format(0);
