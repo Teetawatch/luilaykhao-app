@@ -71,19 +71,18 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
   String? _extractRef(String raw) {
     final m = RegExp(r'LLK-\d{8}-\d{4}', caseSensitive: false).firstMatch(raw);
     if (m != null) return m.group(0)!.toUpperCase();
-    final compact =
-        raw.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+    final compact = raw.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
     final cm = RegExp(r'^LLK(\d{8})(\d{4})$').firstMatch(compact);
     if (cm == null) return null;
     return 'LLK-${cm.group(1)}-${cm.group(2)}';
   }
 
   void _clearErrors() => setState(() {
-        _refError = null;
-        _refPhoneError = null;
-        _nameError = null;
-        _namePhoneError = null;
-      });
+    _refError = null;
+    _refPhoneError = null;
+    _nameError = null;
+    _namePhoneError = null;
+  });
 
   // ── Lookup by ref ─────────────────────────────────────────────────────────
 
@@ -91,7 +90,8 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
     _clearErrors();
 
     final ref =
-        _extractRef(_refController.text) ?? _refController.text.trim().toUpperCase();
+        _extractRef(_refController.text) ??
+        _refController.text.trim().toUpperCase();
     final phone = _refPhoneController.text.trim();
 
     bool hasError = false;
@@ -113,10 +113,12 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
 
     try {
       final client = ApiClient(token: null);
-      final response = await client.post(
-        ApiEndpoints.bookingsGuestLookup,
-        body: {'booking_ref': ref, 'phone': phone},
-      ) as Map<String, dynamic>;
+      final response =
+          await client.post(
+                ApiEndpoints.bookingsGuestLookup,
+                body: {'booking_ref': ref, 'phone': phone},
+              )
+              as Map<String, dynamic>;
 
       final data = response['data'] as Map<String, dynamic>? ?? {};
       HapticFeedback.lightImpact();
@@ -162,10 +164,12 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
 
     try {
       final client = ApiClient(token: null);
-      final response = await client.post(
-        ApiEndpoints.bookingsGuestLookupByName,
-        body: {'name': name, 'phone': phone},
-      ) as Map<String, dynamic>;
+      final response =
+          await client.post(
+                ApiEndpoints.bookingsGuestLookupByName,
+                body: {'name': name, 'phone': phone},
+              )
+              as Map<String, dynamic>;
 
       final raw = response['data'];
       final List<Map<String, dynamic>> results = raw is List
@@ -203,9 +207,8 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
 
     // เปิดให้ติดตามรถตามวันออกรถจริง (departs_at) — รอบที่รถออกคืนก่อน
     // วันทริปจะติดตามได้ตั้งแต่คืนนั้น
-    final departureDate = (result['departs_at'] ?? result['departure_date'])
-            ?.toString() ??
-        '';
+    final departureDate =
+        (result['departs_at'] ?? result['departure_date'])?.toString() ?? '';
     final date = DateTime.tryParse(departureDate);
     if (date != null) {
       final today = DateTime.now();
@@ -245,19 +248,25 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content:
-            Text(msg, style: GoogleFonts.anuphan(fontWeight: FontWeight.w600)),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            msg,
+            style: GoogleFonts.anuphan(fontWeight: FontWeight.w600),
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        ),
+      );
   }
 
   void _resetResults() => setState(() {
-        _refResult = null;
-        _nameResults = null;
-      });
+    _refResult = null;
+    _nameResults = null;
+  });
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -277,8 +286,9 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
           slivers: [
             SliverAppBar(
               pinned: true,
-              backgroundColor:
-                  AppTheme.background(context).withValues(alpha: 0.92),
+              backgroundColor: AppTheme.background(
+                context,
+              ).withValues(alpha: 0.92),
               elevation: 0,
               scrolledUnderElevation: 0,
               centerTitle: true,
@@ -387,7 +397,8 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
                             final item = _nameResults![i];
                             return Padding(
                               padding: EdgeInsets.only(
-                                  bottom: i < _nameResults!.length - 1 ? 16 : 0),
+                                bottom: i < _nameResults!.length - 1 ? 16 : 0,
+                              ),
                               child: _GuestBookingResultCard(
                                 data: item,
                                 showSensitiveInfo: false,
@@ -406,14 +417,13 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
                             label: Text(
                               'ค้นหาการจองอื่น',
                               style: GoogleFonts.anuphan(
-                                  fontWeight: FontWeight.w800),
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.primaryColor,
-                              side: BorderSide(
-                                  color: AppTheme.border(context)),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: AppTheme.border(context)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(28),
                               ),
@@ -444,24 +454,22 @@ class _ModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 48,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border(context)),
+        color: AppTheme.primaryColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
           _ToggleChip(
             label: 'รหัสการจอง + เบอร์',
-            icon: Icons.confirmation_number_outlined,
+            icon: Icons.confirmation_number_rounded,
             selected: mode == _LookupMode.byRef,
             onTap: () => onChanged(_LookupMode.byRef),
           ),
           _ToggleChip(
             label: 'ชื่อ + เบอร์โทร',
-            icon: Icons.person_search_outlined,
+            icon: Icons.person_search_rounded,
             selected: mode == _LookupMode.byName,
             onTap: () => onChanged(_LookupMode.byName),
           ),
@@ -488,13 +496,28 @@ class _ToggleChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: GestureDetector(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          curve: Curves.easeInOut,
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.primaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            // iOS-style white thumb that fills the segment when selected.
+            color: selected ? AppTheme.surface(context) : Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -503,7 +526,7 @@ class _ToggleChip extends StatelessWidget {
                 icon,
                 size: 15,
                 color: selected
-                    ? Colors.white
+                    ? AppTheme.primaryColor
                     : AppTheme.mutedText(context),
               ),
               const SizedBox(width: 5),
@@ -513,10 +536,10 @@ class _ToggleChip extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.anuphan(
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: -0.1,
                     color: selected
-                        ? Colors.white
+                        ? AppTheme.primaryColor
                         : AppTheme.mutedText(context),
                   ),
                 ),
@@ -537,33 +560,29 @@ class _GuestHeroHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.border(context).withValues(alpha: 0.55),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 16,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
+      decoration: AppTheme.cardDecoration(context, radius: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Same solid emerald tile as the home "มีรหัสการจอง?" banner, so the
+          // entry point and this screen read as one continuous flow.
           Container(
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.10),
+              color: AppTheme.primaryColor,
               borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.32),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             child: const Icon(
-              Icons.confirmation_number_outlined,
-              color: AppTheme.primaryColor,
+              Icons.confirmation_number_rounded,
+              color: Colors.white,
               size: 26,
             ),
           ),
@@ -971,8 +990,19 @@ class _GuestBookingResultCard extends StatelessWidget {
     final parsed = DateTime.tryParse(departureDate);
     if (parsed != null) {
       final months = [
-        '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-        'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+        '',
+        'ม.ค.',
+        'ก.พ.',
+        'มี.ค.',
+        'เม.ย.',
+        'พ.ค.',
+        'มิ.ย.',
+        'ก.ค.',
+        'ส.ค.',
+        'ก.ย.',
+        'ต.ค.',
+        'พ.ย.',
+        'ธ.ค.',
       ];
       formattedDate =
           '${parsed.day} ${months[parsed.month]} ${parsed.year + 543}';
@@ -1040,8 +1070,11 @@ class _GuestBookingResultCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.calendar_today_outlined,
-                        size: 15, color: AppTheme.mutedText(context)),
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 15,
+                      color: AppTheme.mutedText(context),
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'เดินทาง $formattedDate',
@@ -1058,8 +1091,11 @@ class _GuestBookingResultCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.directions_bus_outlined,
-                        size: 15, color: AppTheme.mutedText(context)),
+                    Icon(
+                      Icons.directions_bus_outlined,
+                      size: 15,
+                      color: AppTheme.mutedText(context),
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       [
@@ -1092,8 +1128,9 @@ class _GuestBookingResultCard extends StatelessWidget {
                   ? AppTheme.primaryColor.withValues(alpha: 0.14)
                   : AppTheme.primaryColor.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.16)),
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.16),
+              ),
             ),
             child: Column(
               children: [
@@ -1104,15 +1141,21 @@ class _GuestBookingResultCard extends StatelessWidget {
                     color: AppTheme.primaryColor.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.how_to_reg_rounded,
-                      color: AppTheme.primaryColor, size: 26),
+                  child: const Icon(
+                    Icons.how_to_reg_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.verified_rounded,
-                        size: 16, color: AppTheme.primaryColor),
+                    const Icon(
+                      Icons.verified_rounded,
+                      size: 16,
+                      color: AppTheme.primaryColor,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'พร้อมสำหรับเช็คอิน',
@@ -1143,8 +1186,8 @@ class _GuestBookingResultCard extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        color:
-                            AppTheme.primaryColor.withValues(alpha: 0.14)),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.14),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: AppTheme.primaryColor.withValues(alpha: 0.06),
@@ -1205,8 +1248,10 @@ class _GuestBookingResultCard extends StatelessWidget {
               label: Text(
                 'ติดตามรถของฉัน',
                 style: GoogleFonts.anuphan(
-                    fontSize: 16, fontWeight: FontWeight.w800,
-                    letterSpacing: -0.2),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
           ),
@@ -1288,8 +1333,11 @@ class _EmptyNameResult extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Icon(Icons.search_off_rounded,
-                  size: 44, color: AppTheme.mutedText(context)),
+              Icon(
+                Icons.search_off_rounded,
+                size: 44,
+                color: AppTheme.mutedText(context),
+              ),
               const SizedBox(height: 12),
               Text(
                 'ไม่พบข้อมูลการจอง',
@@ -1318,16 +1366,19 @@ class _EmptyNameResult extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: onReset,
           icon: const Icon(Icons.search_rounded, size: 18),
-          label: Text('ค้นหาใหม่',
-              style: GoogleFonts.anuphan(fontWeight: FontWeight.w700)),
+          label: Text(
+            'ค้นหาใหม่',
+            style: GoogleFonts.anuphan(fontWeight: FontWeight.w700),
+          ),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.primaryColor,
             side: BorderSide(
               color: AppTheme.border(context).withValues(alpha: 0.55),
             ),
             padding: const EdgeInsets.symmetric(vertical: 13),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -1344,11 +1395,11 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
       'confirmed' => ('ยืนยันแล้ว', AppTheme.primaryColor),
-      'pending'   => ('รอชำระ', AppTheme.warningColor),
+      'pending' => ('รอชำระ', AppTheme.warningColor),
       'cancelled' => ('ยกเลิก', AppTheme.errorColor),
-      'refunded'  => ('คืนเงินแล้ว', AppTheme.errorColor),
+      'refunded' => ('คืนเงินแล้ว', AppTheme.errorColor),
       'completed' => ('จบทริป', AppTheme.textSecondary),
-      _           => (status.isEmpty ? 'ไม่ระบุ' : status, AppTheme.textSecondary),
+      _ => (status.isEmpty ? 'ไม่ระบุ' : status, AppTheme.textSecondary),
     };
 
     return Container(
@@ -1360,8 +1411,11 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: GoogleFonts.anuphan(
-            fontSize: 11, fontWeight: FontWeight.w700, color: color,
-            letterSpacing: -0.1),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+          letterSpacing: -0.1,
+        ),
       ),
     );
   }
@@ -1386,8 +1440,11 @@ class _GuestHelpCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.help_outline_rounded,
-                  color: AppTheme.primaryColor, size: 19),
+              const Icon(
+                Icons.help_outline_rounded,
+                color: AppTheme.primaryColor,
+                size: 19,
+              ),
               const SizedBox(width: 8),
               Text(
                 'หาข้อมูลไม่เจอ?',
@@ -1403,7 +1460,8 @@ class _GuestHelpCard extends StatelessWidget {
           const SizedBox(height: 10),
           const _HelpItem(
             icon: Icons.confirmation_number_outlined,
-            text: 'รหัสการจอง: รับจากเจ้าหน้าที่ที่จองให้ เช่น LLK-20250409-0001',
+            text:
+                'รหัสการจอง: รับจากเจ้าหน้าที่ที่จองให้ เช่น LLK-20250409-0001',
           ),
           const SizedBox(height: 6),
           const _HelpItem(
@@ -1549,8 +1607,7 @@ class _BookingRefFormatter extends TextInputFormatter {
     final compact = newValue.text
         .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')
         .toUpperCase();
-    final limited =
-        compact.length > 15 ? compact.substring(0, 15) : compact;
+    final limited = compact.length > 15 ? compact.substring(0, 15) : compact;
     final parts = <String>[];
     if (limited.isNotEmpty) {
       parts.add(limited.substring(0, limited.length.clamp(0, 3)));

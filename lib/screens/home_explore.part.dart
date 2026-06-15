@@ -2634,33 +2634,39 @@ class _GuestBookingBanner extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const GuestBookingLookupScreen(),
-          ),
-        ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppTheme.primaryColor.withValues(alpha: 0.14),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const GuestBookingLookupScreen(),
             ),
-          ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: AppTheme.cardDecoration(context, radius: 20),
           child: Row(
             children: [
+              // Solid emerald tile keeps the accent crisp against the clean
+              // surface (iOS-style), with a soft glow for a bit of depth.
               Container(
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(13),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.32),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 child: const Icon(
-                  Icons.confirmation_number_outlined,
-                  color: AppTheme.primaryColor,
-                  size: 20,
+                  Icons.confirmation_number_rounded,
+                  color: Colors.white,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 14),
@@ -2671,19 +2677,19 @@ class _GuestBookingBanner extends StatelessWidget {
                     Text(
                       'มีรหัสการจองอยู่แล้ว?',
                       style: GoogleFonts.anuphan(
-                        fontSize: 14.5,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: AppTheme.primaryColor,
-                        letterSpacing: -0.1,
+                        color: AppTheme.onSurface(context),
+                        letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'ดู QR เช็คอิน และติดตามรถได้เลย ไม่ต้องสมัครสมาชิก',
+                      'ดู QR เช็คอิน และติดตามรถ ไม่ต้องสมัครสมาชิก',
                       style: GoogleFonts.anuphan(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
-                        color: AppTheme.primaryColor.withValues(alpha: 0.72),
+                        color: AppTheme.mutedText(context),
                         height: 1.35,
                       ),
                     ),
@@ -2694,7 +2700,7 @@ class _GuestBookingBanner extends StatelessWidget {
               Icon(
                 Icons.chevron_right_rounded,
                 size: 22,
-                color: AppTheme.primaryColor.withValues(alpha: 0.55),
+                color: AppTheme.mutedText(context),
               ),
             ],
           ),
