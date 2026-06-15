@@ -1343,19 +1343,49 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// Member suggestion strip shown above the composer while typing "@…".
   Widget _buildMentionBar() {
     final suggestions = _mentionSuggestions;
+    final isDark = AppTheme.isDark(context);
     return Container(
-      constraints: const BoxConstraints(maxHeight: 56),
+      width: double.infinity,
+      constraints: const BoxConstraints(maxHeight: 58),
       decoration: BoxDecoration(
-        color: AppTheme.subtleSurface(context),
+        // Use the elevated surface (not subtleSurface, which matches the chat
+        // background in light mode and made this strip blend in / disappear).
+        color: AppTheme.surface(context),
         border: Border(
-          top: BorderSide(color: AppTheme.border(context).withValues(alpha: 0.4)),
+          top: BorderSide(color: AppTheme.border(context)),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
+          ),
+        ],
       ),
-      child: ListView.separated(
+      child: suggestions.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+              child: Row(
+                children: [
+                  Icon(Icons.alternate_email_rounded,
+                      size: 16, color: AppTheme.mutedText(context)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'ไม่มีสมาชิกให้แท็ก',
+                    style: GoogleFonts.anuphan(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         itemCount: suggestions.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
           final m = suggestions[i];
           final label = _mentionLabel(m);
@@ -1363,12 +1393,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             onTap: () => _applyMention(m),
             borderRadius: BorderRadius.circular(999),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
               decoration: BoxDecoration(
-                color: AppTheme.surface(context),
+                // Emerald-tinted pill so each name stands out clearly against
+                // the strip and reads as a tappable mention.
+                color: AppTheme.primaryColor
+                    .withValues(alpha: isDark ? 0.24 : 0.10),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.45),
                 ),
               ),
               child: Row(
@@ -1381,7 +1414,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   Text(label,
                       style: GoogleFonts.anuphan(
                           fontWeight: FontWeight.w700,
-                          color: AppTheme.onSurface(context))),
+                          color: AppTheme.primaryColor)),
                   if (m['role'] == 'staff') ...[
                     const SizedBox(width: 4),
                     const Icon(Icons.verified_rounded,
@@ -1412,7 +1445,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_mentionSuggestions.isNotEmpty) _buildMentionBar(),
+            if (_mentionQuery != null) _buildMentionBar(),
             if (_editing != null)
               _EditPreviewBar(
                 message: _editing!,
@@ -1670,6 +1703,11 @@ class _MessageBubble extends StatelessWidget {
   List<InlineSpan> _mentionSpans(String text, Color fg) {
     final spans = <InlineSpan>[];
     final pattern = RegExp(r'@[^\s@]+');
+    // On a coloured bubble (own messages use white text on emerald) the emerald
+    // accent blends into the background, so keep the bubble's own text colour
+    // there and only use the emerald accent on light bubbles.
+    final mentionColor =
+        fg.computeLuminance() > 0.6 ? fg : AppTheme.primaryColor;
     var last = 0;
     for (final match in pattern.allMatches(text)) {
       if (match.start > last) {
@@ -1679,7 +1717,7 @@ class _MessageBubble extends StatelessWidget {
         text: match.group(0),
         style: GoogleFonts.anuphan(
           fontWeight: FontWeight.w800,
-          color: AppTheme.primaryColor,
+          color: mentionColor,
         ),
       ));
       last = match.end;
