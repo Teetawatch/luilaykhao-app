@@ -896,12 +896,20 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
-  Future<Map<String, dynamic>> confirmStaffCheckIn(String qrCode) async {
+  /// Confirms a staff QR check-in. Returns `{ booking, message }` — the message
+  /// reflects server-side side effects (e.g. auto-notifying the next pickup
+  /// point once everyone at this point has checked in).
+  Future<({Map<String, dynamic> booking, String message})>
+  confirmStaffCheckIn(String qrCode) async {
     final response = await api.post(
       'staff/check-in/confirm',
       body: {'qr_code': qrCode},
     );
-    return Map<String, dynamic>.from(api.data(response) as Map);
+    final envelope = Map<String, dynamic>.from(response as Map);
+    return (
+      booking: Map<String, dynamic>.from(envelope['data'] as Map),
+      message: envelope['message']?.toString() ?? 'เช็คอินสำเร็จแล้ว',
+    );
   }
 
   /// Full passenger manifest for a schedule the staff is assigned to —

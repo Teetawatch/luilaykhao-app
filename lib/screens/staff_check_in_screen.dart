@@ -99,14 +99,14 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
     });
 
     try {
-      final booking = await context.read<AppProvider>().confirmStaffCheckIn(
+      final result = await context.read<AppProvider>().confirmStaffCheckIn(
         code,
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
       setState(() {
-        _booking = booking;
-        _success = 'เช็คอินสำเร็จแล้ว';
+        _booking = result.booking;
+        _success = result.message;
       });
       _successAnimController.forward(from: 0);
     } on ApiException catch (e) {
