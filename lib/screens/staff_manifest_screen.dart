@@ -1,7 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
@@ -743,6 +745,7 @@ class _ManifestPassengerRow extends StatelessWidget {
     final nickname = textOf(passenger['nickname']);
     final phone = textOf(passenger['phone']);
     final checkedIn = passenger['checked_in'] == true;
+    final avatarUrl = ApiConfig.mediaUrl(passenger['avatar_url']);
 
     final allergies = textOf(passenger['allergies']);
     final healthNotes = textOf(passenger['health_notes']);
@@ -756,22 +759,10 @@ class _ManifestPassengerRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 24,
-            height: 24,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppTheme.subtleSurface(context),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$index',
-              style: appFont(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.mutedText(context),
-              ),
-            ),
+          _PassengerAvatar(
+            url: avatarUrl,
+            name: fullName,
+            index: index,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -995,6 +986,136 @@ class _CareChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Passenger profile photo (the booker's avatar). Tappable to view full-screen
+/// and zoom when a real photo exists; otherwise shows an initials circle.
+class _PassengerAvatar extends StatelessWidget {
+  final String url;
+  final String name;
+  final int index;
+
+  const _PassengerAvatar({
+    required this.url,
+    required this.name,
+    required this.index,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 40.0;
+
+    if (url.isEmpty) {
+      final initial = name.trim().isEmpty ? '$index' : name.trim().characters.first;
+      return Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppTheme.subtleSurface(context),
+          shape: BoxShape.circle,
+        ),
+        child: Text(
+          initial,
+          style: appFont(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.mutedText(context),
+          ),
+        ),
+      );
+    }
+
+    final tag = 'pax-avatar-$index-$url';
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => _PassengerPhotoView(url: url, name: name, tag: tag),
+        ),
+      ),
+      child: Hero(
+        tag: tag,
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: url,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            placeholder: (_, _) => Container(
+              width: size,
+              height: size,
+              color: AppTheme.subtleSurface(context),
+            ),
+            errorWidget: (_, _, _) => Container(
+              width: size,
+              height: size,
+              alignment: Alignment.center,
+              color: AppTheme.subtleSurface(context),
+              child: Icon(
+                Icons.person_rounded,
+                size: 20,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-screen, pinch-to-zoom viewer for a passenger photo. Tap anywhere or the
+/// close button to dismiss.
+class _PassengerPhotoView extends StatelessWidget {
+  final String url;
+  final String name;
+  final String tag;
+
+  const _PassengerPhotoView({
+    required this.url,
+    required this.name,
+    required this.tag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: name.trim().isEmpty
+            ? null
+            : Text(name, style: appFont(fontWeight: FontWeight.w700)),
+      ),
+      body: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Center(
+          child: Hero(
+            tag: tag,
+            child: InteractiveViewer(
+              minScale: 1,
+              maxScale: 5,
+              child: CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.contain,
+                placeholder: (_, _) => const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+                errorWidget: (_, _, _) => const Icon(
+                  Icons.broken_image_rounded,
+                  size: 48,
+                  color: Colors.white54,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
