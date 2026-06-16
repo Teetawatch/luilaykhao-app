@@ -8,6 +8,7 @@ import '../screens/chat_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/join_booking_screen.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
+import '../screens/schedule_announcements_screen.dart';
 import '../screens/sos_alert_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
 import 'sos_alarm_service.dart';
@@ -49,6 +50,8 @@ class NotificationNavigator {
         _openSosAlert(data);
       case 'chat_message':
         _openChat(data);
+      case 'schedule_announcement':
+        _openAnnouncements(data);
       case 'promo':
         _switchTab(1);
       case 'loyalty':
@@ -108,6 +111,21 @@ class NotificationNavigator {
     _withNav(
       (nav) => nav.push(
         MaterialPageRoute(builder: (_) => ChatScreen(scheduleId: id)),
+      ),
+    );
+  }
+
+  static void _openAnnouncements(Map<String, dynamic> data) {
+    final id = int.tryParse('${data['schedule_id']}') ?? 0;
+    if (id == 0) {
+      _openNotifications();
+      return;
+    }
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => ScheduleAnnouncementsScreen(scheduleId: id),
+        ),
       ),
     );
   }

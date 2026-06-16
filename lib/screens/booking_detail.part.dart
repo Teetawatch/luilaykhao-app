@@ -256,6 +256,17 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   );
                 }),
 
+                // Operator announcements (ประกาศจากผู้จัด) — self-loading,
+                // renders nothing when the round has no announcements yet.
+                if (textOf(booking['status']) != 'cancelled' &&
+                    (int.tryParse(textOf(schedule['id'])) ?? 0) > 0) ...[
+                  const SizedBox(height: 16),
+                  _AnnouncementsEntry(
+                    scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
+                    tripTitle: textOf(asMap(schedule['trip'])['title']),
+                  ),
+                ],
+
                 // Vehicle & driver section
                 if (textOf(booking['status']) != 'cancelled' &&
                     _hasVehicleInfo(asMap(schedule['vehicle']))) ...[
@@ -623,10 +634,6 @@ class _WeatherCard extends StatelessWidget {
       _ => null,
     };
 
-    final tempText = (tempMin != null && tempMax != null)
-        ? '${tempMin.round()}° – ${tempMax.round()}°'
-        : (tempMax != null ? '${tempMax.round()}°' : null);
-
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -702,18 +709,36 @@ class _WeatherCard extends StatelessWidget {
             ],
           ),
 
-          // Temperature — the headline figure.
-          if (tempText != null) ...[
+          // Temperature — Apple Weather daily style: the high is the headline
+          // figure, with the low shown dimmed beside it (no redundant pill).
+          if (tempMax != null) ...[
             const SizedBox(height: 16),
-            Text(
-              tempText,
-              style: appFont(
-                fontSize: 38,
-                fontWeight: FontWeight.w800,
-                height: 1.0,
-                letterSpacing: -1,
-                color: Colors.white,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '${tempMax.round()}°',
+                  style: appFont(
+                    fontSize: 38,
+                    fontWeight: FontWeight.w800,
+                    height: 1.0,
+                    letterSpacing: -1,
+                    color: Colors.white,
+                  ),
+                ),
+                if (tempMin != null) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    'ต่ำสุด ${tempMin.round()}°',
+                    style: appFont(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.70),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
 
@@ -724,11 +749,6 @@ class _WeatherCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _pill(Icons.water_drop_rounded, 'โอกาสฝน $popPercent%'),
-              if (tempMin != null && tempMax != null)
-                _pill(
-                  Icons.thermostat_rounded,
-                  'สูงสุด ${tempMax.round()}°',
-                ),
             ],
           ),
 
@@ -748,7 +768,7 @@ class _WeatherCard extends StatelessWidget {
                   Icon(
                     severity == 'warning'
                         ? Icons.warning_amber_rounded
-                        : Icons.umbrella_rounded,
+                        : Icons.cloudy_snowing,
                     size: 17,
                     color: Colors.white,
                   ),
@@ -820,7 +840,7 @@ class _WeatherCard extends StatelessWidget {
     return switch (group) {
       '2' => Icons.thunderstorm_rounded,
       '3' => Icons.grain_rounded,
-      '5' => Icons.umbrella_rounded,
+      '5' => Icons.cloudy_snowing,
       '6' => Icons.ac_unit_rounded,
       '7' => Icons.foggy,
       '8' => conditionCode == '800'
@@ -1030,7 +1050,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
-                    Icons.flight_takeoff_rounded,
+                    Icons.backpack_rounded,
                     color: AppTheme.primaryColor,
                     size: 22,
                   ),
@@ -2182,6 +2202,185 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
   }
 }
 
+// ─── Announcements entry (ประกาศจากผู้จัด) ────────────────────────────────────
+
+/// Self-loading entry card for a schedule's official announcements. Shows the
+/// latest one as a teaser plus an unread badge, and opens the full Apple-style
+/// feed on tap. Renders nothing until loaded / when the round has none, so it
+/// never adds empty clutter to the booking sheet.
+class _AnnouncementsEntry extends StatefulWidget {
+  final int scheduleId;
+  final String tripTitle;
+
+  const _AnnouncementsEntry({required this.scheduleId, required this.tripTitle});
+
+  @override
+  State<_AnnouncementsEntry> createState() => _AnnouncementsEntryState();
+}
+
+class _AnnouncementsEntryState extends State<_AnnouncementsEntry> {
+  bool _loaded = false;
+  List<Map<String, dynamic>> _items = const [];
+  int _unread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await context
+          .read<AppProvider>()
+          .scheduleAnnouncements(widget.scheduleId);
+      if (!mounted) return;
+      setState(() {
+        _items = (data['announcements'] as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        _unread = int.tryParse('${data['unread_count']}') ?? 0;
+        _loaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loaded = true);
+    }
+  }
+
+  Future<void> _open() async {
+    HapticFeedback.selectionClick();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScheduleAnnouncementsScreen(
+          scheduleId: widget.scheduleId,
+          tripTitle: widget.tripTitle,
+        ),
+      ),
+    );
+    _load(); // refresh unread badge after returning
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded || _items.isEmpty) return const SizedBox.shrink();
+
+    final latest = _items.first;
+    final title = textOf(latest['title']);
+    final body = textOf(latest['body']);
+    final isDark = AppTheme.isDark(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SheetSectionTitle(
+          icon: Icons.campaign_rounded,
+          title: 'ประกาศจากผู้จัด',
+        ),
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: _open,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: isDark ? 0.12 : 0.06),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.22),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.campaign_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title.isNotEmpty ? title : 'มีประกาศใหม่จากทีมงาน',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                      if (body.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          body,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: appFont(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        _items.length > 1
+                            ? 'ดูทั้งหมด ${_items.length} ประกาศ'
+                            : 'ดูประกาศ',
+                        style: appFont(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_unread > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF3B30), // systemRed unread badge
+                      borderRadius: BorderRadius.all(Radius.circular(999)),
+                    ),
+                    child: Text(
+                      _unread > 9 ? '9+' : '$_unread',
+                      style: appFont(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppTheme.mutedText(context),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ─── Assigned Staff List ─────────────────────────────────────────────────────
 
 class _AssignedStaffList extends StatelessWidget {
@@ -2676,14 +2875,54 @@ class _StaffAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (url.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: url,
-          width: 44,
-          height: 44,
-          fit: BoxFit.cover,
-          errorWidget: (context, e, s) => _fallback(context),
+      final heroTag = 'staff-photo-${url.hashCode}-${name.hashCode}';
+      return GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              fullscreenDialog: true,
+              builder: (_) => _StaffPhotoView(
+                url: url,
+                name: name,
+                heroTag: heroTag,
+              ),
+            ),
+          );
+        },
+        child: Hero(
+          tag: heroTag,
+          child: Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorWidget: (context, e, s) => _fallback(context),
+                ),
+              ),
+              // Subtle hint that the photo is tappable to enlarge.
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.zoom_out_map_rounded,
+                    size: 10,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -2713,6 +2952,105 @@ class _StaffAvatar extends StatelessWidget {
   }
 }
 
+/// Full-screen, pinch-to-zoom viewer for a staff/guide photo. Opened by tapping
+/// the avatar in [_AssignedStaffList]; shares a [Hero] tag with the thumbnail
+/// for a smooth zoom transition. Tap anywhere (or the close button) to dismiss.
+class _StaffPhotoView extends StatelessWidget {
+  final String url;
+  final String name;
+  final String heroTag;
+
+  const _StaffPhotoView({
+    required this.url,
+    required this.name,
+    required this.heroTag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: InteractiveViewer(
+                minScale: 1,
+                maxScale: 5,
+                child: Center(
+                  child: Hero(
+                    tag: heroTag,
+                    child: CachedNetworkImage(
+                      imageUrl: url,
+                      fit: BoxFit.contain,
+                      placeholder: (_, _) => const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      errorWidget: (_, _, _) => const Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.white54,
+                        size: 64,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Close button
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Name caption
+          if (name.isNotEmpty)
+            SafeArea(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 28),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      name,
+                      style: appFont(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Reschedule sheet (เปลี่ยนวันเดินทาง) ──────────────────────────────────────
 
 class _RescheduleSheet extends StatefulWidget {
@@ -2734,10 +3072,22 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
 
   Map<String, dynamic> get _schedule => asMap(widget.booking['schedule']);
   String get _tripSlug => textOf(asMap(_schedule['trip'])['slug']);
+  String get _tripTitle => textOf(asMap(_schedule['trip'])['title'], 'ทริป');
   int get _currentScheduleId => int.tryParse(textOf(_schedule['id'])) ?? 0;
   String get _ref => textOf(widget.booking['booking_ref']);
   int get _passengerCount => asList(widget.booking['passengers']).length;
   bool get _isSeatBased => asList(widget.booking['seats']).isNotEmpty;
+
+  /// ป้ายที่นั่งปัจจุบันของการจอง (เช่น A1, A2) เพื่อแสดงในสรุปรอบปัจจุบัน
+  List<String> get _currentSeatLabels => asList(widget.booking['seats'])
+      .map((e) => textOf(asMap(e)['seat_id']))
+      .where((s) => s.isNotEmpty)
+      .toList();
+
+  /// เส้นตายเปลี่ยนวัน (20 วันก่อนเดินทาง) จาก backend — ใช้โชว์ให้ชัดเจน
+  DateTime? get _deadline =>
+      DateTime.tryParse(textOf(widget.booking['reschedule_deadline']))
+          ?.toLocal();
 
   @override
   void initState() {
@@ -2809,7 +3159,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
       ),
       padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
       child: Column(
@@ -2830,18 +3180,20 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           Text(
             'เปลี่ยนวันเดินทาง',
             style: appFont(
-              fontSize: 18,
+              fontSize: 19,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'เลือกรอบเดินทางใหม่ของทริปเดียวกัน · เปลี่ยนได้ครั้งเดียว · คงราคาเดิม',
+            _tripTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: appFont(
-              fontSize: 12.5,
+              fontSize: 13,
               color: AppTheme.mutedText(context),
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 14),
@@ -2850,211 +3202,508 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FutureBuilder<List<dynamic>>(
-                    future: _schedulesFuture,
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      final options = snapshot.data!
-                          .map((e) => asMap(e))
-                          .where(
-                            (s) =>
-                                (int.tryParse(textOf(s['id'])) ?? 0) !=
-                                _currentScheduleId,
-                          )
-                          .toList();
-                      if (options.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          child: Text(
-                            'ไม่มีรอบเดินทางอื่นให้เลือกในขณะนี้',
-                            style: appFont(
-                              fontSize: 13,
-                              color: AppTheme.mutedText(context),
-                            ),
-                          ),
-                        );
-                      }
-                      return Column(
-                        children: options.map((sched) {
-                          final id = textOf(sched['id']);
-                          final selectedId = textOf(_selected?['id']);
-                          final selected = id == selectedId && id.isNotEmpty;
-                          final avail =
-                              int.tryParse(textOf(sched['available_seats'])) ??
-                              0;
-                          final enough = avail >= _passengerCount;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: enough
-                                  ? () => _selectSchedule(sched)
-                                  : null,
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: selected
-                                      ? AppTheme.primaryColor.withValues(
-                                          alpha: 0.08,
-                                        )
-                                      : AppTheme.subtleSurface(context),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: selected
-                                        ? AppTheme.primaryColor
-                                        : AppTheme.border(
-                                            context,
-                                          ).withValues(alpha: 0.6),
-                                    width: selected ? 2 : 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      selected
-                                          ? Icons.radio_button_checked_rounded
-                                          : Icons
-                                                .radio_button_unchecked_rounded,
-                                      size: 20,
-                                      color: selected
-                                          ? AppTheme.primaryColor
-                                          : AppTheme.mutedText(context),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            departureText(sched),
-                                            style: appFont(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w900,
-                                              color: AppTheme.onSurface(
-                                                context,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            enough
-                                                ? 'ว่าง $avail ที่นั่ง'
-                                                : 'ที่นั่งไม่พอ (ว่าง $avail)',
-                                            style: appFont(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: enough
-                                                  ? AppTheme.mutedText(context)
-                                                  : AppTheme.warningColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
+                  _currentBookingCard(),
+                  const SizedBox(height: 10),
+                  _rulesNotice(),
+                  const SizedBox(height: 18),
+                  _stepLabel('1', 'เลือกรอบเดินทางใหม่'),
+                  const SizedBox(height: 10),
+                  _scheduleList(),
                   if (_selected != null && _isSeatBased) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'เลือกที่นั่งใหม่ (${_selectedSeats.length}/$_passengerCount)',
-                      style: appFont(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.onSurface(context),
-                      ),
+                    const SizedBox(height: 20),
+                    _stepLabel(
+                      '2',
+                      'เลือกที่นั่งใหม่  ${_selectedSeats.length}/$_passengerCount',
                     ),
-                    const SizedBox(height: 10),
-                    if (_loadingSeats)
-                      const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: asList(_seatsData?['seats']).map((item) {
-                          final seat = asMap(item);
-                          final id = textOf(seat['id']);
-                          final label = textOf(seat['label'], id);
-                          final available =
-                              textOf(seat['status']) == 'available';
-                          final picked = _selectedSeats.contains(id);
-                          return GestureDetector(
-                            onTap: available ? () => _toggleSeat(id) : null,
-                            child: Container(
-                              width: 52,
-                              height: 44,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: picked
-                                    ? AppTheme.primaryColor
-                                    : available
-                                    ? AppTheme.surface(context)
-                                    : AppTheme.border(
-                                        context,
-                                      ).withValues(alpha: 0.4),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: picked
-                                      ? AppTheme.primaryColor
-                                      : AppTheme.border(context),
-                                ),
-                              ),
-                              child: Text(
-                                label,
-                                style: appFont(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: picked
-                                      ? Colors.white
-                                      : available
-                                      ? AppTheme.onSurface(context)
-                                      : AppTheme.mutedText(context),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
+                    const SizedBox(height: 12),
+                    _seatSection(),
                   ],
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _canSubmit ? _submit : null,
-              icon: _submitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.check_rounded),
-              label: const Text('ยืนยันเปลี่ยนวันเดินทาง'),
+          const SizedBox(height: 14),
+          _confirmBar(context),
+        ],
+      ),
+    );
+  }
+
+  // ── Numbered step label, matching the booking flow's stepping ──────────────
+  Widget _stepLabel(String step, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor,
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Text(
+            step,
+            style: appFont(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: appFont(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.onSurface(context),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Summary of the booking being moved (current date / pax / seats) ────────
+  Widget _currentBookingCard() {
+    final seats = _currentSeatLabels;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.6),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'รอบปัจจุบัน',
+            style: appFont(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.3,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _infoRow(Icons.event_rounded, departureText(_schedule)),
+          const SizedBox(height: 6),
+          _infoRow(Icons.groups_rounded, '$_passengerCount ผู้เดินทาง'),
+          if (seats.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _infoRow(Icons.event_seat_rounded, 'ที่นั่ง ${seats.join(', ')}'),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: AppTheme.primaryColor),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: appFont(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.onSurface(context),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── The reschedule rules, stated plainly so there's no confusion ───────────
+  Widget _rulesNotice() {
+    final deadline = _deadline;
+    final deadlineText = deadline != null
+        ? DateFormat('d MMM yyyy', 'th_TH').format(deadline)
+        : null;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 16,
+            color: AppTheme.primaryColor,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _bullet('เปลี่ยนได้ครั้งเดียวเท่านั้น'),
+                _bullet(
+                  'ต้องเปลี่ยนก่อนเดินทางอย่างน้อย 20 วัน'
+                  '${deadlineText != null ? ' (ภายใน $deadlineText)' : ''}',
+                ),
+                _bullet('คงราคาเดิม · เปลี่ยนได้เฉพาะรอบของทริปนี้'),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _bullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Text(
+        '• $text',
+        style: appFont(
+          fontSize: 12.5,
+          height: 1.45,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.onSurface(context).withValues(alpha: 0.8),
+        ),
+      ),
+    );
+  }
+
+  // ── Step 1 — pick a new schedule of the same trip ──────────────────────────
+  Widget _scheduleList() {
+    return FutureBuilder<List<dynamic>>(
+      future: _schedulesFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final options = snapshot.data!
+            .map((e) => asMap(e))
+            .where(
+              (s) =>
+                  (int.tryParse(textOf(s['id'])) ?? 0) != _currentScheduleId,
+            )
+            .toList();
+        if (options.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.subtleSurface(context),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              'ไม่มีรอบเดินทางอื่นให้เลือกในขณะนี้',
+              textAlign: TextAlign.center,
+              style: appFont(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+          );
+        }
+        return Column(children: options.map(_scheduleCard).toList());
+      },
+    );
+  }
+
+  Widget _scheduleCard(Map<String, dynamic> sched) {
+    final id = textOf(sched['id']);
+    final selected = id == textOf(_selected?['id']) && id.isNotEmpty;
+    final avail = int.tryParse(textOf(sched['available_seats'])) ?? 0;
+    final enough = avail >= _passengerCount;
+
+    final dep = DateTime.tryParse(textOf(sched['departure_date']));
+    final ret = DateTime.tryParse(textOf(sched['return_date']));
+    final dateLine = dep != null
+        ? DateFormat('EEE d MMM yyyy', 'th_TH').format(dep)
+        : departureText(sched);
+    String? nights;
+    if (dep != null && ret != null) {
+      final n = ret.difference(dep).inDays;
+      if (n > 0) nights = '$n คืน';
+    }
+
+    final accent = enough ? AppTheme.primaryColor : AppTheme.warningColor;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: enough ? () => _selectSchedule(sched) : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppTheme.primaryColor.withValues(alpha: 0.08)
+                : AppTheme.subtleSurface(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected
+                  ? AppTheme.primaryColor
+                  : AppTheme.border(context).withValues(alpha: 0.6),
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                size: 20,
+                color: selected
+                    ? AppTheme.primaryColor
+                    : AppTheme.mutedText(context),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            dateLine,
+                            style: appFont(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.onSurface(context),
+                            ),
+                          ),
+                        ),
+                        if (nights != null)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(
+                                alpha: 0.10,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              nights,
+                              style: appFont(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(
+                          enough
+                              ? Icons.event_seat_rounded
+                              : Icons.block_rounded,
+                          size: 13,
+                          color: accent,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            enough
+                                ? 'ว่าง $avail ที่นั่ง'
+                                : 'ที่นั่งไม่พอ (ว่าง $avail · ต้องการ $_passengerCount)',
+                            style: appFont(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: accent,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Step 2 — pick new seats, using the same seat map as the booking flow ───
+  Widget _seatSection() {
+    if (_loadingSeats) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    final data = _seatsData;
+    if (data == null) return const SizedBox.shrink();
+    final hasSeatMap = data['has_seat_map'] == true;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(8, 14, 8, 16),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        children: [
+          const VehicleSeatLegend(),
+          const SizedBox(height: 16),
+          if (hasSeatMap)
+            VehicleSeatMap(
+              seatMap: data,
+              toneFor: (seat, id) {
+                if (_selectedSeats.contains(id)) return SeatTone.picking;
+                final status = textOf(seat['status'], 'available');
+                if (status == 'booked') return SeatTone.booked;
+                if (status == 'locked') return SeatTone.locked;
+                return SeatTone.available;
+              },
+              selectableFor: (seat, id) {
+                if (_selectedSeats.contains(id)) return true;
+                if (textOf(seat['status'], 'available') != 'available') {
+                  return false;
+                }
+                return _selectedSeats.length < _passengerCount;
+              },
+              onSeatTap: (seat, id) => _toggleSeat(id),
+            )
+          else
+            _seatWrapFallback(data),
+        ],
+      ),
+    );
+  }
+
+  /// Fallback for schedules that have no structured seat map: a plain grid of
+  /// seat chips, capped at the passenger count.
+  Widget _seatWrapFallback(Map<String, dynamic> data) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: asList(data['seats']).map((item) {
+        final seat = asMap(item);
+        final id = textOf(seat['id']);
+        final label = textOf(seat['label'], id);
+        final available = textOf(seat['status']) == 'available';
+        final picked = _selectedSeats.contains(id);
+        final canTap =
+            available && (picked || _selectedSeats.length < _passengerCount);
+        return GestureDetector(
+          onTap: canTap ? () => _toggleSeat(id) : null,
+          child: Container(
+            width: 52,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: picked
+                  ? AppTheme.primaryColor
+                  : available
+                  ? AppTheme.surface(context)
+                  : AppTheme.border(context).withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: picked ? AppTheme.primaryColor : AppTheme.border(context),
+              ),
+            ),
+            child: Text(
+              label,
+              style: appFont(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: picked
+                    ? Colors.white
+                    : available
+                    ? AppTheme.onSurface(context)
+                    : AppTheme.mutedText(context),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ── Confirmation bar: echoes the target so the user knows what they'll get ─
+  Widget _confirmBar(BuildContext context) {
+    final target = _selected;
+    final targetDate = target != null ? departureText(target) : null;
+    final seatSummary = _isSeatBased && target != null
+        ? '${_selectedSeats.length}/$_passengerCount ที่นั่ง'
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (targetDate != null) ...[
+          Row(
+            children: [
+              const Icon(
+                Icons.arrow_forward_rounded,
+                size: 15,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'ย้ายไป: $targetDate'
+                  '${seatSummary != null ? ' · $seatSummary' : ''}',
+                  style: appFont(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _canSubmit ? _submit : null,
+            icon: _submitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.check_rounded),
+            label: const Text('ยืนยันเปลี่ยนวันเดินทาง'),
+          ),
+        ),
+      ],
     );
   }
 }

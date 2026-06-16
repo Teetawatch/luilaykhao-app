@@ -92,17 +92,8 @@ class TravelPlanSelectionSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  _softAccent.withValues(alpha: 0.10),
-                  _softAccent.withValues(alpha: 0.03),
-                ],
-              ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
               border: Border(
-                bottom: BorderSide(color: _softAccent.withValues(alpha: 0.12)),
+                bottom: BorderSide(color: AppTheme.border(context).withValues(alpha: 0.4)),
               ),
             ),
             child: const _SectionHeader(
@@ -148,7 +139,7 @@ class TravelPlanSelectionSection extends StatelessWidget {
 
                 // เวลาออกรถจริงของรอบที่เลือก — สำคัญมากเมื่อรถออกคืนก่อน
                 // วันทริป (เช่น ทริปเสาร์ที่ 13 แต่รถออกศุกร์ที่ 12 เวลา 23:30)
-                ..._departureTimeNotice(scheduleMaps, scheduleValue),
+                ..._departureTimeNotice(context, scheduleMaps, scheduleValue),
 
                 // Step 3 — Pickup point
                 if (scheduleMaps.isNotEmpty) ...[
@@ -178,6 +169,7 @@ class TravelPlanSelectionSection extends StatelessWidget {
 
 /// แถบแจ้งเวลาออกรถจริงของรอบที่เลือก แสดงเฉพาะเมื่อรอบนั้นกำหนด departs_at
 List<Widget> _departureTimeNotice(
+  BuildContext context,
   List<Map<String, dynamic>> schedules,
   int? selectedId,
 ) {
@@ -198,22 +190,27 @@ List<Widget> _departureTimeNotice(
   final label = 'ออกเดินทาง ${departureText(schedule)}'
       '${isNightBefore ? ' (คืนก่อนวันทริป)' : ''}';
 
+  // Apple-style inline notice: systemOrange tint background + symbol, with the
+  // primary label color for the text (high contrast, adapts to dark mode).
+  final isDark = AppTheme.isDark(context);
+  final orange = _appleOrange(isDark);
+
   return [
     const SizedBox(height: 12),
     Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
+        color: orange.withValues(alpha: isDark ? 0.16 : 0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFED7AA)),
+        border: Border.all(color: orange.withValues(alpha: 0.30)),
       ),
       child: Row(
         children: [
           Icon(
             isNightBefore ? Icons.nightlight_round : Icons.departure_board,
             size: 16,
-            color: const Color(0xFFEA580C),
+            color: orange,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -222,7 +219,7 @@ List<Widget> _departureTimeNotice(
               style: appFont(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF9A3412),
+                color: AppTheme.onSurface(context),
               ),
             ),
           ),
@@ -762,7 +759,7 @@ class _ScheduleChip extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: isSelected
                         ? Colors.white.withValues(alpha: 0.75)
-                        : const Color(0xFFEF4444),
+                        : _appleRed(isDark),
                   ),
                 )
               else
@@ -778,7 +775,7 @@ class _ScheduleChip extends StatelessWidget {
                           color: isSelected
                               ? Colors.white.withValues(alpha: 0.80)
                               : isLowSeats
-                                  ? const Color(0xFFF59E0B)
+                                  ? _appleOrange(isDark)
                                   : _softAccent,
                           shape: BoxShape.circle,
                         ),
@@ -794,7 +791,7 @@ class _ScheduleChip extends StatelessWidget {
                           color: isSelected
                               ? Colors.white.withValues(alpha: 0.88)
                               : isLowSeats
-                                  ? const Color(0xFFF59E0B)
+                                  ? _appleOrange(isDark)
                                   : sub,
                         ),
                       ),

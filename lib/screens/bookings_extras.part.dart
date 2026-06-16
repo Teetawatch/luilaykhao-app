@@ -689,6 +689,7 @@ class _BookingActionDeck extends StatelessWidget {
     final showBriefing = confirmed && _isPreTripWindow(schedule);
     final showSos = confirmed && _isWithinTripWindow(schedule);
     final canModify = _asBool(booking['can_modify']);
+    final canReschedule = _asBool(booking['can_reschedule']);
     final hasPickupPoints = asList(schedule['pickup_points']).isNotEmpty;
 
     final showTracking = confirmed && _isUpcomingBooking(booking);
@@ -699,7 +700,13 @@ class _BookingActionDeck extends StatelessWidget {
       if (showTracking) _TrackVehicleButton(booking: booking),
       if (showSos)
         _SosButton(scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0),
-      if (_chipActions(context, confirmed, canModify, hasPickupPoints)
+      if (_chipActions(
+            context,
+            confirmed,
+            canModify,
+            canReschedule,
+            hasPickupPoints,
+          )
           case final chips when chips.isNotEmpty)
         Row(
           children: [
@@ -733,6 +740,7 @@ class _BookingActionDeck extends StatelessWidget {
     BuildContext context,
     bool confirmed,
     bool canModify,
+    bool canReschedule,
     bool hasPickupPoints,
   ) {
     return [
@@ -742,19 +750,19 @@ class _BookingActionDeck extends StatelessWidget {
           label: 'ปฏิทิน',
           onPressed: () => _addToCalendar(context),
         ),
-      if (canModify) ...[
+      // เปลี่ยนวันได้เฉพาะเมื่อยังไม่เคยใช้สิทธิ์ และก่อนเดินทางอย่างน้อย 20 วัน
+      if (canReschedule)
         _ActionChipButton(
           icon: Icons.event_repeat_rounded,
           label: 'เปลี่ยนวัน',
           onPressed: () => _openReschedule(context),
         ),
-        if (hasPickupPoints)
-          _ActionChipButton(
-            icon: Icons.location_on_rounded,
-            label: 'จุดรับ',
-            onPressed: () => _openChangePickup(context),
-          ),
-      ],
+      if (canModify && hasPickupPoints)
+        _ActionChipButton(
+          icon: Icons.location_on_rounded,
+          label: 'จุดรับ',
+          onPressed: () => _openChangePickup(context),
+        ),
     ];
   }
 

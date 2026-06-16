@@ -32,6 +32,18 @@ const Color _mutedText = Color(0xFF64748B);
 const Color _softAccent = Color(0xFF10B981);
 const double _contentOverlap = 28;
 
+// ── Apple HIG system colors (iOS) ───────────────────────────────────────────
+// Semantic status colors with the light / dark variants from Apple's system
+// palette, used for state (full / low seats / warnings) instead of ad-hoc
+// values so they read correctly in both color schemes.
+const Color _systemRed = Color(0xFFFF3B30);
+const Color _systemRedDark = Color(0xFFFF453A);
+const Color _systemOrange = Color(0xFFFF9500);
+const Color _systemOrangeDark = Color(0xFFFF9F0A);
+
+Color _appleRed(bool isDark) => isDark ? _systemRedDark : _systemRed;
+Color _appleOrange(bool isDark) => isDark ? _systemOrangeDark : _systemOrange;
+
 class TripDetailScreen extends StatefulWidget {
   final String? slug;
   final int? initialScheduleId;
@@ -327,6 +339,9 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     final preferredScheduleId = !_hasAppliedInitialSelection
         ? widget.initialScheduleId
         : _selectedScheduleId;
+    // เมื่อไม่มีรอบที่ผู้ใช้ระบุมา (หรือระบุมาแต่หาไม่เจอ) ให้ตกไปที่รอบแรก
+    // ที่ "จองได้จริง" ก่อน เพื่อไม่ให้เปิดหน้ามาแล้วเจอรอบที่เต็ม/ผ่านแล้ว
+    // ถูกเลือกค้างไว้ ค่อย fallback ไปรอบแรกสุดถ้าไม่มีรอบไหนว่างเลย
     final selected = asMap(
       widget.schedules.firstWhere(
         (item) =>
@@ -334,12 +349,19 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
             asMap(item)['id'].toString() == preferredScheduleId.toString() &&
             (regionKey == null ||
                 _scheduleHasPickupRegion(asMap(item), regionKey)),
-        orElse: () => widget.schedules.firstWhere(
-          (item) =>
-              regionKey != null &&
-              _scheduleHasPickupRegion(asMap(item), regionKey),
-          orElse: () => _selectedSchedule ?? widget.schedules.first,
-        ),
+        orElse: () {
+          final bookable = _firstBookableSchedule(
+            widget.schedules,
+            regionKey: regionKey,
+          );
+          if (bookable.isNotEmpty) return bookable;
+          return widget.schedules.firstWhere(
+            (item) =>
+                regionKey != null &&
+                _scheduleHasPickupRegion(asMap(item), regionKey),
+            orElse: () => _selectedSchedule ?? widget.schedules.first,
+          );
+        },
       ),
     );
     _selectedScheduleId = int.tryParse(selected['id'].toString());

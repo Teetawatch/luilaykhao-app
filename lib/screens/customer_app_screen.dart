@@ -25,6 +25,7 @@ import '../services/push_notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/review_dialog.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/vehicle_seat_map.dart';
 import 'login_screen.dart';
 import 'refund_status_screen.dart';
 import 'payment_screen.dart';
@@ -35,6 +36,7 @@ import 'chat_screen.dart';
 import 'chat_list_screen.dart';
 import 'join_booking_screen.dart';
 import 'pre_trip_checklist_screen.dart';
+import 'schedule_announcements_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 import '../services/checklist_storage.dart';
 

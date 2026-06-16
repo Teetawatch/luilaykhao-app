@@ -635,6 +635,35 @@ Map<String, dynamic> _selectedScheduleFor(
   );
 }
 
+int _scheduleAvailableSeats(Map<String, dynamic> schedule) =>
+    int.tryParse(textOf(schedule['available_seats'], '0')) ?? 0;
+
+/// รอบที่ "จองได้จริง": ไม่ใช่รอบเหมา ยังไม่ผ่านวันเดินทาง และยังมีที่นั่งว่าง
+bool _scheduleIsBookable(Map<String, dynamic> schedule) {
+  if (schedule.isEmpty) return false;
+  if (_asBool(schedule['is_charter'])) return false;
+  if (_isSchedulePast(schedule)) return false;
+  return _scheduleAvailableSeats(schedule) > 0;
+}
+
+/// รอบแรกที่จองได้จาก list (กรองตาม region ถ้าระบุ) — ไว้ใช้เป็นค่าเริ่มต้น
+/// เพื่อไม่ให้ระบบเลือกรอบที่เต็ม/ผ่านแล้วมาให้ผู้ใช้ตั้งแต่เปิดหน้า
+Map<String, dynamic> _firstBookableSchedule(
+  List<dynamic> schedules, {
+  String? regionKey,
+}) {
+  final key = regionKey?.trim();
+  for (final item in schedules) {
+    final schedule = asMap(item);
+    if (!_scheduleIsBookable(schedule)) continue;
+    if (key != null && key.isNotEmpty && !_scheduleHasPickupRegion(schedule, key)) {
+      continue;
+    }
+    return schedule;
+  }
+  return <String, dynamic>{};
+}
+
 Map<String, dynamic> _selectedPickupPointFor(
   Map<String, dynamic> schedule,
   int? selectedPickupPointId,

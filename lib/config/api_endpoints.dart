@@ -48,6 +48,18 @@ class ApiEndpoints {
   static String chatReact(int scheduleId, int messageId) =>
       'schedules/$scheduleId/chat/messages/$messageId/react';
 
+  // Announcements (ประกาศจากผู้จัด ต่อรอบเดินทาง)
+  static String announcements(int scheduleId) =>
+      'schedules/$scheduleId/announcements';
+  static String announcement(int scheduleId, int announcementId) =>
+      'schedules/$scheduleId/announcements/$announcementId';
+  static String announcementsRead(int scheduleId) =>
+      'schedules/$scheduleId/announcements/read';
+  static String announcementsUnreadCount(int scheduleId) =>
+      'schedules/$scheduleId/announcements/unread-count';
+  static String announcementPin(int scheduleId, int announcementId) =>
+      'schedules/$scheduleId/announcements/$announcementId/pin';
+
   // Schedules / seats
   static String scheduleSeats(int scheduleId) => 'schedules/$scheduleId/seats';
   static String scheduleSeatLock(int scheduleId) =>

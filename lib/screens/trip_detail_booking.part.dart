@@ -66,6 +66,24 @@ class StickyBookingBar extends StatelessWidget {
     }
 
     final isCharter = _asBool(selectedSchedule['is_charter']);
+    final hasSchedule = schedules.isNotEmpty && selectedSchedule.isNotEmpty;
+    final isBookable = hasSchedule && _scheduleIsBookable(selectedSchedule);
+
+    // ป้ายปุ่มสะท้อนสถานะของรอบที่เลือกจริง ไม่ใช่ขึ้น "จองเลย" ตลอด
+    final String bookLabel;
+    final IconData bookIcon;
+    if (isBookable || !hasSchedule || isCharter) {
+      // charter มีป้าย "รอบเหมา" อยู่แล้วในส่วนราคา ปุ่มจึงคงข้อความปกติไว้
+      bookLabel = 'จองเลย';
+      bookIcon = Icons.hiking_rounded;
+    } else if (_isSchedulePast(selectedSchedule)) {
+      bookLabel = 'ปิดรับจอง';
+      bookIcon = Icons.event_busy_rounded;
+    } else {
+      bookLabel = 'เต็มแล้ว';
+      bookIcon = Icons.do_not_disturb_on_rounded;
+    }
+
     final isDark = AppTheme.isDark(context);
     final priceValue = _priceText(
       trip,
@@ -226,7 +244,9 @@ class StickyBookingBar extends StatelessWidget {
                         const SizedBox(width: 14),
                         // book button
                         _BookingButton(
-                          enabled: schedules.isNotEmpty && !isCharter,
+                          enabled: isBookable,
+                          label: bookLabel,
+                          icon: bookIcon,
                           onPressed: handleBookingTap,
                         ),
                       ],
@@ -248,7 +268,7 @@ class StickyBookingBar extends StatelessWidget {
                             ),
                           ),
                           child: TextButton.icon(
-                            onPressed: schedules.isEmpty
+                            onPressed: !isBookable
                                 ? null
                                 : () => handleBookingTap(joinTrip: true),
                             style: TextButton.styleFrom(
@@ -285,9 +305,16 @@ class StickyBookingBar extends StatelessWidget {
 
 class _BookingButton extends StatefulWidget {
   final bool enabled;
+  final String label;
+  final IconData icon;
   final VoidCallback onPressed;
 
-  const _BookingButton({required this.enabled, required this.onPressed});
+  const _BookingButton({
+    required this.enabled,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
 
   @override
   State<_BookingButton> createState() => _BookingButtonState();
@@ -330,10 +357,10 @@ class _BookingButtonState extends State<_BookingButton> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.hiking_rounded, size: 19, color: Colors.white),
+              Icon(widget.icon, size: 19, color: Colors.white),
               const SizedBox(width: 6),
               Text(
-                'จองเลย',
+                widget.label,
                 style: appFont(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,

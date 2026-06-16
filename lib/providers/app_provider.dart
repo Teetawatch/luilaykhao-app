@@ -1164,6 +1164,61 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 
+  // ── Announcements (ประกาศจากผู้จัด ต่อรอบเดินทาง) ─────────────────────────────
+
+  /// Official announcements for a schedule. Returns the payload as-is:
+  /// `{ announcements: [...], can_moderate: bool, unread_count: int }`.
+  Future<Map<String, dynamic>> scheduleAnnouncements(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.announcements(scheduleId));
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  Future<void> markAnnouncementsRead(int scheduleId) async {
+    await api.post(ApiEndpoints.announcementsRead(scheduleId));
+  }
+
+  Future<int> announcementsUnreadCount(int scheduleId) async {
+    final response =
+        await api.get(ApiEndpoints.announcementsUnreadCount(scheduleId));
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    return int.tryParse('${data['count']}') ?? 0;
+  }
+
+  /// Post a new announcement (staff/operator only — gated server-side).
+  Future<Map<String, dynamic>> postAnnouncement(
+    int scheduleId, {
+    required String category,
+    required String title,
+    required String body,
+    bool isPinned = false,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.announcements(scheduleId),
+      body: {
+        'category': category,
+        'title': title,
+        'body': body,
+        'is_pinned': isPinned,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<void> deleteAnnouncement(int scheduleId, int announcementId) async {
+    await api.delete(ApiEndpoints.announcement(scheduleId, announcementId));
+  }
+
+  Future<Map<String, dynamic>> setAnnouncementPinned(
+    int scheduleId,
+    int announcementId,
+    bool pinned,
+  ) async {
+    final endpoint = ApiEndpoints.announcementPin(scheduleId, announcementId);
+    final response =
+        pinned ? await api.post(endpoint) : await api.delete(endpoint);
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   /// Loads the user's trip chat rooms and refreshes the bottom-nav unread
   /// badge. Returns the list so screens can render it directly.
   Future<List<dynamic>> loadChatConversations() async {
@@ -1191,6 +1246,19 @@ class AppProvider extends ChangeNotifier {
     return realtime.subscribe(
       channel: 'private-chat.schedule.$scheduleId',
       event: 'chat.message',
+      handler: handler,
+    );
+  }
+
+  /// Subscribe to a schedule's announcements channel for live "ประกาศใหม่"
+  /// pushes while the feed is open. Returns a disposer.
+  Future<VoidCallback> subscribeAnnouncements(
+    int scheduleId,
+    RealtimeEventHandler handler,
+  ) {
+    return realtime.subscribe(
+      channel: 'private-announcements.schedule.$scheduleId',
+      event: 'announcement.posted',
       handler: handler,
     );
   }
