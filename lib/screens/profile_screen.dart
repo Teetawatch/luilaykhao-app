@@ -16,6 +16,7 @@ import '../widgets/support_shortcuts.dart';
 import '../widgets/travel_widgets.dart';
 import 'booking_lookup_screen.dart';
 import 'document_wallet_screen.dart';
+import 'group_rooms_screen.dart';
 import 'notification_preferences_screen.dart';
 import 'chat_screen.dart' show ChatScreen;
 import 'staff_check_in_screen.dart' show StaffCheckInScreen;
@@ -652,6 +653,11 @@ class QuickActionsSection extends StatelessWidget {
             filter: BookingFilter.upcoming,
           ),
         ),
+      ),
+      _QuickAction(
+        icon: Icons.groups_2_outlined,
+        label: 'กลุ่มของฉัน',
+        onTap: () => _pushPremium(context, const GroupRoomsScreen()),
       ),
       _QuickAction(
         icon: Icons.directions_bus_filled_outlined,

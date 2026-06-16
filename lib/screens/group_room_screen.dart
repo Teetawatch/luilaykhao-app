@@ -10,6 +10,7 @@ import '../models/group_plan.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../widgets/vehicle_seat_map.dart';
 import 'payment_screen.dart';
 
 /// Live "group room" for the Group Trip Invite feature. The host shares the
@@ -162,6 +163,10 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
   bool _busy = false;
   String? _error;
   VoidCallback? _realtimeDisposer;
+
+  // Host's pickup choice for the whole group booking.
+  String? _selectedRegion;
+  int? _selectedPickupPointId;
 
   AppProvider get _app => context.read<AppProvider>();
 
@@ -324,7 +329,11 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
     if (plan == null) return;
     setState(() => _busy = true);
     try {
-      final booking = await _app.checkoutGroupPlan(_code);
+      final booking = await _app.checkoutGroupPlan(
+        _code,
+        pickupPointId: _selectedPickupPointId,
+        pickupRegion: _selectedRegion,
+      );
       if (!mounted) return;
       final ref = booking['booking_ref']?.toString() ?? '';
       if (ref.isEmpty) {
@@ -453,8 +462,49 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
           ),
           const SizedBox(height: 16),
           if (plan.isOpen) _myActionCard(plan),
+          if (plan.isOpen &&
+              _isHost &&
+              plan.schedule?.hasPickupPoints == true) ...[
+            const SizedBox(height: 16),
+            _buildPickupCard(plan.schedule!),
+          ],
         ],
       ),
+    );
+  }
+
+  void _ensurePickupDefaults(GroupSchedule schedule) {
+    final regions = schedule.regionKeys;
+    if (_selectedRegion == null || !regions.contains(_selectedRegion)) {
+      _selectedRegion = regions.isNotEmpty ? regions.first : null;
+    }
+    final points = _selectedRegion == null
+        ? const <GroupPickupPoint>[]
+        : schedule.pointsInRegion(_selectedRegion!);
+    if (_selectedPickupPointId != null &&
+        !points.any((p) => p.id == _selectedPickupPointId)) {
+      _selectedPickupPointId = null;
+    }
+    // Nothing to choose between — auto-select so the host isn't blocked.
+    if (_selectedPickupPointId == null &&
+        regions.length == 1 &&
+        points.length == 1) {
+      _selectedPickupPointId = points.first.id;
+    }
+  }
+
+  Widget _buildPickupCard(GroupSchedule schedule) {
+    _ensurePickupDefaults(schedule);
+    return _PickupSelectionCard(
+      schedule: schedule,
+      selectedRegion: _selectedRegion,
+      selectedPickupPointId: _selectedPickupPointId,
+      onRegionChanged: (region) => setState(() {
+        _selectedRegion = region;
+        _selectedPickupPointId = null;
+        _ensurePickupDefaults(schedule);
+      }),
+      onPickupChanged: (id) => setState(() => _selectedPickupPointId = id),
     );
   }
 
@@ -536,19 +586,27 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
       );
     }
 
+    final schedule = plan.schedule;
     final claimed = plan.claimedSeatIds.length;
-    final price = plan.schedule?.effectivePrice ?? 0;
+    final needsPickup =
+        schedule?.hasPickupPoints == true && _selectedPickupPointId == null;
+    final price = schedule?.priceForPickup(_selectedPickupPointId) ?? 0;
     final total = price * claimed;
     final fmt = NumberFormat('#,###');
 
+    final String label;
+    if (claimed == 0) {
+      label = 'รอสมาชิกเลือกที่นั่ง';
+    } else if (needsPickup) {
+      label = 'เลือกจุดขึ้นรถก่อนชำระเงิน';
+    } else {
+      label = 'ชำระเงินสำหรับกลุ่ม ($claimed ที่นั่ง) • ฿${fmt.format(total)}';
+    }
+
     return _FooterBar(
       child: FilledButton(
-        onPressed: (_busy || claimed == 0) ? null : _checkout,
-        child: Text(
-          claimed == 0
-              ? 'รอสมาชิกเลือกที่นั่ง'
-              : 'ชำระเงินสำหรับกลุ่ม ($claimed ที่นั่ง) • ฿${fmt.format(total)}',
-        ),
+        onPressed: (_busy || claimed == 0 || needsPickup) ? null : _checkout,
+        child: Text(label),
       ),
     );
   }
@@ -642,17 +700,236 @@ class _TripCard extends StatelessWidget {
                     ),
                   const SizedBox(height: 4),
                   Text(
-                    '฿${NumberFormat('#,###').format(schedule?.effectivePrice ?? 0)} / คน',
+                    _priceLabel(schedule),
                     style: appFont(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.primaryColor,
                     ),
                   ),
+                  if (schedule?.hasPickupPoints == true) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.place_outlined,
+                          size: 13,
+                          color: AppTheme.mutedText(context),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${schedule!.regionKeys.length} ภาค · ${schedule.pickupPoints.length} จุดขึ้นรถ',
+                            style: appFont(
+                              fontSize: 12,
+                              color: AppTheme.mutedText(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  String _priceLabel(GroupSchedule? schedule) {
+    if (schedule == null) return '';
+    final fmt = NumberFormat('#,###');
+    if (schedule.hasVariedPrices) {
+      final (min, max) = schedule.priceRange;
+      return '฿${fmt.format(min)} - ฿${fmt.format(max)} / คน';
+    }
+    return '฿${fmt.format(schedule.effectivePrice)} / คน';
+  }
+}
+
+/// Host-only picker for the group's pickup point. Some trips have several
+/// regions (ภาค) and pickup points, each with its own per-person price, so the
+/// host must choose one for the whole booking before checkout.
+class _PickupSelectionCard extends StatelessWidget {
+  final GroupSchedule schedule;
+  final String? selectedRegion;
+  final int? selectedPickupPointId;
+  final ValueChanged<String?> onRegionChanged;
+  final ValueChanged<int?> onPickupChanged;
+
+  const _PickupSelectionCard({
+    required this.schedule,
+    required this.selectedRegion,
+    required this.selectedPickupPointId,
+    required this.onRegionChanged,
+    required this.onPickupChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final regions = schedule.regionKeys;
+    final points = selectedRegion == null
+        ? const <GroupPickupPoint>[]
+        : schedule.pointsInRegion(selectedRegion!);
+    final selectedPoint = schedule.pointById(selectedPickupPointId);
+    final fmt = NumberFormat('#,###');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.directions_bus_filled_rounded,
+                  color: AppTheme.primaryColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'จุดขึ้นรถของกลุ่ม',
+                style: appFont(fontSize: 15, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'เลือกภาคและจุดขึ้นรถสำหรับทั้งกลุ่ม ราคาต่อคนจะอิงตามจุดที่เลือก',
+            style: appFont(
+              fontSize: 12.5,
+              color: AppTheme.mutedText(context),
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (regions.length > 1) ...[
+            DropdownButtonFormField<String>(
+              initialValue: selectedRegion,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'ภาคที่จะขึ้นรถ',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.travel_explore_rounded),
+              ),
+              items: regions.map((key) {
+                return DropdownMenuItem<String>(
+                  value: key,
+                  child: Text(
+                    schedule.regionLabelFor(key),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              onChanged: onRegionChanged,
+            ),
+            const SizedBox(height: 12),
+          ],
+          DropdownButtonFormField<int>(
+            initialValue: selectedPickupPointId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'จุดขึ้นรถ',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.place_rounded),
+            ),
+            hint: Text(
+              'เลือกจุดขึ้นรถ',
+              style: appFont(color: AppTheme.mutedText(context)),
+            ),
+            selectedItemBuilder: (context) => points
+                .map((p) => Text(
+                      p.locationLabel,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ))
+                .toList(),
+            items: points.map((point) {
+              final price = schedule.priceForPickup(point.id);
+              final notes = (point.notes ?? '').trim();
+              final priceText = '฿${fmt.format(price)} / คน';
+              return DropdownMenuItem<int>(
+                value: point.id,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      point.locationLabel,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: appFont(fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
+                    Text(
+                      notes.isEmpty ? priceText : '$notes · $priceText',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: appFont(
+                        fontSize: 12,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: onPickupChanged,
+          ),
+          const SizedBox(height: 12),
+          if (selectedPoint != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.sell_rounded,
+                      color: AppTheme.primaryColor, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'ราคาต่อคนสำหรับจุดนี้ ฿${fmt.format(schedule.priceForPickup(selectedPoint.id))}',
+                      style: appFont(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: const Color(0xFF126B5B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.warningColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      color: AppTheme.warningColor, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'กรุณาเลือกจุดขึ้นรถก่อนชำระเงิน',
+                      style: appFont(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: const Color(0xFF92400E),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -971,7 +1248,7 @@ class _SeatPickerSheetState extends State<_SeatPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final seats = (widget.seatMap['seats'] as List?) ?? const [];
+    final hasSeatMap = widget.seatMap['has_seat_map'] == true;
     final myMember = widget.plan.memberFor(widget.myUserId);
     final mySeat = myMember?.seatId;
     final groupSeats = widget.plan.claimedSeatIds.toSet();
@@ -1009,73 +1286,52 @@ class _SeatPickerSheetState extends State<_SeatPickerSheet> {
                 ),
               ),
               Expanded(
-                child: GridView.builder(
+                child: SingleChildScrollView(
                   controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    childAspectRatio: 1.4,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const VehicleSeatLegend(),
+                      const SizedBox(height: 18),
+                      hasSeatMap
+                          ? VehicleSeatMap(
+                              seatMap: widget.seatMap,
+                              toneFor: (seat, id) {
+                                final status =
+                                    seat['status']?.toString() ?? 'available';
+                                if (id == mySeat) return SeatTone.mine;
+                                if (_selected == id) return SeatTone.picking;
+                                if (groupSeats.contains(id)) {
+                                  return SeatTone.group;
+                                }
+                                if (status == 'booked') return SeatTone.booked;
+                                if (status == 'locked') return SeatTone.locked;
+                                return SeatTone.available;
+                              },
+                              selectableFor: (seat, id) {
+                                final status =
+                                    seat['status']?.toString() ?? 'available';
+                                final booked = status == 'booked';
+                                final lockedOutside = status == 'locked' &&
+                                    !groupSeats.contains(id);
+                                final isGroup =
+                                    groupSeats.contains(id) && id != mySeat;
+                                return !booked && !lockedOutside && !isGroup;
+                              },
+                              onSeatTap: (seat, id) =>
+                                  setState(() => _selected = id),
+                            )
+                          : _SeatGridFallback(
+                              seatMap: widget.seatMap,
+                              selected: _selected,
+                              mySeat: mySeat,
+                              groupSeats: groupSeats,
+                              onSelect: (id) =>
+                                  setState(() => _selected = id),
+                            ),
+                    ],
                   ),
-                  itemCount: seats.length,
-                  itemBuilder: (context, index) {
-                    final seat = Map<String, dynamic>.from(seats[index] as Map);
-                    final id = seat['id']?.toString() ?? '';
-                    final status = seat['status']?.toString() ?? 'available';
-                    final isMine = id == mySeat;
-                    final isGroup = groupSeats.contains(id) && !isMine;
-                    final booked = status == 'booked';
-                    // Seats locked by non-group users are unavailable.
-                    final lockedOutside =
-                        status == 'locked' && !groupSeats.contains(id);
-                    final selectable =
-                        !booked && !lockedOutside && !isGroup;
-                    final selected = _selected == id;
-
-                    Color bg;
-                    Color fg = AppTheme.onSurface(context);
-                    if (isMine) {
-                      bg = AppTheme.primaryColor;
-                      fg = Colors.white;
-                    } else if (selected) {
-                      bg = AppTheme.accentColor;
-                      fg = Colors.white;
-                    } else if (isGroup) {
-                      bg = AppTheme.warningColor.withValues(alpha: 0.25);
-                    } else if (booked || lockedOutside) {
-                      bg = AppTheme.subtleSurface(context);
-                      fg = AppTheme.mutedText(context);
-                    } else {
-                      bg = AppTheme.subtleSurface(context);
-                    }
-
-                    return GestureDetector(
-                      onTap: selectable
-                          ? () => setState(() => _selected = id)
-                          : null,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: bg,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: selected
-                                ? AppTheme.accentColor
-                                : AppTheme.border(context),
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          id,
-                          style: appFont(
-                            fontWeight: FontWeight.w700,
-                            color: fg,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
                 ),
               ),
               SafeArea(
@@ -1127,6 +1383,102 @@ class _SeatPickerSheetState extends State<_SeatPickerSheet> {
                 ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Fallback for schedules without a vehicle layout: a simple labelled grid so
+/// members can still claim a seat by number.
+class _SeatGridFallback extends StatelessWidget {
+  final Map<String, dynamic> seatMap;
+  final String? selected;
+  final String? mySeat;
+  final Set<String> groupSeats;
+  final ValueChanged<String> onSelect;
+
+  const _SeatGridFallback({
+    required this.seatMap,
+    required this.selected,
+    required this.mySeat,
+    required this.groupSeats,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final seats = (seatMap['seats'] as List?) ?? const [];
+    if (seats.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Text(
+          'ทริปนี้ยังไม่มีผังที่นั่ง',
+          textAlign: TextAlign.center,
+          style: appFont(
+            color: AppTheme.mutedText(context),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        childAspectRatio: 1.4,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: seats.length,
+      itemBuilder: (context, index) {
+        final seat = Map<String, dynamic>.from(seats[index] as Map);
+        final id = seat['id']?.toString() ?? '';
+        final status = seat['status']?.toString() ?? 'available';
+        final isMine = id == mySeat;
+        final isGroup = groupSeats.contains(id) && !isMine;
+        final booked = status == 'booked';
+        final lockedOutside = status == 'locked' && !groupSeats.contains(id);
+        final selectable = !booked && !lockedOutside && !isGroup;
+        final isSelected = selected == id;
+
+        Color bg;
+        Color fg = AppTheme.onSurface(context);
+        if (isMine) {
+          bg = AppTheme.primaryColor;
+          fg = Colors.white;
+        } else if (isSelected) {
+          bg = AppTheme.accentColor;
+          fg = Colors.white;
+        } else if (isGroup) {
+          bg = AppTheme.warningColor.withValues(alpha: 0.25);
+        } else if (booked || lockedOutside) {
+          bg = AppTheme.subtleSurface(context);
+          fg = AppTheme.mutedText(context);
+        } else {
+          bg = AppTheme.subtleSurface(context);
+        }
+
+        return GestureDetector(
+          onTap: selectable ? () => onSelect(id) : null,
+          child: Container(
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isSelected
+                    ? AppTheme.accentColor
+                    : AppTheme.border(context),
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              id,
+              style: appFont(fontWeight: FontWeight.w700, color: fg),
+            ),
           ),
         );
       },

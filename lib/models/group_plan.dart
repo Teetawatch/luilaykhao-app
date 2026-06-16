@@ -123,6 +123,7 @@ class GroupSchedule {
   final String? returnDate;
   final double effectivePrice;
   final int availableSeats;
+  final List<GroupPickupPoint> pickupPoints;
 
   const GroupSchedule({
     required this.id,
@@ -130,7 +131,67 @@ class GroupSchedule {
     required this.returnDate,
     required this.effectivePrice,
     required this.availableSeats,
+    this.pickupPoints = const [],
   });
+
+  bool get hasPickupPoints => pickupPoints.isNotEmpty;
+
+  /// Distinct regions (ภาค) the traveller can pick a pickup point from, in the
+  /// order the backend returned them.
+  List<String> get regionKeys {
+    final seen = <String>{};
+    final keys = <String>[];
+    for (final point in pickupPoints) {
+      final key = point.regionKey;
+      if (key.isEmpty || !seen.add(key)) continue;
+      keys.add(key);
+    }
+    return keys;
+  }
+
+  String regionLabelFor(String regionKey) {
+    for (final point in pickupPoints) {
+      if (point.regionKey == regionKey) return point.regionLabel;
+    }
+    return regionKey;
+  }
+
+  List<GroupPickupPoint> pointsInRegion(String regionKey) =>
+      pickupPoints.where((p) => p.regionKey == regionKey).toList();
+
+  GroupPickupPoint? pointById(int? id) {
+    if (id == null) return null;
+    for (final point in pickupPoints) {
+      if (point.id == id) return point;
+    }
+    return null;
+  }
+
+  /// Per-person price once a pickup point is chosen (its price overrides the
+  /// schedule's effective price), otherwise the schedule base price.
+  double priceForPickup(int? pickupPointId) {
+    final point = pointById(pickupPointId);
+    if (point != null && point.price > 0) return point.price;
+    return effectivePrice;
+  }
+
+  /// Lowest / highest per-person price across the base price and every pickup
+  /// point, used to show a "2 ราคา" style range when they differ.
+  (double, double) get priceRange {
+    var min = effectivePrice;
+    var max = effectivePrice;
+    for (final point in pickupPoints) {
+      if (point.price <= 0) continue;
+      if (point.price < min) min = point.price;
+      if (point.price > max) max = point.price;
+    }
+    return (min, max);
+  }
+
+  bool get hasVariedPrices {
+    final (min, max) = priceRange;
+    return max > min;
+  }
 
   factory GroupSchedule.fromJson(Map<String, dynamic> json) {
     return GroupSchedule(
@@ -140,6 +201,57 @@ class GroupSchedule {
       effectivePrice:
           double.tryParse('${json['effective_price']}') ?? 0,
       availableSeats: int.tryParse('${json['available_seats']}') ?? 0,
+      pickupPoints: (json['pickup_points'] as List?)
+              ?.whereType<Map>()
+              .map((e) =>
+                  GroupPickupPoint.fromJson(Map<String, dynamic>.from(e)))
+              .toList() ??
+          const [],
+    );
+  }
+}
+
+class GroupPickupPoint {
+  final int id;
+  final String region;
+  final String? regionLabelRaw;
+  final String? pickupLocation;
+  final double price;
+  final String? notes;
+
+  const GroupPickupPoint({
+    required this.id,
+    required this.region,
+    required this.regionLabelRaw,
+    required this.pickupLocation,
+    required this.price,
+    required this.notes,
+  });
+
+  String get regionKey {
+    final r = region.trim();
+    if (r.isNotEmpty) return r;
+    return (regionLabelRaw ?? '').trim();
+  }
+
+  String get regionLabel {
+    final label = (regionLabelRaw ?? region).trim();
+    return label.isEmpty ? 'ยังไม่ระบุภูมิภาค' : label;
+  }
+
+  String get locationLabel {
+    final loc = (pickupLocation ?? regionLabelRaw ?? region).trim();
+    return loc.isEmpty ? 'ยังไม่ระบุจุดขึ้นรถ' : loc;
+  }
+
+  factory GroupPickupPoint.fromJson(Map<String, dynamic> json) {
+    return GroupPickupPoint(
+      id: int.tryParse('${json['id']}') ?? 0,
+      region: json['region']?.toString() ?? '',
+      regionLabelRaw: json['region_label']?.toString(),
+      pickupLocation: json['pickup_location']?.toString(),
+      price: double.tryParse('${json['price']}') ?? 0,
+      notes: json['notes']?.toString(),
     );
   }
 }
