@@ -1,6 +1,6 @@
 name: luilaykhao_app
 description: "Luilaykhao Customer App - Track your van in real-time"
-version: 1.3.0+32
+version: 1.4.0+33
 
 environment:
   sdk: ^3.11.1

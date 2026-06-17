@@ -46,6 +46,7 @@ class AppProvider extends ChangeNotifier {
 
   List<dynamic> trips = [];
   List<dynamic> featuredTrips = [];
+  List<dynamic> almostFullTrips = [];
   List<dynamic> categories = [];
   List<dynamic> bookings = [];
   List<dynamic> notifications = [];
@@ -188,6 +189,9 @@ class AppProvider extends ChangeNotifier {
     trips = List<dynamic>.from(cache.readPublic<List>('trips') ?? const []);
     featuredTrips = List<dynamic>.from(
       cache.readPublic<List>('featured') ?? const [],
+    );
+    almostFullTrips = List<dynamic>.from(
+      cache.readPublic<List>('almost_full') ?? const [],
     );
     categories = List<dynamic>.from(
       cache.readPublic<List>('categories') ?? const [],
@@ -362,6 +366,7 @@ class AppProvider extends ChangeNotifier {
       safe(api.get(ApiEndpoints.stats)),
       safe(api.get(ApiEndpoints.promotionsActive)),
       safe(api.get(ApiEndpoints.heroSlides)),
+      safe(api.get('trips/almost-full')),
     ]);
 
     final cache = OfflineCache.instance;
@@ -392,6 +397,10 @@ class AppProvider extends ChangeNotifier {
     if (results[6] != null) {
       heroSlides = List<dynamic>.from(api.data(results[6]) ?? []);
       cache.writePublic('hero_slides', heroSlides);
+    }
+    if (results[7] != null) {
+      almostFullTrips = List<dynamic>.from(api.data(results[7]) ?? []);
+      cache.writePublic('almost_full', almostFullTrips);
     }
     notifyListeners();
   }

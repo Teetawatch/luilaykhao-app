@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -66,11 +67,35 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Future<Map<String, dynamic>>? _future;
   Map<String, dynamic>? _trip;
   bool _isDescriptionExpanded = false;
+  // Silent ~25s refresh so seat counts stay current while the page is open.
+  List<dynamic>? _liveSchedules;
+  Timer? _seatPoll;
 
   @override
   void initState() {
     super.initState();
     _future = _loadData();
+    _seatPoll = Timer.periodic(
+      const Duration(seconds: 25),
+      (_) => _refreshSchedules(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _seatPoll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshSchedules() async {
+    if (!mounted) return;
+    try {
+      final app = Provider.of<AppProvider>(context, listen: false);
+      final schedules = await app.schedules(widget.slug ?? '');
+      if (mounted) setState(() => _liveSchedules = schedules);
+    } catch (_) {
+      // transient — keep current data
+    }
   }
 
   Future<Map<String, dynamic>> _loadData() async {
@@ -185,7 +210,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
         return TravelDetailPage(
           trip: _trip ?? <String, dynamic>{},
-          schedules: snapshot.data?['schedules'] as List<dynamic>? ?? const [],
+          schedules: _liveSchedules ??
+              (snapshot.data?['schedules'] as List<dynamic>? ?? const []),
           reviews: snapshot.data?['reviews'] as List<dynamic>? ?? const [],
           isLoading: isLoading,
           initialScheduleId: widget.initialScheduleId,

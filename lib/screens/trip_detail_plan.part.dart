@@ -782,7 +782,7 @@ class _ScheduleChip extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'ว่าง $seats ที่',
+                        seats <= 2 ? 'เหลือ $seats ที่สุดท้าย' : 'ว่าง $seats ที่',
                         maxLines: 1,
                         softWrap: false,
                         style: appFont(

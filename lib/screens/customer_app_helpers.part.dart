@@ -153,6 +153,31 @@ String textOf(dynamic value, [String fallback = '']) {
   return text.isEmpty ? fallback : text;
 }
 
+/// Lowest available seats across a trip's OPEN upcoming rounds
+/// (TripResource `seats_left`). null = no open/upcoming round, or all full.
+int? tripSeatsLeft(Map<String, dynamic> trip) {
+  final v = trip['seats_left'];
+  if (v is num) return v.toInt();
+  if (v is String) return int.tryParse(v);
+  return null;
+}
+
+/// Scarcity tier driving the "ที่นั่งใกล้เต็ม" cue: 'last' (≤2) | 'soon' (≤5) | null.
+String? tripScarcityLevel(Map<String, dynamic> trip) {
+  final n = tripSeatsLeft(trip);
+  if (n == null || n <= 0) return null;
+  if (n <= 2) return 'last';
+  if (n <= 5) return 'soon';
+  return null;
+}
+
+String? tripScarcityLabel(Map<String, dynamic> trip) {
+  final n = tripSeatsLeft(trip);
+  final level = tripScarcityLevel(trip);
+  if (level == null) return null;
+  return level == 'last' ? 'เหลือ $n ที่นั่งสุดท้าย' : 'ใกล้เต็ม · เหลือ $n ที่';
+}
+
 /// Maps a backend category `icon` (a Google Material Symbols name, set freely by
 /// admins) to a Flutter [IconData]. Flutter can't resolve icon fonts by name at
 /// runtime, so we translate the common symbols the admin picker offers and fall

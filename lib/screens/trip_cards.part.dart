@@ -1,5 +1,39 @@
 part of 'customer_app_screen.dart';
 
+/// "ที่นั่งใกล้เต็ม" pill shown on trip cards. Renders nothing unless the trip
+/// has an open round with ≤5 seats left (≤2 = red "last seats", ≤5 = amber).
+class ScarcityBadge extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const ScarcityBadge({super.key, required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final level = tripScarcityLevel(trip);
+    if (level == null) return const SizedBox.shrink();
+    final label = tripScarcityLabel(trip) ?? '';
+    final bg = level == 'last' ? AppTheme.errorColor : AppTheme.warningColor;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 13),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class PopularTripCardLegacy extends StatelessWidget {
   final Map<String, dynamic> trip;
 
@@ -648,6 +682,11 @@ class TripCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ),
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: ScarcityBadge(trip: trip),
                     ),
                   ],
                 ),

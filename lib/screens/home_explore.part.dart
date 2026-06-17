@@ -1,5 +1,10 @@
 part of 'customer_app_screen.dart';
 
+// Shown at most once per app session (resets on restart). Permanent opt-out is
+// stored in SharedPreferences under [_kScarcityDismissedKey].
+bool _scarcitySheetShownThisSession = false;
+const String _kScarcityDismissedKey = 'scarcity_sheet_dismissed';
+
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
 
@@ -33,10 +38,31 @@ class _ExploreScreenState extends State<ExploreScreen> {
     setState(() => _topBarProgress = nextProgress);
   }
 
+  Future<void> _maybeShowScarcitySheet(AppProvider app) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_kScarcityDismissedKey) == true) return;
+    // small delay so it never interrupts the first glance
+    await Future.delayed(const Duration(seconds: 5));
+    if (!mounted || app.almostFullTrips.isEmpty) return;
+    final trip = asMap(app.almostFullTrips.first);
+    if (tripScarcityLevel(trip) == null) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ScarcitySheet(trip: trip),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
     final heroHeight = (MediaQuery.sizeOf(context).height * 0.50).clamp(420.0, 540.0);
+
+    // Polite one-per-session nudge for an almost-full trip.
+    if (!_scarcitySheetShownThisSession && app.almostFullTrips.isNotEmpty) {
+      _scarcitySheetShownThisSession = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowScarcitySheet(app));
+    }
 
     final notificationCount = app.notifications
         .where((item) => asMap(item)['is_read'] != true)
@@ -1171,6 +1197,39 @@ class _HomeTopSectionState extends State<HomeTopSection> {
         children: [
           HomeHeader(user: widget.user),
           const SizedBox(height: 20),
+          const TripFinderEntryCard(),
+          const SizedBox(height: 20),
+          if (widget.app.almostFullTrips.isNotEmpty) ...[
+            Row(
+              children: [
+                const Icon(Icons.local_fire_department_rounded, color: AppTheme.errorColor, size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  'ใกล้เต็มแล้ว · รีบจอง',
+                  style: appFont(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 440,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.zero,
+                itemCount: widget.app.almostFullTrips.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 14),
+                itemBuilder: (context, index) => SizedBox(
+                  width: 280,
+                  child: TripCard(trip: asMap(widget.app.almostFullTrips[index])),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
           Text(
             'ทริปที่กำลังเปิดรับสมัคร',
             style: appFont(
@@ -2704,6 +2763,143 @@ class _GuestBookingBanner extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Polite, dismissible bottom-sheet nudging the most urgent almost-full trip.
+class _ScarcitySheet extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const _ScarcitySheet({required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final image = ApiConfig.mediaUrl(trip['thumbnail_image'] ?? trip['cover_image']);
+    final label = tripScarcityLabel(trip) ?? 'ใกล้เต็มแล้ว';
+    final level = tripScarcityLevel(trip);
+    final badgeColor = level == 'last' ? AppTheme.errorColor : AppTheme.warningColor;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.surface(context),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                SizedBox(
+                  height: 150,
+                  width: double.infinity,
+                  child: image.isEmpty
+                      ? Container(color: AppTheme.subtleSurface(context))
+                      : CachedNetworkImage(imageUrl: image, fit: BoxFit.cover),
+                ),
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          label,
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Material(
+                    color: Colors.black.withValues(alpha: 0.30),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'ทริปนี้กำลังจะเต็ม',
+                    style: appFont(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.accentColor),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    textOf(trip['title'], '-'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.onSurface(context)),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => TripDetailScreen(slug: trip['slug'].toString()),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.bolt_rounded),
+                      label: Text('จองเลย', style: appFont(fontWeight: FontWeight.w800, color: Colors.white)),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: TextButton(
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool(_kScarcityDismissedKey, true);
+                        if (context.mounted) Navigator.of(context).pop();
+                      },
+                      child: Text(
+                        'ไม่ต้องแสดงอีก',
+                        style: appFont(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textSecondary),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

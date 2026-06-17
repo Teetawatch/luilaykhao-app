@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
@@ -50,6 +51,7 @@ part 'booking_detail.part.dart';
 part 'booking_photos.part.dart';
 part 'auth_booking.part.dart';
 part 'package_planner.part.dart';
+part 'trip_finder.part.dart';
 part 'customer_app_helpers.part.dart';
 
 final _moneyFormat = NumberFormat.currency(locale: 'th_TH', symbol: '฿');
