@@ -1086,13 +1086,27 @@ String? _trackingUnavailableMessage(dynamic booking) {
   }
 
   final tripDate = DateTime.tryParse(booking.departureDate.toString());
-  if (tripDate == null) return null;
+  // วัน-เวลาออกรถจริง อาจเป็นคืนก่อนวันทริป (departs_at) — เปิดติดตามตั้งแต่วันนั้น
+  final departsRaw = booking.departsAt.toString();
+  final departsDate = departsRaw.isEmpty ? null : DateTime.tryParse(departsRaw);
+
+  // เริ่มติดตามได้ตั้งแต่วันรถออกจริง (ไม่งั้นใช้วันทริป)
+  final startSource = departsDate ?? tripDate;
+  // สิ้นสุดเมื่อพ้นวันทริป (ไม่งั้นอิงวันรถออก)
+  final endSource = tripDate ?? departsDate;
+  if (startSource == null && endSource == null) return null;
 
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
-  final date = DateTime(tripDate.year, tripDate.month, tripDate.day);
-  if (date.isAfter(today)) return 'สามารถติดตามรถได้ในวันเดินทาง';
-  if (date.isBefore(today)) return 'การติดตามรถของทริปนี้สิ้นสุดแล้ว';
+
+  if (startSource != null) {
+    final start = DateTime(startSource.year, startSource.month, startSource.day);
+    if (today.isBefore(start)) return 'สามารถติดตามรถได้ในวันเดินทาง';
+  }
+  if (endSource != null) {
+    final end = DateTime(endSource.year, endSource.month, endSource.day);
+    if (today.isAfter(end)) return 'การติดตามรถของทริปนี้สิ้นสุดแล้ว';
+  }
   return null;
 }
 

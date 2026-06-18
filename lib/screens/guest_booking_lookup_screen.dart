@@ -204,20 +204,27 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
       return;
     }
 
-    // เปิดให้ติดตามรถตามวันออกรถจริง (departs_at) — รอบที่รถออกคืนก่อน
-    // วันทริปจะติดตามได้ตั้งแต่คืนนั้น
-    final departureDate =
-        (result['departs_at'] ?? result['departure_date'])?.toString() ?? '';
-    final date = DateTime.tryParse(departureDate);
-    if (date != null) {
-      final today = DateTime.now();
-      final d = DateTime(date.year, date.month, date.day);
-      final t = DateTime(today.year, today.month, today.day);
-      if (d.isAfter(t)) {
+    // เปิดให้ติดตามตั้งแต่วันที่รถออกจริง (departs_at อาจเป็นคืนก่อนวันทริป)
+    // ไปจนถึงวันทริป — รอบที่รถออกคืนก่อนจึงติดตามได้ทั้งคืนนั้นและวันเดินทาง
+    final departsRaw = (result['departs_at'] ?? '').toString();
+    final tripRaw = (result['departure_date'] ?? '').toString();
+    final departsDate = departsRaw.isEmpty ? null : DateTime.tryParse(departsRaw);
+    final tripDate = tripRaw.isEmpty ? null : DateTime.tryParse(tripRaw);
+    final startSource = departsDate ?? tripDate;
+    final endSource = tripDate ?? departsDate;
+    final now = DateTime.now();
+    final t = DateTime(now.year, now.month, now.day);
+    if (startSource != null) {
+      final start =
+          DateTime(startSource.year, startSource.month, startSource.day);
+      if (t.isBefore(start)) {
         _showSnack('สามารถติดตามรถได้ในวันเดินทาง');
         return;
       }
-      if (d.isBefore(t)) {
+    }
+    if (endSource != null) {
+      final end = DateTime(endSource.year, endSource.month, endSource.day);
+      if (t.isAfter(end)) {
         _showSnack('ทริปนี้สิ้นสุดแล้ว');
         return;
       }
