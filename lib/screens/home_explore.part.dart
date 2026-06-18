@@ -151,6 +151,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       app.loadPublicData(type: type);
                     },
                   ),
+                  if (app.almostFullTrips.isNotEmpty)
+                    _AlmostFullRail(
+                      trips: app.almostFullTrips.map(asMap).toList(),
+                    ),
                   _PopularTripsSection(
                     trips: showTrips,
                     activeType: _activeType,
@@ -651,6 +655,8 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
           child: const Column(
             children: [
               _LicenseAssuranceBanner(),
+              SizedBox(height: 14),
+              TripFinderEntryCard(),
               SizedBox(height: 14),
               _GuestBookingBanner(),
             ],
@@ -1484,6 +1490,69 @@ class _CategoryChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Almost-Full Rail ────────────────────────────────────────────────────────
+// Scarcity cue mirroring the web "ใกล้เต็มแล้ว" home rail: a horizontal list of
+// trips that are nearly sold out, nudging users to book before seats run out.
+class _AlmostFullRail extends StatelessWidget {
+  final List<Map<String, dynamic>> trips;
+
+  const _AlmostFullRail({required this.trips});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 16, 0, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.local_fire_department_rounded,
+                  color: AppTheme.errorColor,
+                  size: 24,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'ใกล้เต็มแล้ว · รีบจอง',
+                    style: appFont(
+                      color: const Color(0xFF063F46),
+                      fontSize: 25,
+                      height: 1.1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            height: 250,
+            child: ListView.separated(
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 20),
+              itemCount: trips.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
+              itemBuilder: (context, index) => SizedBox(
+                width: MediaQuery.of(context).size.width > 700 ? 230 : 180,
+                child: _ReferenceTripCard(trip: trips[index]),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
