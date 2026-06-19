@@ -25,18 +25,20 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
   final _mapController = MapController();
   final _label = TextEditingController();
   final _note = TextEditingController();
-  LatLng? _picked;
+  // จุดที่เลือก = จุดกึ่งกลางแผนที่เสมอ (หมุดตรึงกลางจอ เลื่อนแผนที่เอาแบบ LINE MAN)
+  late LatLng _center;
 
   @override
   void initState() {
     super.initState();
     final initial = widget.initial;
+    _center = widget.center;
     if (initial != null) {
       _label.text = initial['label']?.toString() ?? '';
       _note.text = initial['note']?.toString() ?? '';
       final lat = double.tryParse('${initial['lat']}');
       final lng = double.tryParse('${initial['lng']}');
-      if (lat != null && lng != null) _picked = LatLng(lat, lng);
+      if (lat != null && lng != null) _center = LatLng(lat, lng);
     }
   }
 
@@ -47,14 +49,14 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
     super.dispose();
   }
 
-  bool get _canConfirm => _picked != null && _label.text.trim().isNotEmpty;
+  bool get _canConfirm => _label.text.trim().isNotEmpty;
 
   void _confirm() {
     if (!_canConfirm) return;
     Navigator.pop(context, {
       'label': _label.text.trim(),
-      'lat': _picked!.latitude,
-      'lng': _picked!.longitude,
+      'lat': _center.latitude,
+      'lng': _center.longitude,
       'note': _note.text.trim().isEmpty ? null : _note.text.trim(),
     });
   }
@@ -77,11 +79,12 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                 FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: _picked ?? widget.center,
-                    initialZoom: _picked != null ? 14.5 : 11,
+                    initialCenter: _center,
+                    initialZoom: 14.5,
                     minZoom: 5,
                     maxZoom: 18,
-                    onTap: (_, latlng) => setState(() => _picked = latlng),
+                    // หมุดตรึงกลางจอ — จุดที่เลือกคือกึ่งกลางแผนที่ขณะนั้น
+                    onPositionChanged: (camera, _) => _center = camera.center,
                   ),
                   children: [
                     TileLayer(
@@ -90,63 +93,62 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                       subdomains: const ['a', 'b', 'c', 'd'],
                       userAgentPackageName: 'com.luilaykhao.app',
                     ),
-                    if (_picked != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: _picked!,
-                            width: 44,
-                            height: 44,
-                            alignment: Alignment.topCenter,
-                            child: const Icon(
-                              Icons.location_on_rounded,
-                              color: AppTheme.primaryColor,
-                              size: 44,
-                            ),
-                          ),
-                        ],
-                      ),
                   ],
                 ),
-                if (_picked == null)
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    top: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surface(context),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.touch_app_rounded,
-                              size: 18, color: AppTheme.primaryColor),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'แตะบนแผนที่เพื่อเลือกจุดที่สะดวก',
-                              style: appFont(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.onSurface(context),
-                              ),
-                            ),
-                          ),
+                // หมุดคงที่กลางจอ (ปลายหมุดชี้จุดกึ่งกลางพอดี)
+                IgnorePointer(
+                  child: Center(
+                    child: Transform.translate(
+                      offset: const Offset(0, -22),
+                      child: const Icon(
+                        Icons.location_on_rounded,
+                        color: AppTheme.primaryColor,
+                        size: 46,
+                        shadows: [
+                          Shadow(color: Colors.black26, blurRadius: 6),
                         ],
                       ),
                     ),
                   ),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  top: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface(context),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.open_with_rounded,
+                            size: 18, color: AppTheme.primaryColor),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดที่ต้องการ',
+                            style: appFont(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.onSurface(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
