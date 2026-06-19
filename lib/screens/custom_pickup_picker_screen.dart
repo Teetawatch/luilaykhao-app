@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../theme/app_theme.dart';
@@ -27,6 +28,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
   final _note = TextEditingController();
   // จุดที่เลือก = จุดกึ่งกลางแผนที่เสมอ (หมุดตรึงกลางจอ เลื่อนแผนที่เอาแบบ LINE MAN)
   late LatLng _center;
+  bool _locating = false;
 
   @override
   void initState() {
@@ -59,6 +61,46 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
       'lng': _center.longitude,
       'note': _note.text.trim().isEmpty ? null : _note.text.trim(),
     });
+  }
+
+  /// เลื่อนแผนที่ไปยังตำแหน่ง GPS ปัจจุบัน (ปุ่ม my-location แบบ LINE MAN/Grab)
+  Future<void> _goToMyLocation() async {
+    if (_locating) return;
+    setState(() => _locating = true);
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        _notify('กรุณาเปิดบริการตำแหน่ง (GPS) ก่อนใช้งาน');
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _notify('ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง');
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      if (!mounted) return;
+      final target = LatLng(pos.latitude, pos.longitude);
+      _center = target;
+      _mapController.move(target, 16);
+    } catch (_) {
+      _notify('ไม่สามารถระบุตำแหน่งได้ ลองอีกครั้ง');
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message, style: appFont(fontWeight: FontWeight.w600))),
+    );
   }
 
   @override
@@ -146,6 +188,37 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+                // ปุ่มหาตำแหน่งฉัน (my location)
+                Positioned(
+                  right: 14,
+                  bottom: 14,
+                  child: Material(
+                    color: AppTheme.surface(context),
+                    shape: const CircleBorder(),
+                    elevation: 3,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _locating ? null : _goToMyLocation,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: _locating
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.my_location_rounded,
+                                size: 22,
+                                color: AppTheme.primaryColor,
+                              ),
+                      ),
                     ),
                   ),
                 ),
