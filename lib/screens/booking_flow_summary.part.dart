@@ -230,6 +230,10 @@ class TravelInfoSection extends StatelessWidget {
   final ValueChanged<bool> onJoinTripChanged;
   final ValueChanged<String?> onRegionChanged;
   final ValueChanged<int?> onPickupChanged;
+  // จุดรับที่ลูกค้าปักหมุดเอง { label, lat, lng, note } — null = ไม่ได้ใช้
+  final Map<String, dynamic>? customPickup;
+  final VoidCallback onCustomPickupTap;
+  final VoidCallback onCustomPickupClear;
 
   const TravelInfoSection({
     super.key,
@@ -243,6 +247,9 @@ class TravelInfoSection extends StatelessWidget {
     required this.onJoinTripChanged,
     required this.onRegionChanged,
     required this.onPickupChanged,
+    this.customPickup,
+    required this.onCustomPickupTap,
+    required this.onCustomPickupClear,
   });
 
   @override
@@ -472,10 +479,160 @@ class TravelInfoSection extends StatelessWidget {
                   ),
               ],
             ),
+          if (!isJoinTrip) ...[
+            const SizedBox(height: 12),
+            _CustomPickupTile(
+              customPickup: customPickup,
+              onTap: onCustomPickupTap,
+              onClear: onCustomPickupClear,
+            ),
+          ],
           if (!isJoinTrip && selectedVehicle.isNotEmpty) ...[
             const SizedBox(height: 16),
             _VehiclePhotoPreview(vehicle: selectedVehicle),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// ปุ่ม/การ์ดสำหรับจุดรับที่ลูกค้าปักหมุดเอง (อยู่ในเส้นทางผ่านที่รับได้)
+class _CustomPickupTile extends StatelessWidget {
+  final Map<String, dynamic>? customPickup;
+  final VoidCallback onTap;
+  final VoidCallback onClear;
+
+  const _CustomPickupTile({
+    required this.customPickup,
+    required this.onTap,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const amber = Color(0xFFB45309);
+    final cp = customPickup;
+
+    if (cp == null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppTheme.border(context),
+              width: 1.2,
+              style: BorderStyle.solid,
+            ),
+            color: AppTheme.subtleSurface(context),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.add_location_alt_rounded,
+                  color: AppTheme.primaryColor, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'ไม่มีจุดที่สะดวก? ปักหมุดจุดรับเอง',
+                  style: appFont(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: AppTheme.mutedText(context)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: amber.withValues(alpha: 0.4), width: 1.2),
+        color: amber.withValues(alpha: 0.06),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.add_location_alt_rounded, color: amber, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'จุดรับที่ปักหมุดเอง',
+                  style: appFont(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: amber,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(Icons.close_rounded,
+                    size: 18, color: AppTheme.mutedText(context)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            textOf(cp['label']),
+            style: appFont(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.onSurface(context),
+            ),
+          ),
+          if (textOf(cp['note']).trim().isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              textOf(cp['note']),
+              style: appFont(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: _mutedTextColor(context),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, size: 14, color: amber),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  'รอเจ้าหน้าที่ตรวจสอบและแจ้งค่าบริการก่อนยืนยัน',
+                  style: appFont(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: amber,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: onTap,
+            child: Text(
+              'แก้ไขจุดที่ปักหมุด',
+              style: appFont(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ),
         ],
       ),
     );

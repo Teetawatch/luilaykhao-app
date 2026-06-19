@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
@@ -10,6 +11,7 @@ import '../providers/app_provider.dart';
 import '../services/realtime_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
+import 'custom_pickup_picker_screen.dart';
 import 'document_wallet_screen.dart';
 import 'payment_screen.dart';
 
@@ -111,6 +113,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   int? _scheduleId;
   int? _pickupPointId;
   String? _pickupRegion;
+  // จุดรับที่ลูกค้าปักหมุดเอง { label, lat, lng, note } — ใช้เมื่อไม่ได้เลือกจุดที่กำหนด
+  Map<String, dynamic>? _customPickup;
   bool _submitting = false;
   bool _showPricingDetails = false;
   bool _seatLoading = false;
@@ -548,6 +552,44 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     }
   }
 
+  /// จุดเริ่มต้นแผนที่ = พิกัดจุดรับแรกของรอบ (ถ้ามี) มิฉะนั้น center กรุงเทพฯ
+  LatLng _pickupMapCenter() {
+    for (final raw in _pickupPoints) {
+      final p = asMap(raw);
+      final lat = double.tryParse('${p['latitude']}');
+      final lng = double.tryParse('${p['longitude']}');
+      if (lat != null && lng != null) return LatLng(lat, lng);
+    }
+    return const LatLng(13.7563, 100.5018);
+  }
+
+  Future<void> _openCustomPickup() async {
+    FocusScope.of(context).unfocus();
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CustomPickupPickerScreen(
+          center: _pickupMapCenter(),
+          initial: _customPickup,
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _customPickup = result;
+      // จุด custom กับจุดที่กำหนด เลือกได้อย่างใดอย่างหนึ่ง
+      _pickupPointId = null;
+      _pickupRegion = null;
+      for (final p in _passengers) {
+        p.pickupPointId.value = null;
+      }
+    });
+  }
+
+  void _clearCustomPickup() {
+    setState(() => _customPickup = null);
+  }
+
   bool _validatePickupStep() {
     if (_scheduleId == null) {
       ScaffoldMessenger.of(
@@ -564,17 +606,19 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       }
       return true;
     }
+    // ปักหมุดจุดรับเองแล้ว ถือว่าเลือกจุดรับครบ ข้ามการบังคับเลือกจุดที่กำหนด
+    if (_customPickup != null) return true;
     if (_pickupPoints.isNotEmpty &&
         (_pickupRegion == null || _pickupRegion!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณาเลือกภูมิภาคที่จะขึ้นรถ')),
+        const SnackBar(content: Text('กรุณาเลือกภูมิภาคที่จะขึ้นรถ หรือปักหมุดจุดรับเอง')),
       );
       return false;
     }
     if (_pickupPoints.isNotEmpty && _pickupPointId == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถ')));
+      ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถ หรือปักหมุดจุดรับเอง')));
       return false;
     }
     return true;
@@ -679,6 +723,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         pickupRegion: _pickupRegion,
         pickupPointId: _pickupPointId,
         pickupPoints: _pickupPoints,
+        customPickup: _customPickup,
+        onCustomPickupTap: _openCustomPickup,
+        onCustomPickupClear: _clearCustomPickup,
         onScheduleChanged: (value) {
           final nextSchedule = asMap(
             widget.schedules.firstWhere(
@@ -721,6 +768,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
                 ? _pickupRegionKey(point)
                 : value;
             _pickupPointId = newPickupId;
+            _customPickup = null; // เลือกจุดที่กำหนด → ยกเลิกจุดที่ปักเอง
             for (final p in _passengers) {
               p.pickupPointId.value = newPickupId;
             }
@@ -736,6 +784,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           setState(() {
             _pickupPointId = value;
             _pickupRegion = _pickupRegionKey(point);
+            _customPickup = null; // เลือกจุดที่กำหนด → ยกเลิกจุดที่ปักเอง
             // Update all passengers to use the new global pickup
             for (final p in _passengers) {
               p.pickupPointId.value = value;
@@ -959,6 +1008,13 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         'schedule_id': _scheduleId,
         'pickup_point_id': _isJoinTrip ? null : _pickupPointId,
         'pickup_region': _isJoinTrip ? null : _pickupRegion,
+        // จุดรับที่ปักหมุดเอง — ส่งเมื่อไม่ได้เลือกจุดที่กำหนด รอแอดมินยืนยันราคา
+        if (!_isJoinTrip && _pickupPointId == null && _customPickup != null) ...{
+          'custom_pickup_label': _customPickup!['label'],
+          'custom_pickup_lat': _customPickup!['lat'],
+          'custom_pickup_lng': _customPickup!['lng'],
+          'custom_pickup_note': _customPickup!['note'],
+        },
         'is_group': _passengers.length > 1,
         'group_name': _passengers.length > 1
             ? 'กลุ่ม ${_passengers.length} คน'

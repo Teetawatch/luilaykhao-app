@@ -1005,6 +1005,7 @@ class _PreTripBriefingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final trip = asMap(schedule['trip']);
     final pickupPoint = asMap(booking['pickup_point']);
+    final customPickup = asMap(booking['custom_pickup']);
     final staffList = asList(booking['assigned_staff']);
     final preparations = asList(trip['preparations']);
     final mustKnow = asList(trip['must_know']);
@@ -1199,6 +1200,12 @@ class _PreTripBriefingCard extends StatelessWidget {
                   const SizedBox(height: 14),
                 ],
 
+                // จุดรับที่ลูกค้าปักหมุดเอง (custom) พร้อมสถานะยืนยัน
+                if (customPickup.isNotEmpty) ...[
+                  _CustomPickupBriefing(customPickup: customPickup),
+                  const SizedBox(height: 14),
+                ],
+
                 // Staff/guide contacts
                 if (staffList.isNotEmpty) ...[
                   _BriefingSection(
@@ -1373,6 +1380,102 @@ class _BriefingSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// จุดรับที่ลูกค้าปักหมุดเอง — แสดงสถานะ (รอยืนยัน / ยืนยันแล้ว + ค่าบริการ / ปฏิเสธ)
+class _CustomPickupBriefing extends StatelessWidget {
+  final Map<String, dynamic> customPickup;
+
+  const _CustomPickupBriefing({required this.customPickup});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = textOf(customPickup['status']);
+    final (Color color, String label, IconData icon) = switch (status) {
+      'approved' => (
+        const Color(0xFF15803D),
+        'ยืนยันแล้ว',
+        Icons.check_circle_rounded,
+      ),
+      'rejected' => (
+        AppTheme.errorColor,
+        'ไม่ผ่านการยืนยัน',
+        Icons.cancel_rounded,
+      ),
+      _ => (
+        const Color(0xFFB45309),
+        'รอเจ้าหน้าที่ยืนยัน',
+        Icons.hourglass_top_rounded,
+      ),
+    };
+
+    return _BriefingSection(
+      icon: Icons.add_location_alt_rounded,
+      title: 'จุดรับที่ปักหมุดเอง',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            textOf(customPickup['label']),
+            style: appFont(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.onSurface(context),
+              height: 1.4,
+            ),
+          ),
+          if (textOf(customPickup['note']).isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              textOf(customPickup['note']),
+              style: appFont(
+                fontSize: 12.5,
+                color: AppTheme.mutedText(context),
+                height: 1.4,
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 13, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  status == 'approved'
+                      ? '$label · ค่าบริการ ${money(customPickup['price'])}'
+                      : label,
+                  style: appFont(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (status == 'rejected' &&
+              textOf(customPickup['reject_reason']).isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              textOf(customPickup['reject_reason']),
+              style: appFont(
+                fontSize: 12,
+                color: AppTheme.errorColor,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
