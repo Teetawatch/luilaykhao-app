@@ -163,12 +163,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 16),
                 ],
 
-                // Group chat — available to members of active bookings
+                // Companion invites — เชิญเพื่อนเข้าการจองเดียวกัน
                 if (textOf(booking['status']) == 'pending' ||
                     textOf(booking['status']) == 'confirmed') ...[
-                  _TripChatButton(booking: booking),
-                  const SizedBox(height: 16),
-                  // Companion invites — เชิญเพื่อนเข้าการจองเดียวกัน
                   _BookingMembersSection(booking: booking),
                   const SizedBox(height: 16),
                 ],
