@@ -1001,21 +1001,36 @@ class _PreTripBriefingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trip = asMap(schedule['trip']);
-    final pickupPoint = asMap(booking['pickup_point']);
     final customPickup = asMap(booking['custom_pickup']);
     final staffList = asList(booking['assigned_staff']);
-    // รูปจุดรับ: ใช้ของ booking.pickup_point ก่อน ถ้าว่างค่อย fallback ไปจุดเดียวกัน
-    // ใน schedule.pickup_points (เผื่อ relation ฝั่ง booking ไม่มี image_url)
-    final matchedSchedulePickup = asList(schedule['pickup_points'])
-        .map(asMap)
-        .firstWhere(
-          (p) => p['id'].toString() == pickupPoint['id'].toString(),
+
+    // จุดรับที่จะแสดงในหน้านี้ (พร้อมรูป) — เลือกจากแหล่งที่ครบที่สุด:
+    // 1) จุดที่ booking เลือกไว้ (booking.pickup_point)
+    // 2) จุดเดียวกันใน schedule.pickup_points (เผื่อ relation ฝั่ง booking ไม่มี image_url)
+    // 3) ถ้า booking ไม่ได้ระบุจุด (เลือกแบบภูมิภาค) ใช้จุดของภูมิภาคนั้นใน schedule
+    final schedulePickups =
+        asList(schedule['pickup_points']).map(asMap).toList();
+    final bookingPickup = asMap(booking['pickup_point']);
+    final matchedById = schedulePickups.firstWhere(
+      (p) =>
+          bookingPickup.isNotEmpty &&
+          p['id'].toString() == bookingPickup['id'].toString(),
+      orElse: () => <String, dynamic>{},
+    );
+    var pickupPoint = bookingPickup;
+    if (pickupPoint.isEmpty) {
+      final region = textOf(booking['pickup_region']);
+      if (region.isNotEmpty) {
+        pickupPoint = schedulePickups.firstWhere(
+          (p) => textOf(p['region']) == region,
           orElse: () => <String, dynamic>{},
         );
+      }
+    }
     final pickupImageUrl = ApiConfig.mediaUrl(
       textOf(pickupPoint['image_url']).isNotEmpty
           ? pickupPoint['image_url']
-          : matchedSchedulePickup['image_url'],
+          : matchedById['image_url'],
     );
     final preparations = asList(trip['preparations']);
     final mustKnow = asList(trip['must_know']);
