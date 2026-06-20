@@ -1007,6 +1007,19 @@ class _PreTripBriefingCard extends StatelessWidget {
     final pickupPoint = asMap(booking['pickup_point']);
     final customPickup = asMap(booking['custom_pickup']);
     final staffList = asList(booking['assigned_staff']);
+    // รูปจุดรับ: ใช้ของ booking.pickup_point ก่อน ถ้าว่างค่อย fallback ไปจุดเดียวกัน
+    // ใน schedule.pickup_points (เผื่อ relation ฝั่ง booking ไม่มี image_url)
+    final matchedSchedulePickup = asList(schedule['pickup_points'])
+        .map(asMap)
+        .firstWhere(
+          (p) => p['id'].toString() == pickupPoint['id'].toString(),
+          orElse: () => <String, dynamic>{},
+        );
+    final pickupImageUrl = ApiConfig.mediaUrl(
+      textOf(pickupPoint['image_url']).isNotEmpty
+          ? pickupPoint['image_url']
+          : matchedSchedulePickup['image_url'],
+    );
     final preparations = asList(trip['preparations']);
     final mustKnow = asList(trip['must_know']);
 
@@ -1132,17 +1145,54 @@ class _PreTripBriefingCard extends StatelessWidget {
                             height: 1.4,
                           ),
                         ),
-                        if (ApiConfig.mediaUrl(pickupPoint['image_url']).isNotEmpty) ...[
+                        if (pickupImageUrl.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: CachedNetworkImage(
-                              imageUrl:
-                                  ApiConfig.mediaUrl(pickupPoint['image_url']),
+                              imageUrl: pickupImageUrl,
                               height: 150,
                               width: double.infinity,
                               fit: BoxFit.cover,
-                              errorWidget: (_, _, _) => const SizedBox.shrink(),
+                              placeholder: (_, _) => Container(
+                                height: 150,
+                                color: AppTheme.subtleSurface(context),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // อย่าซ่อนเงียบ — โชว์ placeholder ให้เห็นว่ามีรูปแต่โหลดไม่ได้
+                              errorWidget: (_, _, _) => Container(
+                                height: 150,
+                                color: AppTheme.subtleSurface(context),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.image_not_supported_outlined,
+                                        color: AppTheme.mutedText(context),
+                                        size: 26,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'โหลดรูปไม่สำเร็จ',
+                                        style: appFont(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.mutedText(context),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],
