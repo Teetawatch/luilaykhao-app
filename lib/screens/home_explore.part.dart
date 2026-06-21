@@ -56,23 +56,31 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    final heroHeight = (MediaQuery.sizeOf(context).height * 0.50).clamp(420.0, 540.0);
+    final heroHeight = (MediaQuery.sizeOf(context).height * 0.50).clamp(
+      420.0,
+      540.0,
+    );
 
     // Polite one-per-session nudge for an almost-full trip.
     if (!_scarcitySheetShownThisSession && app.almostFullTrips.isNotEmpty) {
       _scarcitySheetShownThisSession = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowScarcitySheet(app));
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _maybeShowScarcitySheet(app),
+      );
     }
 
     final notificationCount = app.notifications
         .where((item) => asMap(item)['is_read'] != true)
         .length;
     final hasFilter = _activeSearch != null || _activeType != null;
-    final showTrips = (hasFilter
-            ? app.trips
-            : (app.featuredTrips.isNotEmpty ? app.featuredTrips : app.trips))
-        .map(asMap)
-        .toList();
+    final showTrips =
+        (hasFilter
+                ? app.trips
+                : (app.featuredTrips.isNotEmpty
+                      ? app.featuredTrips
+                      : app.trips))
+            .map(asMap)
+            .toList();
 
     Future<void> openNotifications() async {
       if (!app.isLoggedIn) {
@@ -379,6 +387,50 @@ class _HeroHeaderState extends State<HeroHeader> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Material(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(999),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(999),
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const TripFinderScreen(),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 9,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome_rounded,
+                                    size: 16,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                  const SizedBox(width: 7),
+                                  Text(
+                                    'ค้นหาทริปที่ใช่',
+                                    style: appFont(
+                                      color: AppTheme.primaryColor,
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -399,7 +451,9 @@ class _HeroHeaderState extends State<HeroHeader> {
                     width: active ? 20 : 7,
                     height: 7,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: active ? 0.95 : 0.5),
+                      color: Colors.white.withValues(
+                        alpha: active ? 0.95 : 0.5,
+                      ),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   );
@@ -656,8 +710,6 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
             children: [
               _LicenseAssuranceBanner(),
               SizedBox(height: 14),
-              TripFinderEntryCard(),
-              SizedBox(height: 14),
               _GuestBookingBanner(),
             ],
           ),
@@ -726,9 +778,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _focused
-              ? const Color(0xFF0B8A6E)
-              : const Color(0xFFE5EBEB),
+          color: _focused ? const Color(0xFF0B8A6E) : const Color(0xFFE5EBEB),
           width: _focused ? 1.5 : 1,
         ),
         boxShadow: [
@@ -928,7 +978,7 @@ class _LicenseAssuranceBanner extends StatelessWidget {
                                   child: CircularProgressIndicator(
                                     value: progress.expectedTotalBytes != null
                                         ? progress.cumulativeBytesLoaded /
-                                            progress.expectedTotalBytes!
+                                              progress.expectedTotalBytes!
                                         : null,
                                     color: const Color(0xFF087C68),
                                   ),
@@ -1208,7 +1258,11 @@ class _HomeTopSectionState extends State<HomeTopSection> {
           if (widget.app.almostFullTrips.isNotEmpty) ...[
             Row(
               children: [
-                const Icon(Icons.local_fire_department_rounded, color: AppTheme.errorColor, size: 20),
+                const Icon(
+                  Icons.local_fire_department_rounded,
+                  color: AppTheme.errorColor,
+                  size: 20,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'ใกล้เต็มแล้ว · รีบจอง',
@@ -1230,7 +1284,9 @@ class _HomeTopSectionState extends State<HomeTopSection> {
                 separatorBuilder: (context, index) => const SizedBox(width: 14),
                 itemBuilder: (context, index) => SizedBox(
                   width: 280,
-                  child: TripCard(trip: asMap(widget.app.almostFullTrips[index])),
+                  child: TripCard(
+                    trip: asMap(widget.app.almostFullTrips[index]),
+                  ),
                 ),
               ),
             ),
@@ -1380,9 +1436,9 @@ class _CategoryChipsSection extends StatelessWidget {
           (
             type: textOf(cat['slug']),
             label: textOf(cat['name'], textOf(cat['slug'])),
-            icon: categoryIcon(textOf(cat['icon']).isEmpty
-                ? null
-                : textOf(cat['icon'])),
+            icon: categoryIcon(
+              textOf(cat['icon']).isEmpty ? null : textOf(cat['icon']),
+            ),
           ),
     ];
 
@@ -1471,11 +1527,7 @@ class _CategoryChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected ? Colors.white : accent,
-            ),
+            Icon(icon, size: 18, color: isSelected ? Colors.white : accent),
             const SizedBox(width: 7),
             Text(
               label,
@@ -1694,11 +1746,7 @@ class _TrustStatsBar extends StatelessWidget {
         value: 'ถูกต้อง',
         label: 'ใบอนุญาตนำเที่ยว',
       ),
-      (
-        icon: Icons.map_rounded,
-        value: '${trips.length}',
-        label: 'เส้นทางทริป',
-      ),
+      (icon: Icons.map_rounded, value: '${trips.length}', label: 'เส้นทางทริป'),
     ].take(3).toList();
 
     return Container(
@@ -1787,8 +1835,19 @@ String _compactCount(int n) {
 // ─── Upcoming Departures Section ─────────────────────────────────────────────
 
 const _thaiMonthsShort = [
-  '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+  '',
+  'ม.ค.',
+  'ก.พ.',
+  'มี.ค.',
+  'เม.ย.',
+  'พ.ค.',
+  'มิ.ย.',
+  'ก.ค.',
+  'ส.ค.',
+  'ก.ย.',
+  'ต.ค.',
+  'พ.ย.',
+  'ธ.ค.',
 ];
 
 class _UpcomingDeparturesSection extends StatelessWidget {
@@ -1801,7 +1860,13 @@ class _UpcomingDeparturesSection extends StatelessWidget {
     // A trip can have many rounds — treat each schedule as its own departure so
     // every round (including the nearly-full ones) shows on the board.
     final entries =
-        <({Map<String, dynamic> trip, Map<String, dynamic> schedule, DateTime date})>[];
+        <
+          ({
+            Map<String, dynamic> trip,
+            Map<String, dynamic> schedule,
+            DateTime date,
+          })
+        >[];
     for (final raw in app.trips) {
       final trip = asMap(raw);
       for (final s in asList(trip['schedules']).map(asMap)) {
@@ -1910,23 +1975,24 @@ class _DepartureCard extends StatelessWidget {
     final full = seats != null && seats <= 0;
     // "ใกล้เต็ม" measured against capacity (≥70% booked) so it stays honest on
     // both small and large trips — plus an absolute floor of ≤3 seats left.
-    final nearlyFull = seats != null &&
+    final nearlyFull =
+        seats != null &&
         seats > 0 &&
         (seats <= 3 || (total != null && total > 0 && seats <= total * 0.3));
 
     final (Color badgeBg, Color badgeFg, String seatText) = full
         ? (const Color(0xFFFDECEC), const Color(0xFFC0392B), 'เต็มแล้ว')
         : nearlyFull
-            ? (
-                const Color(0xFFFFF1E6),
-                const Color(0xFFC2410C),
-                'เหลือ $seats ที่นั่ง',
-              )
-            : (
-                const Color(0xFFE8F3EF),
-                const Color(0xFF0B6E5A),
-                seats != null ? 'ว่าง $seats ที่นั่ง' : 'เปิดรับสมัคร',
-              );
+        ? (
+            const Color(0xFFFFF1E6),
+            const Color(0xFFC2410C),
+            'เหลือ $seats ที่นั่ง',
+          )
+        : (
+            const Color(0xFFE8F3EF),
+            const Color(0xFF0B6E5A),
+            seats != null ? 'ว่าง $seats ที่นั่ง' : 'เปิดรับสมัคร',
+          );
 
     return GestureDetector(
       onTap: () {
@@ -2010,8 +2076,11 @@ class _DepartureCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        const Icon(Icons.place_rounded,
-                            size: 13, color: Color(0xFF8A9FA0)),
+                        const Icon(
+                          Icons.place_rounded,
+                          size: 13,
+                          color: Color(0xFF8A9FA0),
+                        ),
                         const SizedBox(width: 2),
                         Expanded(
                           child: Text(
@@ -2030,8 +2099,10 @@ class _DepartureCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 7),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeBg,
                       borderRadius: BorderRadius.circular(999),
@@ -2129,9 +2200,11 @@ class _HomeReviewCard extends StatelessWidget {
     final user = asMap(review['user']);
     final name = textOf(review['user_name'], textOf(user['name'], 'ลูกทริป'));
     final avatar = ApiConfig.mediaUrl(
-        textOf(review['user_avatar'], textOf(user['avatar_url'])));
-    final rating =
-        (num.tryParse('${review['rating'] ?? 0}') ?? 0).round().clamp(0, 5);
+      textOf(review['user_avatar'], textOf(user['avatar_url'])),
+    );
+    final rating = (num.tryParse('${review['rating'] ?? 0}') ?? 0)
+        .round()
+        .clamp(0, 5);
     final comment = textOf(review['comment']).trim();
     final tripTitle = textOf(review['trip_title']).trim();
     final initial = name.isNotEmpty ? name.characters.first.toUpperCase() : '?';
@@ -2224,8 +2297,11 @@ class _HomeReviewCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.hiking_rounded,
-                    size: 14, color: Color(0xFF0B6E5A)),
+                const Icon(
+                  Icons.hiking_rounded,
+                  size: 14,
+                  color: Color(0xFF0B6E5A),
+                ),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
@@ -2765,9 +2841,7 @@ class _GuestBookingBanner extends StatelessWidget {
         onTap: () {
           HapticFeedback.selectionClick();
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const GuestBookingLookupScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const GuestBookingLookupScreen()),
           );
         },
         child: Container(
@@ -2846,10 +2920,14 @@ class _ScarcitySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = ApiConfig.mediaUrl(trip['thumbnail_image'] ?? trip['cover_image']);
+    final image = ApiConfig.mediaUrl(
+      trip['thumbnail_image'] ?? trip['cover_image'],
+    );
     final label = tripScarcityLabel(trip) ?? 'ใกล้เต็มแล้ว';
     final level = tripScarcityLevel(trip);
-    final badgeColor = level == 'last' ? AppTheme.errorColor : AppTheme.warningColor;
+    final badgeColor = level == 'last'
+        ? AppTheme.errorColor
+        : AppTheme.warningColor;
 
     return SafeArea(
       top: false,
@@ -2877,7 +2955,10 @@ class _ScarcitySheet extends StatelessWidget {
                   top: 12,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeColor,
                       borderRadius: BorderRadius.circular(999),
@@ -2885,11 +2966,19 @@ class _ScarcitySheet extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 14),
+                        const Icon(
+                          Icons.local_fire_department_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           label,
-                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ],
                     ),
@@ -2906,7 +2995,11 @@ class _ScarcitySheet extends StatelessWidget {
                       onTap: () => Navigator.of(context).pop(),
                       child: const Padding(
                         padding: EdgeInsets.all(6),
-                        child: Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
@@ -2921,14 +3014,22 @@ class _ScarcitySheet extends StatelessWidget {
                 children: [
                   Text(
                     'ทริปนี้กำลังจะเต็ม',
-                    style: appFont(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.accentColor),
+                    style: appFont(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.accentColor,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     textOf(trip['title'], '-'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: appFont(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.onSurface(context)),
+                    style: appFont(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.onSurface(context),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   SizedBox(
@@ -2938,16 +3039,27 @@ class _ScarcitySheet extends StatelessWidget {
                         Navigator.of(context).pop();
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => TripDetailScreen(slug: trip['slug'].toString()),
+                            builder: (_) =>
+                                TripDetailScreen(slug: trip['slug'].toString()),
                           ),
                         );
                       },
                       icon: const Icon(Icons.bolt_rounded),
-                      label: Text('จองเลย', style: appFont(fontWeight: FontWeight.w800, color: Colors.white)),
+                      label: Text(
+                        'จองเลย',
+                        style: appFont(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
                       style: FilledButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusMedium,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -2961,7 +3073,11 @@ class _ScarcitySheet extends StatelessWidget {
                       },
                       child: Text(
                         'ไม่ต้องแสดงอีก',
-                        style: appFont(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textSecondary),
+                        style: appFont(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                     ),
                   ),
@@ -2974,4 +3090,3 @@ class _ScarcitySheet extends StatelessWidget {
     );
   }
 }
-
