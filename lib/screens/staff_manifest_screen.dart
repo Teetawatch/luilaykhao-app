@@ -175,6 +175,9 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
     final vehicle = asMap(schedule['vehicle']);
     final groups = asList(_data?['pickup_groups']).map(asMap).toList();
     final seatMap = asMap(_data?['seat_map']);
+    final addonBookings = asList(
+      _data?['bookings'],
+    ).map(asMap).where((b) => asList(b['selected_addons']).isNotEmpty).toList();
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -190,6 +193,10 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
         ],
         _ManifestSummary(summary: summary, pickupGroupCount: groups.length),
         const SizedBox(height: 16),
+        if (addonBookings.isNotEmpty) ...[
+          _AddonRequestsCard(bookings: addonBookings),
+          const SizedBox(height: 16),
+        ],
         if (seatMap.isNotEmpty && asList(seatMap['seats']).isNotEmpty) ...[
           _StaffSeatMap(seatMap: seatMap),
           const SizedBox(height: 16),
@@ -323,8 +330,11 @@ class _VehicleCard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.pin_outlined,
-                      size: 16, color: Color(0xFF0D9488)),
+                  const Icon(
+                    Icons.pin_outlined,
+                    size: 16,
+                    color: Color(0xFF0D9488),
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     plate,
@@ -343,8 +353,11 @@ class _VehicleCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.person_pin_circle_outlined,
-                    size: 18, color: AppTheme.mutedText(context)),
+                Icon(
+                  Icons.person_pin_circle_outlined,
+                  size: 18,
+                  color: AppTheme.mutedText(context),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -526,8 +539,11 @@ class _PickupGroupCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.place_rounded,
-                    size: 18, color: Color(0xFF0D9488)),
+                const Icon(
+                  Icons.place_rounded,
+                  size: 18,
+                  color: Color(0xFF0D9488),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -624,10 +640,7 @@ class _PickupGroupCard extends StatelessWidget {
             child: Column(
               children: [
                 for (var i = 0; i < passengers.length; i++) ...[
-                  _ManifestPassengerRow(
-                    passenger: passengers[i],
-                    index: i + 1,
-                  ),
+                  _ManifestPassengerRow(passenger: passengers[i], index: i + 1),
                   if (i < passengers.length - 1)
                     Divider(
                       height: 1,
@@ -677,8 +690,11 @@ class _PickupCompleteFooter extends StatelessWidget {
       child: completed
           ? Row(
               children: [
-                const Icon(Icons.check_circle_rounded,
-                    size: 18, color: AppTheme.primaryColor),
+                const Icon(
+                  Icons.check_circle_rounded,
+                  size: 18,
+                  color: AppTheme.primaryColor,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'รับครบจุดนี้แล้ว',
@@ -759,11 +775,7 @@ class _ManifestPassengerRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PassengerAvatar(
-            url: avatarUrl,
-            name: fullName,
-            index: index,
-          ),
+          _PassengerAvatar(url: avatarUrl, name: fullName, index: index),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -838,9 +850,7 @@ class _CheckInPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            checkedIn
-                ? Icons.check_circle_rounded
-                : Icons.schedule_rounded,
+            checkedIn ? Icons.check_circle_rounded : Icons.schedule_rounded,
             size: 13,
             color: color,
           ),
@@ -908,7 +918,8 @@ class _SafetyBadges extends StatelessWidget {
         ),
     ];
 
-    final hasEmergency = emergencyPhone.isNotEmpty || emergencyContact.isNotEmpty;
+    final hasEmergency =
+        emergencyPhone.isNotEmpty || emergencyContact.isNotEmpty;
     if (chips.isEmpty && !hasEmergency) return const SizedBox.shrink();
 
     return Padding(
@@ -948,6 +959,145 @@ class _SafetyBadges extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Lists every booking that requested optional add-ons, so staff can see at a
+/// glance what each customer asked to add (e.g. tent rental, halal meals).
+class _AddonRequestsCard extends StatelessWidget {
+  final List<Map<String, dynamic>> bookings;
+
+  const _AddonRequestsCard({required this.bookings});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: AppTheme.cardDecoration(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.add_shopping_cart_rounded,
+                size: 18,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'รายการเสริมที่ลูกค้าขอเพิ่ม',
+                style: appFont(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          for (var i = 0; i < bookings.length; i++) ...[
+            _AddonRequestRow(booking: bookings[i]),
+            if (i < bookings.length - 1) ...[
+              const SizedBox(height: 12),
+              Divider(
+                height: 1,
+                color: AppTheme.border(context).withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AddonRequestRow extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _AddonRequestRow({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final addons = asList(booking['selected_addons']).map(asMap).toList();
+    final groupName = textOf(booking['group_name']);
+    final contactName = textOf(booking['contact_name']);
+    final bookingRef = textOf(booking['booking_ref']);
+    final title = groupName.isNotEmpty
+        ? groupName
+        : (contactName.isNotEmpty ? contactName : bookingRef);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: appFont(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+            ),
+            if (bookingRef.isNotEmpty && title != bookingRef) ...[
+              const SizedBox(width: 8),
+              Text(
+                bookingRef,
+                style: appFont(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final addon in addons)
+              _AddonChip(
+                name: textOf(addon['name']),
+                quantity: int.tryParse(textOf(addon['quantity'], '1')) ?? 1,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AddonChip extends StatelessWidget {
+  final String name;
+  final int quantity;
+
+  const _AddonChip({required this.name, required this.quantity});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = quantity > 1 ? '$name ×$quantity' : name;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: appFont(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.primaryColor,
+        ),
       ),
     );
   }
@@ -1009,7 +1159,9 @@ class _PassengerAvatar extends StatelessWidget {
     const size = 40.0;
 
     if (url.isEmpty) {
-      final initial = name.trim().isEmpty ? '$index' : name.trim().characters.first;
+      final initial = name.trim().isEmpty
+          ? '$index'
+          : name.trim().characters.first;
       return Container(
         width: size,
         height: size,
@@ -1213,10 +1365,7 @@ class _StaffSeatMap extends StatelessWidget {
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
-                      child: SizedBox(
-                        width: 300,
-                        child: Divider(height: 1),
-                      ),
+                      child: SizedBox(width: 300, child: Divider(height: 1)),
                     ),
                     ...rows.map(
                       (row) => Padding(
