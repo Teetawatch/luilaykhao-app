@@ -1,14 +1,26 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-/// Bundled font family (assets/fonts/Anuphan-Variable.ttf, declared in
-/// pubspec.yaml). Same Anuphan face on both Android and iOS, shipped with the
-/// app so there is no runtime font download.
-const String _fontFamily = 'Anuphan';
+/// On iOS we intentionally fall back to the platform system font (San Francisco
+/// for Latin + the iOS Thai system face, e.g. Sukhumvit Set) instead of the
+/// bundled Anuphan face. Android keeps Anuphan. When this is true, [appFont] and
+/// [AppTheme._textTheme] leave `fontFamily` unset so the engine resolves the
+/// native system font; weight handling is unaffected.
+bool get _useSystemFont => !kIsWeb && Platform.isIOS;
 
-/// App-wide text style in [_fontFamily]. Mirrors the `GoogleFonts.*`
-/// named-parameter signature so it is a drop-in replacement at every call site.
+/// Bundled app font family (assets/fonts/Anuphan-Variable.ttf, declared in
+/// pubspec.yaml). Shipped with the app so there is no runtime font download.
+/// Used on Android; on iOS the system font takes over (see [_useSystemFont]).
 ///
 /// Anuphan's weight axis tops out at 700; weights `w800`/`w900` render as 700.
+const String _fontFamily = 'Anuphan';
+
+/// App-wide text style in [_fontFamily] (Android) or the platform system font
+/// (iOS, see [_useSystemFont]). The single chokepoint every call site routes
+/// through. Mirrors the `GoogleFonts.*` named-parameter signature so it stays a
+/// drop-in replacement at every call site.
 TextStyle appFont({
   TextStyle? textStyle,
   Color? color,
@@ -31,7 +43,8 @@ TextStyle appFont({
   double? decorationThickness,
 }) {
   return (textStyle ?? const TextStyle()).copyWith(
-    fontFamily: _fontFamily,
+    // On iOS, leave the family unset so the platform system font is used.
+    fontFamily: _useSystemFont ? null : _fontFamily,
     color: color,
     backgroundColor: backgroundColor,
     fontSize: fontSize,
@@ -54,8 +67,10 @@ TextStyle appFont({
 }
 
 class AppTheme {
-  /// Applies the bundled [_fontFamily] across the whole [TextTheme].
+  /// Applies the bundled [_fontFamily] across the whole [TextTheme] on Android.
+  /// On iOS it keeps the platform system font (Typography already supplies it).
   static TextTheme _textTheme(TextTheme base) {
+    if (_useSystemFont) return base;
     return base.apply(fontFamily: _fontFamily);
   }
 
@@ -216,9 +231,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(radiusSmall),
           borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
-        hintStyle: appFont(
-          color: textSecondary.withValues(alpha: 0.5),
-        ),
+        hintStyle: appFont(color: textSecondary.withValues(alpha: 0.5)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -314,9 +327,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(radiusSmall),
           borderSide: const BorderSide(color: accentColor, width: 2),
         ),
-        hintStyle: appFont(
-          color: darkTextSecondary.withValues(alpha: 0.62),
-        ),
+        hintStyle: appFont(color: darkTextSecondary.withValues(alpha: 0.62)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
