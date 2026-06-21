@@ -7,6 +7,8 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import 'incident_list_screen.dart';
+import 'report_incident_screen.dart';
 import 'staff_check_in_screen.dart'
     show StaffCheckInScreen, asMap, asList, textOf;
 
@@ -108,6 +110,34 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
     }
   }
 
+  /// Passenger and contact names from the loaded manifest, offered as quick
+  /// picks when reporting an incident.
+  List<String> get _passengerNames {
+    final names = <String>{};
+    for (final b in asList(_data?['bookings']).map(asMap)) {
+      final contact = textOf(b['contact_name']);
+      if (contact.isNotEmpty) names.add(contact);
+      for (final p in asList(b['passengers']).map(asMap)) {
+        final name = textOf(p['name']);
+        if (name.isNotEmpty) names.add(name);
+      }
+    }
+    return names.toList();
+  }
+
+  Future<void> _openReportIncident() async {
+    final reported = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ReportIncidentScreen(
+          scheduleId: widget.scheduleId,
+          scheduleTitle: widget.title,
+          passengerNames: _passengerNames,
+        ),
+      ),
+    );
+    if (reported == true) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final summary = asMap(_data?['summary']);
@@ -117,6 +147,26 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       appBar: AppBar(
         title: Text(widget.title.isEmpty ? 'รายชื่อผู้โดยสาร' : widget.title),
         actions: [
+          IconButton(
+            tooltip: 'รายการแจ้งเหตุ',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => IncidentListScreen(
+                  scheduleId: widget.scheduleId,
+                  title: 'รายการแจ้งเหตุ',
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.fact_check_outlined),
+          ),
+          IconButton(
+            tooltip: 'แจ้งเหตุฉุกเฉิน',
+            onPressed: _data == null ? null : _openReportIncident,
+            icon: const Icon(
+              Icons.report_gmailerrorred_rounded,
+              color: AppTheme.errorColor,
+            ),
+          ),
           IconButton(
             tooltip: 'เช็คอินด้วย QR',
             onPressed: () => Navigator.of(context).push(

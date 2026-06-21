@@ -908,8 +908,9 @@ class AppProvider extends ChangeNotifier {
   /// Confirms a staff QR check-in. Returns `{ booking, message }` — the message
   /// reflects server-side side effects (e.g. auto-notifying the next pickup
   /// point once everyone at this point has checked in).
-  Future<({Map<String, dynamic> booking, String message})>
-  confirmStaffCheckIn(String qrCode) async {
+  Future<({Map<String, dynamic> booking, String message})> confirmStaffCheckIn(
+    String qrCode,
+  ) async {
     final response = await api.post(
       'staff/check-in/confirm',
       body: {'qr_code': qrCode},
@@ -926,6 +927,57 @@ class AppProvider extends ChangeNotifier {
   /// Backed by the driver manifest endpoint, which grants staff access.
   Future<Map<String, dynamic>> loadStaffManifest(int scheduleId) async {
     final response = await api.get('driver/schedules/$scheduleId/manifest');
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// Staff reports an on-trip incident (accident / injury) for a schedule.
+  /// Notifies ops/admin/assigned staff on the server. Returns the created
+  /// incident map. Sends multipart when a [photoPath] is attached.
+  Future<Map<String, dynamic>> reportIncident({
+    required int scheduleId,
+    required String severity,
+    required String description,
+    String? passengerName,
+    int? bookingId,
+    double? latitude,
+    double? longitude,
+    String? photoPath,
+  }) async {
+    final fields = <String, dynamic>{
+      'severity': severity,
+      'description': description,
+      'latitude': ?latitude,
+      'longitude': ?longitude,
+      if (passengerName != null && passengerName.isNotEmpty)
+        'passenger_name': passengerName,
+      'booking_id': ?bookingId,
+    };
+
+    final hasPhoto = photoPath != null && photoPath.isNotEmpty;
+    final response = hasPhoto
+        ? await api.postMultipart(
+            'driver/schedules/$scheduleId/incidents',
+            fields: fields,
+            files: {'photo': photoPath},
+          )
+        : await api.post(
+            'driver/schedules/$scheduleId/incidents',
+            body: fields,
+          );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// Incidents logged for a schedule (most recent first).
+  Future<List<Map<String, dynamic>>> loadIncidents(int scheduleId) async {
+    final response = await api.get('driver/schedules/$scheduleId/incidents');
+    final list = api.data(response);
+    if (list is! List) return const [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /// Mark an incident resolved.
+  Future<Map<String, dynamic>> resolveIncident(int id) async {
+    final response = await api.post('driver/incidents/$id/resolve');
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
@@ -1187,8 +1239,9 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<int> announcementsUnreadCount(int scheduleId) async {
-    final response =
-        await api.get(ApiEndpoints.announcementsUnreadCount(scheduleId));
+    final response = await api.get(
+      ApiEndpoints.announcementsUnreadCount(scheduleId),
+    );
     final data = Map<String, dynamic>.from(api.data(response) ?? {});
     return int.tryParse('${data['count']}') ?? 0;
   }
@@ -1223,8 +1276,9 @@ class AppProvider extends ChangeNotifier {
     bool pinned,
   ) async {
     final endpoint = ApiEndpoints.announcementPin(scheduleId, announcementId);
-    final response =
-        pinned ? await api.post(endpoint) : await api.delete(endpoint);
+    final response = pinned
+        ? await api.post(endpoint)
+        : await api.delete(endpoint);
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
