@@ -175,8 +175,6 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _AllTripsHero(),
-                      const SizedBox(height: 22),
                       _TripsFilterPanel(
                         searchController: _searchController,
                         categories: _categories,
@@ -258,65 +256,6 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AllTripsHero extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.explore_rounded,
-                color: AppTheme.primaryColor,
-                size: 14,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'ค้นพบประสบการณ์ใหม่',
-                style: appFont(
-                  color: AppTheme.primaryColor,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.1,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'กิจกรรมและทริปทั้งหมด',
-          style: appFont(
-            color: AppTheme.textMain,
-            fontSize: 28,
-            height: 1.12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          'สำรวจทริปที่คัดสรรมาเพื่อคุณ ตั้งแต่ดำน้ำตื้น เดินป่า จนถึงบริการรถตู้ระดับพรีเมียม',
-          style: appFont(
-            color: AppTheme.textSecondary,
-            fontSize: 14.5,
-            height: 1.5,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }
