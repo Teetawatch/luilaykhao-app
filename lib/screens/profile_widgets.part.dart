@@ -419,39 +419,6 @@ class _InfoLine extends StatelessWidget {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  final String status;
-
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      'confirmed' => AppTheme.primaryColor,
-      'pending' => AppTheme.warningColor,
-      'cancelled' || 'refunded' => AppTheme.errorColor,
-      _ => AppTheme.textSecondary,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        _statusLabel(status),
-        style: appFont(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-          letterSpacing: -0.1,
-        ),
-      ),
-    );
-  }
-}
-
 class _SmallActionButton extends StatelessWidget {
   final IconData icon;
   final String label;

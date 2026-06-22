@@ -15,6 +15,7 @@ import '../theme/app_theme.dart';
 import '../widgets/support_shortcuts.dart';
 import '../widgets/travel_widgets.dart';
 import 'booking_lookup_screen.dart';
+import 'customer_app_screen.dart' show BookingDetailSheet;
 import 'document_wallet_screen.dart';
 import 'group_rooms_screen.dart';
 import 'notification_preferences_screen.dart';
@@ -637,15 +638,6 @@ class QuickActionsSection extends StatelessWidget {
 
     final actions = [
       _QuickAction(
-        icon: Icons.confirmation_number_outlined,
-        label: 'การจองของฉัน',
-        badge: app.bookings.isEmpty ? null : app.bookings.length.toString(),
-        onTap: () => _pushPremium(
-          context,
-          const ProfileBookingsScreen(title: 'การจองของฉัน'),
-        ),
-      ),
-      _QuickAction(
         icon: Icons.event_available_outlined,
         label: 'ทริปที่กำลังจะถึง',
         badge: upcomingCount == 0 ? null : upcomingCount.toString(),
@@ -679,6 +671,16 @@ class QuickActionsSection extends StatelessWidget {
       children: [
         const _SectionHeading('ทางลัด'),
         const SizedBox(height: 8),
+        // Featured primary shortcut (Apple Wallet–style hero card).
+        _BookingsShortcutCard(
+          total: app.bookings.length,
+          upcoming: upcomingCount,
+          onTap: () => _pushPremium(
+            context,
+            const ProfileBookingsScreen(title: 'การจองของฉัน'),
+          ),
+        ),
+        const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) {
             final columns = constraints.maxWidth >= 560 ? 4 : 2;
@@ -785,6 +787,173 @@ class _QuickActionTile extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Featured "การจองของฉัน" shortcut — a full-width hero card (Apple Wallet /
+/// Fitness summary style): emerald gradient, frosted ticket glyph, a live
+/// booking count, an "upcoming" pill, and a disclosure chevron. Gives the
+/// primary travel action clear visual hierarchy above the smaller grid tiles.
+class _BookingsShortcutCard extends StatelessWidget {
+  final int total;
+  final int upcoming;
+  final VoidCallback onTap;
+
+  const _BookingsShortcutCard({
+    required this.total,
+    required this.upcoming,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = total > 0
+        ? 'ดูตั๋ว สถานะ และรายละเอียดการเดินทาง'
+        : 'เริ่มจองทริปแรกของคุณได้เลย';
+
+    return Semantics(
+      button: true,
+      label: 'การจองของฉัน',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF059669), Color(0xFF10B981)],
+              ),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF059669).withValues(alpha: 0.28),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Frosted ticket glyph.
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: const Icon(
+                      Icons.confirmation_number_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'การจองของฉัน',
+                              style: appFont(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            if (total > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '$total',
+                                  style: appFont(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: appFont(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            height: 1.2,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                        if (upcoming > 0) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.event_available_rounded,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  '$upcoming ทริปกำลังจะถึง',
+                                  style: appFont(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    size: 24,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

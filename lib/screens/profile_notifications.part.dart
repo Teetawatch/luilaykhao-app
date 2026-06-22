@@ -148,35 +148,60 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final unread = notifications
         .where((item) => item['is_read'] != true)
         .length;
-    final topPadding = MediaQuery.paddingOf(context).top;
     final groups = _groupNotifications(notifications);
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
+      appBar: AppBar(
+        backgroundColor: AppTheme.background(context),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
+        title: Text(
+          'การแจ้งเตือน',
+          style: appFont(
+            color: AppTheme.onSurface(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        actions: [
+          _NotificationHeaderActions(
+            hasItems: notifications.isNotEmpty,
+            unread: unread,
+            saving: _saving,
+            clearing: _clearing,
+            onMarkAllRead: _markAllRead,
+            onClearAll: _clearAll,
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        edgeOffset: topPadding + 60,
+        edgeOffset: 0,
         color: AppTheme.primaryColor,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            LargeTitleSliverHeader(
-              title: 'การแจ้งเตือน',
-              subtitle: unread > 0
-                  ? '$unread รายการที่ยังไม่ได้อ่าน'
-                  : 'อ่านครบทุกรายการแล้ว',
-              subtitleColor: unread > 0
-                  ? AppTheme.primaryColor
-                  : AppTheme.mutedText(context),
-              trailing: _NotificationHeaderActions(
-                hasItems: notifications.isNotEmpty,
-                unread: unread,
-                saving: _saving,
-                clearing: _clearing,
-                onMarkAllRead: _markAllRead,
-                onClearAll: _clearAll,
+            // Unread-count strip under the app bar (the count used to live in
+            // the large-title subtitle).
+            if (notifications.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Text(
+                    unread > 0
+                        ? '$unread รายการที่ยังไม่ได้อ่าน'
+                        : 'อ่านครบทุกรายการแล้ว',
+                    style: appFont(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: unread > 0
+                          ? AppTheme.primaryColor
+                          : AppTheme.mutedText(context),
+                    ),
+                  ),
+                ),
               ),
-            ),
             if (_loading && notifications.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
