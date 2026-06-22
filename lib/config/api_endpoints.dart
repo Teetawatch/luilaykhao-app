@@ -60,6 +60,10 @@ class ApiEndpoints {
   static String announcementPin(int scheduleId, int announcementId) =>
       'schedules/$scheduleId/announcements/$announcementId/pin';
 
+  // Itinerary (กำหนดการรอบเดินทาง — สตาฟอ่านอย่างเดียว)
+  static String scheduleItinerary(int scheduleId) =>
+      'schedules/$scheduleId/itinerary';
+
   // Schedules / seats
   static String scheduleSeats(int scheduleId) => 'schedules/$scheduleId/seats';
   static String scheduleSeatLock(int scheduleId) =>

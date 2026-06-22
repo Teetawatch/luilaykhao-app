@@ -25,6 +25,7 @@ import 'staff_check_in_screen.dart' show StaffCheckInScreen;
 import 'staff_manifest_screen.dart' show StaffManifestScreen;
 import 'report_incident_screen.dart' show ReportIncidentScreen;
 import 'incident_list_screen.dart' show IncidentListScreen;
+import 'schedule_itinerary_screen.dart' show ScheduleItineraryScreen;
 import 'wishlist_screen.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';

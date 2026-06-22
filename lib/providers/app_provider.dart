@@ -1238,6 +1238,15 @@ class AppProvider extends ChangeNotifier {
     await api.post(ApiEndpoints.announcementsRead(scheduleId));
   }
 
+  /// กำหนดการของรอบเดินทาง (สตาฟอ่านอย่างเดียว) — คืนรายการ item ตามลำดับ
+  /// วัน → เวลา → ลำดับ จาก backend แต่ละ item: { item_date, time, title, detail }.
+  Future<List<Map<String, dynamic>>> scheduleItinerary(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.scheduleItinerary(scheduleId));
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    final items = (data['items'] as List? ?? const []);
+    return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
   Future<int> announcementsUnreadCount(int scheduleId) async {
     final response = await api.get(
       ApiEndpoints.announcementsUnreadCount(scheduleId),

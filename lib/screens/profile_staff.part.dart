@@ -476,6 +476,18 @@ class _StaffToolbar extends StatelessWidget {
       child: Row(
         children: [
           _StaffToolTile(
+            icon: Icons.event_note_outlined,
+            label: 'กำหนดการ',
+            color: const Color(0xFF0D9488),
+            onTap: () => _pushPremium(
+              context,
+              ScheduleItineraryScreen(
+                scheduleId: scheduleId,
+                tripTitle: tripTitle,
+              ),
+            ),
+          ),
+          _StaffToolTile(
             icon: Icons.groups_outlined,
             label: 'รายชื่อ',
             color: const Color(0xFF2563EB),
@@ -1219,9 +1231,24 @@ class _StaffScheduleAction extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Itinerary — กำหนดการที่ทีมงานจัดทำไว้ ให้สตาฟอ่านเตรียมตัวล่วงหน้า
+          if (hasSchedule)
+            _StaffActionRow(
+              icon: Icons.event_note_outlined,
+              label: 'ดูกำหนดการเดินทาง',
+              color: const Color(0xFF0D9488),
+              onTap: () => _pushPremium(
+                context,
+                ScheduleItineraryScreen(
+                  scheduleId: scheduleId,
+                  tripTitle: tripTitle,
+                ),
+              ),
+            ),
           // Passenger manifest — names, callable phones and pickup points so
           // staff can run the roll-call and coordinate pickups in the field.
-          if (hasSchedule)
+          if (hasSchedule) ...[
+            divider(),
             _StaffActionRow(
               icon: Icons.groups_outlined,
               label: 'ดูรายชื่อผู้โดยสาร',
@@ -1231,6 +1258,7 @@ class _StaffScheduleAction extends StatelessWidget {
                 StaffManifestScreen(scheduleId: scheduleId, title: tripTitle),
               ),
             ),
+          ],
           // Group chat — available to assigned staff for coordinating the trip
           if (hasSchedule) ...[
             divider(),
