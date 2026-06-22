@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
@@ -219,6 +220,7 @@ class _TimelineRow extends StatelessWidget {
     final time = (item['time'] as String?)?.trim() ?? '';
     final title = (item['title'] as String?)?.trim() ?? '';
     final detail = (item['detail'] as String?)?.trim() ?? '';
+    final link = (item['link'] as String?)?.trim() ?? '';
     final lineColor = AppTheme.border(context).withValues(alpha: 0.8);
 
     return IntrinsicHeight(
@@ -333,12 +335,85 @@ class _TimelineRow extends StatelessWidget {
                         ),
                       ),
                     ],
+                    if (link.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _ItineraryLinkButton(link: link),
+                    ],
                   ],
                 ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// ปุ่มเปิดลิงก์แนบของรายการ (เช่น Google Maps) — เปิดด้วยแอปภายนอก
+class _ItineraryLinkButton extends StatelessWidget {
+  final String link;
+
+  const _ItineraryLinkButton({required this.link});
+
+  bool get _isMap {
+    final l = link.toLowerCase();
+    return l.contains('google.com/maps') ||
+        l.contains('maps.app.goo.gl') ||
+        l.contains('goo.gl/maps') ||
+        l.contains('maps.google');
+  }
+
+  Future<void> _open(BuildContext context) async {
+    final uri = Uri.tryParse(link);
+    if (uri == null) return;
+    final ok = await canLaunchUrl(uri);
+    if (ok) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('เปิดลิงก์ไม่สำเร็จ')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMap = _isMap;
+    final color = isMap ? const Color(0xFF2563EB) : AppTheme.primaryColor;
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: () => _open(context),
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isMap ? Icons.map_outlined : Icons.link_rounded,
+                  size: 16,
+                  color: color,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isMap ? 'เปิดแผนที่' : 'เปิดลิงก์',
+                  style: appFont(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
