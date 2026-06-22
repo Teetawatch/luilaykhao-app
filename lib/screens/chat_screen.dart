@@ -1,10 +1,16 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
@@ -87,6 +93,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   // Jump-to-latest affordance.
   bool _showJumpButton = false;
   int _newWhileAway = 0;
+
+  // "@mention me" tracking: mentions of me with id beyond this are considered
+  // unread and surfaced via a jump chip. Seeded from the unread boundary so
+  // mentions from before we opened aren't re-flagged.
+  int _mentionAckId = 0;
 
   bool _canModerate = false;
   List<String> _reactionEmojis = const ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -216,6 +227,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final me = _members.where((m) => m['is_me'] == true).toList();
     if (me.isEmpty) return;
     _unreadBoundaryId = int.tryParse('${me.first['last_read_message_id']}') ?? 0;
+    _mentionAckId = _unreadBoundaryId;
     _unreadBoundaryLocked = true;
   }
 
@@ -396,10 +408,22 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Matches the "@All" everyone-token (LINE-style). Word-boundary so a name
+  /// like "@Allan" isn't mistaken for it. Case-insensitive.
+  static final _allMentionPattern = RegExp(r'@all\b', caseSensitive: false);
+
   /// Mention ids still relevant to the final text — keep a pick only if its
-  /// "@label" survived in the message the user actually sent.
+  /// "@label" survived in the message the user actually sent. "@All" expands to
+  /// every other member in the room.
   List<int> _activeMentionIds(String text) {
     final ids = <int>[];
+    if (_allMentionPattern.hasMatch(text)) {
+      for (final m in _members) {
+        if (m['is_me'] == true) continue;
+        final id = int.tryParse('${m['user_id'] ?? m['id']}');
+        if (id != null) ids.add(id);
+      }
+    }
     for (final pick in _mentionPicks) {
       final label = pick['label']?.toString() ?? '';
       final id = int.tryParse('${pick['id']}');
@@ -455,6 +479,69 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  /// Captures the user's current GPS position and posts it as a Google Maps
+  /// link — the most common need in a trip chat ("I'm here" / meeting points).
+  /// Sent through the normal text path, so no backend change is required.
+  Future<void> _shareLocation() async {
+    if (_sending) return;
+
+    final Position pos;
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        _snack('กรุณาเปิดบริการตำแหน่ง (GPS) ก่อนแชร์');
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _snack('ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง');
+        return;
+      }
+      pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+    } catch (_) {
+      _snack('ขอตำแหน่งไม่สำเร็จ ลองอีกครั้ง');
+      return;
+    }
+
+    if (!mounted) return;
+
+    final lat = pos.latitude.toStringAsFixed(6);
+    final lng = pos.longitude.toStringAsFixed(6);
+    final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    final text = '📍 ตำแหน่งของฉัน\n$url';
+
+    setState(() => _sending = true);
+    final app = context.read<AppProvider>();
+    try {
+      final message = await app.sendChatMessage(widget.scheduleId, text);
+      if (!mounted) return;
+      setState(() {
+        _messages.add(message);
+        _sending = false;
+      });
+      _scrollToBottom();
+      _refreshRoom();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _snack(e.toString());
+    }
+  }
+
   void _showImageSourceSheet() {
     if (_sending) return;
     showModalBottomSheet<void>(
@@ -488,6 +575,27 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               onTap: () {
                 Navigator.pop(sheetContext);
                 _pickAndSendImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.location_on_rounded,
+                color: Color(0xFFDC2626),
+              ),
+              title: Text(
+                'แชร์ตำแหน่งของฉัน',
+                style: appFont(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                'ส่งจุดที่คุณอยู่ตอนนี้เป็นลิงก์แผนที่',
+                style: appFont(
+                  fontSize: 12,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _shareLocation();
               },
             ),
             const SizedBox(height: 8),
@@ -536,6 +644,35 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         curve: Curves.easeOut,
       );
     }
+  }
+
+  /// True when [message] tags the current user via @mention.
+  bool _mentionsMe(Map<String, dynamic> message) {
+    final me = _myUserId;
+    if (me == null) return false;
+    final raw = message['mentions'];
+    if (raw is! List) return false;
+    return raw.any((e) => int.tryParse('$e') == me);
+  }
+
+  /// Messages that tag me and arrived after my last acknowledged mention —
+  /// the queue behind the "@ ถูกแท็ก" jump chip, oldest first.
+  List<Map<String, dynamic>> get _unreadMentions => _messages.where((m) {
+        if (m['is_mine'] == true || m['is_deleted'] == true) return false;
+        if (!_mentionsMe(m)) return false;
+        return (int.tryParse('${m['id']}') ?? 0) > _mentionAckId;
+      }).toList();
+
+  /// Jump to the oldest unread mention of me and mark it acknowledged so the
+  /// next tap advances to the one after it.
+  void _jumpToNextMention() {
+    final pending = _unreadMentions;
+    if (pending.isEmpty) return;
+    HapticFeedback.selectionClick();
+    final target = pending.first;
+    final id = int.tryParse('${target['id']}') ?? 0;
+    setState(() => _mentionAckId = id);
+    _scrollToMessage(id);
   }
 
   // ── Realtime signal handlers ──────────────────────────────────────────────
@@ -658,6 +795,37 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (nick.isNotEmpty) return nick;
     final name = member['name']?.toString().trim() ?? '';
     return name.isEmpty ? 'ผู้ใช้' : name.split(RegExp(r'\s+')).first;
+  }
+
+  /// Whether to offer the "@All" everyone-mention while typing "@…". Shown when
+  /// there's at least one other member and the active query is a prefix of
+  /// "all" (or empty), mirroring LINE's @All affordance.
+  bool get _showAllMention {
+    final q = _mentionQuery;
+    if (q == null) return false;
+    final hasOthers = _members.any((m) => m['is_me'] != true);
+    if (!hasOthers) return false;
+    final lower = q.toLowerCase();
+    return lower.isEmpty || 'all'.startsWith(lower);
+  }
+
+  /// Replace the active "@query" with "@All " — tagging everyone in the room.
+  /// No pick is recorded; [_activeMentionIds] expands the token on send.
+  void _applyAllMention() {
+    final value = _input.text;
+    final sel = _input.selection.baseOffset;
+    final caret = (sel >= 0 && sel <= value.length) ? sel : value.length;
+    final upToCaret = value.substring(0, caret);
+    final at = upToCaret.lastIndexOf('@');
+    if (at < 0) return;
+
+    final newPrefix = '${value.substring(0, at)}@All ';
+    final newText = newPrefix + value.substring(caret);
+    _input.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newPrefix.length),
+    );
+    setState(() => _mentionQuery = null);
   }
 
   /// Replace the active "@query" with "@label " and record the mention pick.
@@ -1065,6 +1233,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             child: Stack(
               children: [
                 _buildBody(),
+                if (!_loading && _unreadMentions.isNotEmpty)
+                  Positioned(
+                    left: 14,
+                    top: 12,
+                    child: _MentionJumpChip(
+                      count: _unreadMentions.length,
+                      onTap: _jumpToNextMention,
+                    ),
+                  ),
                 if (_showJumpButton)
                   Positioned(
                     right: 14,
@@ -1270,8 +1447,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           isLastInGroup: isLastInGroup,
           readByCount: readByCount,
           myUserId: _myUserId,
+          mentionsMe: _mentionsMe(m),
           onCopy: _copyMessage,
           onLongPress: () => _openMessageMenu(m),
+          onSwipeReply: () => _startReply(m),
           onReplyTap: _scrollToMessage,
           onReactionTap: (emoji) => _toggleReaction(mId, emoji),
         ),
@@ -1342,6 +1521,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// Member suggestion strip shown above the composer while typing "@…".
   Widget _buildMentionBar() {
     final suggestions = _mentionSuggestions;
+    final showAll = _showAllMention;
     final isDark = AppTheme.isDark(context);
     return Container(
       width: double.infinity,
@@ -1361,7 +1541,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
-      child: suggestions.isEmpty
+      child: (suggestions.isEmpty && !showAll)
           ? Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
               child: Row(
@@ -1383,10 +1563,41 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           : ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-        itemCount: suggestions.length,
+        itemCount: suggestions.length + (showAll ? 1 : 0),
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
-          final m = suggestions[i];
+          // "@All" everyone-mention pinned to the front of the strip.
+          if (showAll && i == 0) {
+            return InkWell(
+              onTap: _applyAllMention,
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.groups_rounded,
+                        size: 15, color: Colors.white),
+                    const SizedBox(width: 5),
+                    Text('@All',
+                        style: appFont(
+                            fontWeight: FontWeight.w800, color: Colors.white)),
+                    const SizedBox(width: 4),
+                    Text('ทุกคน',
+                        style: appFont(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withValues(alpha: 0.85))),
+                  ],
+                ),
+              ),
+            );
+          }
+          final m = suggestions[i - (showAll ? 1 : 0)];
           final label = _mentionLabel(m);
           return InkWell(
             onTap: () => _applyMention(m),
@@ -1654,6 +1865,155 @@ class _SystemMessage extends StatelessWidget {
   }
 }
 
+/// Renders a message body with "@mention" tokens bolded and URLs turned into
+/// tappable links. Stateful so the link [TapGestureRecognizer]s it creates are
+/// disposed properly instead of leaking on every rebuild.
+class _MessageText extends StatefulWidget {
+  final String text;
+  final Color color;
+  final bool isEdited;
+
+  const _MessageText({
+    required this.text,
+    required this.color,
+    required this.isEdited,
+  });
+
+  @override
+  State<_MessageText> createState() => _MessageTextState();
+}
+
+class _MessageTextState extends State<_MessageText> {
+  // URL (http/https or bare www.) or @mention.
+  static final _pattern = RegExp(
+    r'((?:https?:\/\/|www\.)[^\s]+|@[^\s@]+)',
+    caseSensitive: false,
+  );
+
+  final List<TapGestureRecognizer> _recognizers = [];
+  late List<InlineSpan> _spans;
+
+  @override
+  void initState() {
+    super.initState();
+    _spans = _build();
+  }
+
+  @override
+  void didUpdateWidget(_MessageText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text ||
+        oldWidget.color != widget.color ||
+        oldWidget.isEdited != widget.isEdited) {
+      _spans = _build();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposeRecognizers();
+    super.dispose();
+  }
+
+  void _disposeRecognizers() {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+  }
+
+  Future<void> _open(String raw) async {
+    var url = raw;
+    if (!RegExp(r'^https?://', caseSensitive: false).hasMatch(url)) {
+      url = 'https://$url';
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // Best effort — silently ignore an unlaunchable link.
+    }
+  }
+
+  List<InlineSpan> _build() {
+    _disposeRecognizers();
+    final text = widget.text;
+    final fg = widget.color;
+    // On the emerald "own message" bubble the accent blends in, so keep the
+    // bubble's own colour there; use accents only on light bubbles.
+    final onColoured = fg.computeLuminance() > 0.6;
+    final mentionColor = onColoured ? fg : AppTheme.primaryColor;
+    final linkColor = onColoured ? fg : const Color(0xFF2563EB);
+
+    final spans = <InlineSpan>[];
+    var last = 0;
+    for (final match in _pattern.allMatches(text)) {
+      if (match.start > last) {
+        spans.add(TextSpan(text: text.substring(last, match.start)));
+      }
+      var token = match.group(0)!;
+      if (token.startsWith('@')) {
+        spans.add(TextSpan(
+          text: token,
+          style: appFont(fontWeight: FontWeight.w800, color: mentionColor),
+        ));
+      } else {
+        // Don't swallow trailing punctuation into the link.
+        var trailing = '';
+        while (token.isNotEmpty &&
+            '.,!?)]}"\''.contains(token[token.length - 1])) {
+          trailing = token[token.length - 1] + trailing;
+          token = token.substring(0, token.length - 1);
+        }
+        final recognizer = TapGestureRecognizer()..onTap = () => _open(token);
+        _recognizers.add(recognizer);
+        spans.add(TextSpan(
+          text: token,
+          style: appFont(
+            fontWeight: FontWeight.w600,
+            color: linkColor,
+          ).copyWith(
+            decoration: TextDecoration.underline,
+            decorationColor: linkColor.withValues(alpha: 0.6),
+          ),
+          recognizer: recognizer,
+        ));
+        if (trailing.isNotEmpty) spans.add(TextSpan(text: trailing));
+      }
+      last = match.end;
+    }
+    if (last < text.length) {
+      spans.add(TextSpan(text: text.substring(last)));
+    }
+    if (widget.isEdited) {
+      spans.add(TextSpan(
+        text: '  แก้ไขแล้ว',
+        style: appFont(
+          fontSize: 11,
+          color: fg.withValues(alpha: 0.55),
+          fontStyle: FontStyle.italic,
+          fontWeight: FontWeight.w500,
+        ),
+      ));
+    }
+    return spans;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(children: _spans),
+      style: appFont(
+        fontSize: 15,
+        height: 1.4,
+        color: widget.color,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
 class _MessageBubble extends StatelessWidget {
   final Map<String, dynamic> message;
   final bool showAuthor;
@@ -1663,8 +2023,10 @@ class _MessageBubble extends StatelessWidget {
   final bool isLastInGroup;
   final int readByCount;
   final int? myUserId;
+  final bool mentionsMe;
   final ValueChanged<String> onCopy;
   final VoidCallback onLongPress;
+  final VoidCallback onSwipeReply;
   final ValueChanged<int> onReplyTap;
   final ValueChanged<String> onReactionTap;
 
@@ -1677,8 +2039,10 @@ class _MessageBubble extends StatelessWidget {
     required this.isLastInGroup,
     required this.readByCount,
     required this.myUserId,
+    required this.mentionsMe,
     required this.onCopy,
     required this.onLongPress,
+    required this.onSwipeReply,
     required this.onReplyTap,
     required this.onReactionTap,
   });
@@ -1696,35 +2060,6 @@ class _MessageBubble extends StatelessWidget {
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '$h:$m';
-  }
-
-  /// Split a message body into spans, bolding "@mention" tokens.
-  List<InlineSpan> _mentionSpans(String text, Color fg) {
-    final spans = <InlineSpan>[];
-    final pattern = RegExp(r'@[^\s@]+');
-    // On a coloured bubble (own messages use white text on emerald) the emerald
-    // accent blends into the background, so keep the bubble's own text colour
-    // there and only use the emerald accent on light bubbles.
-    final mentionColor =
-        fg.computeLuminance() > 0.6 ? fg : AppTheme.primaryColor;
-    var last = 0;
-    for (final match in pattern.allMatches(text)) {
-      if (match.start > last) {
-        spans.add(TextSpan(text: text.substring(last, match.start)));
-      }
-      spans.add(TextSpan(
-        text: match.group(0),
-        style: appFont(
-          fontWeight: FontWeight.w800,
-          color: mentionColor,
-        ),
-      ));
-      last = match.end;
-    }
-    if (last < text.length) {
-      spans.add(TextSpan(text: text.substring(last)));
-    }
-    return spans;
   }
 
   @override
@@ -1781,7 +2116,7 @@ class _MessageBubble extends StatelessWidget {
             bottomRight: r,
           );
 
-    return Padding(
+    final content = Padding(
       // Grouped messages sit tighter; the gap before a new sender opens up.
       padding: EdgeInsets.only(top: isFirstInGroup ? 8 : 2, bottom: 0),
       child: Row(
@@ -1841,6 +2176,14 @@ class _MessageBubble extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: bg,
                       borderRadius: shape,
+                      // Tint the bubble when this message tags me, so it stands
+                      // out while scrolling (LINE-style mention highlight).
+                      border: mentionsMe && !isMine
+                          ? Border.all(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.9),
+                              width: 1.5,
+                            )
+                          : null,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1881,28 +2224,10 @@ class _MessageBubble extends StatelessWidget {
                             ],
                           )
                         else if (hasText)
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                ..._mentionSpans(body, fg),
-                                if (isEdited)
-                                  TextSpan(
-                                    text: '  แก้ไขแล้ว',
-                                    style: appFont(
-                                      fontSize: 11,
-                                      color: fg.withValues(alpha: 0.55),
-                                      fontStyle: FontStyle.italic,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            style: appFont(
-                              fontSize: 15,
-                              height: 1.4,
-                              color: fg,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          _MessageText(
+                            text: body,
+                            color: fg,
+                            isEdited: isEdited,
                           ),
                       ],
                     ),
@@ -1962,6 +2287,42 @@ class _MessageBubble extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    // Deleted notices aren't repliable, so skip the swipe affordance there.
+    if (isDeleted) return content;
+
+    // Swipe-right to reply (LINE/iMessage style). confirmDismiss returns false
+    // so the bubble springs back instead of actually dismissing.
+    return Dismissible(
+      key: ValueKey('swipe-${message['id'] ?? message['client_token']}'),
+      direction: DismissDirection.startToEnd,
+      dismissThresholds: const {DismissDirection.startToEnd: 0.25},
+      confirmDismiss: (_) async {
+        HapticFeedback.mediumImpact();
+        onSwipeReply();
+        return false;
+      },
+      background: Padding(
+        padding: const EdgeInsets.only(left: 24),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.reply_rounded,
+              size: 20,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+        ),
+      ),
+      child: content,
     );
   }
 }
@@ -2070,6 +2431,29 @@ class _ImageViewer extends StatelessWidget {
 
   const _ImageViewer({required this.url, this.title});
 
+  /// Downloads the photo to a temp file and opens the OS share sheet, where
+  /// "Save Image" / "บันทึกรูปภาพ" writes it to the device gallery.
+  Future<void> _saveOrShare(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final resp = await http.get(Uri.parse(url));
+      if (resp.statusCode != 200) throw Exception('download failed');
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/llk_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      await file.writeAsBytes(resp.bodyBytes);
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('บันทึกรูปไม่สำเร็จ ลองอีกครั้ง',
+              style: appFont(fontWeight: FontWeight.w600)),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -2086,6 +2470,13 @@ class _ImageViewer extends StatelessWidget {
           tooltip: 'ปิด',
           onPressed: () => Navigator.of(context).maybePop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.ios_share_rounded),
+            tooltip: 'บันทึก / แชร์',
+            onPressed: () => _saveOrShare(context),
+          ),
+        ],
         title: title == null || title!.trim().isEmpty
             ? null
             : Text(
@@ -2879,6 +3270,48 @@ class _JumpToLatestButton extends StatelessWidget {
               color: AppTheme.onSurface(context),
               size: 26,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Floating "you were mentioned" pill (LINE-style). Tap to hop to the oldest
+/// unread @mention of the current user.
+class _MentionJumpChip extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _MentionJumpChip({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 3,
+      color: AppTheme.primaryColor,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.alternate_email_rounded,
+                  size: 16, color: Colors.white),
+              const SizedBox(width: 5),
+              Text(
+                count > 1 ? 'ถูกแท็ก $count' : 'ถูกแท็ก',
+                style: appFont(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.1,
+                ),
+              ),
+            ],
           ),
         ),
       ),

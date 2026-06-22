@@ -397,77 +397,256 @@ class _ScheduleDatePicker extends StatefulWidget {
 }
 
 class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
-  late final Set<String> _expandedMonths;
+  // Single fixed-height horizontal strip — keeps the section height stable no
+  // matter how many departures exist, and reads like a calendar date picker.
+  // Month dividers are interleaved between groups so it's obvious, while
+  // scrolling, that more months lie ahead.
+  static const double _chipWidth = 84;
+  static const double _dividerWidth = 30;
+  static const double _chipSpacing = 8;
+
+  final ScrollController _controller = ScrollController();
+  late List<_StripEntry> _entries;
+
+  // "Swipe to see more" affordance — shown only when the strip actually
+  // overflows, and dismissed once the user starts scrolling.
+  bool _canScroll = false;
+  bool _hintDismissed = false;
 
   @override
   void initState() {
     super.initState();
-    final groups = _groupSchedulesByMonth(widget.schedules);
-    _expandedMonths = groups.map((g) => g.label).toSet();
+    _entries = _buildEntries(widget.schedules);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Auto-scroll first, then start listening — otherwise the programmatic
+      // jump would be mistaken for a user swipe and dismiss the hint instantly.
+      _scrollToInitial();
+      _refreshScrollHint();
+      _controller.addListener(_onScroll);
+    });
+  }
+
+  @override
+  void didUpdateWidget(_ScheduleDatePicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Region filtering can swap the schedule list out from under us.
+    if (!identical(oldWidget.schedules, widget.schedules)) {
+      setState(() {
+        _entries = _buildEntries(widget.schedules);
+        _hintDismissed = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_controller.hasClients) _controller.jumpTo(0);
+        _refreshScrollHint();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onScroll);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // Builds the interleaved [divider, chip, chip, …, divider, chip, …] list.
+  // Dividers are only added when the strip spans more than one month.
+  List<_StripEntry> _buildEntries(List<Map<String, dynamic>> schedules) {
+    final groups = _groupSchedulesByMonth(schedules);
+    final multiMonth = groups.length > 1;
+    return [
+      for (final group in groups) ...[
+        if (multiMonth) _StripEntry.month(group.label),
+        for (final schedule in group.schedules) _StripEntry.chip(schedule),
+      ],
+    ];
+  }
+
+  // Sum of item + separator widths preceding [index].
+  double _offsetForEntry(int index) {
+    double offset = 0;
+    for (int i = 0; i < index; i++) {
+      offset +=
+          (_entries[i].isDivider ? _dividerWidth : _chipWidth) + _chipSpacing;
+    }
+    return offset;
+  }
+
+  // Open on the selected date, or — if nothing is selected yet — on the first
+  // bookable departure so users don't land on a row of past/full dates. Lead
+  // with that month's divider so the month context is visible on open.
+  void _scrollToInitial() {
+    if (!_controller.hasClients || _entries.isEmpty) return;
+    int idx = -1;
+    if (widget.selectedId != null) {
+      idx = _entries.indexWhere(
+        (e) =>
+            e.schedule != null &&
+            int.tryParse(e.schedule!['id'].toString()) == widget.selectedId,
+      );
+    }
+    if (idx < 0) {
+      idx = _entries.indexWhere(
+        (e) => e.schedule != null && !_isSchedulePast(e.schedule!),
+      );
+    }
+    if (idx > 0 && _entries[idx - 1].isDivider) idx -= 1;
+    if (idx <= 0) return;
+    _controller.jumpTo(
+      _offsetForEntry(idx).clamp(0.0, _controller.position.maxScrollExtent),
+    );
+  }
+
+  void _refreshScrollHint() {
+    if (!_controller.hasClients) return;
+    final canScroll = _controller.position.maxScrollExtent > 0;
+    if (canScroll != _canScroll) setState(() => _canScroll = canScroll);
+  }
+
+  // Hide the hint once the user drags the strip themselves. Checking the user
+  // scroll direction ignores programmatic jumps (which stay idle).
+  void _onScroll() {
+    if (_hintDismissed || !_controller.hasClients) return;
+    if (_controller.position.userScrollDirection != ScrollDirection.idle) {
+      setState(() => _hintDismissed = true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final groups = _groupSchedulesByMonth(widget.schedules);
-    final multiMonth = groups.length > 1;
+    if (_entries.isEmpty) return const SizedBox.shrink();
+
+    final muted = AppTheme.mutedText(context);
+    final showHint = _canScroll && !_hintDismissed;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (int gi = 0; gi < groups.length; gi++) ...[
-          if (multiMonth) ...[
-            _MonthHeader(
-              label: groups[gi].label,
-              isExpanded: _expandedMonths.contains(groups[gi].label),
-              onTap: () => setState(() {
-                final label = groups[gi].label;
-                if (_expandedMonths.contains(label)) {
-                  _expandedMonths.remove(label);
-                } else {
-                  _expandedMonths.add(label);
-                }
-              }),
-            ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeInOut,
-              child: _expandedMonths.contains(groups[gi].label)
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: _chipWrap(groups[gi].schedules),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ] else
-            _chipWrap(groups[gi].schedules),
-          if (multiMonth && gi < groups.length - 1)
-            const SizedBox(height: 10),
-        ],
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: showHint ? 1 : 0,
+            child: showHint
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(Icons.swipe_rounded, size: 14, color: muted),
+                        const SizedBox(width: 5),
+                        Text(
+                          'เลื่อนดูวันอื่น ๆ',
+                          style: appFont(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: muted,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ),
+        SizedBox(
+          height: 122,
+          child: ListView.separated(
+            controller: _controller,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: _entries.length,
+            separatorBuilder: (_, _) => const SizedBox(width: _chipSpacing),
+            itemBuilder: (context, i) {
+              final entry = _entries[i];
+              if (entry.isDivider) {
+                return _MonthDivider(label: entry.monthLabel!);
+              }
+              final schedule = entry.schedule!;
+              final disabled = _asBool(schedule['is_charter']) ||
+                  _isSchedulePast(schedule) ||
+                  (int.tryParse(textOf(schedule['available_seats'], '0')) ??
+                          0) ==
+                      0;
+              return _ScheduleChip(
+                schedule: schedule,
+                isSelected: widget.selectedId ==
+                    int.tryParse(schedule['id'].toString()),
+                regionKey: widget.regionKey,
+                onTap: disabled
+                    ? null
+                    : () => widget.onChanged(
+                          int.tryParse(schedule['id'].toString()),
+                        ),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
+}
 
-  Widget _chipWrap(List<Map<String, dynamic>> schedules) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.start,
-      crossAxisAlignment: WrapCrossAlignment.start,
-      children: [
-        for (final schedule in schedules)
-          _ScheduleChip(
-            schedule: schedule,
-            isSelected:
-                widget.selectedId == int.tryParse(schedule['id'].toString()),
-            regionKey: widget.regionKey,
-            onTap: _asBool(schedule['is_charter']) ||
-                    _isSchedulePast(schedule) ||
-                    (int.tryParse(textOf(schedule['available_seats'], '0')) ?? 0) == 0
-                ? null
-                : () =>
-                    widget.onChanged(int.tryParse(schedule['id'].toString())),
+/// One slot in the horizontal date strip — either an inline month divider or a
+/// selectable schedule chip.
+class _StripEntry {
+  final String? monthLabel;
+  final Map<String, dynamic>? schedule;
+
+  const _StripEntry.month(this.monthLabel) : schedule = null;
+  const _StripEntry.chip(this.schedule) : monthLabel = null;
+
+  bool get isDivider => monthLabel != null;
+}
+
+/// Slim vertical month marker shown between month groups in the strip. The
+/// label is rotated so it stays compact yet readable next to the date chips.
+class _MonthDivider extends StatelessWidget {
+  final String label;
+
+  const _MonthDivider({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = AppTheme.mutedText(context);
+    return SizedBox(
+      width: _ScheduleDatePickerState._dividerWidth,
+      height: 122,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: 1.5,
+            margin: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: AppTheme.border(context).withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(1),
+            ),
           ),
-      ],
+          Expanded(
+            child: Center(
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: muted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -527,54 +706,6 @@ String _monthGroupLabel(String yearMonthKey) {
   final month = int.tryParse(parts[1]) ?? 0;
   if (year == 0 || month == 0) return '';
   return DateFormat('MMMM yyyy', 'th_TH').format(DateTime(year, month));
-}
-
-class _MonthHeader extends StatelessWidget {
-  final String label;
-  final bool isExpanded;
-  final VoidCallback onTap;
-
-  const _MonthHeader({
-    required this.label,
-    required this.isExpanded,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final muted = AppTheme.mutedText(context);
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Text(
-              label,
-              style: appFont(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: muted,
-                letterSpacing: 0.3,
-              ),
-            ),
-            const SizedBox(width: 4),
-            AnimatedRotation(
-              turns: isExpanded ? 0 : -0.25,
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeInOut,
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 16,
-                color: muted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _ScheduleChip extends StatelessWidget {
@@ -890,6 +1021,58 @@ class _PickupPointSelector extends StatelessWidget {
   }
 }
 
+/// Prominent "เวลาขึ้นรถ" badge shown under a pickup point. Apple-style: a solid
+/// accent capsule with a clock glyph so the departure time is the clear anchor
+/// of the row, regardless of selection state.
+class _PickupTimeBadge extends StatelessWidget {
+  final String time;
+
+  const _PickupTimeBadge({required this.time});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: _softAccent,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: _softAccent.withValues(alpha: 0.30),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.schedule_rounded, size: 14, color: Colors.white),
+          const SizedBox(width: 5),
+          Text(
+            'ขึ้นรถ ',
+            style: appFont(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.9),
+              letterSpacing: -0.1,
+            ),
+          ),
+          Text(
+            '$time น.',
+            style: appFont(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PickupPointRow extends StatelessWidget {
   final Map<String, dynamic> point;
   final bool isSelected;
@@ -905,6 +1088,7 @@ class _PickupPointRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = AppTheme.isDark(context);
     final location = textOf(point['pickup_location']).trim();
+    final time = textOf(point['pickup_time']).trim();
     final price = _pickupPriceText(point['price']);
     final hasExtra = price != 'ไม่มีค่าใช้จ่ายเพิ่ม';
 
@@ -949,18 +1133,29 @@ class _PickupPointRow extends StatelessWidget {
                   : null,
             ),
             const SizedBox(width: 12),
-            // Location name
+            // Location name + prominent departure time
             Expanded(
-              child: Text(
-                location.isNotEmpty ? location : 'ไม่ระบุจุดขึ้นรถ',
-                style: appFont(
-                  fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  color: isSelected
-                      ? (isDark ? Colors.white : _premiumText)
-                      : AppTheme.onSurface(context).withValues(alpha: 0.85),
-                  height: 1.3,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    location.isNotEmpty ? location : 'ไม่ระบุจุดขึ้นรถ',
+                    style: appFont(
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.w800 : FontWeight.w600,
+                      color: isSelected
+                          ? (isDark ? Colors.white : _premiumText)
+                          : AppTheme.onSurface(context).withValues(alpha: 0.85),
+                      height: 1.3,
+                    ),
+                  ),
+                  if (time.isNotEmpty) ...[
+                    const SizedBox(height: 7),
+                    _PickupTimeBadge(time: time),
+                  ],
+                ],
               ),
             ),
             // Price tag (only shown when there's an extra charge)
