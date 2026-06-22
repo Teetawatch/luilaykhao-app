@@ -141,6 +141,10 @@ class TravelPlanSelectionSection extends StatelessWidget {
                 // วันทริป (เช่น ทริปเสาร์ที่ 13 แต่รถออกศุกร์ที่ 12 เวลา 23:30)
                 ..._departureTimeNotice(context, scheduleMaps, scheduleValue),
 
+                // พยากรณ์อากาศของวันเดินทางที่เลือก (ถ้า backend มีข้อมูล —
+                // เฉพาะรอบที่อยู่ในช่วงพยากรณ์ ~6 วันข้างหน้า)
+                ..._weatherNotice(scheduleMaps, scheduleValue),
+
                 // Step 3 — Pickup point
                 if (scheduleMaps.isNotEmpty) ...[
                   const SizedBox(height: 22),
@@ -226,6 +230,28 @@ List<Widget> _departureTimeNotice(
         ],
       ),
     ),
+  ];
+}
+
+/// Weather forecast for the selected departure date. Reads the `weather`
+/// payload the backend attaches to a schedule (present only when the trip has
+/// coordinates and the date is within the ~6-day forecast window).
+List<Widget> _weatherNotice(
+  List<Map<String, dynamic>> schedules,
+  int? selectedId,
+) {
+  if (selectedId == null) return const [];
+
+  final schedule = schedules.firstWhere(
+    (s) => int.tryParse(s['id'].toString()) == selectedId,
+    orElse: () => const {},
+  );
+  final weather = asMap(schedule['weather']);
+  if (weather.isEmpty) return const [];
+
+  return [
+    const SizedBox(height: 12),
+    WeatherCard(weather: weather, label: 'พยากรณ์อากาศวันที่เลือก'),
   ];
 }
 

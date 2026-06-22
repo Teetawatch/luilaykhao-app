@@ -27,6 +27,7 @@ import '../theme/app_theme.dart';
 import '../widgets/review_dialog.dart';
 import '../widgets/travel_widgets.dart';
 import '../widgets/vehicle_seat_map.dart';
+import '../widgets/weather_card.dart';
 import 'login_screen.dart';
 import 'refund_status_screen.dart';
 import 'payment_screen.dart';

@@ -16,6 +16,7 @@ import '../providers/wishlist_provider.dart';
 import '../config/api_config.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
+import '../widgets/weather_card.dart';
 import 'booking_flow_screen.dart';
 import 'group_room_screen.dart';
 import 'login_screen.dart';
