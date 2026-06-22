@@ -8,6 +8,7 @@ import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
+import 'customer_app_screen.dart' show AllTripsScreen;
 import 'group_room_screen.dart';
 
 /// Lists the group rooms the current user hosts or has joined, so a room is no
@@ -59,6 +60,17 @@ class _GroupRoomsScreenState extends State<GroupRoomsScreen> {
     if (mounted) _load();
   }
 
+  // A group is created from a specific trip + departure, so creating one starts
+  // by picking a trip; the trip detail screen then offers "ชวนเพื่อนมาเป็นกลุ่ม".
+  Future<void> _createGroup() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const AllTripsScreen(introBanner: GroupCreateTripHint()),
+      ),
+    );
+    if (mounted) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,6 +82,20 @@ class _GroupRoomsScreenState extends State<GroupRoomsScreen> {
           'กลุ่มของฉัน',
           style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
         ),
+        actions: [
+          TextButton.icon(
+            onPressed: _createGroup,
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: Text(
+              'สร้างกลุ่ม',
+              style: appFont(fontSize: 14, fontWeight: FontWeight.w800),
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
     );
@@ -93,12 +119,34 @@ class _GroupRoomsScreenState extends State<GroupRoomsScreen> {
     }
     if (_plans.isEmpty) {
       return ListView(
-        children: const [
-          SizedBox(height: 120),
-          EmptyState(
+        children: [
+          const SizedBox(height: 120),
+          const EmptyState(
             icon: Icons.groups_2_rounded,
             title: 'ยังไม่มีกลุ่ม',
-            body: 'เมื่อคุณสร้างหรือเข้าร่วมทริปแบบกลุ่ม จะแสดงที่นี่',
+            body: 'สร้างกลุ่มเพื่อชวนเพื่อนไปทริปเดียวกัน จองพร้อมกันได้ในที่เดียว',
+          ),
+          const SizedBox(height: 24),
+          Center(
+            child: FilledButton.icon(
+              onPressed: _createGroup,
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: Text(
+                'สร้างกลุ่มใหม่',
+                style: appFont(fontSize: 15, fontWeight: FontWeight.w800),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
           ),
         ],
       );

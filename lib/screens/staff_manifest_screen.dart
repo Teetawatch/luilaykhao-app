@@ -110,16 +110,17 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
     }
   }
 
-  /// Passenger and contact names from the loaded manifest, offered as quick
-  /// picks when reporting an incident.
+  /// Passengers of this schedule only, offered as quick picks when reporting an
+  /// incident. Each entry is "คำนำหน้า ชื่อ-นามสกุล (ชื่อเล่น)" — the manifest
+  /// `name` already carries the title; the nickname is appended when present.
   List<String> get _passengerNames {
     final names = <String>{};
     for (final b in asList(_data?['bookings']).map(asMap)) {
-      final contact = textOf(b['contact_name']);
-      if (contact.isNotEmpty) names.add(contact);
       for (final p in asList(b['passengers']).map(asMap)) {
         final name = textOf(p['name']);
-        if (name.isNotEmpty) names.add(name);
+        if (name.isEmpty) continue;
+        final nickname = textOf(p['nickname']);
+        names.add(nickname.isEmpty ? name : '$name ($nickname)');
       }
     }
     return names.toList();
@@ -941,18 +942,32 @@ class _SafetyBadges extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chips = <Widget>[
+    // Long free-text medical fields get full-width callout cells that wrap
+    // gracefully no matter how much the customer entered; short, bounded
+    // values stay as compact chips.
+    final callouts = <Widget>[
       if (allergies.isNotEmpty)
-        _CareChip(
+        _CareCallout(
           icon: Icons.warning_amber_rounded,
-          label: 'แพ้ $allergies',
+          label: 'แพ้ยา / แพ้อาหาร',
+          value: allergies,
           color: AppTheme.errorColor,
         ),
       if (healthNotes.isNotEmpty)
-        _CareChip(
+        _CareCallout(
           icon: Icons.medical_services_rounded,
-          label: healthNotes,
+          label: 'ข้อมูลสุขภาพ',
+          value: healthNotes,
           color: AppTheme.warningColor,
+        ),
+    ];
+
+    final chips = <Widget>[
+      if (bloodGroup.isNotEmpty)
+        _CareChip(
+          icon: Icons.bloodtype_rounded,
+          label: 'กรุ๊ปเลือด $bloodGroup',
+          color: AppTheme.errorColor,
         ),
       if (halal)
         const _CareChip(
@@ -960,25 +975,27 @@ class _SafetyBadges extends StatelessWidget {
           label: 'ฮาลาล',
           color: AppTheme.primaryColor,
         ),
-      if (bloodGroup.isNotEmpty)
-        _CareChip(
-          icon: Icons.bloodtype_rounded,
-          label: 'กรุ๊ปเลือด $bloodGroup',
-          color: AppTheme.errorColor,
-        ),
     ];
 
     final hasEmergency =
         emergencyPhone.isNotEmpty || emergencyContact.isNotEmpty;
-    if (chips.isEmpty && !hasEmergency) return const SizedBox.shrink();
+    if (callouts.isEmpty && chips.isEmpty && !hasEmergency) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.only(top: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (chips.isNotEmpty)
+          for (var i = 0; i < callouts.length; i++) ...[
+            if (i > 0) const SizedBox(height: 8),
+            callouts[i],
+          ],
+          if (chips.isNotEmpty) ...[
+            if (callouts.isNotEmpty) const SizedBox(height: 8),
             Wrap(spacing: 6, runSpacing: 6, children: chips),
+          ],
           if (hasEmergency) ...[
             const SizedBox(height: 6),
             Row(
@@ -1183,6 +1200,78 @@ class _CareChip extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Apple-style "callout" cell for long free-text medical info (allergies,
+/// health notes). A tinted rounded container with a glyph, a caption label and
+/// the value as full-width text that wraps to as many lines as needed — so a
+/// long allergy list stays fully legible instead of being clipped in a chip.
+class _CareCallout extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _CareCallout({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 16, color: color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: appFont(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: appFont(
+                    fontSize: 13.5,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

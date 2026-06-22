@@ -243,10 +243,25 @@ class _ParticipantRow extends StatelessWidget {
   }
 }
 
+/// Formats an ISO date (Y-m-d) as a short Thai date, e.g. "12 ก.ค. 68" (BE).
+/// Returns '' for empty/unparseable input. Reuses [_thaiMonthsShort].
+String _thaiShortDate(String iso) {
+  if (iso.isEmpty) return '';
+  final date = DateTime.tryParse(iso);
+  if (date == null) return '';
+  final beYear = (date.year + 543) % 100;
+  return '${date.day} ${_thaiMonthsShort[date.month]} '
+      '${beYear.toString().padLeft(2, '0')}';
+}
+
 class _ReferenceTripCard extends StatelessWidget {
   final Map<String, dynamic> trip;
 
-  const _ReferenceTripCard({required this.trip});
+  /// When true (the "almost full" rail), overlays the seats-left and the
+  /// near-full round's departure date so the urgency is explicit.
+  final bool showScarcity;
+
+  const _ReferenceTripCard({required this.trip, this.showScarcity = false});
 
   @override
   Widget build(BuildContext context) {
@@ -261,6 +276,10 @@ class _ReferenceTripCard extends StatelessWidget {
     final title = textOf(trip['title'], '-');
     final duration = _durationText(trip);
     final reviewCount = textOf(trip['review_count'], '0');
+    final seatsLeft = showScarcity ? int.tryParse(textOf(trip['seats_left'])) : null;
+    final departureDate = showScarcity
+        ? _thaiShortDate(textOf(trip['almost_full_date']))
+        : '';
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -334,6 +353,40 @@ class _ReferenceTripCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (seatsLeft != null)
+              Positioned(
+                top: 14,
+                right: 14,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.event_seat_rounded,
+                        size: 13,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'เหลือ $seatsLeft ที่',
+                        style: appFont(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             Positioned(
               left: 14,
               right: 14,
@@ -363,6 +416,29 @@ class _ReferenceTripCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (departureDate.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.event_rounded,
+                          size: 14,
+                          color: Color(0xFFFFD9A8),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'ออกเดินทาง $departureDate',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: appFont(
+                            color: const Color(0xFFFFD9A8),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Row(
                     children: [

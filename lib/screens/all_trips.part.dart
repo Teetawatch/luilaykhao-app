@@ -1,7 +1,11 @@
 part of 'customer_app_screen.dart';
 
 class AllTripsScreen extends StatefulWidget {
-  const AllTripsScreen({super.key});
+  /// Optional banner pinned above the filters — used to explain a special entry
+  /// flow, e.g. "pick a trip to start a group".
+  final Widget? introBanner;
+
+  const AllTripsScreen({super.key, this.introBanner});
 
   @override
   State<AllTripsScreen> createState() => _AllTripsScreenState();
@@ -175,6 +179,10 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (widget.introBanner != null) ...[
+                        widget.introBanner!,
+                        const SizedBox(height: 18),
+                      ],
                       _TripsFilterPanel(
                         searchController: _searchController,
                         categories: _categories,

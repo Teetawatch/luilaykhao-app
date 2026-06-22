@@ -39,6 +39,10 @@ import 'join_booking_screen.dart';
 import 'pre_trip_checklist_screen.dart';
 import 'schedule_announcements_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
+import 'group_rooms_screen.dart';
+import 'group_room_screen.dart';
+import 'referral_screen.dart' show ReferralScreen;
+import '../models/group_plan.dart';
 import '../services/checklist_storage.dart';
 
 part 'my_bookings_screen.dart';

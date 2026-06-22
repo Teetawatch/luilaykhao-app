@@ -380,38 +380,34 @@ class TrustSignalsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     const signals = [
       _TrustSignal(Icons.lock_rounded, 'ชำระเงินปลอดภัย'),
-      _TrustSignal(Icons.task_alt_rounded, 'ยืนยันการจองทันที'),
-      _TrustSignal(Icons.support_agent_rounded, 'ติดต่อทีมงาน 24 ชม.'),
+      _TrustSignal(Icons.bolt_rounded, 'ยืนยันทันที'),
+      _TrustSignal(Icons.support_agent_rounded, 'ทีมงาน 24 ชม.'),
     ];
 
+    // Quiet, Apple-style reassurance footnote: muted icon + label, no chips or
+    // tinted backgrounds, centered, wrapping gracefully on narrow screens.
+    final color = AppTheme.mutedText(context);
+
     return Wrap(
-      spacing: 8,
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 18,
       runSpacing: 8,
       children: signals.map((signal) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          decoration: BoxDecoration(
-            color: AppTheme.selectedTint(context),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _softAccent.withValues(alpha: 0.10)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(signal.icon, size: 15, color: _softAccent),
-              const SizedBox(width: 6),
-              Text(
-                signal.label,
-                style: appFont(
-                  color: AppTheme.isDark(context)
-                      ? AppTheme.accentColor
-                      : const Color(0xFF126B5B),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(signal.icon, size: 14, color: color),
+            const SizedBox(width: 5),
+            Text(
+              signal.label,
+              style: appFont(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
               ),
-            ],
-          ),
+            ),
+          ],
         );
       }).toList(),
     );

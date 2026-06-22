@@ -147,6 +147,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ],
                   ),
+                  _YourTripSection(app: app),
                   _TrustStatsBar(app: app),
                   _CategoryChipsSection(
                     categories: app.categories.map(asMap).toList(),
@@ -174,6 +175,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         .where((r) => r.isNotEmpty)
                         .toList(),
                   ),
+                  _GroupTripSection(app: app),
+                  _ReferralBanner(app: app),
                   PromotionsSection(
                     promotions: app.promotions
                         .map(asMap)
@@ -706,11 +709,15 @@ class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
               ),
             ],
           ),
-          child: const Column(
+          child: Column(
             children: [
-              _LicenseAssuranceBanner(),
-              SizedBox(height: 14),
-              _GuestBookingBanner(),
+              const _LicenseAssuranceBanner(),
+              // Booking-ref lookup is only useful to guests (members already
+              // have their trips in-app), so keep it out of signed-in Home.
+              if (!widget.app.isLoggedIn) ...[
+                const SizedBox(height: 14),
+                const _GuestBookingBanner(),
+              ],
             ],
           ),
         ),
@@ -1600,7 +1607,10 @@ class _AlmostFullRail extends StatelessWidget {
               separatorBuilder: (_, _) => const SizedBox(width: 14),
               itemBuilder: (context, index) => SizedBox(
                 width: MediaQuery.of(context).size.width > 700 ? 230 : 180,
-                child: _ReferenceTripCard(trip: trips[index]),
+                child: _ReferenceTripCard(
+                  trip: trips[index],
+                  showScarcity: true,
+                ),
               ),
             ),
           ),
@@ -3090,3 +3100,1179 @@ class _ScarcitySheet extends StatelessWidget {
     );
   }
 }
+
+// ─── Your Trip Section (personalised next booking) ───────────────────────────
+//
+// Surfaces the signed-in traveller's nearest upcoming booking right at the top
+// of Home, so the screen greets returning users with their own trip instead of
+// generic discovery content. Reuses the existing booking helpers and detail
+// sheet — no new backend.
+
+class _YourTripSection extends StatelessWidget {
+  final AppProvider app;
+
+  const _YourTripSection({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!app.isLoggedIn) return const SizedBox.shrink();
+
+    final upcoming = app.bookings.map(asMap).where(_isUpcomingBooking).toList()
+      ..sort((a, b) {
+        final ad = bookingTravelDate(a) ?? DateTime(2100);
+        final bd = bookingTravelDate(b) ?? DateTime(2100);
+        return ad.compareTo(bd);
+      });
+    if (upcoming.isEmpty) return const SizedBox.shrink();
+
+    final next = upcoming.first;
+    final more = upcoming.length - 1;
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ทริปของคุณ',
+                      style: appFont(
+                        color: const Color(0xFF063F46),
+                        fontSize: 22,
+                        height: 1.1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      more > 0
+                          ? 'อีก $more ทริปที่กำลังจะถึง'
+                          : 'เตรียมตัวให้พร้อมก่อนออกเดินทาง',
+                      style: appFont(
+                        color: AppTheme.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: NotificationNavigator.goToBookings,
+                child: Text(
+                  more > 0 ? 'ดูทั้งหมด' : 'การจองของฉัน',
+                  style: appFont(
+                    color: const Color(0xFF063F46),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _HomeNextTripCard(booking: next),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeNextTripCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _HomeNextTripCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final schedule = asMap(booking['schedule']);
+    final trip = asMap(schedule['trip']);
+    final title = textOf(trip['title'], 'ทริปของคุณ');
+    final location = textOf(trip['location']);
+    final travelDate = bookingTravelDate(booking);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final days = travelDate?.difference(today).inDays;
+    final ref = textOf(booking['booking_ref']);
+    final image = ApiConfig.mediaUrl(
+      textOf(trip['thumbnail_image'], textOf(trip['cover_image'])),
+    );
+    final isPending = textOf(booking['status']) == 'pending';
+
+    final (String countLabel, Color countColor) = switch (days) {
+      null => ('รอวันเดินทาง', AppTheme.primaryColor),
+      < 0 => ('กำลังเดินทาง', const Color(0xFF16A34A)),
+      0 => ('เดินทางวันนี้!', const Color(0xFF16A34A)),
+      1 => ('พรุ่งนี้!', const Color(0xFFD97706)),
+      <= 3 => ('อีก $days วัน!', const Color(0xFFD97706)),
+      _ => ('อีก $days วัน', AppTheme.primaryColor),
+    };
+
+    void openSheet() {
+      if (ref.isEmpty) return;
+      HapticFeedback.selectionClick();
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => BookingDetailSheet(bookingRef: ref),
+      );
+    }
+
+    return GestureDetector(
+      onTap: openSheet,
+      child: Container(
+        height: 172,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: const Color(0xFF0B3D42),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0B3D42).withValues(alpha: 0.22),
+              blurRadius: 22,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (image.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: image,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => const SizedBox.shrink(),
+                errorWidget: (_, _, _) => const SizedBox.shrink(),
+              ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x33000000), Color(0xE6000000)],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const _GlassPill(
+                        icon: Icons.hiking_rounded,
+                        label: 'ทริปของคุณ',
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isPending
+                              ? const Color(0xFFD97706)
+                              : countColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isPending
+                                  ? Icons.schedule_rounded
+                                  : Icons.event_rounded,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              isPending ? 'ค้างชำระ' : countLabel,
+                              style: appFont(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      color: Colors.white,
+                      fontSize: 19,
+                      height: 1.15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (travelDate != null) ...[
+                        const Icon(
+                          Icons.calendar_today_rounded,
+                          size: 12,
+                          color: Colors.white70,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          DateFormat('d MMM yyyy', 'th_TH').format(travelDate),
+                          style: appFont(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      if (travelDate != null && location.isNotEmpty)
+                        Text(
+                          '  ·  ',
+                          style: appFont(color: Colors.white54, fontSize: 12.5),
+                        ),
+                      if (location.isNotEmpty)
+                        Flexible(
+                          child: Text(
+                            location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: appFont(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _NextTripCta(
+                    label: isPending ? 'ชำระเงินให้เสร็จ' : 'ดูรายละเอียด',
+                    icon: isPending
+                        ? Icons.payments_rounded
+                        : Icons.arrow_forward_rounded,
+                    highlighted: isPending,
+                    onTap: openSheet,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _GlassPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 13, color: Colors.white),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: appFont(
+                  color: Colors.white,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NextTripCta extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool highlighted;
+  final VoidCallback onTap;
+
+  const _NextTripCta({
+    required this.label,
+    required this.icon,
+    required this.highlighted,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: highlighted
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(12),
+          border: highlighted
+              ? null
+              : Border.all(color: Colors.white.withValues(alpha: 0.30)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: appFont(
+                color: highlighted ? const Color(0xFFB45309) : Colors.white,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.1,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              icon,
+              size: 16,
+              color: highlighted ? const Color(0xFFB45309) : Colors.white,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Group Trip Section (find travel companions) ─────────────────────────────
+//
+// Promotes the Group Trip feature on Home and gives a quick way in: review the
+// rooms you host or joined, or jump in with an invite code. The personalised
+// rail loads silently — if it fails or is empty, the promo card still shows.
+
+class _GroupTripSection extends StatefulWidget {
+  final AppProvider app;
+
+  const _GroupTripSection({required this.app});
+
+  @override
+  State<_GroupTripSection> createState() => _GroupTripSectionState();
+}
+
+class _GroupTripSectionState extends State<_GroupTripSection> {
+  List<GroupPlan> _plans = const [];
+  bool _requested = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.app.isLoggedIn) _load();
+  }
+
+  @override
+  void didUpdateWidget(_GroupTripSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Login can complete after the first build — pick the rooms up then.
+    if (widget.app.isLoggedIn && !_requested) _load();
+  }
+
+  Future<void> _load() async {
+    _requested = true;
+    try {
+      final raw = await widget.app.myGroupPlans();
+      final plans = raw
+          .whereType<Map>()
+          .map((e) => GroupPlan.fromJson(Map<String, dynamic>.from(e)))
+          .where((p) => p.status == 'open' || p.status == 'booked')
+          .toList();
+      if (!mounted) return;
+      setState(() => _plans = plans);
+    } catch (_) {
+      // Silent — the promo card is still useful without the rail.
+    }
+  }
+
+  void _openMine() {
+    if (!widget.app.isLoggedIn) {
+      _gateLogin(_pushMine);
+      return;
+    }
+    _pushMine();
+  }
+
+  void _pushMine() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const GroupRoomsScreen()),
+    );
+  }
+
+  void _gateLogin(VoidCallback then) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LoginScreen(
+          onLoginSuccess: () {
+            if (mounted) then();
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _joinByCode() async {
+    final code = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _JoinGroupSheet(),
+    );
+    if (code == null || code.isEmpty || !mounted) return;
+    if (!widget.app.isLoggedIn) {
+      _gateLogin(() => _openGroup(code));
+      return;
+    }
+    _openGroup(code);
+  }
+
+  void _openGroup(String code) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => GroupRoomScreen(inviteCode: code)),
+    );
+  }
+
+  // Browsing trips is public; the create CTA inside trip detail gates login.
+  void _createGroup() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const AllTripsScreen(introBanner: GroupCreateTripHint()),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPlans = _plans.isNotEmpty;
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'เที่ยวเป็นกลุ่ม',
+                      style: appFont(
+                        color: const Color(0xFF063F46),
+                        fontSize: 22,
+                        height: 1.1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'ชวนเพื่อนไปทริปเดียวกัน',
+                      style: appFont(
+                        color: AppTheme.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (hasPlans)
+                TextButton(
+                  onPressed: _openMine,
+                  child: Text(
+                    'ดูทั้งหมด',
+                    style: appFont(
+                      color: const Color(0xFF063F46),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          if (hasPlans) ...[
+            SizedBox(
+              height: 124,
+              child: ListView.separated(
+                clipBehavior: Clip.none,
+                scrollDirection: Axis.horizontal,
+                itemCount: _plans.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final plan = _plans[index];
+                  return _HomeGroupCard(
+                    plan: plan,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => GroupRoomScreen(initialPlan: plan),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          _GroupPromoCard(
+            onCreate: _createGroup,
+            onMine: _openMine,
+            onJoin: _joinByCode,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeGroupCard extends StatelessWidget {
+  final GroupPlan plan;
+  final VoidCallback onTap;
+
+  const _HomeGroupCard({required this.plan, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = plan.trip?.title ?? 'ทริปแบบกลุ่ม';
+    final dateRaw = plan.schedule?.departureDate;
+    final date = dateRaw == null ? null : DateTime.tryParse(dateRaw);
+    final isBooked = plan.isBooked;
+    final accent = isBooked ? const Color(0xFF16A34A) : AppTheme.primaryColor;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 244,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFEAF0F0)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF082A30).withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isBooked ? 'จองแล้ว' : 'กำลังเปิดรับ',
+                    style: appFont(
+                      color: accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (plan.isHost)
+                  Icon(
+                    Icons.star_rounded,
+                    size: 16,
+                    color: const Color(0xFFD97706).withValues(alpha: 0.9),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: appFont(
+                fontSize: 15,
+                height: 1.2,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
+                color: const Color(0xFF063F46),
+              ),
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                const Icon(
+                  Icons.groups_rounded,
+                  size: 14,
+                  color: AppTheme.textSecondary,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${plan.readyCount}/${plan.seatCount} พร้อมแล้ว',
+                  style: appFont(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                if (date != null)
+                  Text(
+                    DateFormat('d MMM', 'th_TH').format(date),
+                    style: appFont(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupPromoCard extends StatelessWidget {
+  final VoidCallback onCreate;
+  final VoidCallback onMine;
+  final VoidCallback onJoin;
+
+  const _GroupPromoCard({
+    required this.onCreate,
+    required this.onMine,
+    required this.onJoin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0B7C66), Color(0xFF0B3D42)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B3D42).withValues(alpha: 0.22),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.groups_2_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ไปเป็นกลุ่ม สนุกกว่า',
+                      style: appFont(
+                        color: Colors.white,
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'ชวนเพื่อนจองพร้อมกัน เลือกที่นั่งเองได้ หัวหน้ากลุ่มจ่ายทีเดียว',
+                      style: appFont(
+                        color: Colors.white.withValues(alpha: 0.82),
+                        fontSize: 12.5,
+                        height: 1.35,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _PromoButton(
+            label: 'สร้างกลุ่มใหม่',
+            icon: Icons.add_rounded,
+            filled: true,
+            fullWidth: true,
+            onTap: onCreate,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _PromoButton(
+                  label: 'กลุ่มของฉัน',
+                  icon: Icons.meeting_room_rounded,
+                  filled: false,
+                  onTap: onMine,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _PromoButton(
+                  label: 'ใส่โค้ดเชิญ',
+                  icon: Icons.vpn_key_rounded,
+                  filled: false,
+                  onTap: onJoin,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PromoButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool filled;
+  final bool fullWidth;
+  final VoidCallback onTap;
+
+  const _PromoButton({
+    required this.label,
+    required this.icon,
+    required this.filled,
+    this.fullWidth = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        height: 46,
+        width: fullWidth ? double.infinity : null,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: filled ? Colors.white : Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: filled
+              ? null
+              : Border.all(color: Colors.white.withValues(alpha: 0.32)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 17,
+              color: filled ? const Color(0xFF0B3D42) : Colors.white,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: appFont(
+                color: filled ? const Color(0xFF0B3D42) : Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _JoinGroupSheet extends StatefulWidget {
+  const _JoinGroupSheet();
+
+  @override
+  State<_JoinGroupSheet> createState() => _JoinGroupSheetState();
+}
+
+class _JoinGroupSheetState extends State<_JoinGroupSheet> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final code = _controller.text.trim().toUpperCase();
+    if (code.isEmpty) return;
+    Navigator.of(context).pop(code);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surface(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.border(context),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'เข้าร่วมกลุ่มด้วยโค้ด',
+              style: appFont(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'กรอกโค้ดเชิญที่ได้รับจากหัวหน้ากลุ่ม',
+              style: appFont(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.go,
+              onSubmitted: (_) => _submit(),
+              style: appFont(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2,
+                color: AppTheme.onSurface(context),
+              ),
+              decoration: InputDecoration(
+                hintText: 'เช่น AB12CD',
+                hintStyle: appFont(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
+                  color: AppTheme.mutedText(context).withValues(alpha: 0.5),
+                ),
+                filled: true,
+                fillColor: AppTheme.subtleSurface(context),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton(
+                onPressed: _submit,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'เข้าร่วมกลุ่ม',
+                  style: appFont(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Referral Banner (invite friends, earn points) ───────────────────────────
+//
+// A compact growth nudge into the existing referral hub. Loads the invite code
+// silently so signed-in users can share in one tap straight from Home; guests
+// see the value prop and are routed through login.
+
+class _ReferralBanner extends StatefulWidget {
+  final AppProvider app;
+
+  const _ReferralBanner({required this.app});
+
+  @override
+  State<_ReferralBanner> createState() => _ReferralBannerState();
+}
+
+class _ReferralBannerState extends State<_ReferralBanner> {
+  bool _requested = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.app.isLoggedIn) _load();
+  }
+
+  @override
+  void didUpdateWidget(_ReferralBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.app.isLoggedIn && !_requested) _load();
+  }
+
+  Future<void> _load() async {
+    _requested = true;
+    if (widget.app.referral != null) return;
+    try {
+      await widget.app.fetchReferral();
+      if (mounted) setState(() {});
+    } catch (_) {
+      // Silent — the banner still works as a plain CTA into the referral hub.
+    }
+  }
+
+  String get _code => textOf(asMap(widget.app.referral)['code']);
+
+  void _openHub() {
+    if (!widget.app.isLoggedIn) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => LoginScreen(
+            onLoginSuccess: () {
+              if (mounted) _pushHub();
+            },
+          ),
+        ),
+      );
+      return;
+    }
+    _pushHub();
+  }
+
+  void _pushHub() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ReferralScreen()),
+    );
+  }
+
+  Future<void> _share() async {
+    final data = asMap(widget.app.referral);
+    final msg = textOf(data['share_message'], textOf(data['share_url']));
+    if (msg.isEmpty) {
+      _openHub();
+      return;
+    }
+    HapticFeedback.selectionClick();
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: msg, subject: 'ชวนเพื่อนมาเที่ยวลุยลายเขา'),
+      );
+    } catch (_) {
+      if (mounted) _openHub();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canShare = _code.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+      child: GestureDetector(
+        onTap: _openHub,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF047857), Color(0xFF10B981)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF059669).withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 9),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.card_giftcard_rounded,
+                  color: Colors.white,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ชวนเพื่อน รับแต้มฟรีทั้งคู่',
+                      style: appFont(
+                        color: Colors.white,
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      canShare
+                          ? 'โค้ดของคุณ: $_code · ใช้แทนส่วนลดได้'
+                          : 'เพื่อนจองทริปแรก รับแต้มทั้งสองฝ่าย',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        color: Colors.white.withValues(alpha: 0.88),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (canShare)
+                GestureDetector(
+                  onTap: _share,
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.ios_share_rounded,
+                          size: 16,
+                          color: Color(0xFF047857),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'แชร์',
+                          style: appFont(
+                            color: const Color(0xFF047857),
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

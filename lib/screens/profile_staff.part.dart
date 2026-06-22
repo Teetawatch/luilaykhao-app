@@ -75,6 +75,16 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
       }
     }
 
+    // Today's first active trip is promoted to a hero; the remaining active
+    // trips still list below. The toolbar targets whatever job is most pressing.
+    final hasHero = activeSchedules.isNotEmpty;
+    final activeForList = hasHero
+        ? activeSchedules.sublist(1)
+        : const <Map<String, dynamic>>[];
+    final primarySchedule = hasHero
+        ? activeSchedules.first
+        : (upcomingSchedules.isNotEmpty ? upcomingSchedules.first : null);
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: RefreshIndicator(
@@ -94,12 +104,25 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _StaffCheckInCta(
-                        onTap: () => _pushPremium(
-                          context,
-                          const StaffCheckInScreen(),
+                      if (hasHero)
+                        _StaffTodayHero(
+                          schedule: activeSchedules.first,
+                          onCheckIn: () => _pushPremium(
+                            context,
+                            const StaffCheckInScreen(),
+                          ),
+                        )
+                      else
+                        _StaffCheckInCta(
+                          onTap: () => _pushPremium(
+                            context,
+                            const StaffCheckInScreen(),
+                          ),
                         ),
-                      ),
+                      if (primarySchedule != null) ...[
+                        const SizedBox(height: 12),
+                        _StaffToolbar(schedule: primarySchedule),
+                      ],
                       const SizedBox(height: 16),
                       _StaffSummaryRow(
                         summary: summary,
@@ -111,14 +134,14 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                         upcomingCount:
                             activeSchedules.length + upcomingSchedules.length,
                       ),
-                      if (activeSchedules.isNotEmpty) ...[
+                      if (activeForList.isNotEmpty) ...[
                         const SizedBox(height: 18),
                         const _StaffGroupLabel(
                           label: 'วันนี้ / กำลังเดินทาง',
                           color: Color(0xFFDC2626),
                         ),
                         const SizedBox(height: 8),
-                        for (final s in activeSchedules) ...[
+                        for (final s in activeForList) ...[
                           _StaffScheduleCard(schedule: s, isToday: true),
                           const SizedBox(height: 10),
                         ],
@@ -149,7 +172,13 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                       ],
                       if (schedules.isEmpty && _loadedOnce && !_loading) ...[
                         const SizedBox(height: 16),
-                        _StaffEmptyState(),
+                        _StaffEmptyState(
+                          onRefresh: _refresh,
+                          onContact: () => _pushPremium(
+                            context,
+                            const ChatListScreen(),
+                          ),
+                        ),
                       ],
                       if (schedules.isEmpty && _loading && !_loadedOnce) ...[
                         const SizedBox(height: 60),
@@ -249,7 +278,306 @@ class _StaffCheckInCta extends StatelessWidget {
   }
 }
 
+/// Prominent hero for the trip happening today / right now — surfaces the
+/// check-in progress at a glance and a one-tap way into the scanner.
+class _StaffTodayHero extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+  final VoidCallback onCheckIn;
+
+  const _StaffTodayHero({required this.schedule, required this.onCheckIn});
+
+  @override
+  Widget build(BuildContext context) {
+    final trip = _toMap(schedule['trip']);
+    final tripTitle = _cleanText(trip['title'], fallback: 'งานวันนี้');
+    final location = _cleanText(trip['location']);
+    final dateText = _staffDateRange(
+      _cleanText(schedule['departure_date']),
+      _cleanText(schedule['return_date']),
+    );
+    final total = _numberValue(schedule['total_confirmed']);
+    final checkedIn = _numberValue(schedule['checked_in_count']);
+    final progress = total > 0 ? (checkedIn / total).clamp(0.0, 1.0) : 0.0;
+    final allIn = total > 0 && checkedIn >= total;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0F766E), Color(0xFF064E45)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF064E45).withValues(alpha: 0.30),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDC2626),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.circle, size: 7, color: Colors.white),
+                    const SizedBox(width: 5),
+                    Text(
+                      'งานวันนี้',
+                      style: appFont(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Text(
+                dateText,
+                style: appFont(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white.withValues(alpha: 0.85),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            tripTitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: appFont(
+              fontSize: 19,
+              height: 1.2,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.3,
+            ),
+          ),
+          if (location.isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 13,
+                  color: Colors.white70,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    location,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 16),
+          // Check-in progress
+          Row(
+            children: [
+              Text(
+                'เช็คอินแล้ว',
+                style: appFont(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withValues(alpha: 0.85),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$checkedIn / $total คน',
+                style: appFont(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: Colors.white.withValues(alpha: 0.22),
+              valueColor: AlwaysStoppedAnimation(
+                allIn ? const Color(0xFF4ADE80) : Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: onCheckIn,
+              icon: const Icon(Icons.qr_code_scanner_rounded, size: 19),
+              label: Text(
+                allIn ? 'เช็คอินครบแล้ว · เปิดสแกน' : 'เปิด QR เช็คอิน',
+                style: appFont(fontSize: 15, fontWeight: FontWeight.w800),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF064E45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Always-on staff toolkit for the most pressing job — keeps the field tools
+/// (manifest, chat, incident report) one tap away instead of buried per-card.
+class _StaffToolbar extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+
+  const _StaffToolbar({required this.schedule});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheduleId = _numberValue(schedule['id']);
+    if (scheduleId <= 0) return const SizedBox.shrink();
+    final trip = _toMap(schedule['trip']);
+    final tripTitle = _cleanText(trip['title'], fallback: 'ทริป');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: _sectionDecoration(context: context, radius: 20),
+      child: Row(
+        children: [
+          _StaffToolTile(
+            icon: Icons.groups_outlined,
+            label: 'รายชื่อ',
+            color: const Color(0xFF2563EB),
+            onTap: () => _pushPremium(
+              context,
+              StaffManifestScreen(scheduleId: scheduleId, title: tripTitle),
+            ),
+          ),
+          _StaffToolTile(
+            icon: Icons.forum_outlined,
+            label: 'แชทกลุ่ม',
+            color: AppTheme.primaryColor,
+            onTap: () => _pushPremium(
+              context,
+              ChatScreen(scheduleId: scheduleId, title: tripTitle),
+            ),
+          ),
+          _StaffToolTile(
+            icon: Icons.report_gmailerrorred_outlined,
+            label: 'แจ้งเหตุ',
+            color: const Color(0xFFDC2626),
+            onTap: () => _pushPremium(
+              context,
+              ReportIncidentScreen(
+                scheduleId: scheduleId,
+                scheduleTitle: tripTitle,
+              ),
+            ),
+          ),
+          _StaffToolTile(
+            icon: Icons.history_rounded,
+            label: 'ประวัติเหตุ',
+            color: const Color(0xFF6366F1),
+            onTap: () => _pushPremium(
+              context,
+              IncidentListScreen(scheduleId: scheduleId, title: tripTitle),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StaffToolTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _StaffToolTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, size: 21, color: color),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.onSurface(context),
+                  letterSpacing: -0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StaffEmptyState extends StatelessWidget {
+  final VoidCallback onRefresh;
+  final VoidCallback onContact;
+
+  const _StaffEmptyState({required this.onRefresh, required this.onContact});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -258,27 +586,84 @@ class _StaffEmptyState extends StatelessWidget {
       decoration: _sectionDecoration(context: context, radius: 20),
       child: Column(
         children: [
-          Icon(Icons.work_outline, size: 36, color: AppTheme.mutedText(context)),
-          const SizedBox(height: 12),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(
+              Icons.work_history_outlined,
+              size: 32,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(height: 16),
           Text(
             'ยังไม่มีงานที่ได้รับมอบหมาย',
             style: appFont(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
+              fontSize: 15.5,
+              fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
               letterSpacing: -0.1,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            'งานที่ได้รับมอบหมายจากแอดมินจะปรากฏที่นี่',
+            'เมื่อแอดมินมอบหมายทริปให้คุณ งานจะแสดงที่นี่พร้อมรายชื่อ '
+            'ผู้โดยสารและ QR เช็คอิน · ลองดึงเพื่อรีเฟรชอีกครั้ง',
             textAlign: TextAlign.center,
             style: appFont(
               fontSize: 13,
-              height: 1.45,
+              height: 1.5,
               fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,
             ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onContact,
+                  icon: const Icon(Icons.forum_outlined, size: 18),
+                  label: Text(
+                    'ติดต่อทีม',
+                    style: appFont(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.onSurface(context),
+                    side: BorderSide(
+                      color: AppTheme.border(context).withValues(alpha: 0.8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onRefresh,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(
+                    'รีเฟรชงาน',
+                    style: appFont(fontSize: 14, fontWeight: FontWeight.w800),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

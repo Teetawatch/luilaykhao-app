@@ -902,8 +902,6 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
                             pricePerTraveler: pricing.pricePerTraveler,
                             isJoinTrip: _isJoinTrip,
                           ),
-                          const SizedBox(height: 16),
-                          const TrustSignalsSection(),
                           const SizedBox(height: 24),
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 220),
@@ -911,6 +909,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
                             switchOutCurve: Curves.easeInCubic,
                             child: _buildCurrentStepContent(),
                           ),
+                          // Quiet reassurance footer — sits just above the
+                          // sticky checkout bar, near the commit action.
+                          const SizedBox(height: 24),
+                          const TrustSignalsSection(),
                         ],
                       ),
                     );

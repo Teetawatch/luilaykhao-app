@@ -1485,3 +1485,64 @@ class _SeatGridFallback extends StatelessWidget {
     );
   }
 }
+
+/// Banner shown above the trip list when the traveller arrived there to start a
+/// group — a group must be created from a specific trip + departure, so this
+/// guides them to pick one first.
+class GroupCreateTripHint extends StatelessWidget {
+  const GroupCreateTripHint({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const primary = AppTheme.primaryColor;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: primary.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.groups_2_rounded, color: primary, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'เริ่มสร้างกลุ่ม',
+                  style: appFont(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  "เลือกทริปและวันเดินทาง แล้วกด 'ชวนเพื่อนมาเป็นกลุ่ม'",
+                  style: appFont(
+                    fontSize: 12.5,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
