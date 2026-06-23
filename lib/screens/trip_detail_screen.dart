@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chewie/chewie.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
@@ -9,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:luilaykhao_app/providers/app_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:video_player/video_player.dart';
 
 import '../providers/trip_alert_provider.dart';
 import '../providers/wishlist_provider.dart';
@@ -652,72 +654,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
                     ),
                   ),
                   padding: EdgeInsets.fromLTRB(16, 24, 16, bottomBarHeight + 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      DestinationInfoSection(
-                        trip: widget.trip,
-                        reviews: widget.reviews,
-                        isLoading: widget.isLoading,
-                      ),
-                      const SizedBox(height: 16),
-                      AboutSection(
-                        trip: widget.trip,
-                        isLoading: widget.isLoading,
-                        isExpanded: widget.isDescriptionExpanded,
-                        onToggle: widget.onDescriptionToggle,
-                      ),
-                      const SizedBox(height: 16),
-                      PhotoGallerySection(trip: widget.trip),
-                      const SizedBox(height: 16),
-                      MustKnowSection(trip: widget.trip),
-                      const SizedBox(height: 16),
-                      PreparationsSection(trip: widget.trip),
-                      const SizedBox(height: 16),
-                      TravelPlanSelectionSection(
-                        schedules: widget.schedules,
-                        pickupRegionKey: _effectivePickupRegionKey,
-                        selectedScheduleId: _selectedScheduleId,
-                        selectedPickupPointId: _selectedPickupPointId,
-                        selectedPickupPoints: _selectedPickupPoints,
-                        onRegionChanged: _handleRegionChanged,
-                        onScheduleChanged: _handleScheduleChanged,
-                        onPickupChanged: _handlePickupChanged,
-                      ),
-                      if (_selectedScheduleId != null) ...[
-                        const SizedBox(height: 12),
-                        _GroupInviteEntry(
-                          onPressed: () => GroupRoomScreen.startFlow(
-                            context,
-                            _selectedScheduleId!,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      HighlightsSection(trip: widget.trip),
-                      const SizedBox(height: 16),
-                      IncludedSection(trip: widget.trip),
-                      const SizedBox(height: 16),
-                      ExcludedSection(trip: widget.trip),
-                      const SizedBox(height: 16),
-                      ItinerarySection(
-                        trip: widget.trip,
-                        pickupRegionKey: _effectivePickupRegionKey,
-                        pickupRegionLabel: _pickupRegionLabel(
-                          _selectedPickupPoint,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_hasCommunityPhotos) ...[
-                        CommunityPhotosSection(
-                          trip: widget.trip,
-                          reviews: widget.reviews,
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      ReviewSection(trip: widget.trip, reviews: widget.reviews),
-                    ],
-                  ),
+                  child: _buildSections(context),
                 ),
               ),
             ),
@@ -732,6 +669,92 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
                 selectedPickupPointId: _selectedPickupPointId,
               ),
       ),
+    );
+  }
+
+  /// The stacked detail sections, each revealed on scroll for a calm cascade.
+  ///
+  /// Only sections that will actually render content are added, so a section
+  /// that collapses to nothing (e.g. a trip with no videos) doesn't leave a
+  /// stacked gap between the two 16px spacers that would otherwise wrap it.
+  Widget _buildSections(BuildContext context) {
+    final trip = widget.trip;
+
+    // Mirror each section's own "empty?" guard so we skip the ones that would
+    // render SizedBox.shrink().
+    final hasDescription =
+        widget.isLoading || textOf(trip['description']).trim().isNotEmpty;
+    final hasMustKnow = _mustKnowItems(trip).isNotEmpty ||
+        textOf(asMap(trip['must_know'])['remarks']).trim().isNotEmpty;
+    final hasInclusions =
+        asList(trip['inclusions']).any((e) => textOf(e).trim().isNotEmpty);
+    final hasExclusions =
+        asList(trip['exclusions']).any((e) => textOf(e).trim().isNotEmpty);
+    final hasItinerary = _itinerarySectors(
+      trip,
+      regionKey: _effectivePickupRegionKey,
+      regionLabel: _pickupRegionLabel(_selectedPickupPoint),
+    ).isNotEmpty;
+
+    final sections = <Widget>[
+      DestinationInfoSection(
+        trip: trip,
+        reviews: widget.reviews,
+        isLoading: widget.isLoading,
+      ),
+      if (hasDescription)
+        AboutSection(
+          trip: trip,
+          isLoading: widget.isLoading,
+          isExpanded: widget.isDescriptionExpanded,
+          onToggle: widget.onDescriptionToggle,
+        ),
+      if (_detailGalleryImages(trip).isNotEmpty)
+        PhotoGallerySection(trip: trip),
+      if (_tripVideos(trip).isNotEmpty) VideoGallerySection(trip: trip),
+      if (hasMustKnow) MustKnowSection(trip: trip),
+      if (_textItems(trip['preparations']).isNotEmpty)
+        PreparationsSection(trip: trip),
+      TravelPlanSelectionSection(
+        schedules: widget.schedules,
+        pickupRegionKey: _effectivePickupRegionKey,
+        selectedScheduleId: _selectedScheduleId,
+        selectedPickupPointId: _selectedPickupPointId,
+        selectedPickupPoints: _selectedPickupPoints,
+        onRegionChanged: _handleRegionChanged,
+        onScheduleChanged: _handleScheduleChanged,
+        onPickupChanged: _handlePickupChanged,
+      ),
+      if (_selectedScheduleId != null)
+        _GroupInviteEntry(
+          onPressed: () => GroupRoomScreen.startFlow(
+            context,
+            _selectedScheduleId!,
+          ),
+        ),
+      if (_highlightItems(trip['highlights']).isNotEmpty)
+        HighlightsSection(trip: trip),
+      if (hasInclusions) IncludedSection(trip: trip),
+      if (hasExclusions) ExcludedSection(trip: trip),
+      if (hasItinerary)
+        ItinerarySection(
+          trip: trip,
+          pickupRegionKey: _effectivePickupRegionKey,
+          pickupRegionLabel: _pickupRegionLabel(_selectedPickupPoint),
+        ),
+      if (_hasCommunityPhotos)
+        CommunityPhotosSection(trip: trip, reviews: widget.reviews),
+      ReviewSection(trip: trip, reviews: widget.reviews),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < sections.length; i++) ...[
+          if (i > 0) const SizedBox(height: 16),
+          _RevealOnScroll(child: sections[i]),
+        ],
+      ],
     );
   }
 

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../widgets/travel_widgets.dart';
 
 /// Lets a staff member log an on-trip incident (accident / injury) for a
 /// schedule. Captures severity, a description, who was affected, the current
@@ -56,10 +57,42 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   String? _photoPath;
   bool _submitting = false;
 
+  /// Passenger quick-pick names. Seeded from the caller, or fetched from the
+  /// manifest when this screen is opened from the staff hub (which has no
+  /// manifest loaded to hand them over).
+  late List<String> _passengerNames = widget.passengerNames
+      .where((n) => n.trim().isNotEmpty)
+      .toList();
+
   @override
   void initState() {
     super.initState();
     _captureLocation();
+    if (_passengerNames.isEmpty) _loadPassengerNames();
+  }
+
+  /// Build "คำนำหน้า ชื่อ-นามสกุล (ชื่อเล่น)" quick picks from the schedule
+  /// manifest — same shape as StaffManifestScreen, so the staff-hub entry point
+  /// shows the names too. Best-effort: a failure just leaves the field manual.
+  Future<void> _loadPassengerNames() async {
+    try {
+      final data =
+          await context.read<AppProvider>().loadStaffManifest(widget.scheduleId);
+      final names = <String>{};
+      for (final b in asList(data['bookings']).map(asMap)) {
+        for (final p in asList(b['passengers']).map(asMap)) {
+          final name = textOf(p['name']);
+          if (name.isEmpty) continue;
+          final nickname = textOf(p['nickname']);
+          names.add(nickname.isEmpty ? name : '$name ($nickname)');
+        }
+      }
+      if (mounted && names.isNotEmpty) {
+        setState(() => _passengerNames = names.toList());
+      }
+    } catch (_) {
+      // Leave the person field as free text on any manifest-load failure.
+    }
   }
 
   @override
@@ -152,7 +185,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final names = widget.passengerNames
+    final names = _passengerNames
         .where((n) => n.trim().isNotEmpty)
         .toSet();
 

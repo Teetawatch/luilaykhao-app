@@ -318,3 +318,74 @@ class _RatingPill extends StatelessWidget {
     );
   }
 }
+
+/// Fades + gently lifts its child into place the first time it scrolls into the
+/// viewport, giving the long detail page a calm, premium cascade. Purely
+/// visual (Opacity/translate don't change layout, so scroll math stays stable).
+/// Reveals immediately when there's no enclosing scrollable, so content can
+/// never get stuck hidden.
+class _RevealOnScroll extends StatefulWidget {
+  final Widget child;
+
+  const _RevealOnScroll({required this.child});
+
+  @override
+  State<_RevealOnScroll> createState() => _RevealOnScrollState();
+}
+
+class _RevealOnScrollState extends State<_RevealOnScroll> {
+  bool _shown = false;
+  ScrollPosition? _position;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _position = Scrollable.maybeOf(context)?.position;
+      if (_position == null) {
+        _reveal();
+        return;
+      }
+      _position!.addListener(_check);
+      _check();
+    });
+  }
+
+  void _check() {
+    if (_shown || !mounted) return;
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final dy = box.localToGlobal(Offset.zero).dy;
+    // Reveal a little before the section's top edge reaches the bottom of the
+    // screen, so it eases in rather than popping at the very edge.
+    if (dy < MediaQuery.sizeOf(context).height * 0.92) _reveal();
+  }
+
+  void _reveal() {
+    if (_shown || !mounted) return;
+    setState(() => _shown = true);
+    _position?.removeListener(_check);
+  }
+
+  @override
+  void dispose() {
+    _position?.removeListener(_check);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSlide(
+      offset: _shown ? Offset.zero : const Offset(0, 0.04),
+      duration: const Duration(milliseconds: 480),
+      curve: Curves.easeOutCubic,
+      child: AnimatedOpacity(
+        opacity: _shown ? 1 : 0,
+        duration: const Duration(milliseconds: 480),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
+}

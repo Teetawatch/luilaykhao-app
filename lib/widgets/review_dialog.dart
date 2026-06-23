@@ -66,7 +66,13 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
   final List<String> _uploadedUrls = [];
   final List<bool> _uploadingFlags = [];
 
+  // Attached videos (uploaded immediately, same as images).
+  final List<File> _selectedVideos = [];
+  final List<String> _uploadedVideoUrls = [];
+  final List<bool> _videoUploadingFlags = [];
+
   static const _maxImages = 6;
+  static const _maxVideos = 2;
 
   @override
   void dispose() {
@@ -139,7 +145,66 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
     });
   }
 
-  bool get _anyUploading => _uploadingFlags.any((f) => f);
+  Future<void> _pickVideo() async {
+    if (_selectedVideos.length >= _maxVideos) return;
+
+    final picker = ImagePicker();
+    final picked = await picker.pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(seconds: 60),
+    );
+    if (picked == null) return;
+
+    final file = File(picked.path);
+    setState(() {
+      _selectedVideos.add(file);
+      _uploadedVideoUrls.add('');
+      _videoUploadingFlags.add(false);
+    });
+    _uploadVideo(_selectedVideos.length - 1);
+  }
+
+  Future<void> _uploadVideo(int index) async {
+    setState(() => _videoUploadingFlags[index] = true);
+    try {
+      final app = context.read<AppProvider>();
+      final response = await app.api.postMultipart(
+        ApiEndpoints.reviewsUploadVideo,
+        fields: {},
+        files: {'video': _selectedVideos[index].path},
+      ) as Map<String, dynamic>;
+      final url = (response['data']?['url'] ?? response['url'] ?? '')
+          .toString();
+      if (mounted) setState(() => _uploadedVideoUrls[index] = url);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _videoUploadingFlags[index] = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('อัปโหลดวิดีโอล้มเหลว (ไฟล์อาจใหญ่เกิน 50MB)',
+                style: appFont()),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          ),
+        );
+      }
+      return;
+    }
+    if (mounted) setState(() => _videoUploadingFlags[index] = false);
+  }
+
+  void _removeVideo(int index) {
+    setState(() {
+      _selectedVideos.removeAt(index);
+      _uploadedVideoUrls.removeAt(index);
+      _videoUploadingFlags.removeAt(index);
+    });
+  }
+
+  bool get _anyUploading =>
+      _uploadingFlags.any((f) => f) || _videoUploadingFlags.any((f) => f);
 
   Future<void> _submit() async {
     final comment = _commentController.text.trim();
@@ -153,6 +218,8 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
     }
     final images =
         _uploadedUrls.where((url) => url.isNotEmpty).toList();
+    final videos =
+        _uploadedVideoUrls.where((url) => url.isNotEmpty).toList();
 
     setState(() {
       _submitting = true;
@@ -164,6 +231,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
             rating: _rating,
             comment: comment,
             images: images,
+            videos: videos,
             ratingGuide:
                 _categoryRatings['guide']! > 0 ? _categoryRatings['guide'] : null,
             ratingVehicle: _categoryRatings['vehicle']! > 0
@@ -477,6 +545,128 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                               onTap: _submitting
                                   ? null
                                   : () => _removeImage(index),
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.errorColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppTheme.surface(context),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: const Icon(Icons.close_rounded,
+                                    color: Colors.white, size: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+
+              // ── Video picker ─────────────────────────────────────────
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    'วิดีโอ (${_selectedVideos.length}/$_maxVideos)',
+                    style: appFont(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_selectedVideos.length < _maxVideos)
+                    TextButton.icon(
+                      onPressed: _submitting ? null : _pickVideo,
+                      icon: const Icon(Icons.video_call_outlined, size: 18),
+                      label: Text('เพิ่มวิดีโอ',
+                          style: appFont(fontWeight: FontWeight.w800)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                ],
+              ),
+
+              if (_selectedVideos.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 86,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedVideos.length,
+                    separatorBuilder: (context, i) => const SizedBox(width: 8),
+                    itemBuilder: (_, index) {
+                      final uploading = _videoUploadingFlags[index];
+                      final uploaded = _uploadedVideoUrls[index].isNotEmpty;
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 82,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF1F2937), Color(0xFF0F172A)],
+                              ),
+                            ),
+                            child: Center(
+                              child: uploading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Icon(
+                                      uploaded
+                                          ? Icons.play_circle_fill_rounded
+                                          : Icons.error_outline_rounded,
+                                      color: Colors.white,
+                                      size: 30,
+                                    ),
+                            ),
+                          ),
+                          if (uploaded && !uploading)
+                            Positioned(
+                              bottom: 4,
+                              right: 4,
+                              child: Container(
+                                width: 18,
+                                height: 18,
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check_rounded,
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            top: -6,
+                            right: -6,
+                            child: GestureDetector(
+                              onTap: _submitting
+                                  ? null
+                                  : () => _removeVideo(index),
                               child: Container(
                                 width: 20,
                                 height: 20,

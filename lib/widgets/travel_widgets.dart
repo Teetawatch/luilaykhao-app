@@ -339,6 +339,10 @@ class TravelSliverAppBar extends StatelessWidget {
 
     return SliverAppBar(
       pinned: true,
+      // This bar manages its own leading via [showBackButton]; never let the
+      // SliverAppBar auto-inject a back button (which would appear on a tab
+      // root the moment a detail page is pushed over it on the root navigator).
+      automaticallyImplyLeading: false,
       backgroundColor: isTransparent
           ? Colors.transparent
           : Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),

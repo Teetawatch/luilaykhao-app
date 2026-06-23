@@ -25,6 +25,7 @@ import '../services/notification_navigator.dart';
 import '../services/push_notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/review_dialog.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart';
 import '../widgets/vehicle_seat_map.dart';
 import '../widgets/weather_card.dart';
@@ -227,7 +228,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
     final showStaffCheckIn = app.canUseStaffCheckIn;
     final pages = [
       const ExploreScreen(),
-      const AllTripsScreen(),
+      const AllTripsScreen(showBackButton: false),
       const MyBookingsScreen(),
       const ChatListScreen(),
       const ProfileScreen(),

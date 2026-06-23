@@ -91,6 +91,24 @@ List<String> _detailGalleryImages(Map<String, dynamic> trip) {
       .toList();
 }
 
+List<String> _tripVideos(Map<String, dynamic> trip) {
+  final videoValues = <dynamic>[
+    ...asList(trip['videos']),
+  ];
+
+  return videoValues
+      .map((video) {
+        if (video is Map) {
+          final data = asMap(video);
+          return ApiConfig.mediaUrl(data['url'] ?? data['path']);
+        }
+        return ApiConfig.mediaUrl(video);
+      })
+      .where((url) => url.isNotEmpty)
+      .toSet()
+      .toList();
+}
+
 List<String> _galleryImages(Map<String, dynamic> trip) {
   final imageValues = <dynamic>[
     trip['cover_image'],

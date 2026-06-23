@@ -5,7 +5,17 @@ class AllTripsScreen extends StatefulWidget {
   /// flow, e.g. "pick a trip to start a group".
   final Widget? introBanner;
 
-  const AllTripsScreen({super.key, this.introBanner});
+  /// Whether the app bar shows a back button. Defaults to true for the pushed
+  /// usages (from home / trip finder / group flow); the bottom-nav tab passes
+  /// false so it never shows a stray back arrow when a detail page is pushed
+  /// over it on the root navigator.
+  final bool showBackButton;
+
+  const AllTripsScreen({
+    super.key,
+    this.introBanner,
+    this.showBackButton = true,
+  });
 
   @override
   State<AllTripsScreen> createState() => _AllTripsScreenState();
@@ -120,6 +130,7 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
       _trips.length;
 
   void _toggleType(String value) {
+    HapticFeedback.selectionClick();
     setState(() {
       _selectedType = _selectedType == value ? '' : value;
       if (_selectedType != 'trekking') _selectedDifficulty = '';
@@ -130,6 +141,7 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   }
 
   void _toggleDifficulty(String value) {
+    HapticFeedback.selectionClick();
     setState(() {
       _selectedDifficulty = _selectedDifficulty == value ? '' : value;
     });
@@ -170,7 +182,10 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
         onRefresh: () => _fetchTrips(_currentPage),
         child: CustomScrollView(
           slivers: [
-            const TravelSliverAppBar(title: 'กิจกรรมและทริปทั้งหมด'),
+            TravelSliverAppBar(
+              title: 'กิจกรรมและทริปทั้งหมด',
+              showBackButton: widget.showBackButton,
+            ),
             SliverToBoxAdapter(
               child: SafeArea(
                 top: false,
@@ -202,6 +217,7 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
                         sortOrder: _sortOrder,
                         onSortChanged: (value) {
                           if (value == null) return;
+                          HapticFeedback.selectionClick();
                           setState(() => _sortOrder = value);
                         },
                       ),
@@ -234,14 +250,19 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
                           ),
                           itemBuilder: (context, index) {
                             final trip = _sortedTrips[index];
-                            return _AllTripGridCard(
-                              trip: trip,
-                              typeLabel: _categoryLabel(
-                                textOf(
-                                  trip['type'] ??
-                                      trip['category_slug'] ??
-                                      trip['category_name'] ??
-                                      trip['category'],
+                            return _RevealOnMount(
+                              delay: Duration(
+                                milliseconds: 45 * (index.clamp(0, 8)),
+                              ),
+                              child: _AllTripGridCard(
+                                trip: trip,
+                                typeLabel: _categoryLabel(
+                                  textOf(
+                                    trip['type'] ??
+                                        trip['category_slug'] ??
+                                        trip['category_name'] ??
+                                        trip['category'],
+                                  ),
                                 ),
                               ),
                             );
@@ -641,37 +662,174 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
+/// Shimmer placeholder grid shown while trips load — mirrors the real 2-column
+/// card silhouette so the layout doesn't jump when results arrive.
 class _TripsLoadingCard extends StatelessWidget {
   const _TripsLoadingCard();
 
   @override
   Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      itemCount: 6,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 16,
+        mainAxisExtent: 288,
+      ),
+      itemBuilder: (context, index) => _RevealOnMount(
+        delay: Duration(milliseconds: 40 * (index.clamp(0, 6))),
+        child: const _TripCardSkeleton(),
+      ),
+    );
+  }
+}
+
+class _TripCardSkeleton extends StatelessWidget {
+  const _TripCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 48),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CircularProgressIndicator(
-            color: AppTheme.primaryColor,
-            strokeWidth: 2.5,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(5),
+              child: SkeletonBox(borderRadius: BorderRadius.circular(13)),
+            ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'กำลังค้นหาทริปที่ดีที่สุดให้คุณ...',
-            style: appFont(
-              color: AppTheme.textMain,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(11, 2, 11, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(
+                  width: double.infinity,
+                  height: 13,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                const SizedBox(height: 7),
+                SkeletonBox(
+                  width: 90,
+                  height: 11,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                const SizedBox(height: 12),
+                SkeletonBox(
+                  width: 70,
+                  height: 15,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Fade + gentle rise as a widget first appears, after an optional [delay] so a
+/// grid of these cascades in. Animates once on mount.
+class _RevealOnMount extends StatefulWidget {
+  final Widget child;
+  final Duration delay;
+
+  const _RevealOnMount({required this.child, this.delay = Duration.zero});
+
+  @override
+  State<_RevealOnMount> createState() => _RevealOnMountState();
+}
+
+class _RevealOnMountState extends State<_RevealOnMount> {
+  bool _shown = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // A zero-duration timer still fires after the first frame, so the card
+    // always animates in from hidden rather than popping in at full opacity.
+    _timer = Timer(widget.delay, () {
+      if (mounted) setState(() => _shown = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSlide(
+      offset: _shown ? Offset.zero : const Offset(0, 0.06),
+      duration: const Duration(milliseconds: 460),
+      curve: Curves.easeOutCubic,
+      child: AnimatedOpacity(
+        opacity: _shown ? 1 : 0,
+        duration: const Duration(milliseconds: 460),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Press-scale wrapper: dips slightly on tap-down and fires a light haptic, so
+/// tapping a card feels physical. Falls back to a plain tap when [onTap] null.
+class _PressableCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final BorderRadius borderRadius;
+
+  const _PressableCard({
+    required this.child,
+    required this.onTap,
+    required this.borderRadius,
+  });
+
+  @override
+  State<_PressableCard> createState() => _PressableCardState();
+}
+
+class _PressableCardState extends State<_PressableCard> {
+  bool _down = false;
+
+  void _set(bool down) {
+    if (mounted) setState(() => _down = down);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.onTap == null ? null : (_) => _set(true),
+      onTapCancel: () => _set(false),
+      onTapUp: (_) => _set(false),
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              widget.onTap!();
+            },
+      child: AnimatedScale(
+        scale: _down ? 0.97 : 1,
+        duration: const Duration(milliseconds: 130),
+        curve: Curves.easeOut,
+        child: widget.child,
       ),
     );
   }
@@ -770,8 +928,12 @@ class _AllTripGridCard extends StatelessWidget {
     final location = textOf(trip['location'], 'ประเทศไทย');
     final duration = textOf(trip['duration_days'], '1');
     final reviewCount = int.tryParse(textOf(trip['review_count'], '0')) ?? 0;
+    final seatsLeft = int.tryParse(textOf(trip['seats_left']));
+    final almostFull = _asBool(trip['is_almost_full']) &&
+        seatsLeft != null &&
+        seatsLeft > 0;
 
-    return InkWell(
+    return _PressableCard(
       onTap: slug.isEmpty
           ? null
           : () => Navigator.of(context).push(
@@ -824,6 +986,31 @@ class _AllTripGridCard extends StatelessWidget {
                           errorWidget: (context, url, error) => Container(
                             color: AppTheme.subtleSurface(context),
                             child: const Icon(Icons.broken_image_rounded),
+                          ),
+                        ),
+                      // Gentle scrim for depth and to keep the scarcity badge legible.
+                      if (image.isNotEmpty)
+                        const Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.center,
+                                colors: [Color(0x40000000), Colors.transparent],
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (almostFull)
+                        Positioned(
+                          left: 8,
+                          bottom: 8,
+                          child: _OverlayPill(
+                            text: 'เหลือ $seatsLeft ที่นั่ง',
+                            icon: Icons.local_fire_department_rounded,
+                            backgroundColor:
+                                const Color(0xFFEA580C).withValues(alpha: 0.94),
+                            foregroundColor: Colors.white,
                           ),
                         ),
                       Positioned(

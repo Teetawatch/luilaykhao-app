@@ -481,6 +481,10 @@ class _ReviewCard extends StatelessWidget {
         .map((e) => ApiConfig.mediaUrl(e.toString()))
         .where((s) => s.isNotEmpty)
         .toList();
+    final videos = asList(review['videos'])
+        .map((e) => ApiConfig.mediaUrl(e.toString()))
+        .where((s) => s.isNotEmpty)
+        .toList();
     final breakdown = _reviewBreakdown(review);
 
     // avatar background color cycle
@@ -679,6 +683,32 @@ class _ReviewCard extends StatelessWidget {
                 children: breakdown
                     .map((b) => _ReviewBreakdownChip(label: b.$1, value: b.$2))
                     .toList(),
+              ),
+            ],
+            if (videos.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 76,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: videos.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) => GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        fullscreenDialog: true,
+                        builder: (_) => _FullscreenVideoPlayer(url: videos[i]),
+                      ),
+                    ),
+                    child: _VideoThumbCard(
+                      url: videos[i],
+                      index: i,
+                      width: 110,
+                      height: 76,
+                      showLabel: false,
+                    ),
+                  ),
+                ),
               ),
             ],
             if (images.isNotEmpty) ...[

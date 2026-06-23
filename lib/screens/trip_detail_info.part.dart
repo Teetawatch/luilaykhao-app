@@ -425,6 +425,291 @@ class PhotoGallerySection extends StatelessWidget {
   }
 }
 
+/// Trip videos — shown right after the photo gallery. Each tile is a tappable
+/// play card; tapping opens a fullscreen player.
+class VideoGallerySection extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const VideoGallerySection({super.key, required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final videos = _tripVideos(trip);
+    if (videos.isEmpty) return const SizedBox.shrink();
+
+    return _PremiumCard(
+      padding: const EdgeInsets.fromLTRB(24, 24, 0, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: _SectionHeader(
+              icon: Icons.videocam_outlined,
+              title: 'วิดีโอ',
+              subtitle: '${videos.length} คลิป',
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 160,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 24),
+              itemCount: videos.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) => GestureDetector(
+                onTap: () => _openVideo(context, videos[index]),
+                child: _VideoThumbCard(url: videos[index], index: index),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openVideo(BuildContext context, String url) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _FullscreenVideoPlayer(url: url),
+      ),
+    );
+  }
+}
+
+/// Video tile that renders the clip's first frame as a poster. A muted,
+/// non-playing [VideoPlayerController] is initialised lazily (tiles off-screen
+/// in the horizontal list aren't built until scrolled to) and disposed with the
+/// tile, so only the visible cards hold a decoder. Falls back to a gradient
+/// placeholder while loading or if the frame can't be decoded.
+class _VideoThumbCard extends StatefulWidget {
+  final String url;
+  final int index;
+  final double width;
+  final double height;
+  final bool showLabel;
+
+  const _VideoThumbCard({
+    required this.url,
+    required this.index,
+    this.width = 240,
+    this.height = 160,
+    this.showLabel = true,
+  });
+
+  @override
+  State<_VideoThumbCard> createState() => _VideoThumbCardState();
+}
+
+class _VideoThumbCardState extends State<_VideoThumbCard> {
+  VideoPlayerController? _controller;
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    _controller = controller;
+    try {
+      await controller.initialize();
+      await controller.setVolume(0);
+      // Nudge to a frame so the texture paints a poster rather than black.
+      await controller.seekTo(const Duration(milliseconds: 100));
+      if (mounted) setState(() => _ready = true);
+    } catch (_) {
+      // Keep the gradient placeholder on any decode/network failure.
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    final showFrame = _ready && controller != null;
+
+    final playSize = widget.height < 110 ? 38.0 : 54.0;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (showFrame)
+              FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: controller.value.size.width,
+                  height: controller.value.size.height,
+                  child: VideoPlayer(controller),
+                ),
+              )
+            else
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF1F2937), Color(0xFF0F172A)],
+                  ),
+                ),
+              ),
+            // Subtle scrim so the play button and label stay legible.
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0x66000000)],
+                ),
+              ),
+            ),
+            Center(
+              child: Container(
+                width: playSize,
+                height: playSize,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  color: _premiumText,
+                  size: playSize * 0.63,
+                ),
+              ),
+            ),
+            if (widget.showLabel)
+              Positioned(
+                left: 12,
+                bottom: 10,
+                child: Text(
+                  'วิดีโอ ${widget.index + 1}',
+                  style: appFont(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FullscreenVideoPlayer extends StatefulWidget {
+  final String url;
+
+  const _FullscreenVideoPlayer({required this.url});
+
+  @override
+  State<_FullscreenVideoPlayer> createState() => _FullscreenVideoPlayerState();
+}
+
+class _FullscreenVideoPlayerState extends State<_FullscreenVideoPlayer> {
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      _videoController = controller;
+      await controller.initialize();
+      if (!mounted) return;
+      setState(() {
+        _chewieController = ChewieController(
+          videoPlayerController: controller,
+          autoPlay: true,
+          looping: false,
+          allowFullScreen: true,
+          aspectRatio: controller.value.aspectRatio == 0
+              ? 16 / 9
+              : controller.value.aspectRatio,
+          materialProgressColors: ChewieProgressColors(
+            playedColor: _softAccent,
+            handleColor: _softAccent,
+          ),
+        );
+      });
+    } catch (_) {
+      if (mounted) setState(() => _hasError = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Center(child: _buildContent()),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_hasError) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Text(
+          'ไม่สามารถเล่นวิดีโอนี้ได้',
+          style: TextStyle(color: Colors.white70),
+        ),
+      );
+    }
+
+    final chewie = _chewieController;
+    if (chewie == null) {
+      return const CircularProgressIndicator(color: Colors.white54);
+    }
+
+    return Chewie(controller: chewie);
+  }
+}
+
 class _FullscreenGallery extends StatefulWidget {
   final List<String> images;
   final int initialIndex;
