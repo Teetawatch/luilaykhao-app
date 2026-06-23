@@ -251,7 +251,11 @@ List<Widget> _weatherNotice(
 
   return [
     const SizedBox(height: 12),
-    WeatherCard(weather: weather, label: 'พยากรณ์อากาศวันที่เลือก'),
+    WeatherCard(
+      weather: weather,
+      label: 'พยากรณ์อากาศวันที่เลือก',
+      compact: true,
+    ),
   ];
 }
 
@@ -455,8 +459,12 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
   @override
   void didUpdateWidget(_ScheduleDatePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Region filtering can swap the schedule list out from under us.
-    if (!identical(oldWidget.schedules, widget.schedules)) {
+    // Region filtering can swap the schedule list out from under us. Compare by
+    // CONTENT, not identity — the parent rebuilds this list on every setState
+    // (e.g. just picking a date), and resetting the scroll then would yank the
+    // strip back to the start under the user's finger.
+    if (_scheduleSignature(oldWidget.schedules) !=
+        _scheduleSignature(widget.schedules)) {
       setState(() {
         _entries = _buildEntries(widget.schedules);
         _hintDismissed = false;
@@ -467,6 +475,12 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
       });
     }
   }
+
+  // The ordered departure ids — changes only when the actual set of rounds
+  // changes (region switch), not when an unrelated rebuild hands us a fresh
+  // list with the same contents.
+  String _scheduleSignature(List<Map<String, dynamic>> schedules) =>
+      schedules.map((s) => s['id']).join(',');
 
   @override
   void dispose() {

@@ -93,6 +93,13 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 20),
 
+                // Trip cover photo + title + booking ref (the real trip image)
+                _BookingHeroHeader(trip: trip, booking: booking),
+                const SizedBox(height: 20),
+
+                // ผู้จอง — รูปโปรไฟล์ลูกค้า + ชื่อ (self-spaces; hides if no user)
+                _BookingCustomerRow(booking: booking),
+
                 // Check-in card (confirmed only)
                 if (textOf(booking['status']) == 'confirmed') ...[
                   _BookingCheckInCard(booking: booking),
@@ -123,27 +130,6 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 20),
                 ],
 
-                // Trip title + booking ref
-                Text(
-                  textOf(trip['title'], 'รายละเอียดการจอง'),
-                  style: appFont(
-                    color: AppTheme.primaryColor,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  textOf(booking['booking_ref']),
-                  style: appFont(
-                    color: AppTheme.mutedText(context),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
                 // Status chips
                 Wrap(
                   spacing: 8,
@@ -159,7 +145,10 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 // Departure-day weather (only present when the backend resolved
                 // a forecast for the trip's coordinates).
                 if (asMap(schedule['weather']).isNotEmpty) ...[
-                  WeatherCard(weather: asMap(schedule['weather'])),
+                  WeatherCard(
+                    weather: asMap(schedule['weather']),
+                    compact: true,
+                  ),
                   const SizedBox(height: 16),
                 ],
 
@@ -252,6 +241,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     ),
                   );
                 }),
+
+                // จุดขึ้นรถที่จองไว้ (พร้อมรูปจริง) — แสดงเสมอเมื่อมีจุดรับ
+                _BookingPickupSection(booking: booking, schedule: schedule),
 
                 // Operator announcements (ประกาศจากผู้จัด) — self-loading,
                 // renders nothing when the round has no announcements yet.
@@ -600,6 +592,413 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
       _reload();
       if (context.mounted) showSnack(context, 'เปลี่ยนจุดรับสำเร็จ');
     }
+  }
+}
+
+/// Trip cover photo banner with the title + booking ref overlaid — the real
+/// trip image, replacing the old plain-text title at the top of the sheet.
+class _BookingHeroHeader extends StatelessWidget {
+  final Map<String, dynamic> trip;
+  final Map<String, dynamic> booking;
+
+  const _BookingHeroHeader({required this.trip, required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final image = ApiConfig.mediaUrl(
+      textOf(trip['cover_image']).isNotEmpty
+          ? trip['cover_image']
+          : trip['thumbnail_image'],
+    );
+    final title = textOf(trip['title'], 'รายละเอียดการจอง');
+    final ref = textOf(booking['booking_ref']);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: SizedBox(
+        height: 168,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (image.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: image,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => ColoredBox(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                ),
+                errorWidget: (_, _, _) => const _BookingHeroFallback(),
+              )
+            else
+              const _BookingHeroFallback(),
+            // Bottom scrim so the title stays readable over any photo.
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00000000), Color(0xD9000000)],
+                  stops: [0.35, 1.0],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (ref.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        ref,
+                        style: appFont(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "ผู้จอง" identity row — the customer's profile photo + name, so the ticket
+/// feels personal. Renders nothing when the booking carries no user (e.g. the
+/// relation wasn't loaded or a guest booking).
+class _BookingCustomerRow extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _BookingCustomerRow({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = asMap(booking['user']);
+    final name = textOf(user['name']).trim();
+    if (name.isEmpty) return const SizedBox.shrink();
+
+    final avatar = ApiConfig.mediaUrl(textOf(user['avatar_url']));
+    final initials = name.substring(0, 1).toUpperCase();
+    final phone = textOf(user['phone']).trim();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.subtleSurface(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.border(context).withValues(alpha: 0.6),
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 21,
+              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.12),
+              backgroundImage: avatar.isNotEmpty
+                  ? CachedNetworkImageProvider(avatar)
+                  : null,
+              child: avatar.isEmpty
+                  ? Text(
+                      initials,
+                      style: appFont(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primaryColor,
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ผู้จอง',
+                    style: appFont(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                  if (phone.isNotEmpty) ...[
+                    const SizedBox(height: 1),
+                    Text(
+                      phone,
+                      style: appFont(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingHeroFallback extends StatelessWidget {
+  const _BookingHeroFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1F7A4D), Color(0xFF0F4C2A)],
+        ),
+      ),
+      child: Center(
+        child: Icon(Icons.landscape_rounded, color: Colors.white24, size: 56),
+      ),
+    );
+  }
+}
+
+/// The pickup point the customer booked, shown with its real photo, time, notes
+/// and a map link — always visible (not just in the pre-trip window).
+class _BookingPickupSection extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final Map<String, dynamic> schedule;
+
+  const _BookingPickupSection({required this.booking, required this.schedule});
+
+  @override
+  Widget build(BuildContext context) {
+    // Resolve the booked pickup point, falling back to the matching schedule
+    // point (which carries the image when the booking relation doesn't).
+    final schedulePickups =
+        asList(schedule['pickup_points']).map(asMap).toList();
+    final bookingPickup = asMap(booking['pickup_point']);
+    final matchedById = schedulePickups.firstWhere(
+      (p) =>
+          bookingPickup.isNotEmpty &&
+          p['id'].toString() == bookingPickup['id'].toString(),
+      orElse: () => <String, dynamic>{},
+    );
+    var pickupPoint = bookingPickup;
+    if (pickupPoint.isEmpty) {
+      final region = textOf(booking['pickup_region']);
+      if (region.isNotEmpty) {
+        pickupPoint = schedulePickups.firstWhere(
+          (p) => textOf(p['region']) == region,
+          orElse: () => <String, dynamic>{},
+        );
+      }
+    }
+    if (pickupPoint.isEmpty) return const SizedBox.shrink();
+
+    final imageUrl = ApiConfig.mediaUrl(
+      textOf(pickupPoint['image_url']).isNotEmpty
+          ? pickupPoint['image_url']
+          : matchedById['image_url'],
+    );
+    final location = textOf(
+      pickupPoint['pickup_location'],
+      textOf(pickupPoint['region_label'], textOf(pickupPoint['region'])),
+    );
+    final regionLabel = textOf(pickupPoint['region_label']);
+    final time = textOf(pickupPoint['pickup_time']).trim();
+    final notes = textOf(pickupPoint['notes']).trim();
+    final mapUrl = textOf(pickupPoint['map_url']).trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const _SheetSectionTitle(
+          icon: Icons.location_on_rounded,
+          title: 'จุดขึ้นรถ',
+        ),
+        const SizedBox(height: 10),
+        Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppTheme.subtleSurface(context),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.6),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (imageUrl.isNotEmpty)
+                CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => Container(
+                    height: 160,
+                    color: AppTheme.surface(context),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+                  errorWidget: (_, _, _) => Container(
+                    height: 160,
+                    color: AppTheme.surface(context),
+                    child: Center(
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: AppTheme.mutedText(context),
+                        size: 26,
+                      ),
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      location,
+                      style: appFont(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                        height: 1.35,
+                      ),
+                    ),
+                    if (regionLabel.isNotEmpty && regionLabel != location) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        regionLabel,
+                        style: appFont(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                    ],
+                    if (time.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.schedule_rounded,
+                            size: 15,
+                            color: AppTheme.primaryColor,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'เวลา $time น.',
+                            style: appFont(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (notes.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        notes,
+                        style: appFont(
+                          fontSize: 12.5,
+                          color: AppTheme.mutedText(context),
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                    if (mapUrl.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      GestureDetector(
+                        onTap: () async {
+                          final uri = Uri.parse(mapUrl);
+                          if (await canLaunchUrl(uri)) {
+                            launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.map_outlined,
+                              size: 15,
+                              color: AppTheme.primaryColor,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'เปิดแผนที่',
+                              style: appFont(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

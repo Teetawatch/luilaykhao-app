@@ -15,10 +15,16 @@ class WeatherCard extends StatelessWidget {
   /// the trip detail passes a "selected date" variant.
   final String label;
 
+  /// Compact, single-row inline variant — used where the forecast is supporting
+  /// context (e.g. under the date picker on trip detail) rather than a hero
+  /// element. The full gradient card is kept for the booking detail screen.
+  final bool compact;
+
   const WeatherCard({
     super.key,
     required this.weather,
     this.label = 'พยากรณ์อากาศวันเดินทาง',
+    this.compact = false,
   });
 
   @override
@@ -39,6 +45,20 @@ class WeatherCard extends StatelessWidget {
       'advisory' => 'มีโอกาสฝน เตรียมเสื้อกันฝนติดไปเผื่อไว้',
       _ => null,
     };
+
+    if (compact) {
+      return _buildCompact(
+        context,
+        desc: desc,
+        code: code,
+        gradient: gradient,
+        tempMin: tempMin,
+        tempMax: tempMax,
+        popPercent: popPercent,
+        severity: severity,
+        note: note,
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -187,6 +207,177 @@ class WeatherCard extends StatelessWidget {
                         height: 1.4,
                         fontWeight: FontWeight.w600,
                         color: Colors.white.withValues(alpha: 0.95),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Single-row inline forecast: a small coloured glyph, the condition + temps,
+  /// and a rain-chance pill — sized to sit quietly under the date picker. The
+  /// rough-weather advisory still appears below, but as a tinted note rather
+  /// than a frosted chip on a hero gradient.
+  Widget _buildCompact(
+    BuildContext context, {
+    required String desc,
+    required String code,
+    required List<Color> gradient,
+    required num? tempMin,
+    required num? tempMax,
+    required int popPercent,
+    required String severity,
+    required String? note,
+  }) {
+    final isDark = AppTheme.isDark(context);
+    final onSurface = AppTheme.onSurface(context);
+    final muted = AppTheme.mutedText(context);
+    final tempText = tempMax != null
+        ? '${tempMax.round()}°${tempMin != null ? ' / ${tempMin.round()}°' : ''}'
+        : '';
+
+    final noteColor = severity == 'warning'
+        ? AppTheme.warningColor
+        : const Color(0xFF3B82F6);
+
+    // Tint the whole card with the sky colour so it still reads clearly as the
+    // weather card among the other plain cards — just compact, not a hero.
+    final sky = gradient.last;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: sky.withValues(alpha: isDark ? 0.22 : 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: sky.withValues(alpha: 0.30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: gradient,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(_iconFor(code), color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: appFont(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                        color: muted,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        if (desc.isNotEmpty)
+                          Flexible(
+                            child: Text(
+                              desc,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: onSurface,
+                              ),
+                            ),
+                          ),
+                        if (tempText.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            '· $tempText',
+                            style: appFont(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: muted,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.water_drop_rounded,
+                      size: 13,
+                      color: Color(0xFF3B82F6),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$popPercent%',
+                      style: appFont(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF3B82F6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (note != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              decoration: BoxDecoration(
+                color: noteColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    severity == 'warning'
+                        ? Icons.warning_amber_rounded
+                        : Icons.umbrella_rounded,
+                    size: 15,
+                    color: noteColor,
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      note,
+                      style: appFont(
+                        fontSize: 12,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                        color: onSurface.withValues(alpha: 0.85),
                       ),
                     ),
                   ),
