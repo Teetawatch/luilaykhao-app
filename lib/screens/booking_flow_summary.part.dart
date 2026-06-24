@@ -332,6 +332,11 @@ class TravelInfoSection extends StatelessWidget {
             items: scheduleMaps.map((schedule) {
               final id = int.parse(schedule['id'].toString());
               final isCharter = _asBool(schedule['is_charter']);
+              // Actual vehicle departure (may be the night before the trip day).
+              final departsAt = scheduleDepartsAt(schedule);
+              final departHint = departsAt != null
+                  ? ' · ออก ${departsAt.hour.toString().padLeft(2, '0')}:${departsAt.minute.toString().padLeft(2, '0')} น.'
+                  : '';
               return DropdownMenuItem<int>(
                 value: id,
                 enabled: !isCharter,
@@ -339,7 +344,7 @@ class TravelInfoSection extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '${dateText(schedule['departure_date'])}  ·  ${isCharter ? 'รอบเหมา' : 'เหลือ ${textOf(schedule['available_seats'], '0')} ที่'}',
+                        '${dateText(schedule['departure_date'])}$departHint  ·  ${isCharter ? 'รอบเหมา' : 'เหลือ ${textOf(schedule['available_seats'], '0')} ที่'}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),

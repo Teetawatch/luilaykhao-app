@@ -814,6 +814,13 @@ class ReservationCard extends StatelessWidget {
                   // Meta strip
                   _BookingMetaStrip(booking: booking),
 
+                  // Actual vehicle departure (e.g. leaves the night before the
+                  // trip day) — shown only when the round defines departs_at.
+                  if (!isCancelled && scheduleDepartsAt(schedule) != null) ...[
+                    const SizedBox(height: 10),
+                    _DepartureTimeNote(schedule: schedule),
+                  ],
+
                   // Who's travelling — overlapping passenger avatars
                   if (!isCancelled) _TravelerAvatars(booking: booking),
                   const SizedBox(height: 12),
@@ -1161,6 +1168,76 @@ class _BookingMetaStrip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DepartureTimeNote extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+
+  const _DepartureTimeNote({required this.schedule});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    final departsAt = scheduleDepartsAt(schedule);
+    final tripDate = DateTime.tryParse(textOf(schedule['departure_date']));
+    final beforeTripDay = departsAt != null &&
+        tripDate != null &&
+        DateTime(departsAt.year, departsAt.month, departsAt.day)
+            .isBefore(DateTime(tripDate.year, tripDate.month, tripDate.day));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFFB45309).withValues(alpha: 0.12)
+            : const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.directions_bus_rounded,
+            size: 18,
+            color: Color(0xFFD97706),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                style: appFont(
+                  color: isDark
+                      ? const Color(0xFFFCD34D)
+                      : const Color(0xFF92400E),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
+                children: [
+                  const TextSpan(text: 'รถออก '),
+                  TextSpan(
+                    text: departureText(schedule),
+                    style: appFont(
+                      color: isDark
+                          ? const Color(0xFFFCD34D)
+                          : const Color(0xFF92400E),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (beforeTripDay)
+                    const TextSpan(text: ' · ออกก่อนวันทริป โปรดมาก่อนเวลา'),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

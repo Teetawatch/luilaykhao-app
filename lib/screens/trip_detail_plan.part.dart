@@ -767,6 +767,7 @@ class _ScheduleChip extends StatelessWidget {
     final isCharter = _asBool(schedule['is_charter']);
     final departureDate = DateTime.tryParse(textOf(schedule['departure_date']));
     final returnDate = DateTime.tryParse(textOf(schedule['return_date']));
+    final departsAt = scheduleDepartsAt(schedule);
     final seats = int.tryParse(textOf(schedule['available_seats'], '0')) ?? 0;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -821,7 +822,10 @@ class _ScheduleChip extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedContainer(
         duration: const Duration(milliseconds: 170),
         width: 84,
         height: 122,
@@ -984,6 +988,45 @@ class _ScheduleChip extends StatelessWidget {
             ],
           ],
         ),
+          ),
+          // Compact marker: this round's vehicle leaves at a specific time
+          // (often the night before the trip day). Overlaid so the fixed-height
+          // chip layout is untouched.
+          if (departsAt != null && !isUnavailable)
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.92)
+                      : const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.directions_bus_rounded,
+                      size: 10,
+                      color: Color(0xFFD97706),
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      DateFormat('HH:mm').format(departsAt),
+                      style: appFont(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFFB45309),
+                        height: 1.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
