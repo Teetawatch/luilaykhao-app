@@ -3794,19 +3794,20 @@ class _GroupPromoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0B7C66), Color(0xFF0B3D42)],
+          colors: [Color(0xFFF3FBF8), Colors.white],
         ),
+        border: Border.all(color: const Color(0xFFE3EFEC)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0B3D42).withValues(alpha: 0.22),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: const Color(0xFF082A30).withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -3819,12 +3820,12 @@ class _GroupPromoCard extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
                   Icons.groups_2_rounded,
-                  color: Colors.white,
+                  color: AppTheme.primaryColor,
                   size: 24,
                 ),
               ),
@@ -3836,7 +3837,7 @@ class _GroupPromoCard extends StatelessWidget {
                     Text(
                       'ไปเป็นกลุ่ม สนุกกว่า',
                       style: appFont(
-                        color: Colors.white,
+                        color: const Color(0xFF063F46),
                         fontSize: 16.5,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.2,
@@ -3846,7 +3847,7 @@ class _GroupPromoCard extends StatelessWidget {
                     Text(
                       'ชวนเพื่อนจองพร้อมกัน เลือกที่นั่งเองได้ หัวหน้ากลุ่มจ่ายทีเดียว',
                       style: appFont(
-                        color: Colors.white.withValues(alpha: 0.82),
+                        color: AppTheme.textSecondary,
                         fontSize: 12.5,
                         height: 1.35,
                         fontWeight: FontWeight.w500,
@@ -3920,25 +3921,32 @@ class _PromoButton extends StatelessWidget {
         width: fullWidth ? double.infinity : null,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: filled ? Colors.white : Colors.white.withValues(alpha: 0.12),
+          color: filled ? AppTheme.primaryColor : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: filled
-              ? null
-              : Border.all(color: Colors.white.withValues(alpha: 0.32)),
+          border: filled ? null : Border.all(color: const Color(0xFFD7E6E1)),
+          boxShadow: filled
+              ? [
+                  BoxShadow(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.28),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 17,
-              color: filled ? const Color(0xFF0B3D42) : Colors.white,
+              size: 18,
+              color: filled ? Colors.white : AppTheme.primaryColor,
             ),
             const SizedBox(width: 7),
             Text(
               label,
               style: appFont(
-                color: filled ? const Color(0xFF0B3D42) : Colors.white,
+                color: filled ? Colors.white : const Color(0xFF063F46),
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.1,
