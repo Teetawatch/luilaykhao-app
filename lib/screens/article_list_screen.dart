@@ -1,7 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../config/api_config.dart';
 import '../models/article.dart';
 import '../providers/article_provider.dart';
 import '../theme/app_theme.dart';
@@ -192,10 +194,13 @@ class _ArticleCard extends StatelessWidget {
             if (article.coverImageUrl != null)
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
-                  article.coverImageUrl!,
+                child: CachedNetworkImage(
+                  imageUrl: ApiConfig.mediaUrl(article.coverImageUrl),
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
+                  placeholder: (_, _) => Container(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                  ),
+                  errorWidget: (_, _, _) => Container(
                     color: AppTheme.primaryColor.withValues(alpha: 0.08),
                     child: const Icon(Icons.image_outlined, color: Colors.white54),
                   ),

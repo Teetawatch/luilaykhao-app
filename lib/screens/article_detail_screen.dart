@@ -1,9 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/api_config.dart';
 import '../models/article.dart';
 import '../providers/article_provider.dart';
 import '../theme/app_theme.dart';
@@ -70,12 +72,13 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         if (article.coverImageUrl != null)
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: Image.network(
-              article.coverImageUrl!,
+            child: CachedNetworkImage(
+              imageUrl: ApiConfig.mediaUrl(article.coverImageUrl),
               fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
-                color: AppTheme.primaryColor.withValues(alpha: 0.08),
-              ),
+              placeholder: (_, _) =>
+                  Container(color: AppTheme.primaryColor.withValues(alpha: 0.06)),
+              errorWidget: (_, _, _) =>
+                  Container(color: AppTheme.primaryColor.withValues(alpha: 0.08)),
             ),
           ),
         Padding(
@@ -231,12 +234,13 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           child: Row(
             children: [
               if (cover != null && cover.isNotEmpty)
-                Image.network(
-                  cover,
+                CachedNetworkImage(
+                  imageUrl: ApiConfig.mediaUrl(cover),
                   width: 84,
                   height: 84,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox(width: 84, height: 84),
+                  placeholder: (_, _) => const SizedBox(width: 84, height: 84),
+                  errorWidget: (_, _, _) => const SizedBox(width: 84, height: 84),
                 ),
               Expanded(
                 child: Padding(

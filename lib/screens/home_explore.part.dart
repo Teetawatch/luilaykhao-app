@@ -169,6 +169,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     activeType: _activeType,
                   ),
                   _UpcomingDeparturesSection(app: app),
+                  const _ArticlesTeaserSection(),
                   _CustomerReviewsSection(
                     reviews: app.reviews
                         .map(asMap)
@@ -176,7 +177,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         .toList(),
                   ),
                   _GroupTripSection(app: app),
-                  const _ArticlesTeaserSection(),
                   _ReferralBanner(app: app),
                   PromotionsSection(
                     promotions: app.promotions
@@ -4370,10 +4370,15 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                           AspectRatio(
                             aspectRatio: 16 / 9,
                             child: a.coverImageUrl != null
-                                ? Image.network(
-                                    a.coverImageUrl!,
+                                ? CachedNetworkImage(
+                                    imageUrl:
+                                        ApiConfig.mediaUrl(a.coverImageUrl),
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => Container(
+                                    placeholder: (_, _) => Container(
+                                      color: AppTheme.primaryColor
+                                          .withValues(alpha: 0.06),
+                                    ),
+                                    errorWidget: (_, _, _) => Container(
                                       color: AppTheme.primaryColor
                                           .withValues(alpha: 0.08),
                                     ),
