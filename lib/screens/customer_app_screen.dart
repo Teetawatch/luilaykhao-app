@@ -19,6 +19,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
+import '../providers/article_provider.dart';
 import '../providers/tracking_provider.dart';
 import 'tracking_screen.dart' show TrackingMapPage;
 import '../services/notification_navigator.dart';
@@ -40,6 +41,8 @@ import 'chat_list_screen.dart';
 import 'join_booking_screen.dart';
 import 'pre_trip_checklist_screen.dart';
 import 'schedule_announcements_screen.dart';
+import 'article_list_screen.dart';
+import 'article_detail_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 import 'group_rooms_screen.dart';
 import 'group_room_screen.dart';

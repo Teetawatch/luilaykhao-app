@@ -23,6 +23,11 @@ class ApiEndpoints {
   static const stats = 'stats';
   static const heroSlides = 'hero-slides';
 
+  // Blog / Articles (public read)
+  static const articles = 'articles';
+  static const articleCategories = 'articles/categories';
+  static String article(String slug) => 'articles/$slug';
+
   // Reviews
   static const reviews = 'reviews';
   static const reviewsMy = 'reviews/my';

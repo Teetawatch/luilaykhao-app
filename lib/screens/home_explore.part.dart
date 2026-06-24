@@ -176,6 +176,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         .toList(),
                   ),
                   _GroupTripSection(app: app),
+                  const _ArticlesTeaserSection(),
                   _ReferralBanner(app: app),
                   PromotionsSection(
                     promotions: app.promotions
@@ -4276,3 +4277,165 @@ class _ReferralBannerState extends State<_ReferralBanner> {
   }
 }
 
+
+// ─── Articles Teaser Section ──────────────────────────────────────────────────
+// Surfaces the latest blog articles on home and routes into the full reader.
+// Renders nothing until articles load, so it never disrupts a fresh install.
+class _ArticlesTeaserSection extends StatefulWidget {
+  const _ArticlesTeaserSection();
+
+  @override
+  State<_ArticlesTeaserSection> createState() => _ArticlesTeaserSectionState();
+}
+
+class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ArticleProvider>().loadInitial();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ArticleProvider>();
+    final articles = provider.articles;
+    if (articles.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 4, 0, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'บทความ & ทริคเที่ยว',
+                    style: appFont(
+                      color: const Color(0xFF063F46),
+                      fontSize: 25,
+                      height: 1.1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ArticleListScreen()),
+                  ),
+                  child: Text(
+                    'ดูทั้งหมด',
+                    style: appFont(
+                      color: const Color(0xFF063F46),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 232,
+            child: ListView.separated(
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 20),
+              itemCount: articles.take(6).length,
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                final a = articles[index];
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ArticleDetailScreen(slug: a.slug),
+                      ),
+                    );
+                  },
+                  child: SizedBox(
+                    width: 260,
+                    child: Container(
+                      decoration: AppTheme.cardDecoration(context),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: a.coverImageUrl != null
+                                ? Image.network(
+                                    a.coverImageUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Container(
+                                      color: AppTheme.primaryColor
+                                          .withValues(alpha: 0.08),
+                                    ),
+                                  )
+                                : Container(
+                                    color: AppTheme.primaryColor
+                                        .withValues(alpha: 0.08),
+                                    child: const Icon(Icons.menu_book_rounded,
+                                        color: Colors.white54),
+                                  ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (a.category != null)
+                                    Text(
+                                      a.category!.name,
+                                      style: appFont(
+                                        color: AppTheme.primaryColor,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 2),
+                                  Expanded(
+                                    child: Text(
+                                      a.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: appFont(
+                                        color: AppTheme.onSurface(context),
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    'อ่าน ${a.readingMinutes} นาที',
+                                    style: appFont(
+                                      color: AppTheme.mutedText(context),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

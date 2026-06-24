@@ -11,6 +11,7 @@ import 'providers/app_provider.dart';
 import 'providers/notification_preferences.dart';
 import 'providers/tracking_provider.dart';
 import 'providers/trip_alert_provider.dart';
+import 'providers/article_provider.dart';
 import 'providers/wishlist_provider.dart';
 import 'screens/customer_app_screen.dart';
 import 'screens/login_screen.dart';
@@ -118,6 +119,7 @@ class LuilaykhaoApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TrackingProvider()),
         ChangeNotifierProvider(create: (_) => WishlistProvider()..load()),
         ChangeNotifierProvider(create: (_) => TripAlertProvider()),
+        ChangeNotifierProvider(create: (_) => ArticleProvider()),
         ChangeNotifierProvider(
           create: (_) => NotificationPreferences()..load(),
         ),
