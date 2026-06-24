@@ -606,13 +606,16 @@ class _HeroTopBar extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  ClipOval(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          AnimatedContainer(
+                  // Badge sits in an outer Stack so the count isn't clipped by
+                  // the bell's ClipOval. The bell is the home for the unread
+                  // notification count (not the bottom "บัญชี" tab).
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      ClipOval(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                          child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
                             width: 44,
                             height: 44,
@@ -629,26 +632,51 @@ class _HeroTopBar extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (notificationCount > 0)
-                            Positioned(
-                              top: 9,
-                              right: 10,
-                              child: Container(
-                                width: 9,
-                                height: 9,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.errorColor,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 1.2,
+                        ),
+                      ),
+                      if (notificationCount > 0)
+                        Positioned(
+                          top: -3,
+                          right: -3,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 2,
+                            ),
+                            alignment: Alignment.center,
+                            constraints: const BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.errorColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.errorColor.withValues(
+                                    alpha: 0.55,
                                   ),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
                                 ),
+                              ],
+                            ),
+                            child: Text(
+                              notificationCount > 99
+                                  ? '99+'
+                                  : '$notificationCount',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                height: 1.1,
                               ),
                             ),
-                        ],
-                      ),
-                    ),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
@@ -4349,7 +4377,7 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
           ),
           const SizedBox(height: 18),
           SizedBox(
-            height: 232,
+            height: 262,
             child: ListView.separated(
               clipBehavior: Clip.none,
               scrollDirection: Axis.horizontal,
@@ -4368,7 +4396,7 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                     );
                   },
                   child: SizedBox(
-                    width: 260,
+                    width: 272,
                     child: Container(
                       decoration: AppTheme.cardDecoration(context),
                       clipBehavior: Clip.antiAlias,
@@ -4400,40 +4428,57 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                           ),
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (a.category != null)
-                                    Text(
-                                      a.category!.name,
-                                      style: appFont(
-                                        color: AppTheme.primaryColor,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  const SizedBox(height: 2),
-                                  Expanded(
-                                    child: Text(
-                                      a.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: appFont(
-                                        color: AppTheme.onSurface(context),
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                        height: 1.3,
-                                      ),
+                                  // Title leads (up to 2 full lines — no longer
+                                  // squeezed by an Expanded that clipped it).
+                                  Text(
+                                    a.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: appFont(
+                                      color: AppTheme.onSurface(context),
+                                      fontSize: 15.5,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.3,
+                                      letterSpacing: -0.2,
                                     ),
                                   ),
-                                  Text(
-                                    'อ่าน ${a.readingMinutes} นาที',
-                                    style: appFont(
-                                      color: AppTheme.mutedText(context),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                  const Spacer(),
+                                  Row(
+                                    children: [
+                                      if (a.category != null) ...[
+                                        Flexible(
+                                          child: Text(
+                                            a.category!.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: appFont(
+                                              color: AppTheme.primaryColor,
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          '  ·  ',
+                                          style: appFont(
+                                            color: AppTheme.mutedText(context),
+                                            fontSize: 11.5,
+                                          ),
+                                        ),
+                                      ],
+                                      Text(
+                                        'อ่าน ${a.readingMinutes} นาที',
+                                        style: appFont(
+                                          color: AppTheme.mutedText(context),
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

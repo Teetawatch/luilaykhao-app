@@ -59,7 +59,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
             fontWeight: FontWeight.w800,
           ),
         ),
-        centerTitle: false,
+        centerTitle: true,
       ),
       body: _buildBody(provider),
     );
@@ -125,11 +125,13 @@ class _CategoryFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Tall enough to fully clear the pill (text + vertical padding) so the chips
+    // never clip — the earlier 48px box cut them off.
     return SizedBox(
-      height: 48,
+      height: 60,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
         children: [
           _chip(context, 'ทั้งหมด', provider.activeCategorySlug == null,
               () => provider.selectCategory(null)),
@@ -149,21 +151,33 @@ class _CategoryFilter extends StatelessWidget {
           HapticFeedback.selectionClick();
           onTap();
         },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
             color: active ? AppTheme.primaryColor : AppTheme.surface(context),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: active ? AppTheme.primaryColor : AppTheme.border(context),
             ),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.22),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Text(
             label,
             style: appFont(
-              color: active ? Colors.white : AppTheme.mutedText(context),
-              fontSize: 13,
+              color: active ? Colors.white : AppTheme.textSecondary,
+              fontSize: 13.5,
               fontWeight: FontWeight.w700,
+              letterSpacing: -0.1,
             ),
           ),
         ),

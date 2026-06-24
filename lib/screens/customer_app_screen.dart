@@ -238,10 +238,6 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
       if (showStaffCheckIn) const StaffWorkScreen(),
     ];
 
-    final unreadCount = app.notifications
-        .where((n) => (n as Map?)?['is_read'] != true)
-        .length;
-
     return Scaffold(
       extendBody: true,
       body: IndexedStack(
@@ -251,7 +247,6 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
       bottomNavigationBar: CustomBottomNav(
         index: _index >= pages.length ? pages.length - 1 : _index,
         showStaffCheckIn: showStaffCheckIn,
-        unreadNotificationCount: unreadCount,
         unreadChatCount: app.chatUnreadTotal,
         onChanged: selectTab,
       ),
@@ -262,7 +257,6 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
 class CustomBottomNav extends StatefulWidget {
   final int index;
   final bool showStaffCheckIn;
-  final int unreadNotificationCount;
   final int unreadChatCount;
   final ValueChanged<int> onChanged;
 
@@ -271,7 +265,6 @@ class CustomBottomNav extends StatefulWidget {
     required this.index,
     required this.showStaffCheckIn,
     required this.onChanged,
-    this.unreadNotificationCount = 0,
     this.unreadChatCount = 0,
   });
 
@@ -381,13 +374,10 @@ class _CustomBottomNavState extends State<CustomBottomNav>
                               activeIcon: items[i].activeIcon,
                               label: items[i].label,
                               isSelected: widget.index == i,
-                              // Chat tab (index 3) → unread messages; account
-                              // tab (index 4) → unread notifications.
-                              badge: i == 3
-                                  ? widget.unreadChatCount
-                                  : (i == 4
-                                        ? widget.unreadNotificationCount
-                                        : 0),
+                              // Chat tab (index 3) → unread messages. Unread
+                              // notifications live on the home header bell, not
+                              // the "บัญชี" tab.
+                              badge: i == 3 ? widget.unreadChatCount : 0,
                               onTap: () {
                                 HapticFeedback.selectionClick();
                                 widget.onChanged(i);
