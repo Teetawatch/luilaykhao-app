@@ -36,10 +36,8 @@ class BiometricService {
     try {
       return await _auth.authenticate(
         localizedReason: reason,
-        options: const AuthenticationOptions(
-          biometricOnly: false,
-          stickyAuth: true,
-        ),
+        biometricOnly: false,
+        persistAcrossBackgrounding: true,
       );
     } on PlatformException catch (e) {
       debugPrint('Biometric auth error: ${e.code} ${e.message}');
