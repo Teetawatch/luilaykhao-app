@@ -1613,7 +1613,7 @@ class _AlmostFullRail extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'ใกล้เต็มแล้ว · รีบจอง',
+                    'ใกล้เต็มแล้ว · รีบจองเลย',
                     style: appFont(
                       color: const Color(0xFF063F46),
                       fontSize: 25,
@@ -2742,22 +2742,43 @@ class PromotionsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
+      appBar: AppBar(
+        backgroundColor: AppTheme.background(context),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
+        title: Text(
+          'โปรโมชั่นและสิทธิพิเศษ',
+          style: appFont(
+            color: AppTheme.onSurface(context),
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
       body: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          LargeTitleSliverHeader(
-            title: 'โปรโมชั่นและสิทธิพิเศษ',
-            subtitle: promotions.isEmpty
-                ? 'รออัปเดตเร็ว ๆ นี้'
-                : '${promotions.length} ดีลพร้อมใช้งาน',
-            subtitleColor: promotions.isEmpty ? null : AppTheme.primaryColor,
-          ),
           if (promotions.isEmpty)
             const SliverFillRemaining(
               hasScrollBody: false,
               child: _PromotionsEmptyState(),
             )
-          else
+          else ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                child: Text(
+                  '${promotions.length} ดีลพร้อมใช้งาน',
+                  style: appFont(
+                    color: AppTheme.primaryColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
               sliver: SliverList.builder(
@@ -2771,6 +2792,7 @@ class PromotionsScreen extends StatelessWidget {
                 },
               ),
             ),
+          ],
         ],
       ),
     );
