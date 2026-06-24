@@ -319,42 +319,49 @@ class AddonSelectionSection extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Checkbox(
-                        value: selected,
-                        activeColor: const Color(0xFFF59E0B),
-                        onChanged: (value) =>
-                            onChanged(addon.index, value ?? false),
-                      ),
-                      const SizedBox(width: 4),
-                      if (addon.hasImage) ...[
-                        GestureDetector(
-                          onTap: () => _openAddonImage(context, addon.imageUrl),
-                          child: Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: CachedNetworkImage(
-                                  imageUrl: addon.imageUrl,
-                                  width: 46,
-                                  height: 46,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, _) => Container(
-                                    width: 46,
-                                    height: 46,
-                                    color: const Color(0xFFFEF3C7),
-                                  ),
-                                  errorWidget: (_, _, _) => Container(
-                                    width: 46,
-                                    height: 46,
-                                    color: const Color(0xFFFEF3C7),
-                                    child: const Icon(
-                                      Icons.broken_image_rounded,
-                                      size: 18,
-                                      color: Color(0xFFD97706),
+                      // Image (tap to zoom) or amber placeholder
+                      GestureDetector(
+                        onTap: addon.hasImage
+                            ? () => _openAddonImage(context, addon.imageUrl)
+                            : null,
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: addon.hasImage
+                                  ? CachedNetworkImage(
+                                      imageUrl: addon.imageUrl,
+                                      width: 60,
+                                      height: 60,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, _) => Container(
+                                        width: 60,
+                                        height: 60,
+                                        color: const Color(0xFFFEF3C7),
+                                      ),
+                                      errorWidget: (_, _, _) => Container(
+                                        width: 60,
+                                        height: 60,
+                                        color: const Color(0xFFFEF3C7),
+                                        child: const Icon(
+                                          Icons.broken_image_rounded,
+                                          size: 22,
+                                          color: Color(0xFFD97706),
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      width: 60,
+                                      height: 60,
+                                      color: const Color(0xFFFEF3C7),
+                                      child: const Icon(
+                                        Icons.add_task_rounded,
+                                        size: 24,
+                                        color: Color(0xFFD97706),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ),
+                            ),
+                            if (addon.hasImage)
                               Positioned(
                                 right: 2,
                                 bottom: 2,
@@ -371,11 +378,10 @@ class AddonSelectionSection extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                      ],
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,7 +397,7 @@ class AddonSelectionSection extends StatelessWidget {
                                 letterSpacing: -0.1,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
                               '${money(addon.price)} ${addon.priceTypeLabel}',
                               style: appFont(
@@ -400,16 +406,42 @@ class AddonSelectionSection extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '+${money(addon.totalFor(travelerCount))}',
+                              style: appFont(
+                                color: const Color(0xFFB45309),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      Text(
-                        '+${money(addon.totalFor(travelerCount))}',
-                        style: appFont(
-                          color: const Color(0xFFB45309),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
+                      const SizedBox(width: 10),
+                      // Selection indicator
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? const Color(0xFFF59E0B)
+                              : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selected
+                                ? const Color(0xFFF59E0B)
+                                : AppTheme.border(context),
+                            width: 2,
+                          ),
                         ),
+                        child: selected
+                            ? const Icon(
+                                Icons.check_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              )
+                            : null,
                       ),
                     ],
                   ),
