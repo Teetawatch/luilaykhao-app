@@ -907,16 +907,7 @@ class MustKnowSection extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
             child: Column(
               children: [
-                ...items.map(
-                  (item) => _FeatureRow(
-                    icon: Icons.error_outline_rounded,
-                    title: item.price > 0
-                        ? '${item.name} · ${money(item.price)} ${item.priceTypeLabel}'
-                        : item.name,
-                    iconColor: const Color(0xFFD97706),
-                    iconBackground: const Color(0xFFFEF3C7),
-                  ),
-                ),
+                ...items.map((item) => _MustKnowItemRow(item: item)),
                 if (remarks.isNotEmpty)
                   _FeatureRow(
                     icon: Icons.notes_rounded,
@@ -925,6 +916,104 @@ class MustKnowSection extends StatelessWidget {
                     iconBackground: const Color(0xFFFEF3C7),
                   ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MustKnowItemRow extends StatelessWidget {
+  final _MustKnowItem item;
+
+  const _MustKnowItemRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = item.price > 0
+        ? '${item.name} · ${money(item.price)} ${item.priceTypeLabel}'
+        : item.name;
+
+    if (!item.hasImage) {
+      return _FeatureRow(
+        icon: Icons.error_outline_rounded,
+        title: title,
+        iconColor: const Color(0xFFD97706),
+        iconBackground: const Color(0xFFFEF3C7),
+      );
+    }
+
+    final isDark = AppTheme.isDark(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                fullscreenDialog: true,
+                builder: (_) =>
+                    _FullscreenGallery(images: [item.imageUrl], initialIndex: 0),
+              ),
+            ),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: CachedNetworkImage(
+                    imageUrl: item.imageUrl,
+                    width: 52,
+                    height: 52,
+                    fit: BoxFit.cover,
+                    placeholder: (_, _) => Container(
+                      width: 52,
+                      height: 52,
+                      color: const Color(0xFFFEF3C7),
+                    ),
+                    errorWidget: (_, _, _) => Container(
+                      width: 52,
+                      height: 52,
+                      color: const Color(0xFFFEF3C7),
+                      child: const Icon(
+                        Icons.broken_image_rounded,
+                        size: 20,
+                        color: Color(0xFFD97706),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 3,
+                  bottom: 3,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.zoom_in_rounded,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: appFont(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white.withValues(alpha: 0.9) : _premiumText,
+                height: 1.4,
+              ),
             ),
           ),
         ],

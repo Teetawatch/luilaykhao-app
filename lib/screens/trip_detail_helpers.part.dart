@@ -19,15 +19,19 @@ class _MustKnowItem {
   final String name;
   final num price;
   final String priceType;
+  final String imageUrl;
 
   const _MustKnowItem({
     required this.name,
     required this.price,
     required this.priceType,
+    this.imageUrl = '',
   });
 
   String get priceTypeLabel =>
       priceType == 'per_person' ? 'ต่อคน' : 'ครั้งเดียว';
+
+  bool get hasImage => imageUrl.isNotEmpty;
 }
 
 class _ItinerarySector {
@@ -302,6 +306,7 @@ List<_MustKnowItem> _mustKnowItems(Map<String, dynamic> trip) {
           priceType: data['price_type'] == 'per_person'
               ? 'per_person'
               : 'per_booking',
+          imageUrl: textOf(data['image_url']).trim(),
         );
       })
       .whereType<_MustKnowItem>()

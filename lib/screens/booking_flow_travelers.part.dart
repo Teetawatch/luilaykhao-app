@@ -326,6 +326,56 @@ class AddonSelectionSection extends StatelessWidget {
                             onChanged(addon.index, value ?? false),
                       ),
                       const SizedBox(width: 4),
+                      if (addon.hasImage) ...[
+                        GestureDetector(
+                          onTap: () => _openAddonImage(context, addon.imageUrl),
+                          child: Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: CachedNetworkImage(
+                                  imageUrl: addon.imageUrl,
+                                  width: 46,
+                                  height: 46,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, _) => Container(
+                                    width: 46,
+                                    height: 46,
+                                    color: const Color(0xFFFEF3C7),
+                                  ),
+                                  errorWidget: (_, _, _) => Container(
+                                    width: 46,
+                                    height: 46,
+                                    color: const Color(0xFFFEF3C7),
+                                    child: const Icon(
+                                      Icons.broken_image_rounded,
+                                      size: 18,
+                                      color: Color(0xFFD97706),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                right: 2,
+                                bottom: 2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(1.5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.5),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: const Icon(
+                                    Icons.zoom_in_rounded,
+                                    size: 11,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

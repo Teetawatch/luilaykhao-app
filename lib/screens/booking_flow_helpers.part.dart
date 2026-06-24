@@ -101,19 +101,84 @@ class _AddonOption {
   final String name;
   final num price;
   final String priceType;
+  final String imageUrl;
 
   const _AddonOption({
     required this.index,
     required this.name,
     required this.price,
     required this.priceType,
+    this.imageUrl = '',
   });
+
+  bool get hasImage => imageUrl.isNotEmpty;
 
   bool get isPerPerson => priceType == 'per_person';
 
   String get priceTypeLabel => isPerPerson ? 'ต่อคน' : 'ครั้งเดียว';
 
   num totalFor(int travelerCount) => price * (isPerPerson ? travelerCount : 1);
+}
+
+// Fullscreen, zoomable viewer for an add-on item image.
+void _openAddonImage(BuildContext context, String url) {
+  if (url.isEmpty) return;
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 4,
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.contain,
+                  placeholder: (_, _) => const Center(
+                    child: CircularProgressIndicator(color: Colors.white54),
+                  ),
+                  errorWidget: (_, _, _) => const Center(
+                    child: Icon(
+                      Icons.broken_image_rounded,
+                      color: Colors.white54,
+                      size: 64,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _PassengerControllers {
@@ -413,6 +478,7 @@ List<_AddonOption> _addonOptionsFrom(Map<String, dynamic> trip) {
         priceType: data['price_type'] == 'per_person'
             ? 'per_person'
             : 'per_booking',
+        imageUrl: textOf(data['image_url']).trim(),
       ),
     );
   }
