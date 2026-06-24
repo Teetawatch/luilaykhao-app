@@ -1247,6 +1247,19 @@ class AppProvider extends ChangeNotifier {
     return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
+  /// เช็คอิน/ยกเลิกเช็คอินจุดกำหนดการ (สตาฟ) — คืนรายการที่อัปเดตแล้ว
+  Future<Map<String, dynamic>> markItineraryReached(
+    int scheduleId,
+    int itemId, {
+    required bool reached,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.scheduleItineraryReach(scheduleId, itemId),
+      body: {'reached': reached},
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
   Future<int> announcementsUnreadCount(int scheduleId) async {
     final response = await api.get(
       ApiEndpoints.announcementsUnreadCount(scheduleId),

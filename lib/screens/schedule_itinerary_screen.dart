@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -28,6 +29,7 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
   List<Map<String, dynamic>> _items = const [];
   bool _loading = true;
   String? _error;
+  int? _togglingId;
 
   @override
   void initState() {
@@ -51,6 +53,35 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
         _loading = false;
         _error = e.toString();
       });
+    }
+  }
+
+  /// เช็คอิน/ยกเลิกเช็คอินจุดกำหนดการ — อัปเดต state ในเครื่องจากผลที่ backend ส่งกลับ
+  Future<void> _toggleReached(Map<String, dynamic> item) async {
+    final id = item['id'] as int?;
+    if (id == null || _togglingId != null) return;
+    final currentlyReached = (item['reached_at'] as String?) != null;
+
+    HapticFeedback.selectionClick();
+    setState(() => _togglingId = id);
+    try {
+      final updated = await context.read<AppProvider>().markItineraryReached(
+        widget.scheduleId,
+        id,
+        reached: !currentlyReached,
+      );
+      if (!mounted) return;
+      setState(() {
+        final idx = _items.indexWhere((e) => e['id'] == id);
+        if (idx != -1) _items[idx] = {..._items[idx], ...updated};
+        _togglingId = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _togglingId = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('บันทึกไม่สำเร็จ ลองอีกครั้ง')),
+      );
     }
   }
 
@@ -117,17 +148,135 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
     }
     final keys = groups.keys.toList();
 
+    final reachedCount =
+        _items.where((e) => (e['reached_at'] as String?) != null).length;
+    // จุดถัดไป = รายการแรก (ตามลำดับแสดงผล) ที่ยังไม่เช็คอิน
+    final next = _items.cast<Map<String, dynamic>?>().firstWhere(
+      (e) => (e!['reached_at'] as String?) == null,
+      orElse: () => null,
+    );
+    final nextId = next?['id'] as int?;
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       children: [
+        _ProgressHeader(
+          reached: reachedCount,
+          total: _items.length,
+          nextTitle: next?['title'] as String?,
+        ),
+        const SizedBox(height: 16),
         for (var i = 0; i < keys.length; i++) ...[
           _DayHeader(dateIso: keys[i], dayNumber: keys[i] == null ? null : i + 1),
           const SizedBox(height: 10),
-          _DayTimeline(items: groups[keys[i]]!),
+          _DayTimeline(
+            items: groups[keys[i]]!,
+            nextId: nextId,
+            togglingId: _togglingId,
+            onToggle: _toggleReached,
+          ),
           if (i < keys.length - 1) const SizedBox(height: 18),
         ],
       ],
+    );
+  }
+}
+
+/// สรุปความคืบหน้าเช็คอิน + บอกจุดถัดไป — ช่วยสตาฟไม่ลืม/ไม่ผิดแผน
+class _ProgressHeader extends StatelessWidget {
+  final int reached;
+  final int total;
+  final String? nextTitle;
+
+  const _ProgressHeader({
+    required this.reached,
+    required this.total,
+    this.nextTitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final allDone = total > 0 && reached >= total;
+    final progress = total == 0 ? 0.0 : reached / total;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border(context).withValues(alpha: 0.55)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                allDone
+                    ? Icons.verified_rounded
+                    : Icons.route_rounded,
+                size: 20,
+                color: allDone ? const Color(0xFF16A34A) : AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'เช็คอินแล้ว $reached/$total จุด',
+                style: appFont(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.onSurface(context),
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: AppTheme.border(context).withValues(alpha: 0.5),
+              valueColor: AlwaysStoppedAnimation(
+                allDone ? const Color(0xFF16A34A) : AppTheme.primaryColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(
+                allDone ? Icons.celebration_rounded : Icons.arrow_forward_rounded,
+                size: 15,
+                color: AppTheme.mutedText(context),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  allDone
+                      ? 'เช็คอินครบทุกจุดแล้ว เยี่ยมมาก!'
+                      : 'จุดถัดไป: ${nextTitle ?? '-'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -186,8 +335,16 @@ class _DayHeader extends StatelessWidget {
 /// รายละเอียด
 class _DayTimeline extends StatelessWidget {
   final List<Map<String, dynamic>> items;
+  final int? nextId;
+  final int? togglingId;
+  final Future<void> Function(Map<String, dynamic>) onToggle;
 
-  const _DayTimeline({required this.items});
+  const _DayTimeline({
+    required this.items,
+    required this.nextId,
+    required this.togglingId,
+    required this.onToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -198,6 +355,9 @@ class _DayTimeline extends StatelessWidget {
             item: items[i],
             isFirst: i == 0,
             isLast: i == items.length - 1,
+            isNext: items[i]['id'] == nextId,
+            isToggling: items[i]['id'] == togglingId,
+            onToggle: onToggle,
           ),
       ],
     );
@@ -208,11 +368,17 @@ class _TimelineRow extends StatelessWidget {
   final Map<String, dynamic> item;
   final bool isFirst;
   final bool isLast;
+  final bool isNext;
+  final bool isToggling;
+  final Future<void> Function(Map<String, dynamic>) onToggle;
 
   const _TimelineRow({
     required this.item,
     required this.isFirst,
     required this.isLast,
+    required this.isNext,
+    required this.isToggling,
+    required this.onToggle,
   });
 
   @override
@@ -221,13 +387,24 @@ class _TimelineRow extends StatelessWidget {
     final title = (item['title'] as String?)?.trim() ?? '';
     final detail = (item['detail'] as String?)?.trim() ?? '';
     final link = (item['link'] as String?)?.trim() ?? '';
+    final reachedAt = (item['reached_at'] as String?)?.trim() ?? '';
+    final reachedBy = (item['reached_by_name'] as String?)?.trim() ?? '';
+    final reached = reachedAt.isNotEmpty;
     final lineColor = AppTheme.border(context).withValues(alpha: 0.8);
+
+    const green = Color(0xFF16A34A);
+    final dotColor = reached
+        ? green
+        : (isNext ? AppTheme.primaryColor : AppTheme.surface(context));
+    final dotBorder = reached
+        ? green
+        : (isNext ? AppTheme.primaryColor : AppTheme.border(context));
 
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // เส้น timeline + จุด
+          // เส้น timeline + จุด (เช็คอินแล้ว = เขียวพร้อมเครื่องหมายถูก)
           SizedBox(
             width: 24,
             child: Column(
@@ -238,13 +415,18 @@ class _TimelineRow extends StatelessWidget {
                   color: isFirst ? Colors.transparent : lineColor,
                 ),
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: reached || isNext ? 18 : 14,
+                  height: reached || isNext ? 18 : 14,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppTheme.surface(context),
+                    color: dotColor,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.primaryColor, width: 2.5),
+                    border: Border.all(color: dotBorder, width: 2.5),
                   ),
+                  child: reached
+                      ? const Icon(Icons.check_rounded,
+                          size: 11, color: Colors.white)
+                      : null,
                 ),
                 Expanded(
                   child: Container(
@@ -263,10 +445,17 @@ class _TimelineRow extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface(context),
+                  color: reached
+                      ? green.withValues(alpha: 0.05)
+                      : AppTheme.surface(context),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppTheme.border(context).withValues(alpha: 0.55),
+                    color: isNext
+                        ? AppTheme.primaryColor.withValues(alpha: 0.55)
+                        : (reached
+                              ? green.withValues(alpha: 0.30)
+                              : AppTheme.border(context).withValues(alpha: 0.55)),
+                    width: isNext ? 1.5 : 1,
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -279,38 +468,64 @@ class _TimelineRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (time.isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 7),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.schedule_rounded,
-                              size: 13,
-                              color: AppTheme.primaryColor,
+                    Row(
+                      children: [
+                        if (time.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 3,
                             ),
-                            const SizedBox(width: 5),
-                            Text(
-                              time,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.schedule_rounded,
+                                  size: 13,
+                                  color: AppTheme.primaryColor,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  time,
+                                  style: appFont(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.primaryColor,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const Spacer(),
+                        if (isNext && !reached)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'จุดถัดไป',
                               style: appFont(
-                                fontSize: 12.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w800,
-                                color: AppTheme.primaryColor,
-                                letterSpacing: -0.2,
+                                color: Colors.white,
+                                letterSpacing: -0.1,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                      ],
+                    ),
+                    if (time.isNotEmpty || (isNext && !reached))
+                      const SizedBox(height: 8),
                     Text(
                       title.isEmpty ? 'ไม่ระบุหัวข้อ' : title,
                       style: appFont(
@@ -339,6 +554,14 @@ class _TimelineRow extends StatelessWidget {
                       const SizedBox(height: 10),
                       _ItineraryLinkButton(link: link),
                     ],
+                    const SizedBox(height: 12),
+                    _CheckInButton(
+                      reached: reached,
+                      reachedAt: reachedAt,
+                      reachedBy: reachedBy,
+                      loading: isToggling,
+                      onTap: () => onToggle(item),
+                    ),
                   ],
                 ),
               ),
@@ -347,6 +570,120 @@ class _TimelineRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// ปุ่มเช็คอิน/สถานะ "มาถึงแล้ว" ของแต่ละจุด
+class _CheckInButton extends StatelessWidget {
+  final bool reached;
+  final String reachedAt;
+  final String reachedBy;
+  final bool loading;
+  final VoidCallback onTap;
+
+  const _CheckInButton({
+    required this.reached,
+    required this.reachedAt,
+    required this.reachedBy,
+    required this.loading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const green = Color(0xFF16A34A);
+
+    if (reached) {
+      final at = _formatTime(reachedAt);
+      final who = reachedBy.isNotEmpty ? ' · โดย $reachedBy' : '';
+      return Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, size: 17, color: green),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'มาถึงแล้ว${at.isNotEmpty ? ' · $at' : ''}$who',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: green,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: loading ? null : onTap,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(0, 32),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: loading
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    'ยกเลิก',
+                    style: appFont(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+          ),
+        ],
+      );
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: loading ? null : onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppTheme.primaryColor,
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: loading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.where_to_vote_rounded, size: 18),
+        label: Text(
+          'เช็คอินจุดนี้',
+          style: appFont(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            letterSpacing: -0.2,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(String iso) {
+    final dt = DateTime.tryParse(iso)?.toLocal();
+    if (dt == null) return '';
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m น.';
   }
 }
 
