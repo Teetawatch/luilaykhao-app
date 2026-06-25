@@ -1510,7 +1510,8 @@ class _BriefingSection extends StatelessWidget {
   }
 }
 
-/// จุดรับที่ลูกค้าปักหมุดเอง — แสดงสถานะ (รอยืนยัน / ยืนยันแล้ว + ค่าบริการ / ปฏิเสธ)
+/// จุดรับที่ลูกค้าปักหมุดเอง — รับอัตโนมัติ ไม่มีค่าบริการเพิ่ม
+/// (สถานะ rejected ยังรองรับไว้สำหรับการจองเก่าก่อนเปลี่ยนเป็น auto-accept)
 class _CustomPickupBriefing extends StatelessWidget {
   final Map<String, dynamic> customPickup;
 
@@ -1519,21 +1520,17 @@ class _CustomPickupBriefing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = textOf(customPickup['status']);
+    final fee = double.tryParse('${customPickup['price'] ?? 0}') ?? 0;
     final (Color color, String label, IconData icon) = switch (status) {
-      'approved' => (
-        const Color(0xFF15803D),
-        'ยืนยันแล้ว',
-        Icons.check_circle_rounded,
-      ),
       'rejected' => (
         AppTheme.errorColor,
         'ไม่ผ่านการยืนยัน',
         Icons.cancel_rounded,
       ),
       _ => (
-        const Color(0xFFB45309),
-        'รอเจ้าหน้าที่ยืนยัน',
-        Icons.hourglass_top_rounded,
+        const Color(0xFF15803D),
+        'บันทึกจุดรับแล้ว',
+        Icons.check_circle_rounded,
       ),
     };
 
@@ -1576,9 +1573,7 @@ class _CustomPickupBriefing extends StatelessWidget {
                 Icon(icon, size: 13, color: color),
                 const SizedBox(width: 4),
                 Text(
-                  status == 'approved'
-                      ? '$label · ค่าบริการ ${money(customPickup['price'])}'
-                      : label,
+                  fee > 0 ? '$label · ค่าบริการ ${money(customPickup['price'])}' : label,
                   style: appFont(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,

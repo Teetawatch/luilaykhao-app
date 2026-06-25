@@ -616,7 +616,7 @@ class _CustomPickupTile extends StatelessWidget {
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
-                  'รอเจ้าหน้าที่ตรวจสอบและแจ้งค่าบริการก่อนยืนยัน',
+                  'จุดรับนี้จะถูกบันทึกในการจอง · ไม่มีค่าบริการเพิ่ม',
                   style: appFont(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
