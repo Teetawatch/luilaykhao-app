@@ -16,12 +16,14 @@ import '../providers/trip_alert_provider.dart';
 import '../providers/wishlist_provider.dart';
 
 import '../config/api_config.dart';
+import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
 import '../widgets/weather_card.dart';
 import 'booking_flow_screen.dart';
 import 'group_room_screen.dart';
 import 'login_screen.dart';
+import 'waitlist_screen.dart';
 
 part 'trip_detail_hero.part.dart';
 part 'trip_detail_info.part.dart';
@@ -112,9 +114,16 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
 
     final tripId = int.tryParse(tripData['id']?.toString() ?? '') ?? 0;
+    // Schedules are essential (booking dates / pickup) so a failure here must
+    // propagate and surface the retry screen. Reviews are supplementary, so a
+    // transient review failure degrades to an empty list rather than blanking
+    // the whole page — this is what used to make the page "load incompletely".
     final results = await Future.wait([
       app.schedules(slug),
-      if (tripId > 0) app.tripReviews(tripId) else Future.value(<dynamic>[]),
+      if (tripId > 0)
+        app.tripReviews(tripId).catchError((_) => <dynamic>[])
+      else
+        Future.value(<dynamic>[]),
     ]);
 
     return <String, dynamic>{
@@ -132,7 +141,14 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             snapshot.connectionState == ConnectionState.waiting &&
             _trip == null;
 
-        if (snapshot.hasError && _trip == null) {
+        // A silent-refresh poll may have populated schedules even when the
+        // initial load errored; only fall back to the error screen when we have
+        // nothing usable to show. Previously this was gated on `_trip == null`
+        // alone, so a schedules/reviews failure after the trip header loaded
+        // rendered a half-empty page with no way to retry.
+        final hasUsableSchedules = _liveSchedules?.isNotEmpty ?? false;
+
+        if (snapshot.hasError && !hasUsableSchedules) {
           return Scaffold(
             backgroundColor: AppTheme.background(context),
             appBar: AppBar(

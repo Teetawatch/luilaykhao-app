@@ -2579,6 +2579,18 @@ class _PromotionCard extends StatelessWidget {
     final name = promotion['name']?.toString() ?? '-';
     final endDate = promotion['end_date'];
 
+    // Flash sale: a precise deadline drives a live countdown + remaining-uses
+    // urgency instead of the plain "ใช้ได้ถึง <date>" footer.
+    final isFlash = promotion['is_flash_sale'] == true;
+    final endsAt = promotion['ends_at'] != null
+        ? DateTime.tryParse(promotion['ends_at'].toString())
+        : null;
+    final showFlash = isFlash && endsAt != null && endsAt.isAfter(DateTime.now());
+    final maxUses = int.tryParse('${promotion['max_uses'] ?? ''}');
+    final usedCount = int.tryParse('${promotion['used_count'] ?? 0}') ?? 0;
+    final remainingUses =
+        maxUses != null ? (maxUses - usedCount).clamp(0, maxUses) : null;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -2643,8 +2655,23 @@ class _PromotionCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (showFlash) ...[
+                _FlashCountdown(endsAt: endsAt),
+                if (remainingUses != null && remainingUses > 0) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'เหลือเพียง $remainingUses สิทธิ์',
+                    style: appFont(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+              ],
               _CodeChip(code: code),
-              if (endDate != null) ...[
+              if (!showFlash && endDate != null) ...[
                 const SizedBox(height: 6),
                 Text(
                   'ใช้ได้ถึง ${_formatDate(endDate.toString())}',
@@ -2669,6 +2696,76 @@ class _PromotionCard extends StatelessWidget {
     } catch (_) {
       return raw;
     }
+  }
+}
+
+/// Live "⚡ FLASH SALE · จบใน HH:MM:SS" pill that ticks down each second and
+/// flips to a lapsed state when the deadline passes.
+class _FlashCountdown extends StatefulWidget {
+  final DateTime endsAt;
+
+  const _FlashCountdown({required this.endsAt});
+
+  @override
+  State<_FlashCountdown> createState() => _FlashCountdownState();
+}
+
+class _FlashCountdownState extends State<_FlashCountdown> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = widget.endsAt.difference(DateTime.now());
+    final expired = remaining.isNegative;
+    final label = expired ? 'หมดเวลาแล้ว' : 'จบใน ${_format(remaining)}';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.bolt_rounded, color: Colors.white, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            'FLASH SALE · $label',
+            style: appFont(
+              color: Colors.white,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _format(Duration d) {
+    // Show days only when the sale runs longer than a day, otherwise HH:MM:SS.
+    String two(int n) => n.toString().padLeft(2, '0');
+    if (d.inDays > 0) {
+      return '${d.inDays} วัน ${two(d.inHours % 24)}:${two(d.inMinutes % 60)}';
+    }
+    return '${two(d.inHours)}:${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}';
   }
 }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -16,6 +17,11 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
+  /// Hard ceiling for a single request. Without this, a stalled connection
+  /// hangs the future forever — which on the trip detail page surfaced as a
+  /// half-loaded screen (trip header shown, schedules/reviews never arriving).
+  static const Duration _timeout = Duration(seconds: 20);
+
   String? token;
 
   /// Invoked whenever the server returns 401. Use this to wipe local credentials
@@ -91,21 +97,31 @@ class ApiClient {
     final encoded = body == null ? null : jsonEncode(body);
     late http.Response response;
 
-    switch (method) {
-      case 'GET':
-        response = await http.get(uri, headers: _headers());
-        break;
-      case 'POST':
-        response = await http.post(uri, headers: _headers(), body: encoded);
-        break;
-      case 'PUT':
-        response = await http.put(uri, headers: _headers(), body: encoded);
-        break;
-      case 'DELETE':
-        response = await http.delete(uri, headers: _headers(), body: encoded);
-        break;
-      default:
-        throw ApiException('Unsupported method $method');
+    try {
+      switch (method) {
+        case 'GET':
+          response = await http.get(uri, headers: _headers()).timeout(_timeout);
+          break;
+        case 'POST':
+          response = await http
+              .post(uri, headers: _headers(), body: encoded)
+              .timeout(_timeout);
+          break;
+        case 'PUT':
+          response = await http
+              .put(uri, headers: _headers(), body: encoded)
+              .timeout(_timeout);
+          break;
+        case 'DELETE':
+          response = await http
+              .delete(uri, headers: _headers(), body: encoded)
+              .timeout(_timeout);
+          break;
+        default:
+          throw ApiException('Unsupported method $method');
+      }
+    } on TimeoutException {
+      throw const ApiException('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่');
     }
 
     return _handleResponse(response);

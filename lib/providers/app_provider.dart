@@ -415,6 +415,41 @@ class AppProvider extends ChangeNotifier {
     return List<dynamic>.from(api.data(response) ?? []);
   }
 
+  // ── Waitlist (คิวรอที่นั่งว่าง) ─────────────────────────────────────────────
+  // Backend manages the queue, offers seats on cancellation (15-min TTL) and
+  // pushes waitlist_offered/expired notifications; the app just drives the
+  // join/leave/status surface.
+
+  /// Joins the waitlist for a sold-out schedule. Returns the created entry.
+  Future<Map<String, dynamic>> joinWaitlist(
+    int scheduleId, {
+    int seatCount = 1,
+  }) async {
+    final response = await api.post(
+      'schedules/$scheduleId/waitlist',
+      body: {'seat_count': seatCount},
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// Leaves the waitlist for a schedule.
+  Future<void> leaveWaitlist(int scheduleId) async {
+    await api.delete('schedules/$scheduleId/waitlist');
+  }
+
+  /// Current user's waitlist standing for a single schedule, e.g.
+  /// `{in_waitlist: bool, status, position, expires_in_seconds, ...}`.
+  Future<Map<String, dynamic>> waitlistStatus(int scheduleId) async {
+    final response = await api.get('schedules/$scheduleId/waitlist/status');
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// All active (waiting/offered) waitlist entries for the current user.
+  Future<List<dynamic>> myWaitlistEntries() async {
+    final response = await api.get('waitlist');
+    return List<dynamic>.from(api.data(response) ?? []);
+  }
+
   Future<List<dynamic>> tripReviews(int tripId) async {
     final response = await api.get(
       'reviews',

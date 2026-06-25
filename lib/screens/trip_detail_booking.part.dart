@@ -68,6 +68,12 @@ class StickyBookingBar extends StatelessWidget {
     final isCharter = _asBool(selectedSchedule['is_charter']);
     final hasSchedule = schedules.isNotEmpty && selectedSchedule.isNotEmpty;
     final isBookable = hasSchedule && _scheduleIsBookable(selectedSchedule);
+    // "เต็ม" (eligible for waitlist) = a real, future, non-charter departure
+    // with no seats left — distinct from a past/closed one which can't be queued.
+    final isFull = hasSchedule &&
+        !isCharter &&
+        !_isSchedulePast(selectedSchedule) &&
+        _scheduleAvailableSeats(selectedSchedule) <= 0;
 
     // ป้ายปุ่มสะท้อนสถานะของรอบที่เลือกจริง ไม่ใช่ขึ้น "จองเลย" ตลอด
     final String bookLabel;
@@ -242,13 +248,20 @@ class StickyBookingBar extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        // book button
-                        _BookingButton(
-                          enabled: isBookable,
-                          label: bookLabel,
-                          icon: bookIcon,
-                          onPressed: handleBookingTap,
-                        ),
+                        // book button — or, when the chosen round is full, a
+                        // waitlist CTA so demand isn't lost at a sold-out round
+                        if (isFull)
+                          _WaitlistButton(
+                            scheduleId:
+                                int.tryParse('${selectedSchedule['id']}') ?? 0,
+                          )
+                        else
+                          _BookingButton(
+                            enabled: isBookable,
+                            label: bookLabel,
+                            icon: bookIcon,
+                            onPressed: handleBookingTap,
+                          ),
                       ],
                     ),
                   ),
@@ -297,6 +310,171 @@ class StickyBookingBar extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sold-out CTA: lets a signed-in customer queue for a seat on a full round,
+/// or jump to "คิวรอที่นั่ง" when they're already in line. Mirrors the booking
+/// button's footprint so the bar layout stays identical between states.
+class _WaitlistButton extends StatefulWidget {
+  final int scheduleId;
+
+  const _WaitlistButton({required this.scheduleId});
+
+  @override
+  State<_WaitlistButton> createState() => _WaitlistButtonState();
+}
+
+class _WaitlistButtonState extends State<_WaitlistButton> {
+  bool _checking = true;
+  bool _busy = false;
+  bool _inQueue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshStatus();
+  }
+
+  @override
+  void didUpdateWidget(covariant _WaitlistButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scheduleId != widget.scheduleId) {
+      _refreshStatus();
+    }
+  }
+
+  Future<void> _refreshStatus() async {
+    final app = context.read<AppProvider>();
+    if (!app.isLoggedIn || widget.scheduleId == 0) {
+      if (mounted) setState(() => _checking = false);
+      return;
+    }
+    setState(() => _checking = true);
+    try {
+      final status = await app.waitlistStatus(widget.scheduleId);
+      if (!mounted) return;
+      setState(() {
+        _inQueue = status['in_waitlist'] == true;
+        _checking = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  void _openWaitlist() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const WaitlistScreen()),
+    );
+  }
+
+  Future<void> _join() async {
+    final app = context.read<AppProvider>();
+    if (!app.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LoginScreen(
+            onLoginSuccess: () {
+              if (mounted) _refreshStatus();
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _busy = true);
+    HapticFeedback.mediumImpact();
+    try {
+      await app.joinWaitlist(widget.scheduleId);
+      if (!mounted) return;
+      setState(() {
+        _inQueue = true;
+        _busy = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'เพิ่มเข้าคิวรอแล้ว — เราจะแจ้งเตือนทันทีที่มีที่นั่งว่าง',
+            style: appFont(color: Colors.white),
+          ),
+          action: SnackBarAction(
+            label: 'ดูคิว',
+            textColor: Colors.white,
+            onPressed: _openWaitlist,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is ApiException ? e.message : 'เพิ่มเข้าคิวไม่สำเร็จ',
+            style: appFont(color: Colors.white),
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inQueue = _inQueue;
+    final color = inQueue ? AppTheme.accentColor : AppTheme.primaryColor;
+    final label = inQueue ? 'ดูคิวรอ' : 'รอที่นั่งว่าง';
+    final icon = inQueue
+        ? Icons.checklist_rtl_rounded
+        : Icons.hourglass_bottom_rounded;
+
+    return GestureDetector(
+      onTap: _checking || _busy ? null : (inQueue ? _openWaitlist : _join),
+      child: Container(
+        height: 54,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.28),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_checking || _busy)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              )
+            else
+              Icon(icon, size: 19, color: Colors.white),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: appFont(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
         ),
       ),
     );

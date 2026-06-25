@@ -11,6 +11,7 @@ import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/schedule_announcements_screen.dart';
 import '../screens/sos_alert_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
+import '../screens/waitlist_screen.dart';
 import 'sos_alarm_service.dart';
 
 /// Maps notification type + data payload to the correct in-app screen.
@@ -45,6 +46,7 @@ class NotificationNavigator {
       case 'trip_alert':
       case 'new_trip':
       case 'low_seats':
+      case 'booking_winback':
         _openTripFromData(data);
       case 'sos_alert':
         _openSosAlert(data);
@@ -52,6 +54,9 @@ class NotificationNavigator {
         _openChat(data);
       case 'schedule_announcement':
         _openAnnouncements(data);
+      case 'waitlist_offered':
+      case 'waitlist_expired':
+        _openWaitlist();
       case 'promo':
         _switchTab(1);
       case 'loyalty':
@@ -126,6 +131,14 @@ class NotificationNavigator {
         MaterialPageRoute(
           builder: (_) => ScheduleAnnouncementsScreen(scheduleId: id),
         ),
+      ),
+    );
+  }
+
+  static void _openWaitlist() {
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => const WaitlistScreen()),
       ),
     );
   }

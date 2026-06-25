@@ -594,7 +594,7 @@ class _BookingActionDeck extends StatelessWidget {
         _PreTripBriefingCard(booking: booking, schedule: schedule),
       if (showTracking) _TrackVehicleButton(booking: booking),
       if (showSos)
-        _SosButton(scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0),
+        SosButton(scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0),
       if (_chipActions(
             context,
             confirmed,
