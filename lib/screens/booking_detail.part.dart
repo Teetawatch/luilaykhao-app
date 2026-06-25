@@ -93,13 +93,6 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 20),
 
-                // Trip cover photo + title + booking ref (the real trip image)
-                _BookingHeroHeader(trip: trip, booking: booking),
-                const SizedBox(height: 20),
-
-                // ผู้จอง — รูปโปรไฟล์ลูกค้า + ชื่อ (self-spaces; hides if no user)
-                _BookingCustomerRow(booking: booking),
-
                 // Check-in card (confirmed only)
                 if (textOf(booking['status']) == 'confirmed') ...[
                   _BookingCheckInCard(booking: booking),
@@ -130,6 +123,27 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 20),
                 ],
 
+                // Trip title + booking ref
+                Text(
+                  textOf(trip['title'], 'รายละเอียดการจอง'),
+                  style: appFont(
+                    color: AppTheme.primaryColor,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  textOf(booking['booking_ref']),
+                  style: appFont(
+                    color: AppTheme.mutedText(context),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
                 // Status chips
                 Wrap(
                   spacing: 8,
@@ -158,6 +172,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   _BookingMembersSection(booking: booking),
                   const SizedBox(height: 16),
                 ],
+
+                // ผู้จอง — รูปโปรไฟล์ลูกค้า + ชื่อ (self-spaces; hides if no user)
+                _BookingCustomerRow(booking: booking),
 
                 // Passengers section
                 const _SheetSectionTitle(
@@ -595,103 +612,6 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
   }
 }
 
-/// Trip cover photo banner with the title + booking ref overlaid — the real
-/// trip image, replacing the old plain-text title at the top of the sheet.
-class _BookingHeroHeader extends StatelessWidget {
-  final Map<String, dynamic> trip;
-  final Map<String, dynamic> booking;
-
-  const _BookingHeroHeader({required this.trip, required this.booking});
-
-  @override
-  Widget build(BuildContext context) {
-    final image = ApiConfig.mediaUrl(
-      textOf(trip['cover_image']).isNotEmpty
-          ? trip['cover_image']
-          : trip['thumbnail_image'],
-    );
-    final title = textOf(trip['title'], 'รายละเอียดการจอง');
-    final ref = textOf(booking['booking_ref']);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: SizedBox(
-        height: 168,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (image.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: image,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => ColoredBox(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                ),
-                errorWidget: (_, _, _) => const _BookingHeroFallback(),
-              )
-            else
-              const _BookingHeroFallback(),
-            // Bottom scrim so the title stays readable over any photo.
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x00000000), Color(0xD9000000)],
-                  stops: [0.35, 1.0],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 14,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (ref.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.22),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        ref,
-                        style: appFont(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: appFont(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// "ผู้จอง" identity row — the customer's profile photo + name, so the ticket
 /// feels personal. Renders nothing when the booking carries no user (e.g. the
 /// relation wasn't loaded or a guest booking).
@@ -781,26 +701,6 @@ class _BookingCustomerRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _BookingHeroFallback extends StatelessWidget {
-  const _BookingHeroFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1F7A4D), Color(0xFF0F4C2A)],
-        ),
-      ),
-      child: Center(
-        child: Icon(Icons.landscape_rounded, color: Colors.white24, size: 56),
       ),
     );
   }
