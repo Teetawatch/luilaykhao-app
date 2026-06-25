@@ -835,19 +835,14 @@ class MustKnowSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // amber accent header
+          // header — neutral background like the other sections; the amber
+          // icon/title keep the "read before booking" warning cue
           Container(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
             decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFFB45309).withValues(alpha: 0.12)
-                  : const Color(0xFFFFFBEB),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
               border: Border(
                 bottom: BorderSide(
-                  color: isDark
-                      ? const Color(0xFFB45309).withValues(alpha: 0.18)
-                      : const Color(0xFFFDE68A),
+                  color: AppTheme.border(context).withValues(alpha: 0.4),
                 ),
               ),
             ),
