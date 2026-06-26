@@ -702,6 +702,8 @@ String _notificationTypeLabel(String type) {
     'system' => 'ระบบ',
     'loyalty' => 'คะแนนสะสม',
     'vehicle_approaching' => 'รถใกล้ถึงแล้ว',
+    'staff_assignment' => 'มอบหมายงาน',
+    'staff_shift_reminder' => 'เตรียมงานนำทริป',
     _ => 'การแจ้งเตือน',
   };
 }
@@ -721,6 +723,8 @@ IconData _notificationIcon(String type) {
     'booking' || 'booking_confirmed' => Icons.confirmation_number_rounded,
     'booking_cancelled' => Icons.cancel_rounded,
     'vehicle_approaching' => Icons.directions_bus_rounded,
+    'staff_assignment' => Icons.assignment_ind_rounded,
+    'staff_shift_reminder' => Icons.backpack_rounded,
     _ => Icons.notifications_none_rounded,
   };
 }
@@ -738,6 +742,8 @@ Color _notificationColor(String type) {
     'installment_due' => const Color(0xFFD97706),
     'booking' || 'booking_confirmed' => AppTheme.primaryColor,
     'vehicle_approaching' => const Color(0xFF2563EB),
+    'staff_assignment' => const Color(0xFF2563EB),
+    'staff_shift_reminder' => const Color(0xFF7C3AED),
     _ => AppTheme.primaryColor,
   };
 }

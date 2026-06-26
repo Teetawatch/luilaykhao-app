@@ -59,6 +59,10 @@ class NotificationNavigator {
         _openWaitlist();
       case 'promo':
         _switchTab(1);
+      case 'staff_assignment':
+      case 'staff_shift_reminder':
+        // ไม่มีหน้าตารางงานสตาฟในแอปลูกค้า — เปิดศูนย์แจ้งเตือนให้อ่านรายละเอียด
+        _openNotifications();
       case 'loyalty':
       case 'system':
       default:
