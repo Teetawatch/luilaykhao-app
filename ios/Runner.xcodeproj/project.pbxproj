@@ -213,6 +213,7 @@
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				C8A6DF93A4D2D07A922EF017 /* Strip Simulator Platform Slices */,
+				51654BD36477F739CAE53893 /* Upload Crashlytics dSYM */,
 			);
 			buildRules = (
 			);
@@ -307,6 +308,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
+		};
+		51654BD36477F739CAE53893 /* Upload Crashlytics dSYM */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+				"$(SRCROOT)/$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)",
+			);
+			name = "Upload Crashlytics dSYM";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Upload dSYMs to Firebase Crashlytics so crash reports are symbolicated.\n# Firebase is integrated via Swift Package Manager here (Podfile.lock has only\n# Flutter), so the run helper lives in the SwiftPM checkout. Fall back to the\n# CocoaPods path, and guard against it being absent so dSYM upload never\n# fails the build (e.g. Debug builds that don't emit a dSYM).\nSPM_RUN=\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\nPOD_RUN=\"${PODS_ROOT}/FirebaseCrashlytics/run\"\nif [ -f \"$SPM_RUN\" ]; then\n  \"$SPM_RUN\"\nelif [ -f \"$POD_RUN\" ]; then\n  \"$POD_RUN\"\nelse\n  echo \"warning: FirebaseCrashlytics run script not found (tried SPM: $SPM_RUN and Pods: $POD_RUN) — skipping dSYM upload\"\nfi\n";
 		};
 		6EA1BD6DB863A5C57C368877 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
