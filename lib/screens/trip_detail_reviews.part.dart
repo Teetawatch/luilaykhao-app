@@ -706,6 +706,11 @@ class _ReviewCard extends StatelessWidget {
                       width: 110,
                       height: 76,
                       showLabel: false,
+                      // Reviews stack unbounded video tiles in a non-recycling
+                      // Column as more pages load; a live decoder per tile would
+                      // exhaust the platform pool and crash. Show the static
+                      // poster placeholder — tapping still opens a real player.
+                      livePreview: false,
                     ),
                   ),
                 ),

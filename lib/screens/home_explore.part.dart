@@ -272,7 +272,7 @@ class _HeroHeaderState extends State<HeroHeader> {
     final heroHeight = (size.height * 0.50).clamp(420.0, 540.0);
     final compactWidth = size.width < 390;
     final horizontalPadding = compactWidth ? 18.0 : 24.0;
-    final contentBottom = compactWidth ? 148.0 : 158.0;
+    final contentBottom = compactWidth ? 128.0 : 138.0;
     final contentWidth = (size.width - (horizontalPadding * 2)).clamp(
       260.0,
       680.0,

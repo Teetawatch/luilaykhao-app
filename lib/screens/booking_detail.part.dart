@@ -1512,6 +1512,15 @@ class _BriefingSection extends StatelessWidget {
 
 /// จุดรับที่ลูกค้าปักหมุดเอง — รับอัตโนมัติ ไม่มีค่าบริการเพิ่ม
 /// (สถานะ rejected ยังรองรับไว้สำหรับการจองเก่าก่อนเปลี่ยนเป็น auto-accept)
+/// Google Maps link for a customer-pinned pickup, built from its lat/lng.
+/// Returns null when the pin has no usable coordinates.
+String? _customPickupMapUrl(Map<String, dynamic> customPickup) {
+  final lat = double.tryParse(textOf(customPickup['lat']));
+  final lng = double.tryParse(textOf(customPickup['lng']));
+  if (lat == null || lng == null) return null;
+  return 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+}
+
 class _CustomPickupBriefing extends StatelessWidget {
   final Map<String, dynamic> customPickup;
 
@@ -1557,6 +1566,38 @@ class _CustomPickupBriefing extends StatelessWidget {
                 fontSize: 12.5,
                 color: AppTheme.mutedText(context),
                 height: 1.4,
+              ),
+            ),
+          ],
+          if (_customPickupMapUrl(customPickup) != null) ...[
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: () async {
+                final uri = Uri.parse(_customPickupMapUrl(customPickup)!);
+                if (await canLaunchUrl(uri)) {
+                  launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.map_outlined,
+                    size: 14,
+                    color: AppTheme.primaryColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'เปิดแผนที่',
+                    style: appFont(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primaryColor,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppTheme.primaryColor,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

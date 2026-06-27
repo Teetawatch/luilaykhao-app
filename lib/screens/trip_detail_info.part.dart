@@ -491,12 +491,22 @@ class _VideoThumbCard extends StatefulWidget {
   final double height;
   final bool showLabel;
 
+  /// When true the tile spins up a muted [VideoPlayerController] to paint the
+  /// clip's first frame as a poster. Each controller holds a native video
+  /// decoder, and the platform caps how many can exist at once, so callers that
+  /// can stack an unbounded number of tiles (e.g. one per review, all kept
+  /// mounted in a non-recycling Column) must pass `false` to avoid exhausting
+  /// the decoder pool and crashing the app. Those tiles fall back to the
+  /// gradient placeholder and still open a real player on tap.
+  final bool livePreview;
+
   const _VideoThumbCard({
     required this.url,
     required this.index,
     this.width = 240,
     this.height = 160,
     this.showLabel = true,
+    this.livePreview = true,
   });
 
   @override
@@ -510,7 +520,7 @@ class _VideoThumbCardState extends State<_VideoThumbCard> {
   @override
   void initState() {
     super.initState();
-    _initialize();
+    if (widget.livePreview) _initialize();
   }
 
   Future<void> _initialize() async {

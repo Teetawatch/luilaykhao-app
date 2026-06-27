@@ -570,6 +570,7 @@ class _PickupGroupCard extends StatelessWidget {
     final label = textOf(group['label'], 'จุดรับ');
     final region = textOf(group['region_label']);
     final mapUrl = textOf(group['map_url']);
+    final isCustom = group['is_custom'] == true;
     final notes = textOf(group['notes']);
     final total = int.tryParse(textOf(group['passenger_count'], '0')) ?? 0;
     final checkedIn = int.tryParse(textOf(group['checked_in_count'], '0')) ?? 0;
@@ -609,7 +610,42 @@ class _PickupGroupCard extends StatelessWidget {
                           letterSpacing: -0.1,
                         ),
                       ),
-                      if (region.isNotEmpty && region != label)
+                      if (isCustom)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.warningColor.withValues(
+                                alpha: 0.12,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.add_location_alt_rounded,
+                                  size: 12,
+                                  color: AppTheme.warningColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'ลูกค้าปักหมุดเอง',
+                                  style: appFont(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.warningColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (region.isNotEmpty && region != label)
                         Text(
                           region,
                           style: appFont(
