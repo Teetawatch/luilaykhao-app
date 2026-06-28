@@ -1753,6 +1753,7 @@ class _TrustStatsBar extends StatelessWidget {
     var ratingTrips = 0;
     var reviewCount = 0;
     var travelers = 0;
+    var bookings = 0;
     for (final t in trips) {
       final rc = int.tryParse('${t['review_count'] ?? 0}') ?? 0;
       final r = num.tryParse('${t['rating'] ?? 0}') ?? 0;
@@ -1762,11 +1763,12 @@ class _TrustStatsBar extends StatelessWidget {
         reviewCount += rc;
       }
       travelers += int.tryParse('${t['confirmed_passengers_count'] ?? 0}') ?? 0;
+      bookings += int.tryParse('${t['bookings_count'] ?? 0}') ?? 0;
     }
     final avgRating = ratingTrips > 0 ? ratingSum / ratingTrips : 0;
 
     // Strongest available signals first; capped at the 3 best so the bar reads
-    // cleanly. License + routes are always-true fallbacks.
+    // cleanly. The license cell is an always-true fallback.
     final cells = <({IconData icon, String value, String label})>[
       if (avgRating > 0)
         (
@@ -1780,12 +1782,17 @@ class _TrustStatsBar extends StatelessWidget {
           value: '${_compactCount(travelers)}+',
           label: 'นักเดินทาง',
         ),
+      if (bookings > 0)
+        (
+          icon: Icons.event_available_rounded,
+          value: '${_compactCount(bookings)}+',
+          label: 'ยอดการจอง',
+        ),
       (
         icon: Icons.verified_rounded,
         value: 'ถูกต้อง',
         label: 'ใบอนุญาตนำเที่ยว',
       ),
-      (icon: Icons.map_rounded, value: '${trips.length}', label: 'เส้นทางทริป'),
     ].take(3).toList();
 
     return Container(
