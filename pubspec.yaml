@@ -83,6 +83,21 @@ flutter:
     - assets/audio/sos_siren.wav
     - assets/icons/google_2025.svg
   fonts:
-    - family: Anuphan
+    # Latin + numerals (variable font; weight applied via fontWeight).
+    - family: Inter
       fonts:
-        - asset: assets/fonts/Anuphan-Variable.ttf
+        - asset: assets/fonts/Inter-Variable.ttf
+    # Thai face (static weights). Used as the fallback after Inter so Latin
+    # glyphs render in Inter and Thai glyphs fall through to Prompt.
+    - family: Prompt
+      fonts:
+        - asset: assets/fonts/Prompt-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Prompt-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Prompt-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Prompt-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Prompt-ExtraBold.ttf
+          weight: 800

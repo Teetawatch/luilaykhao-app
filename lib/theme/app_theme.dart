@@ -1,26 +1,25 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-/// On iOS we intentionally fall back to the platform system font (San Francisco
-/// for Latin + the iOS Thai system face, e.g. Sukhumvit Set) instead of the
-/// bundled Anuphan face. Android keeps Anuphan. When this is true, [appFont] and
-/// [AppTheme._textTheme] leave `fontFamily` unset so the engine resolves the
-/// native system font; weight handling is unaffected.
-bool get _useSystemFont => !kIsWeb && Platform.isIOS;
+/// Latin + numeral face (assets/fonts/Inter-Variable.ttf, declared in
+/// pubspec.yaml). A variable font, so any [FontWeight] (incl. w800/w900) is
+/// rendered exactly. Set as the primary family on every platform.
+const String _latinFont = 'Inter';
 
-/// Bundled app font family (assets/fonts/Anuphan-Variable.ttf, declared in
-/// pubspec.yaml). Shipped with the app so there is no runtime font download.
-/// Used on Android; on iOS the system font takes over (see [_useSystemFont]).
+/// Thai face (assets/fonts/Prompt-*.ttf, weights 400–800). Declared as the
+/// fallback after [_latinFont] so Latin/numeric glyphs render in Inter while
+/// Thai code points — which Inter lacks — fall through to Prompt. This is the
+/// "Prompt + Inter" pairing: crisp Latin numerals, warm Thai text.
+const String _thaiFont = 'Prompt';
+
+/// Fallback chain applied alongside [_latinFont] everywhere.
+const List<String> _fontFallback = [_thaiFont];
+
+/// Both fonts are shipped in the bundle, so there is no runtime font download.
 ///
-/// Anuphan's weight axis tops out at 700; weights `w800`/`w900` render as 700.
-const String _fontFamily = 'Anuphan';
-
-/// App-wide text style in [_fontFamily] (Android) or the platform system font
-/// (iOS, see [_useSystemFont]). The single chokepoint every call site routes
-/// through. Mirrors the `GoogleFonts.*` named-parameter signature so it stays a
-/// drop-in replacement at every call site.
+/// App-wide text style in [_latinFont] with the [_thaiFont] fallback. The single
+/// chokepoint every call site routes through. Mirrors the `GoogleFonts.*`
+/// named-parameter signature so it stays a drop-in replacement at every call
+/// site.
 TextStyle appFont({
   TextStyle? textStyle,
   Color? color,
@@ -43,8 +42,8 @@ TextStyle appFont({
   double? decorationThickness,
 }) {
   return (textStyle ?? const TextStyle()).copyWith(
-    // On iOS, leave the family unset so the platform system font is used.
-    fontFamily: _useSystemFont ? null : _fontFamily,
+    fontFamily: _latinFont,
+    fontFamilyFallback: _fontFallback,
     color: color,
     backgroundColor: backgroundColor,
     fontSize: fontSize,
@@ -66,12 +65,93 @@ TextStyle appFont({
   );
 }
 
+/// App type scale (Prompt + Inter). Lean on **weight** for hierarchy more than
+/// size, and keep generous line-height so Thai diacritics (สระบน/ล่าง, ไม้โท)
+/// never collide. Every style flows through [appFont] so the Inter→Prompt
+/// fallback is always attached.
+///
+/// | Role                  | Size | Weight     |
+/// |-----------------------|------|------------|
+/// | [displayHero]         | 30   | Bold (700) |
+/// | [h1]                  | 24   | Bold (700) |
+/// | [h2]                  | 19   | SemiBold   |
+/// | [subtitle]            | 16   | Medium     |
+/// | [body]                | 14   | Regular    |
+/// | [caption]             | 12   | Medium     |
+class AppText {
+  AppText._();
+
+  /// Display / Hero — large price figures, the booking-success screen. 28–32sp.
+  static TextStyle displayHero({Color? color}) => appFont(
+    fontSize: 30,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    letterSpacing: -0.5,
+    color: color,
+  );
+
+  /// Heading 1 — large trip titles ("ทริปดำน้ำเกาะเต่า 3 วัน 2 คืน"). 22–24sp.
+  static TextStyle h1({Color? color}) => appFont(
+    fontSize: 24,
+    fontWeight: FontWeight.w700,
+    height: 1.25,
+    letterSpacing: -0.3,
+    color: color,
+  );
+
+  /// Heading 2 — section headers ("ไฮไลท์ของทริป", "ตารางเดินทาง"). 18–20sp.
+  static TextStyle h2({Color? color}) => appFont(
+    fontSize: 19,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    color: color,
+  );
+
+  /// Subtitle / Body Large — form field labels, primary menus, sub-package
+  /// names. 16sp. Pass [strong] for the SemiBold + accent-colour emphasis case.
+  static TextStyle subtitle({Color? color, bool strong = false}) => appFont(
+    fontSize: 16,
+    fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
+    height: 1.4,
+    color: color,
+  );
+
+  /// Body — trip details and long-form copy. 14sp is the most comfortable read
+  /// on mobile; height 1.5 gives Thai text room to breathe.
+  static TextStyle body({Color? color, bool strong = false}) => appFont(
+    fontSize: 14,
+    fontWeight: strong ? FontWeight.w600 : FontWeight.w400,
+    height: 1.5,
+    color: color,
+  );
+
+  /// Caption / Label — dates, seats-left, short tags ("เหลือ 2 ที่สุดท้าย").
+  /// 11–12sp.
+  static TextStyle caption({Color? color, bool strong = false}) => appFont(
+    fontSize: 12,
+    fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
+    height: 1.35,
+    color: color,
+  );
+
+  /// Primary CTA label ("จองทริปนี้", "ชำระเงิน") — 16sp Bold for buttons
+  /// sized ~48–56dp tall.
+  static TextStyle button({Color? color}) => appFont(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.3,
+    color: color,
+  );
+}
+
 class AppTheme {
-  /// Applies the bundled [_fontFamily] across the whole [TextTheme] on Android.
-  /// On iOS it keeps the platform system font (Typography already supplies it).
+  /// Applies the bundled [_latinFont] + [_thaiFont] fallback across the whole
+  /// [TextTheme] on every platform.
   static TextTheme _textTheme(TextTheme base) {
-    if (_useSystemFont) return base;
-    return base.apply(fontFamily: _fontFamily);
+    return base.apply(
+      fontFamily: _latinFont,
+      fontFamilyFallback: _fontFallback,
+    );
   }
 
   // Premium Emerald & Slate Palette
