@@ -479,6 +479,32 @@ class AppProvider extends ChangeNotifier {
     return (items: items, hasMore: currentPage < lastPage);
   }
 
+  /// Fetches one page of every approved review across all trips, optionally
+  /// filtered by an exact star [rating]. Backs the "ดูทั้งหมด" all-reviews
+  /// screen with infinite scroll and the total count for its header.
+  Future<({List<dynamic> items, bool hasMore, int total})> allReviewsPage({
+    int page = 1,
+    int perPage = 12,
+    int? rating,
+  }) async {
+    final response = await api.get(
+      ApiEndpoints.reviews,
+      query: {
+        'page': page,
+        'per_page': perPage,
+        'rating': ?rating,
+      },
+    );
+    final items = List<dynamic>.from(api.data(response) ?? []);
+    final meta = api.meta(response);
+    final currentPage =
+        int.tryParse('${meta?['current_page'] ?? page}') ?? page;
+    final lastPage =
+        int.tryParse('${meta?['last_page'] ?? currentPage}') ?? currentPage;
+    final total = int.tryParse('${meta?['total'] ?? items.length}') ?? items.length;
+    return (items: items, hasMore: currentPage < lastPage, total: total);
+  }
+
   Future<Map<String, dynamic>> seats(int scheduleId) async {
     final response = await api.get('schedules/$scheduleId/seats');
     return Map<String, dynamic>.from(api.data(response) ?? {});

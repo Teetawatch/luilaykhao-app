@@ -33,6 +33,7 @@ part 'trip_detail_reviews.part.dart';
 part 'trip_detail_booking.part.dart';
 part 'trip_detail_widgets.part.dart';
 part 'trip_detail_helpers.part.dart';
+part 'all_reviews.part.dart';
 
 const Color _premiumText = Color(0xFF0F172A);
 const Color _mutedText = Color(0xFF64748B);

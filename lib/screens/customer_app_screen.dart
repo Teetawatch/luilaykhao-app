@@ -42,7 +42,7 @@ import 'pre_trip_checklist_screen.dart';
 import 'schedule_announcements_screen.dart';
 import 'article_list_screen.dart';
 import 'article_detail_screen.dart';
-import 'trip_detail_screen.dart' show TripDetailScreen;
+import 'trip_detail_screen.dart' show TripDetailScreen, AllReviewsScreen;
 import 'trip_day_screen.dart';
 import 'group_rooms_screen.dart';
 import 'group_room_screen.dart';

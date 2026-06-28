@@ -2185,26 +2185,46 @@ class _CustomerReviewsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(right: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.only(right: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  'เสียงจากลูกทริป',
-                  style: appFont(
-                    color: const Color(0xFF063F46),
-                    fontSize: 22,
-                    height: 1.1,
-                    fontWeight: FontWeight.w900,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'เสียงจากลูกทริป',
+                        style: appFont(
+                          color: const Color(0xFF063F46),
+                          fontSize: 22,
+                          height: 1.1,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'รีวิวจริงจากผู้ที่เดินทางไปกับเรา',
+                        style: appFont(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'รีวิวจริงจากผู้ที่เดินทางไปกับเรา',
-                  style: appFont(
-                    color: AppTheme.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AllReviewsScreen()),
+                  ),
+                  child: Text(
+                    'ดูทั้งหมด',
+                    style: appFont(
+                      color: const Color(0xFF063F46),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],

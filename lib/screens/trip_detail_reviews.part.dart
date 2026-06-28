@@ -465,7 +465,12 @@ class _CategoryAverageTile extends StatelessWidget {
 class _ReviewCard extends StatelessWidget {
   final Map<String, dynamic> review;
 
-  const _ReviewCard({required this.review});
+  /// When set, a small trip chip is shown under the comment. Used by the
+  /// all-reviews screen (where reviews span many trips); left null inside a
+  /// single trip's detail page, where the trip is already obvious.
+  final String? tripTitle;
+
+  const _ReviewCard({required this.review, this.tripTitle});
 
   @override
   Widget build(BuildContext context) {
@@ -672,6 +677,41 @@ class _ReviewCard extends StatelessWidget {
                         : const Color(0xFF374151),
                     height: 1.65,
                   ),
+                ),
+              ),
+            ],
+            if (tripTitle != null &&
+                tripTitle!.trim().isNotEmpty &&
+                tripTitle!.trim() != '-') ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _softAccent.withValues(alpha: isDark ? 0.16 : 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.terrain_rounded,
+                      size: 14,
+                      color: _softAccent,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        tripTitle!.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? const Color(0xFF6EE7B7) : _premiumText,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
