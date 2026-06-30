@@ -1738,7 +1738,7 @@ class _TrustStatsBar extends StatelessWidget {
     var ratingTrips = 0;
     var reviewCount = 0;
     var travelers = 0;
-    var bookings = 0;
+    var bookedPeople = 0;
     for (final t in trips) {
       final rc = int.tryParse('${t['review_count'] ?? 0}') ?? 0;
       final r = num.tryParse('${t['rating'] ?? 0}') ?? 0;
@@ -1748,7 +1748,7 @@ class _TrustStatsBar extends StatelessWidget {
         reviewCount += rc;
       }
       travelers += int.tryParse('${t['confirmed_passengers_count'] ?? 0}') ?? 0;
-      bookings += int.tryParse('${t['bookings_count'] ?? 0}') ?? 0;
+      bookedPeople += int.tryParse('${t['booked_passengers_count'] ?? 0}') ?? 0;
     }
     final avgRating = ratingTrips > 0 ? ratingSum / ratingTrips : 0;
 
@@ -1767,11 +1767,11 @@ class _TrustStatsBar extends StatelessWidget {
           value: '${_compactCount(travelers)}+',
           label: 'นักเดินทาง',
         ),
-      if (bookings > 0)
+      if (bookedPeople > 0)
         (
           icon: Icons.event_available_rounded,
-          value: '${_compactCount(bookings)}+',
-          label: 'ยอดการจอง',
+          value: '${_compactCount(bookedPeople)}+',
+          label: 'คนจองแล้ว',
         ),
       (
         icon: Icons.verified_rounded,
