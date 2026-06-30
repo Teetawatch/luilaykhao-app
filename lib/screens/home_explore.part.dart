@@ -135,7 +135,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     ],
                   ),
                   _YourTripSection(app: app),
-                  _TrustStatsBar(app: app),
+                  // Browse-continuity: trips the user opened before, so they can
+                  // pick up where they left off (hidden until something's viewed).
+                  _RecentlyViewedSection(app: app),
                   _CategoryChipsSection(
                     categories: app.categories.map(asMap).toList(),
                     activeType: _activeType,
@@ -153,21 +155,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     activeType: _activeType,
                   ),
                   _UpcomingDeparturesSection(app: app),
-                  const _ArticlesTeaserSection(),
-                  _CustomerReviewsSection(
-                    reviews: app.reviews
-                        .map(asMap)
-                        .where((r) => r.isNotEmpty)
-                        .toList(),
-                  ),
-                  _GroupTripSection(app: app),
-                  _ReferralBanner(app: app),
+                  // Deals — a strong conversion lever, placed right after the
+                  // core browse rails to catch deal-seekers before softer content.
                   PromotionsSection(
                     promotions: app.promotions
                         .map(asMap)
                         .where((p) => p.isNotEmpty)
                         .toList(),
                   ),
+                  // Social proof backs up the browsing above.
+                  _CustomerReviewsSection(
+                    reviews: app.reviews
+                        .map(asMap)
+                        .where((r) => r.isNotEmpty)
+                        .toList(),
+                  ),
+                  // Secondary features (invite a group / refer a friend).
+                  _GroupTripSection(app: app),
+                  _ReferralBanner(app: app),
+                  // Inspiration / SEO content sits last, before the nav padding.
+                  const _ArticlesTeaserSection(),
                   const SizedBox(height: 100), // Bottom padding for Nav Bar
                 ],
               ),
@@ -250,6 +257,15 @@ class _HeroHeaderState extends State<HeroHeader> {
     super.dispose();
   }
 
+  /// Time-of-day greeting shown above the hero search bar.
+  ({String text, String emoji}) _timeGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return (text: 'อรุณสวัสดิ์', emoji: '☀️');
+    if (hour < 16) return (text: 'สวัสดีตอนบ่าย', emoji: '⛅');
+    if (hour < 19) return (text: 'สวัสดีตอนเย็น', emoji: '🌅');
+    return (text: 'สวัสดีตอนค่ำ', emoji: '🌙');
+  }
+
   /// Opens the dedicated results page with the typed query (standard-app
   /// behaviour) instead of filtering the home in place.
   void _submitSearch() {
@@ -274,12 +290,8 @@ class _HeroHeaderState extends State<HeroHeader> {
     final compactWidth = size.width < 390;
     final horizontalPadding = compactWidth ? 18.0 : 24.0;
     final contentBottom = compactWidth ? 128.0 : 138.0;
-    final contentWidth = (size.width - (horizontalPadding * 2)).clamp(
-      260.0,
-      680.0,
-    );
     final titleSize = (size.width * 0.058).clamp(20.0, 26.0).toDouble();
-    final subtitleSize = compactWidth ? 14.0 : 15.0;
+    final greeting = _timeGreeting();
 
     return SizedBox(
       height: heroHeight,
@@ -327,28 +339,23 @@ class _HeroHeaderState extends State<HeroHeader> {
                       ),
                     ),
                   ),
-                // Apple-style vignette: stronger scrim where the headline sits
-                // so text is legible without needing per-character text shadows.
+                // Two-ended scrim: a light wash up top keeps the nav bar legible
+                // and a strong wash at the bottom anchors the greeting/headline/
+                // search — the middle stays fully clear so the photo reads crisp.
+                // (No full-image blur, which is what made the hero look murky.)
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.38),
-                        Colors.black.withValues(alpha: 0.10),
+                        Colors.black.withValues(alpha: 0.30),
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.36),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.62),
                       ],
-                      stops: const [0.0, 0.28, 0.55, 1.0],
+                      stops: const [0.0, 0.22, 0.45, 1.0],
                     ),
-                  ),
-                ),
-                // Optional subtle BackdropFilter for a premium feel
-                Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
-                    child: Container(color: Colors.transparent),
                   ),
                 ),
               ],
@@ -363,107 +370,64 @@ class _HeroHeaderState extends State<HeroHeader> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Smart-finder entry as a compact eyebrow pill above the
-                // headline (secondary to the main search bar below).
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Material(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(999),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(999),
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const TripFinderScreen(),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 13,
-                          vertical: 7,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.auto_awesome_rounded,
-                              size: 15,
-                              color: AppTheme.primaryColor,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'ค้นหาทริปที่ใช่',
-                              style: appFont(
-                                color: AppTheme.primaryColor,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                // Time-of-day greeting eyebrow — light personal context that
+                // leads the eye into the primary search action below.
+                Text(
+                  '${greeting.text} ${greeting.emoji}',
+                  style: appFont(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    shadows: const [
+                      Shadow(color: Color(0x4D000000), blurRadius: 6),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 14),
-                // Headline + subtitle scale down together if the text is long;
-                // the search field below stays at full size.
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: SizedBox(
-                    width: contentWidth,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'การเที่ยวที่ดี เริ่มจาก\nความรู้สึกที่ดี ตั้งแต่การจอง',
-                          textAlign: TextAlign.start,
-                          style: appFont(
-                            color: Colors.white,
-                            fontSize: titleSize,
-                            height: 1.22,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.2,
-                            shadows: const [
-                              Shadow(
-                                color: Color(0x59000000),
-                                blurRadius: 8,
-                                offset: Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'ค้นหาทริปและประสบการณ์ที่พร้อมเดินทาง',
-                          textAlign: TextAlign.start,
-                          style: appFont(
-                            color: Colors.white.withValues(alpha: 0.88),
-                            fontSize: subtitleSize,
-                            height: 1.4,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+                const SizedBox(height: 6),
+                // Short, functional headline — one scannable line instead of the
+                // old two-line marketing copy, so the search bar reads sooner.
+                Text(
+                  'วันนี้อยากไปลุยที่ไหน?',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    color: Colors.white,
+                    fontSize: titleSize,
+                    height: 1.2,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                    shadows: const [
+                      Shadow(
+                        color: Color(0x59000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
                   ),
                 ),
                 if (widget.showSearch) ...[
                   const SizedBox(height: 16),
-                  // Klook-style: full-width search bar anchored at the bottom of
-                  // the hero as the primary action. Submitting (keyboard search
-                  // key or the magnifier) opens a dedicated results page.
+                  // Primary action: full-width search bar anchored at the bottom
+                  // of the hero. Submitting opens a dedicated results page.
                   _HeroSearchField(
                     controller: _searchController,
                     onSubmitted: (_) => _submitSearch(),
                     onFilterTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const AllTripsScreen()),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Secondary AI trip-finder entry, demoted below the search so
+                  // it complements rather than competes with the primary action.
+                  _HeroFinderChip(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const TripFinderScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ],
@@ -739,7 +703,7 @@ class _HomeInspiredTopSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const _LicenseAssuranceBanner(),
+          _TrustHub(app: app),
           // Booking-ref lookup is only useful to guests (members already
           // have their trips in-app), so keep it out of signed-in Home.
           if (!app.isLoggedIn) ...[
@@ -797,7 +761,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
       curve: Curves.easeOut,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: _focused ? const Color(0xFF0B8A6E) : const Color(0xFFE5EBEB),
           width: _focused ? 1.5 : 1,
@@ -817,7 +781,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
           GestureDetector(
             onTap: () => widget.onSubmitted(widget.controller.text),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
+              padding: const EdgeInsets.fromLTRB(14, 0, 0, 0),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 180),
                 child: Icon(
@@ -826,12 +790,12 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                   color: _focused
                       ? const Color(0xFF0B8A6E)
                       : const Color(0xFF8A9FA0),
-                  size: 20,
+                  size: 18,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: widget.controller,
@@ -841,7 +805,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
               cursorColor: const Color(0xFF0B8A6E),
               style: appFont(
                 color: const Color(0xFF111313),
-                fontSize: 15,
+                fontSize: 14.5,
                 fontWeight: FontWeight.w600,
               ),
               decoration: InputDecoration(
@@ -849,12 +813,12 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                 hintText: 'ค้นหาทริป ปลายทาง หรือกิจกรรม',
                 hintStyle: appFont(
                   color: const Color(0xFF111313).withValues(alpha: 0.42),
-                  fontSize: 14.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w500,
                 ),
                 border: InputBorder.none,
                 filled: false,
-                contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
               ),
             ),
           ),
@@ -865,16 +829,16 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                 _focusNode.unfocus();
               },
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                width: 22,
-                height: 22,
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                width: 20,
+                height: 20,
                 decoration: BoxDecoration(
                   color: const Color(0xFF111313).withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.close_rounded,
-                  size: 14,
+                  size: 13,
                   color: Colors.white,
                 ),
               ),
@@ -887,16 +851,16 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
             behavior: HitTestBehavior.opaque,
             child: Container(
               margin: const EdgeInsets.all(5),
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: const Color(0xFF0B8A6E).withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
                 Icons.tune_rounded,
                 color: Color(0xFF0B6E5A),
-                size: 19,
+                size: 18,
               ),
             ),
           ),
@@ -906,22 +870,124 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
   }
 }
 
-class _LicenseAssuranceBanner extends StatelessWidget {
-  const _LicenseAssuranceBanner();
+/// Secondary AI trip-finder entry shown under the hero search bar. Styled as a
+/// translucent glass chip so it reads as a helper, not a competing search.
+class _HeroFinderChip extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _HeroFinderChip({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.35),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 15,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  'ผู้ช่วยหาทริป',
+                  style: appFont(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 14,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Unified trust hub shown right under the hero: a tappable green header with
+/// the legal licence claim, plus a light social-proof row (rating / travellers
+/// / people booked). Merging the old licence strip and stats bar into one card
+/// reads as a single "why trust us" block and saves vertical space.
+class _TrustHub extends StatelessWidget {
+  final AppProvider app;
+
+  const _TrustHub({required this.app});
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 360;
-        final narrow = constraints.maxWidth < 430;
-        final padding = compact
-            ? const EdgeInsets.all(14)
-            : const EdgeInsets.fromLTRB(18, 16, 16, 16);
-        final iconBoxSize = compact ? 48.0 : (narrow ? 56.0 : 66.0);
-        final iconSize = compact ? 31.0 : (narrow ? 36.0 : 44.0);
-        final titleSize = compact ? 15.0 : 17.0;
-        final bodySize = compact ? 12.0 : 13.0;
+        final titleSize = compact ? 14.0 : 15.0;
+        final bodySize = compact ? 11.5 : 12.5;
+
+        // Aggregate social-proof stats across all trips for the lower half. The
+        // licence claim lives in the green header, so the old licence fallback
+        // cell is dropped here to avoid repeating the same signal.
+        final trips = app.trips.map(asMap).toList();
+        num ratingSum = 0;
+        var ratingTrips = 0;
+        var reviewCount = 0;
+        var travelers = 0;
+        var bookedPeople = 0;
+        for (final t in trips) {
+          final rc = int.tryParse('${t['review_count'] ?? 0}') ?? 0;
+          final r = num.tryParse('${t['rating'] ?? 0}') ?? 0;
+          if (rc > 0 && r > 0) {
+            ratingSum += r;
+            ratingTrips++;
+            reviewCount += rc;
+          }
+          travelers +=
+              int.tryParse('${t['confirmed_passengers_count'] ?? 0}') ?? 0;
+          bookedPeople +=
+              int.tryParse('${t['booked_passengers_count'] ?? 0}') ?? 0;
+        }
+        final avgRating = ratingTrips > 0 ? ratingSum / ratingTrips : 0;
+        final statCells = <({IconData icon, String value, String label})>[
+          if (avgRating > 0)
+            (
+              icon: Icons.star_rounded,
+              value: avgRating.toStringAsFixed(1),
+              label: 'จาก $reviewCount รีวิว',
+            ),
+          if (travelers > 0)
+            (
+              icon: Icons.groups_rounded,
+              value: '${_compactCount(travelers)}+',
+              label: 'นักเดินทาง',
+            ),
+          if (bookedPeople > 0)
+            (
+              icon: Icons.event_available_rounded,
+              value: '${_compactCount(bookedPeople)}+',
+              label: 'คนจองแล้ว',
+            ),
+        ].take(3).toList();
 
         void showLicenseDialog() {
           showDialog<void>(
@@ -1052,135 +1118,141 @@ class _LicenseAssuranceBanner extends StatelessWidget {
           );
         }
 
-        Widget iconBox() {
-          // Apple Wallet-style trust glyph — white seal on a soft inner tint
-          // so the verified mark reads first.
-          return Container(
-            width: iconBoxSize,
-            height: iconBoxSize,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(compact ? 14 : 16),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.22),
-                width: 1,
-              ),
-            ),
-            child: Icon(
-              Icons.verified_rounded,
-              color: Colors.white,
-              size: iconSize,
-            ),
-          );
-        }
-
-        Widget textContent() {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'จองมั่นใจ ปลอดภัย',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: appFont(
-                  color: Colors.white,
-                  fontSize: titleSize,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
+        // Compact, fully-tappable trust strip: a small seal, a one-line claim +
+        // licence number, and a trailing chevron — far slimmer than the old
+        // card with its full-width white button, so it reassures without
+        // competing with the hero above it.
+        // Green header — the tappable licence claim.
+        final header = Semantics(
+          button: true,
+          label: 'ดูใบอนุญาตประกอบธุรกิจนำเที่ยว เลขที่ 12/03773',
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: showLicenseDialog,
+              child: Ink(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF0B6E5F), Color(0xFF0E8770)],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'ใบอนุญาตประกอบธุรกิจนำเที่ยว\nเลขที่ 12/03773',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: appFont(
-                  color: Colors.white.withValues(alpha: 0.86),
-                  fontSize: bodySize,
-                  height: 1.42,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          );
-        }
-
-        Widget licenseButton() {
-          // Filled-light CTA: white pill on dark green — far higher contrast
-          // than the previous dark-on-dark button.
-          return TextButton.icon(
-            onPressed: showLicenseDialog,
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF0B5E55),
-              backgroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 14 : 16,
-                vertical: compact ? 10 : 12,
-              ),
-              minimumSize: narrow ? const Size.fromHeight(42) : null,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            iconAlignment: IconAlignment.end,
-            icon: const Icon(Icons.chevron_right_rounded, size: 18),
-            label: Text(
-              'ดูใบอนุญาต',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: appFont(
-                fontSize: compact ? 12.5 : 13.5,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          );
-        }
-
-        final content = narrow
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 13 : 15,
+                    vertical: compact ? 11 : 12,
+                  ),
+                  child: Row(
                     children: [
-                      iconBox(),
-                      SizedBox(width: compact ? 12 : 14),
-                      Expanded(child: textContent()),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(11),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.24),
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.verified_rounded,
+                          color: Colors.white,
+                          size: compact ? 20 : 22,
+                        ),
+                      ),
+                      SizedBox(width: compact ? 11 : 13),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'จองมั่นใจ ปลอดภัย',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                color: Colors.white,
+                                fontSize: titleSize,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'ใบอนุญาตเลขที่ 12/03773',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontSize: bodySize,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        size: 22,
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  licenseButton(),
-                ],
-              )
-            : Row(
-                children: [
-                  iconBox(),
-                  const SizedBox(width: 16),
-                  Expanded(child: textContent()),
-                  const SizedBox(width: 12),
-                  Flexible(flex: 0, child: licenseButton()),
-                ],
-              );
-
-        return Container(
-          width: double.infinity,
-          padding: padding,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF0B6E5F), Color(0xFF0E8770)],
+                ),
+              ),
             ),
-            borderRadius: BorderRadius.circular(20),
+          ),
+        );
+
+        // One rounded card, clipped so the green header and the light stats row
+        // share the same corners; the shadow rides on the outer container.
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0B6E5F).withValues(alpha: 0.18),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: const Color(0xFF0B6E5F).withValues(alpha: 0.16),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: content,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                header,
+                if (statCells.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    color: const Color(0xFFF4F8F8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 13,
+                      horizontal: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < statCells.length; i++) ...[
+                          if (i > 0)
+                            Container(
+                              width: 1,
+                              height: 34,
+                              color: const Color(
+                                0xFF0A3D46,
+                              ).withValues(alpha: 0.08),
+                            ),
+                          Expanded(child: _TrustCell(data: statCells[i])),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -1570,6 +1642,73 @@ class _CategoryChip extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Recently Viewed Rail ────────────────────────────────────────────────────
+// Browse-continuity: trips the user opened before (stored locally by
+// AppProvider.recordRecentTrip). Hidden until at least one trip is viewed.
+class _RecentlyViewedSection extends StatelessWidget {
+  final AppProvider app;
+
+  const _RecentlyViewedSection({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    final trips = app.recentlyViewedTrips
+        .map(asMap)
+        .where((t) => textOf(t['slug']).isNotEmpty)
+        .toList();
+    if (trips.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 4, 0, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.history_rounded,
+                  color: Color(0xFF063F46),
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'ดูล่าสุด',
+                    style: appFont(
+                      color: const Color(0xFF063F46),
+                      fontSize: 22,
+                      height: 1.1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 250,
+            child: ListView.separated(
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 20),
+              itemCount: trips.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
+              itemBuilder: (context, index) => SizedBox(
+                width: MediaQuery.of(context).size.width > 700 ? 230 : 180,
+                child: _ReferenceTripCard(trip: trips[index]),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Almost-Full Rail ────────────────────────────────────────────────────────
 // Scarcity cue mirroring the web "ใกล้เต็มแล้ว" home rail: a horizontal list of
 // trips that are nearly sold out, nudging users to book before seats run out.
@@ -1722,93 +1861,7 @@ class _PopularTripsSection extends StatelessWidget {
   }
 }
 
-// ─── Trust Stats Bar ─────────────────────────────────────────────────────────
-
-class _TrustStatsBar extends StatelessWidget {
-  final AppProvider app;
-
-  const _TrustStatsBar({required this.app});
-
-  @override
-  Widget build(BuildContext context) {
-    final trips = app.trips.map(asMap).toList();
-    if (trips.isEmpty) return const SizedBox.shrink();
-
-    num ratingSum = 0;
-    var ratingTrips = 0;
-    var reviewCount = 0;
-    var travelers = 0;
-    var bookedPeople = 0;
-    for (final t in trips) {
-      final rc = int.tryParse('${t['review_count'] ?? 0}') ?? 0;
-      final r = num.tryParse('${t['rating'] ?? 0}') ?? 0;
-      if (rc > 0 && r > 0) {
-        ratingSum += r;
-        ratingTrips++;
-        reviewCount += rc;
-      }
-      travelers += int.tryParse('${t['confirmed_passengers_count'] ?? 0}') ?? 0;
-      bookedPeople += int.tryParse('${t['booked_passengers_count'] ?? 0}') ?? 0;
-    }
-    final avgRating = ratingTrips > 0 ? ratingSum / ratingTrips : 0;
-
-    // Strongest available signals first; capped at the 3 best so the bar reads
-    // cleanly. The license cell is an always-true fallback.
-    final cells = <({IconData icon, String value, String label})>[
-      if (avgRating > 0)
-        (
-          icon: Icons.star_rounded,
-          value: avgRating.toStringAsFixed(1),
-          label: 'จาก $reviewCount รีวิว',
-        ),
-      if (travelers > 0)
-        (
-          icon: Icons.groups_rounded,
-          value: '${_compactCount(travelers)}+',
-          label: 'นักเดินทาง',
-        ),
-      if (bookedPeople > 0)
-        (
-          icon: Icons.event_available_rounded,
-          value: '${_compactCount(bookedPeople)}+',
-          label: 'คนจองแล้ว',
-        ),
-      (
-        icon: Icons.verified_rounded,
-        value: 'ถูกต้อง',
-        label: 'ใบอนุญาตนำเที่ยว',
-      ),
-    ].take(3).toList();
-
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF4F8F8),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: const Color(0xFF0A3D46).withValues(alpha: 0.06),
-          ),
-        ),
-        child: Row(
-          children: [
-            for (var i = 0; i < cells.length; i++) ...[
-              if (i > 0)
-                Container(
-                  width: 1,
-                  height: 34,
-                  color: const Color(0xFF0A3D46).withValues(alpha: 0.08),
-                ),
-              Expanded(child: _TrustCell(data: cells[i])),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
+// ─── Trust Hub stat cell ─────────────────────────────────────────────────────
 
 class _TrustCell extends StatelessWidget {
   final ({IconData icon, String value, String label}) data;

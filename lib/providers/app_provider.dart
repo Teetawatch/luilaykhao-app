@@ -51,6 +51,7 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> bookings = [];
   List<dynamic> notifications = [];
   List<dynamic> reviews = [];
+  List<dynamic> recentlyViewedTrips = [];
   List<dynamic> myReviews = [];
   List<dynamic> rewards = [];
   List<dynamic> coupons = [];
@@ -197,6 +198,9 @@ class AppProvider extends ChangeNotifier {
       cache.readPublic<List>('categories') ?? const [],
     );
     reviews = List<dynamic>.from(cache.readPublic<List>('reviews') ?? const []);
+    recentlyViewedTrips = List<dynamic>.from(
+      cache.readPublic<List>('recently_viewed') ?? const [],
+    );
     promotions = List<dynamic>.from(
       cache.readPublic<List>('promotions') ?? const [],
     );
@@ -408,6 +412,41 @@ class AppProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> trip(String slug) async {
     final response = await api.get('trips/$slug');
     return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// Remembers a trip the user just opened so the home "ดูล่าสุด" rail can
+  /// resurface it. Stores a trimmed copy (only the fields a trip card needs),
+  /// most-recent first, deduped by slug, capped at [_recentTripLimit].
+  static const int _recentTripLimit = 10;
+
+  void recordRecentTrip(Map<String, dynamic> trip) {
+    final slug = trip['slug']?.toString() ?? '';
+    if (slug.isEmpty) return;
+
+    final card = <String, dynamic>{
+      'id': trip['id'],
+      'slug': slug,
+      'title': trip['title'],
+      'location': trip['location'],
+      'price_per_person': trip['price_per_person'],
+      'cover_image': trip['cover_image'],
+      'thumbnail_image': trip['thumbnail_image'],
+      'rating': trip['rating'],
+      'review_count': trip['review_count'],
+      'duration_days': trip['duration_days'],
+      'type': trip['type'],
+    };
+
+    final next = [
+      card,
+      ...recentlyViewedTrips
+          .map(_asMap)
+          .where((t) => t['slug']?.toString() != slug),
+    ].take(_recentTripLimit).toList();
+
+    recentlyViewedTrips = next;
+    OfflineCache.instance.writePublic('recently_viewed', next);
+    notifyListeners();
   }
 
   Future<List<dynamic>> schedules(String slug) async {
