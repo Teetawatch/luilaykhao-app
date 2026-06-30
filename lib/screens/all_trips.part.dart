@@ -244,38 +244,27 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
                           body: 'ลองปรับตัวกรองหรือคำค้นหา แล้วค้นหาอีกครั้ง',
                         )
                       else ...[
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
-                          itemCount: _sortedTrips.length,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 16,
-                            mainAxisExtent: 288,
-                          ),
-                          itemBuilder: (context, index) {
-                            final trip = _sortedTrips[index];
-                            return _RevealOnMount(
-                              delay: Duration(
-                                milliseconds: 45 * (index.clamp(0, 8)),
-                              ),
-                              child: _AllTripGridCard(
-                                trip: trip,
-                                typeLabel: _categoryLabel(
-                                  textOf(
-                                    trip['type'] ??
-                                        trip['category_slug'] ??
-                                        trip['category_name'] ??
-                                        trip['category'],
-                                  ),
+                        for (var index = 0;
+                            index < _sortedTrips.length;
+                            index++) ...[
+                          if (index > 0) const SizedBox(height: 18),
+                          _RevealOnMount(
+                            delay: Duration(
+                              milliseconds: 45 * (index.clamp(0, 8)),
+                            ),
+                            child: _AllTripCard(
+                              trip: _sortedTrips[index],
+                              typeLabel: _categoryLabel(
+                                textOf(
+                                  _sortedTrips[index]['type'] ??
+                                      _sortedTrips[index]['category_slug'] ??
+                                      _sortedTrips[index]['category_name'] ??
+                                      _sortedTrips[index]['category'],
                                 ),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          ),
+                        ],
                         if (_lastPage > 1) ...[
                           const SizedBox(height: 20),
                           _TripsPaginationBar(
@@ -670,28 +659,23 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
-/// Shimmer placeholder grid shown while trips load — mirrors the real 2-column
+/// Shimmer placeholders shown while trips load — mirror the real full-width
 /// card silhouette so the layout doesn't jump when results arrive.
 class _TripsLoadingCard extends StatelessWidget {
   const _TripsLoadingCard();
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      itemCount: 6,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        mainAxisExtent: 288,
-      ),
-      itemBuilder: (context, index) => _RevealOnMount(
-        delay: Duration(milliseconds: 40 * (index.clamp(0, 6))),
-        child: const _TripCardSkeleton(),
-      ),
+    return Column(
+      children: [
+        for (var index = 0; index < 3; index++) ...[
+          if (index > 0) const SizedBox(height: 18),
+          _RevealOnMount(
+            delay: Duration(milliseconds: 50 * index),
+            child: const _TripCardSkeleton(),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -704,7 +688,7 @@ class _TripCardSkeleton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -712,33 +696,44 @@ class _TripCardSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
+          AspectRatio(
+            aspectRatio: 16 / 10,
             child: Padding(
-              padding: const EdgeInsets.all(5),
-              child: SkeletonBox(borderRadius: BorderRadius.circular(13)),
+              padding: const EdgeInsets.all(6),
+              child: SkeletonBox(borderRadius: BorderRadius.circular(18)),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(11, 2, 11, 14),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SkeletonBox(
                   width: double.infinity,
-                  height: 13,
+                  height: 16,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 SkeletonBox(
-                  width: 90,
-                  height: 11,
+                  width: 140,
+                  height: 12,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                const SizedBox(height: 12),
-                SkeletonBox(
-                  width: 70,
-                  height: 15,
-                  borderRadius: BorderRadius.circular(6),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SkeletonBox(
+                      width: 90,
+                      height: 22,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    SkeletonBox(
+                      width: 120,
+                      height: 38,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -916,20 +911,20 @@ class _TripsErrorCard extends StatelessWidget {
   }
 }
 
-/// Compact trip card for the 2-column "all trips" grid. Trimmed vs the legacy
-/// full-width card: drops the description, joined count and bottom overlay pills
-/// so it stays readable at ~half width. The image uses [Expanded] so the tile
-/// never overflows its fixed grid extent regardless of device width.
-class _AllTripGridCard extends StatelessWidget {
+/// Full-width immersive trip card for the "all trips" list. Leads with a large
+/// 16:10 hero image carrying the type / women-only / scarcity badges and a
+/// glassy rating chip, then a content block with title, location, duration,
+/// booking social proof, and a price + CTA footer.
+class _AllTripCard extends StatelessWidget {
   final Map<String, dynamic> trip;
   final String typeLabel;
 
-  const _AllTripGridCard({required this.trip, required this.typeLabel});
+  const _AllTripCard({required this.trip, required this.typeLabel});
 
   @override
   Widget build(BuildContext context) {
     final image = ApiConfig.mediaUrl(
-      trip['thumbnail_image'] ?? trip['cover_image'],
+      trip['cover_image'] ?? trip['thumbnail_image'],
     );
     final slug = textOf(trip['slug']);
     final title = textOf(trip['title'], '-');
@@ -940,6 +935,8 @@ class _AllTripGridCard extends StatelessWidget {
     final almostFull = _asBool(trip['is_almost_full']) &&
         seatsLeft != null &&
         seatsLeft > 0;
+    final booked =
+        int.tryParse(textOf(trip['booked_passengers_count'], '0')) ?? 0;
 
     return _PressableCard(
       onTap: slug.isEmpty
@@ -947,116 +944,143 @@ class _AllTripGridCard extends StatelessWidget {
           : () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => TripDetailScreen(slug: slug)),
             ),
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(24),
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.55),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image fills the leftover space above the fixed content block, so
-            // the tile never overflows its fixed grid extent on any width.
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(5),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(13),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (image.isEmpty)
-                        Container(
-                          color: AppTheme.subtleSurface(context),
-                          child: const Icon(
-                            Icons.image_rounded,
-                            color: AppTheme.textSecondary,
-                            size: 36,
-                          ),
-                        )
-                      else
-                        CachedNetworkImage(
-                          imageUrl: image,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) =>
-                              Container(color: AppTheme.subtleSurface(context)),
-                          errorWidget: (context, url, error) => Container(
-                            color: AppTheme.subtleSurface(context),
-                            child: const Icon(Icons.broken_image_rounded),
-                          ),
-                        ),
-                      // Gentle scrim for depth and to keep the scarcity badge legible.
-                      if (image.isNotEmpty)
-                        const Positioned.fill(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.center,
-                                colors: [Color(0x40000000), Colors.transparent],
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (almostFull)
-                        Positioned(
-                          left: 8,
-                          bottom: 8,
-                          child: _OverlayPill(
-                            text: 'เหลือ $seatsLeft ที่นั่ง',
-                            icon: Icons.local_fire_department_rounded,
-                            backgroundColor:
-                                const Color(0xFFEA580C).withValues(alpha: 0.94),
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        right: 8,
-                        child: Row(
-                          children: [
-                            Flexible(
-                              child: _OverlayPill(
-                                text: typeLabel,
-                                icon: null,
-                                backgroundColor: _tripTypeColor(
-                                  textOf(trip['type']),
-                                ).withValues(alpha: 0.92),
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                            if (_asBool(trip['is_women_only'])) ...[
-                              const SizedBox(width: 6),
-                              _OverlayPill(
-                                text: 'หญิงล้วน',
-                                icon: Icons.female_rounded,
-                                backgroundColor:
-                                    Colors.pinkAccent.withValues(alpha: 0.92),
-                                foregroundColor: Colors.white,
-                              ),
-                            ],
-                          ],
+            // ── Hero image ──────────────────────────────────────────────
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (image.isEmpty)
+                    Container(
+                      color: AppTheme.subtleSurface(context),
+                      child: const Icon(
+                        Icons.image_rounded,
+                        color: AppTheme.textSecondary,
+                        size: 44,
+                      ),
+                    )
+                  else
+                    CachedNetworkImage(
+                      imageUrl: image,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          Container(color: AppTheme.subtleSurface(context)),
+                      errorWidget: (context, url, error) => Container(
+                        color: AppTheme.subtleSurface(context),
+                        child: const Icon(Icons.broken_image_rounded),
+                      ),
+                    ),
+                  // Scrim from the bottom for badge legibility + depth.
+                  const Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Color(0x59000000)],
+                          stops: [0.55, 1],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  // Top row: type + women-only on the left, rating on the right.
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    right: 12,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left group: type + women-only badges. Wrapped in
+                        // Expanded so it takes the remaining width and the
+                        // rating chip stays pinned flush to the right.
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: _OverlayPill(
+                                  text: typeLabel,
+                                  icon: null,
+                                  backgroundColor: _tripTypeColor(
+                                    textOf(trip['type']),
+                                  ).withValues(alpha: 0.95),
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                              if (_asBool(trip['is_women_only'])) ...[
+                                const SizedBox(width: 6),
+                                _OverlayPill(
+                                  text: 'หญิงล้วน',
+                                  icon: Icons.female_rounded,
+                                  backgroundColor:
+                                      Colors.pinkAccent.withValues(alpha: 0.95),
+                                  foregroundColor: Colors.white,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Right: rating, or "ทริปใหม่" when there are no reviews.
+                        if (reviewCount > 0)
+                          _OverlayPill(
+                            text:
+                                '${numberText(trip['rating'], fallback: '0')} ($reviewCount)',
+                            icon: Icons.star_rounded,
+                            backgroundColor:
+                                Colors.black.withValues(alpha: 0.42),
+                            foregroundColor: Colors.white,
+                          )
+                        else
+                          _OverlayPill(
+                            text: 'ทริปใหม่',
+                            icon: Icons.auto_awesome_rounded,
+                            backgroundColor:
+                                Colors.black.withValues(alpha: 0.42),
+                            foregroundColor: Colors.white,
+                          ),
+                      ],
+                    ),
+                  ),
+                  // Bottom-left scarcity badge.
+                  if (almostFull)
+                    Positioned(
+                      left: 12,
+                      bottom: 12,
+                      child: _OverlayPill(
+                        text: 'เหลือ $seatsLeft ที่นั่ง',
+                        icon: Icons.local_fire_department_rounded,
+                        backgroundColor:
+                            const Color(0xFFEA580C).withValues(alpha: 0.95),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                ],
               ),
             ),
+            // ── Content ─────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(11, 2, 11, 12),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1066,21 +1090,21 @@ class _AllTripGridCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: AppTheme.textMain,
-                      fontSize: 14.5,
-                      height: 1.25,
+                      fontSize: 17.5,
+                      height: 1.3,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -0.2,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       const Icon(
                         Icons.location_on_outlined,
-                        size: 13,
+                        size: 15,
                         color: AppTheme.textSecondary,
                       ),
-                      const SizedBox(width: 3),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           location,
@@ -1088,53 +1112,125 @@ class _AllTripGridCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
                             color: AppTheme.textSecondary,
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
+                      const SizedBox(width: 10),
                       const Icon(
-                        Icons.star_rounded,
-                        color: Color(0xFFFFB020),
+                        Icons.schedule_rounded,
                         size: 14,
+                        color: AppTheme.textSecondary,
                       ),
-                      const SizedBox(width: 3),
+                      const SizedBox(width: 4),
                       Text(
-                        reviewCount > 0
-                            ? numberText(trip['rating'], fallback: '0')
-                            : 'ใหม่',
-                        style: appFont(
-                          color: AppTheme.textMain,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        '  ·  $duration วัน',
+                        '$duration วัน',
                         style: appFont(
                           color: AppTheme.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _priceLabel(trip),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: appFont(
-                      color: AppTheme.textMain,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
+                  if (booked > 0) ...[
+                    const SizedBox(height: 9),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.group_rounded,
+                          size: 15,
+                          color: AppTheme.primaryColor,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '$booked คนจองแล้ว',
+                          style: appFont(
+                            color: AppTheme.primaryColor,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
+                  ],
+                  const SizedBox(height: 14),
+                  Divider(
+                    height: 1,
+                    color: AppTheme.border(context).withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'เริ่มต้นเพียง',
+                              style: appFont(
+                                color: AppTheme.textSecondary,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _priceLabel(trip),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                color: AppTheme.textMain,
+                                fontSize: 19,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 11,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  AppTheme.primaryColor.withValues(alpha: 0.28),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'ดูรายละเอียด',
+                              style: appFont(
+                                color: Colors.white,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.1,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.arrow_forward_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
