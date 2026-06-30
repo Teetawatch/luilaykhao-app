@@ -888,7 +888,7 @@ class _HeroFinderChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
@@ -901,22 +901,22 @@ class _HeroFinderChip extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.auto_awesome_rounded,
-                  size: 15,
+                  size: 13,
                   color: Colors.white,
                 ),
-                const SizedBox(width: 7),
+                const SizedBox(width: 6),
                 Text(
                   'ผู้ช่วยหาทริป',
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 13,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 const Icon(
                   Icons.arrow_forward_rounded,
-                  size: 14,
+                  size: 12,
                   color: Colors.white,
                 ),
               ],
@@ -1660,7 +1660,7 @@ class _RecentlyViewedSection extends StatelessWidget {
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(24, 4, 0, 28),
+      padding: const EdgeInsets.fromLTRB(24, 24, 0, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
