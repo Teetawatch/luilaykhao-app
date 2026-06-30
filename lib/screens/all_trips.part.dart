@@ -11,10 +11,15 @@ class AllTripsScreen extends StatefulWidget {
   /// over it on the root navigator.
   final bool showBackButton;
 
+  /// Pre-fills the search box (and the first fetch) so this screen can act as a
+  /// dedicated results page when opened from the home search bar.
+  final String? initialSearch;
+
   const AllTripsScreen({
     super.key,
     this.introBanner,
     this.showBackButton = true,
+    this.initialSearch,
   });
 
   @override
@@ -41,6 +46,9 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialSearch != null) {
+      _searchController.text = widget.initialSearch!.trim();
+    }
     _searchController.addListener(_handleSearchChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchTrips());
   }

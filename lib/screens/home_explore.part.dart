@@ -15,7 +15,6 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> {
   late final ScrollController _scrollController;
   double _topBarProgress = 0;
-  String? _activeSearch;
   String? _activeType;
 
   @override
@@ -72,7 +71,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final notificationCount = app.notifications
         .where((item) => asMap(item)['is_read'] != true)
         .length;
-    final hasFilter = _activeSearch != null || _activeType != null;
+    final hasFilter = _activeType != null;
     final showTrips =
         (hasFilter
                 ? app.trips
@@ -131,19 +130,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       HeroHeader(slides: app.heroSlides),
                       Container(
                         margin: EdgeInsets.only(top: heroHeight - 64),
-                        child: _HomeInspiredTopSection(
-                          app: app,
-                          user: app.user,
-                          onSearch: (value) {
-                            setState(() {
-                              _activeSearch = value.isEmpty ? null : value;
-                              _activeType = null;
-                            });
-                            app.loadPublicData(
-                              search: value.isEmpty ? null : value,
-                            );
-                          },
-                        ),
+                        child: _HomeInspiredTopSection(app: app),
                       ),
                     ],
                   ),
@@ -153,10 +140,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     categories: app.categories.map(asMap).toList(),
                     activeType: _activeType,
                     onTypeChanged: (type) {
-                      setState(() {
-                        _activeType = type;
-                        _activeSearch = null;
-                      });
+                      setState(() => _activeType = type);
                       app.loadPublicData(type: type);
                     },
                   ),
@@ -212,7 +196,11 @@ class HeroHeader extends StatefulWidget {
   /// bundled background when empty.
   final List<dynamic> slides;
 
-  const HeroHeader({super.key, this.slides = const []});
+  /// Whether to show the in-hero search bar. Home shows it; a reuse without
+  /// search can pass false.
+  final bool showSearch;
+
+  const HeroHeader({super.key, this.slides = const [], this.showSearch = true});
 
   @override
   State<HeroHeader> createState() => _HeroHeaderState();
@@ -221,6 +209,7 @@ class HeroHeader extends StatefulWidget {
 class _HeroHeaderState extends State<HeroHeader> {
   int _index = 0;
   Timer? _timer;
+  final _searchController = TextEditingController();
 
   static const _interval = Duration(seconds: 5);
 
@@ -257,7 +246,19 @@ class _HeroHeaderState extends State<HeroHeader> {
   @override
   void dispose() {
     _timer?.cancel();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  /// Opens the dedicated results page with the typed query (standard-app
+  /// behaviour) instead of filtering the home in place.
+  void _submitSearch() {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => AllTripsScreen(initialSearch: query)),
+    );
   }
 
   @override
@@ -357,88 +358,115 @@ class _HeroHeaderState extends State<HeroHeader> {
           Positioned(
             left: horizontalPadding,
             right: horizontalPadding,
-            top: null,
             bottom: contentBottom,
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.center,
-                child: SizedBox(
-                  width: contentWidth,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'การเที่ยวที่ดี เริ่มจาก\nความรู้สึกที่ดี ตั้งแต่การจอง',
-                        textAlign: TextAlign.start,
-                        style: appFont(
-                          color: Colors.white,
-                          fontSize: titleSize,
-                          height: 1.22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Smart-finder entry as a compact eyebrow pill above the
+                // headline (secondary to the main search bar below).
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(999),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(999),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const TripFinderScreen(),
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 13,
+                          vertical: 7,
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'ค้นหาทริปและประสบการณ์ที่พร้อมเดินทาง',
-                        textAlign: TextAlign.start,
-                        style: appFont(
-                          color: Colors.white.withValues(alpha: 0.88),
-                          fontSize: subtitleSize,
-                          height: 1.4,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Material(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(999),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(999),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const TripFinderScreen(),
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 9,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.auto_awesome_rounded,
-                                    size: 16,
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                  const SizedBox(width: 7),
-                                  Text(
-                                    'ค้นหาทริปที่ใช่',
-                                    style: appFont(
-                                      color: AppTheme.primaryColor,
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 15,
+                              color: AppTheme.primaryColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'ค้นหาทริปที่ใช่',
+                              style: appFont(
+                                color: AppTheme.primaryColor,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 14),
+                // Headline + subtitle scale down together if the text is long;
+                // the search field below stays at full size.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: contentWidth,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'การเที่ยวที่ดี เริ่มจาก\nความรู้สึกที่ดี ตั้งแต่การจอง',
+                          textAlign: TextAlign.start,
+                          style: appFont(
+                            color: Colors.white,
+                            fontSize: titleSize,
+                            height: 1.22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                            shadows: const [
+                              Shadow(
+                                color: Color(0x59000000),
+                                blurRadius: 8,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'ค้นหาทริปและประสบการณ์ที่พร้อมเดินทาง',
+                          textAlign: TextAlign.start,
+                          style: appFont(
+                            color: Colors.white.withValues(alpha: 0.88),
+                            fontSize: subtitleSize,
+                            height: 1.4,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (widget.showSearch) ...[
+                  const SizedBox(height: 16),
+                  // Klook-style: full-width search bar anchored at the bottom of
+                  // the hero as the primary action. Submitting (keyboard search
+                  // key or the magnifier) opens a dedicated results page.
+                  _HeroSearchField(
+                    controller: _searchController,
+                    onSubmitted: (_) => _submitSearch(),
+                    onFilterTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AllTripsScreen()),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           // Slide indicator dots (only with more than one slide).
@@ -688,81 +716,38 @@ class _HeroTopBar extends StatelessWidget {
   }
 }
 
-class _HomeInspiredTopSection extends StatefulWidget {
+class _HomeInspiredTopSection extends StatelessWidget {
   final AppProvider app;
-  final Map<String, dynamic>? user;
-  final ValueChanged<String> onSearch;
 
-  const _HomeInspiredTopSection({
-    required this.app,
-    required this.user,
-    required this.onSearch,
-  });
-
-  @override
-  State<_HomeInspiredTopSection> createState() =>
-      _HomeInspiredTopSectionState();
-}
-
-class _HomeInspiredTopSectionState extends State<_HomeInspiredTopSection> {
-  final _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _submitSearch() {
-    FocusScope.of(context).unfocus();
-    widget.onSearch(_searchController.text.trim());
-  }
+  const _HomeInspiredTopSection({required this.app});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(top: 40),
-          padding: const EdgeInsets.fromLTRB(20, 58, 20, 22),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 24,
-                offset: const Offset(0, -4),
-              ),
-            ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, -4),
           ),
-          child: Column(
-            children: [
-              const _LicenseAssuranceBanner(),
-              // Booking-ref lookup is only useful to guests (members already
-              // have their trips in-app), so keep it out of signed-in Home.
-              if (!widget.app.isLoggedIn) ...[
-                const SizedBox(height: 14),
-                const _GuestBookingBanner(),
-              ],
-            ],
-          ),
-        ),
-        Positioned(
-          top: 0,
-          left: 28,
-          right: 28,
-          child: _HeroSearchField(
-            controller: _searchController,
-            onSubmitted: (_) => _submitSearch(),
-            onFilterTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const AllTripsScreen())),
-          ),
-        ),
-      ],
+        ],
+      ),
+      child: Column(
+        children: [
+          const _LicenseAssuranceBanner(),
+          // Booking-ref lookup is only useful to guests (members already
+          // have their trips in-app), so keep it out of signed-in Home.
+          if (!app.isLoggedIn) ...[
+            const SizedBox(height: 14),
+            const _GuestBookingBanner(),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -869,7 +854,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                 ),
                 border: InputBorder.none,
                 filled: false,
-                contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                contentPadding: const EdgeInsets.symmetric(vertical: 13),
               ),
             ),
           ),
@@ -901,17 +886,17 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
             onTap: widget.onFilterTap,
             behavior: HitTestBehavior.opaque,
             child: Container(
-              margin: const EdgeInsets.all(6),
-              width: 42,
-              height: 42,
+              margin: const EdgeInsets.all(5),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: const Color(0xFF0B8A6E).withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(11),
               ),
               child: const Icon(
                 Icons.tune_rounded,
                 color: Color(0xFF0B6E5A),
-                size: 20,
+                size: 19,
               ),
             ),
           ),
@@ -2016,6 +2001,9 @@ class _DepartureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = textOf(trip['title'], 'ทริป');
     final location = textOf(trip['location']);
+    final image = ApiConfig.mediaUrl(
+      textOf(trip['thumbnail_image'], textOf(trip['cover_image'])),
+    );
     final seats = int.tryParse('${schedule['available_seats'] ?? ''}');
     final total = int.tryParse('${schedule['total_seats'] ?? ''}');
     final full = seats != null && seats <= 0;
@@ -2069,36 +2057,59 @@ class _DepartureCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 60,
-              height: 68,
-              decoration: BoxDecoration(
-                color: const Color(0xFF044C4D),
+            SizedBox(
+              width: 64,
+              height: 72,
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '${date.day}',
-                    style: appFont(
-                      color: Colors.white,
-                      fontSize: 24,
-                      height: 1.0,
-                      fontWeight: FontWeight.w900,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (image.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: image,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) =>
+                            const ColoredBox(color: Color(0xFF044C4D)),
+                        errorWidget: (_, _, _) => const _DepartureCoverFallback(),
+                      )
+                    else
+                      const _DepartureCoverFallback(),
+                    // Bottom scrim so the date chip stays legible over any photo.
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Color(0x99000000)],
+                          stops: [0.4, 1.0],
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _thaiMonthsShort[date.month],
-                    style: appFont(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 12,
-                      height: 1.0,
-                      fontWeight: FontWeight.w700,
+                    Positioned(
+                      left: 4,
+                      right: 4,
+                      bottom: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.94),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${date.day} ${_thaiMonthsShort[date.month]}',
+                          textAlign: TextAlign.center,
+                          style: appFont(
+                            color: const Color(0xFF044C4D),
+                            fontSize: 11.5,
+                            height: 1.0,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -2167,6 +2178,26 @@ class _DepartureCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Placeholder for the departure card's cover thumbnail when a trip has no
+/// image (or it fails to load): the brand green with a subtle terrain glyph.
+class _DepartureCoverFallback extends StatelessWidget {
+  const _DepartureCoverFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFF044C4D),
+      child: Center(
+        child: Icon(
+          Icons.terrain_rounded,
+          color: Colors.white24,
+          size: 26,
         ),
       ),
     );

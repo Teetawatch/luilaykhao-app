@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 /// rendered exactly. Set as the primary family on every platform.
 const String _latinFont = 'Inter';
 
-/// Thai face (assets/fonts/Prompt-*.ttf, weights 400–800). Declared as the
+/// Thai face (assets/fonts/Kanit-*.ttf, weights 400–800). Declared as the
 /// fallback after [_latinFont] so Latin/numeric glyphs render in Inter while
-/// Thai code points — which Inter lacks — fall through to Prompt. This is the
-/// "Prompt + Inter" pairing: crisp Latin numerals, warm Thai text.
-const String _thaiFont = 'Prompt';
+/// Thai code points — which Inter lacks — fall through to Kanit. This is the
+/// "Kanit + Inter" pairing: crisp Latin numerals, warm Thai text.
+const String _thaiFont = 'Kanit';
 
 /// Fallback chain applied alongside [_latinFont] everywhere.
 const List<String> _fontFallback = [_thaiFont];
@@ -65,9 +65,9 @@ TextStyle appFont({
   );
 }
 
-/// App type scale (Prompt + Inter). Lean on **weight** for hierarchy more than
+/// App type scale (Kanit + Inter). Lean on **weight** for hierarchy more than
 /// size, and keep generous line-height so Thai diacritics (สระบน/ล่าง, ไม้โท)
-/// never collide. Every style flows through [appFont] so the Inter→Prompt
+/// never collide. Every style flows through [appFont] so the Inter→Kanit
 /// fallback is always attached.
 ///
 /// | Role                  | Size | Weight     |
