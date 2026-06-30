@@ -111,24 +111,41 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
     final tripData = await app.trip(slug);
     if (mounted) {
-      setState(() => _trip = tripData);
+      setState(() {
+        _trip = tripData;
+        // The show payload already embeds this trip's schedules, so seed from
+        // them right away. The booking/date details then render immediately and
+        // survive a slow or failed separate schedules fetch below — build()'s
+        // hasUsableSchedules guard keeps the page off the error screen too.
+        final embedded = tripData['schedules'];
+        if (_liveSchedules == null && embedded is List && embedded.isNotEmpty) {
+          _liveSchedules = List<dynamic>.from(embedded);
+        }
+      });
     }
+    // Remember this trip for the home "ดูล่าสุด" rail.
+    app.recordRecentTrip(tripData);
 
     final tripId = int.tryParse(tripData['id']?.toString() ?? '') ?? 0;
     // Schedules are essential (booking dates / pickup) so a failure here must
     // propagate and surface the retry screen. Reviews are supplementary, so a
     // transient review failure degrades to an empty list rather than blanking
     // the whole page — this is what used to make the page "load incompletely".
+    final embeddedSchedules =
+        (tripData['schedules'] as List?)?.cast<dynamic>() ?? const <dynamic>[];
     final results = await Future.wait([
-      app.schedules(slug),
+      // Fall back to the schedules embedded in the trip payload if the dedicated
+      // refresh fails, so the page never ends up with empty booking details.
+      app.schedules(slug).catchError((_) => embeddedSchedules),
       if (tripId > 0)
         app.tripReviews(tripId).catchError((_) => <dynamic>[])
       else
         Future.value(<dynamic>[]),
     ]);
 
+    final schedules = results[0].isNotEmpty ? results[0] : embeddedSchedules;
     return <String, dynamic>{
-      'schedules': results[0],
+      'schedules': schedules,
       'reviews': results[1],
     };
   }

@@ -336,10 +336,16 @@ class _RevealOnScroll extends StatefulWidget {
 class _RevealOnScrollState extends State<_RevealOnScroll> {
   bool _shown = false;
   ScrollPosition? _position;
+  Timer? _fallbackReveal;
 
   @override
   void initState() {
     super.initState();
+    // Safety net: reveal regardless if the scroll-based check never fires it.
+    // Without this, a section sitting below the fold stays at opacity 0 forever
+    // when the user doesn't scroll (e.g. the page grew after data loaded but no
+    // scroll event was emitted to re-run the position check).
+    _fallbackReveal = Timer(const Duration(milliseconds: 700), _reveal);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _position = Scrollable.maybeOf(context)?.position;
@@ -364,12 +370,14 @@ class _RevealOnScrollState extends State<_RevealOnScroll> {
 
   void _reveal() {
     if (_shown || !mounted) return;
+    _fallbackReveal?.cancel();
     setState(() => _shown = true);
     _position?.removeListener(_check);
   }
 
   @override
   void dispose() {
+    _fallbackReveal?.cancel();
     _position?.removeListener(_check);
     super.dispose();
   }

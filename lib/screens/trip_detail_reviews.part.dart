@@ -18,6 +18,7 @@ class _ReviewSectionState extends State<ReviewSection> {
   bool _expanded = false;
   bool _loadingMore = false;
   bool _hasMore = false;
+  bool _recovering = false;
   int _page = 1;
   int? _totalCount;
 
@@ -45,6 +46,38 @@ class _ReviewSectionState extends State<ReviewSection> {
     final total = int.tryParse(textOf(widget.trip['review_count']));
     _totalCount = total;
     _hasMore = total != null && total > _reviews.length;
+    // The parent bundles the first page of reviews with the trip load; if that
+    // sub-request failed transiently the list arrives empty even though the
+    // trip advertises reviews (review_count > 0). Recover by fetching page 1
+    // ourselves so the user doesn't have to leave and reopen the screen.
+    if (_reviews.isEmpty && (total ?? 0) > 0) {
+      _recoverFirstPage();
+    }
+  }
+
+  Future<void> _recoverFirstPage() async {
+    if (_recovering) return;
+    final tripId = int.tryParse(textOf(widget.trip['id'])) ?? 0;
+    if (tripId <= 0) return;
+    _recovering = true;
+    try {
+      final app = Provider.of<AppProvider>(context, listen: false);
+      final result = await app.tripReviewsPage(
+        tripId,
+        page: 1,
+        perPage: _pageSize,
+      );
+      if (!mounted || result.items.isEmpty) return;
+      setState(() {
+        _reviews = result.items;
+        _page = 1;
+        _hasMore = result.hasMore;
+      });
+    } catch (_) {
+      // Leave empty; the aggregate rating summary still renders.
+    } finally {
+      _recovering = false;
+    }
   }
 
   Future<void> _loadMore() async {
@@ -879,7 +912,9 @@ class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
     final app = Provider.of<AppProvider>(context, listen: false);
     final collected = <String>[..._photos];
     final seen = collected.toSet();
-    var page = 1;
+    // Start from page 1 (not 2) when the bundled first page arrived empty —
+    // otherwise a transient first-page failure also drops page 1's photos.
+    var page = widget.reviews.isEmpty ? 0 : 1;
     var hasMore = true;
 
     while (hasMore && mounted) {
