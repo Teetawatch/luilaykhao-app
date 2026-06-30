@@ -48,6 +48,8 @@ class ApiEndpoints {
   static const chatMyConversations = 'chat/my-conversations';
   static String chatTyping(int scheduleId) =>
       'schedules/$scheduleId/chat/typing';
+  static String chatJoined(int scheduleId) =>
+      'schedules/$scheduleId/chat/joined';
   static String chatPin(int scheduleId, int messageId) =>
       'schedules/$scheduleId/chat/messages/$messageId/pin';
   static String chatReact(int scheduleId, int messageId) =>

@@ -35,6 +35,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     final upcoming = filtered.where(_isUpcomingBooking).toList();
     final past = filtered.where(_isPastBooking).toList();
     final cancelled = filtered.where(_isCancelledBooking).toList();
+    // First-ever load (no cache yet): show a skeleton instead of flashing the
+    // "no bookings" empty state before data arrives.
+    final isInitialLoading = !app.accountLoaded && allBookings.isEmpty;
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
@@ -88,6 +91,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (isInitialLoading)
+                          const _BookingsLoadingSkeleton()
+                        else ...[
                         _BookingsHeader(
                           totalCount: allBookings.length,
                           upcomingCount: allBookings
@@ -151,6 +157,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                               title: _segmentTitle,
                               bookings: filtered,
                             ),
+                        ],
                         ],
                       ],
                     ),
@@ -450,6 +457,99 @@ class _BookingReferencePanel extends StatelessWidget {
               fontSize: 20,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// First-load skeleton — mirrors the header + reservation-card silhouette so the
+// screen doesn't flash an empty state before the first fetch resolves.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BookingsLoadingSkeleton extends StatelessWidget {
+  const _BookingsLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Next-trip hero
+        SkeletonBox(height: 132, borderRadius: BorderRadius.circular(20)),
+        const SizedBox(height: 12),
+        // Three summary pills
+        Row(
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              if (i > 0) const SizedBox(width: 12),
+              Expanded(
+                child: SkeletonBox(
+                  height: 96,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 24),
+        // Segment tabs
+        SkeletonBox(height: 48, borderRadius: BorderRadius.circular(16)),
+        const SizedBox(height: 24),
+        // Two reservation cards
+        for (var i = 0; i < 2; i++) ...[
+          if (i > 0) const SizedBox(height: 16),
+          const _ReservationCardSkeleton(),
+        ],
+      ],
+    );
+  }
+}
+
+class _ReservationCardSkeleton extends StatelessWidget {
+  const _ReservationCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonBox(
+            height: 160,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(
+                  height: 18,
+                  width: 200,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                const SizedBox(height: 10),
+                SkeletonBox(
+                  height: 12,
+                  width: 120,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                const SizedBox(height: 16),
+                SkeletonBox(height: 52, borderRadius: BorderRadius.circular(16)),
+                const SizedBox(height: 14),
+                SkeletonBox(height: 46, borderRadius: BorderRadius.circular(14)),
+              ],
             ),
           ),
         ],

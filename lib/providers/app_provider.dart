@@ -49,6 +49,10 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> almostFullTrips = [];
   List<dynamic> categories = [];
   List<dynamic> bookings = [];
+  // True once account data (incl. bookings) has been loaded at least once —
+  // from the network or a cache restore. Lets screens show a skeleton on the
+  // very first load instead of flashing an empty state.
+  bool accountLoaded = false;
   List<dynamic> notifications = [];
   List<dynamic> reviews = [];
   List<dynamic> recentlyViewedTrips = [];
@@ -890,6 +894,7 @@ class AppProvider extends ChangeNotifier {
     cache.writeAccount('coupons', coupons);
     cache.writeAccount('myReviews', myReviews);
     _syncAppIconBadge();
+    accountLoaded = true;
     notifyListeners();
   }
 
@@ -1307,6 +1312,14 @@ class AppProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// Fire-and-forget "joined the room" ping so other members see a brief
+  /// "X เข้าห้องแชท" notice. Ephemeral — failures are swallowed.
+  Future<void> sendChatJoin(int scheduleId) async {
+    try {
+      await api.post(ApiEndpoints.chatJoined(scheduleId));
+    } catch (_) {}
+  }
+
   Future<void> markChatRead(int scheduleId) async {
     await api.post(ApiEndpoints.chatRead(scheduleId));
   }
@@ -1454,6 +1467,7 @@ class AppProvider extends ChangeNotifier {
     int scheduleId, {
     RealtimeEventHandler? onRead,
     RealtimeEventHandler? onTyping,
+    RealtimeEventHandler? onJoined,
     RealtimeEventHandler? onReaction,
     RealtimeEventHandler? onPinned,
     RealtimeEventHandler? onUpdated,
@@ -1470,6 +1484,7 @@ class AppProvider extends ChangeNotifier {
 
     await bind('chat.read', onRead);
     await bind('chat.typing', onTyping);
+    await bind('chat.joined', onJoined);
     await bind('chat.reaction', onReaction);
     await bind('chat.pinned', onPinned);
     await bind('chat.message.updated', onUpdated);

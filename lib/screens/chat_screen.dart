@@ -85,6 +85,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   Timer? _typingSweeper;
   DateTime? _lastTypingSentAt;
 
+  // Transient "X เข้าห้องแชท" notices — userId → (name, expiry), swept like typing.
+  final Map<int, ({String name, DateTime until})> _joined = {};
+  Timer? _joinedSweeper;
+
   // Unread divider: messages with id beyond this (and not mine) are "new" since
   // we opened. Captured once from our own read marker on first room load.
   int _unreadBoundaryId = 0;
@@ -118,6 +122,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _stopPolling();
     _typingSweeper?.cancel();
+    _joinedSweeper?.cancel();
     _disposer?.call();
     _signalsDisposer?.call();
     _input.dispose();
@@ -152,10 +157,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       widget.scheduleId,
       onRead: _onReadSignal,
       onTyping: _onTypingSignal,
+      onJoined: _onJoinedSignal,
       onReaction: _onReactionSignal,
       onPinned: _onPinnedSignal,
       onUpdated: _onMessageUpdated,
     );
+    // Let the rest of the room know we've entered, so they see a brief notice.
+    app.sendChatJoin(widget.scheduleId);
     _startPolling();
   }
 
@@ -728,6 +736,38 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     return '${names.length} คนกำลังพิมพ์…';
   }
 
+  void _onJoinedSignal(Map<String, dynamic> data) {
+    final userId = int.tryParse('${data['user_id']}');
+    if (userId == null || userId == _myUserId) return;
+    final name = data['name']?.toString() ?? 'สมาชิก';
+    _joined[userId] = (
+      name: name,
+      until: DateTime.now().add(const Duration(seconds: 4)),
+    );
+    _ensureJoinedSweeper();
+    setState(() {});
+  }
+
+  void _ensureJoinedSweeper() {
+    _joinedSweeper ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      final now = DateTime.now();
+      _joined.removeWhere((_, v) => v.until.isBefore(now));
+      if (mounted) setState(() {});
+      if (_joined.isEmpty) {
+        _joinedSweeper?.cancel();
+        _joinedSweeper = null;
+      }
+    });
+  }
+
+  String? _joinedLabel() {
+    if (_joined.isEmpty) return null;
+    final names = _joined.values.map((v) => v.name).toList();
+    if (names.length == 1) return '${names.first} เข้าห้องแชท';
+    if (names.length == 2) return '${names[0]} และ ${names[1]} เข้าห้องแชท';
+    return '${names.length} คนเข้าห้องแชท';
+  }
+
   void _onReactionSignal(Map<String, dynamic> data) {
     final messageId = int.tryParse('${data['message_id']}');
     if (messageId == null) return;
@@ -1250,6 +1290,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       newCount: _newWhileAway,
                       onTap: _jumpToLatest,
                     ),
+                  ),
+                if (_joinedLabel() != null)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 12,
+                    child: Center(child: _JoinedBanner(label: _joinedLabel()!)),
                   ),
               ],
             ),
@@ -3309,6 +3356,63 @@ class _MentionJumpChip extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                   letterSpacing: -0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Transient floating notice shown when a member opens the room — fades in at
+/// the top of the message area and auto-clears after a few seconds.
+class _JoinedBanner extends StatelessWidget {
+  final String label;
+
+  const _JoinedBanner({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSlide(
+      offset: Offset.zero,
+      duration: const Duration(milliseconds: 220),
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.waving_hand_rounded,
+                size: 14,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -0.1,
+                  ),
                 ),
               ),
             ],

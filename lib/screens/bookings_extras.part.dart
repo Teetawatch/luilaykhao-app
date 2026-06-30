@@ -581,7 +581,6 @@ class _BookingActionDeck extends StatelessWidget {
     final status = textOf(booking['status']);
     final schedule = asMap(booking['schedule']);
     final confirmed = status == 'confirmed';
-    final showBriefing = confirmed && _isPreTripWindow(schedule);
     final showSos = confirmed && _isWithinTripWindow(schedule);
     final canModify = _asBool(booking['can_modify']);
     final canReschedule = _asBool(booking['can_reschedule']);
@@ -590,8 +589,6 @@ class _BookingActionDeck extends StatelessWidget {
     final showTracking = confirmed && _isUpcomingBooking(booking);
 
     final items = <Widget>[
-      if (showBriefing)
-        _PreTripBriefingCard(booking: booking, schedule: schedule),
       if (showTracking) _TrackVehicleButton(booking: booking),
       if (showSos)
         SosButton(scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0),
