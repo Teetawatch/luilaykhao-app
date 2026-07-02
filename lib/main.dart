@@ -24,6 +24,7 @@ import 'widgets/active_seat_lock_overlay.dart';
 import 'widgets/app_error_boundary.dart';
 import 'widgets/biometric_lock_gate.dart';
 import 'widgets/force_update_screen.dart';
+import 'widgets/maintenance_screen.dart';
 import 'widgets/offline_banner.dart';
 
 final appNavigatorKey = GlobalKey<NavigatorState>();
@@ -153,7 +154,12 @@ class LuilaykhaoApp extends StatelessWidget {
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             builder: (context, child) {
-              final body = app.versionGate.blocked
+              final body = app.maintenance
+                  ? MaintenanceScreen(
+                      checking: app.recheckingMaintenance,
+                      onRetry: app.recheckMaintenance,
+                    )
+                  : app.versionGate.blocked
                   ? ForceUpdateScreen(result: app.versionGate)
                   : BiometricLockGate(
                       child: ActiveSeatLockOverlay(

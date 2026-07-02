@@ -28,7 +28,13 @@ class ApiClient {
   /// and route the user back to the login screen.
   void Function()? onUnauthorized;
 
-  ApiClient({this.token, this.onUnauthorized});
+  /// Invoked whenever the server returns 503 (Laravel maintenance mode, i.e.
+  /// `php artisan down`). Use this to raise a full-screen "ปิดปรับปรุงชั่วคราว"
+  /// gate so users see a calm message instead of raw request errors during a
+  /// deploy or database cutover.
+  void Function()? onMaintenance;
+
+  ApiClient({this.token, this.onUnauthorized, this.onMaintenance});
 
   Map<String, String> _headers({bool json = true}) {
     return {
@@ -131,6 +137,16 @@ class ApiClient {
     final decoded = _decode(response.body);
     if (response.statusCode == 401) {
       onUnauthorized?.call();
+    }
+    if (response.statusCode == 503) {
+      onMaintenance?.call();
+      // Always a Thai message: Laravel's default 503 body is the English
+      // "Service Unavailable", and the full-screen maintenance gate is what
+      // the user actually sees regardless.
+      throw const ApiException(
+        'ระบบกำลังปิดปรับปรุงชั่วคราว กรุณาลองใหม่อีกครั้ง',
+        statusCode: 503,
+      );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(

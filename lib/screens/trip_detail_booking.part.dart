@@ -97,6 +97,15 @@ class StickyBookingBar extends StatelessWidget {
       pickupPoint: selectedPickupPoint,
     );
 
+    // Flash sale on the selected round: struck-through original + live countdown.
+    // Hidden when a priced pickup point overrides the fare (matches _priceText).
+    final flashSale = asMap(selectedSchedule['flash_sale']);
+    final flashActive = _asBool(flashSale['active']) &&
+        _asNum(selectedPickupPoint['price']) <= 0;
+    final flashEndsAt = DateTime.tryParse(textOf(flashSale['ends_at']));
+    final flashOriginal = _asNum(selectedSchedule['original_price']);
+    final flashPrice = _asNum(flashSale['price']);
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -221,6 +230,27 @@ class StickyBookingBar extends StatelessWidget {
                                   letterSpacing: -0.6,
                                 ),
                               ),
+                              if (!isCharter && flashActive) ...[
+                                const SizedBox(height: 5),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (flashOriginal > flashPrice) ...[
+                                      Text(
+                                        money(flashOriginal),
+                                        style: appFont(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppTheme.mutedText(context),
+                                          decoration: TextDecoration.lineThrough,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    FlashCountdownPill(endsAt: flashEndsAt),
+                                  ],
+                                ),
+                              ],
                               if (!isCharter && joinTripEnabled) ...[
                                 const SizedBox(height: 3),
                                 Container(

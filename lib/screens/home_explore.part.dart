@@ -146,6 +146,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       app.loadPublicData(type: type);
                     },
                   ),
+                  if (app.flashSaleTrips.isNotEmpty)
+                    _FlashSaleRail(
+                      trips: app.flashSaleTrips.map(asMap).toList(),
+                    ),
                   if (app.almostFullTrips.isNotEmpty)
                     _AlmostFullRail(
                       trips: app.almostFullTrips.map(asMap).toList(),
@@ -1764,6 +1768,67 @@ class _AlmostFullRail extends StatelessWidget {
                   trip: trips[index],
                   showScarcity: true,
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Flash Sale Rail ─────────────────────────────────────────────────────────
+// Mirrors the web "⚡ Flash Sale" home rail: trips with a live per-round flash
+// sale (soonest-ending first). The destination for the flash-sale push CTA.
+class _FlashSaleRail extends StatelessWidget {
+  final List<Map<String, dynamic>> trips;
+
+  const _FlashSaleRail({required this.trips});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 16, 0, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.bolt_rounded,
+                  color: Color(0xFFEA580C),
+                  size: 26,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Flash Sale · ราคาพิเศษ',
+                    style: appFont(
+                      color: const Color(0xFF063F46),
+                      fontSize: 25,
+                      height: 1.1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            height: 250,
+            child: ListView.separated(
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 20),
+              itemCount: trips.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
+              itemBuilder: (context, index) => SizedBox(
+                width: MediaQuery.of(context).size.width > 700 ? 230 : 180,
+                child: _ReferenceTripCard(trip: trips[index]),
               ),
             ),
           ),

@@ -33,6 +33,14 @@ class AppProvider extends ChangeNotifier {
   VersionGateResult _versionGate = VersionGateResult.ok;
   VersionGateResult get versionGate => _versionGate;
 
+  /// True while the backend is in maintenance mode (any request returned 503,
+  /// i.e. `php artisan down`). Raises a full-screen gate; cleared by a probe
+  /// once the server is back up.
+  bool _maintenance = false;
+  bool get maintenance => _maintenance;
+  bool _recheckingMaintenance = false;
+  bool get recheckingMaintenance => _recheckingMaintenance;
+
   ThemeMode _themeMode = ThemeMode.light;
   Locale _locale = const Locale('th');
   Locale get locale => _locale;
@@ -47,6 +55,7 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> trips = [];
   List<dynamic> featuredTrips = [];
   List<dynamic> almostFullTrips = [];
+  List<dynamic> flashSaleTrips = [];
   List<dynamic> categories = [];
   List<dynamic> bookings = [];
   // True once account data (incl. bookings) has been loaded at least once —
@@ -109,6 +118,35 @@ class AppProvider extends ChangeNotifier {
     _onSessionExpired = callback;
   }
 
+  void _handleMaintenance() {
+    if (_maintenance) return;
+    _maintenance = true;
+    notifyListeners();
+  }
+
+  /// Probe the backend to see whether maintenance mode has ended. Uses the
+  /// lightweight public `app/version` endpoint — during `php artisan down` it
+  /// returns 503 (keeps the gate up); once the server is back it succeeds and
+  /// we lower the gate so the app resumes normally.
+  Future<void> recheckMaintenance() async {
+    if (_recheckingMaintenance) return;
+    _recheckingMaintenance = true;
+    notifyListeners();
+    try {
+      await api.get('app/version');
+      _maintenance = false;
+    } on ApiException catch (e) {
+      // Still 503 → stay on the gate. Any other error (network, etc.) we also
+      // treat as "not yet back" and keep the gate up.
+      if (e.statusCode != 503) _maintenance = false;
+    } catch (_) {
+      // Network hiccup — leave the gate up, let the user try again.
+    } finally {
+      _recheckingMaintenance = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> _handleUnauthorized() async {
     // While deleting the account the token is intentionally invalidated
     // server-side; ignore the resulting 401s so the session-expired handler
@@ -138,6 +176,10 @@ class AppProvider extends ChangeNotifier {
     api.onUnauthorized = () {
       // Defer so the current request returns its error first.
       Future.microtask(_handleUnauthorized);
+    };
+    api.onMaintenance = () {
+      // Defer so the current request returns its error first.
+      Future.microtask(_handleMaintenance);
     };
     _themeMode = _themeModeFromStorage(prefs.getString(_themeModeKey));
     _locale = _localeFromStorage(prefs.getString(_localeKey));
@@ -197,6 +239,9 @@ class AppProvider extends ChangeNotifier {
     );
     almostFullTrips = List<dynamic>.from(
       cache.readPublic<List>('almost_full') ?? const [],
+    );
+    flashSaleTrips = List<dynamic>.from(
+      cache.readPublic<List>('flash_sale') ?? const [],
     );
     categories = List<dynamic>.from(
       cache.readPublic<List>('categories') ?? const [],
@@ -375,6 +420,7 @@ class AppProvider extends ChangeNotifier {
       safe(api.get(ApiEndpoints.promotionsActive)),
       safe(api.get(ApiEndpoints.heroSlides)),
       safe(api.get('trips/almost-full')),
+      safe(api.get('trips/flash-sale')),
     ]);
 
     final cache = OfflineCache.instance;
@@ -409,6 +455,10 @@ class AppProvider extends ChangeNotifier {
     if (results[7] != null) {
       almostFullTrips = List<dynamic>.from(api.data(results[7]) ?? []);
       cache.writePublic('almost_full', almostFullTrips);
+    }
+    if (results[8] != null) {
+      flashSaleTrips = List<dynamic>.from(api.data(results[8]) ?? []);
+      cache.writePublic('flash_sale', flashSaleTrips);
     }
     notifyListeners();
   }

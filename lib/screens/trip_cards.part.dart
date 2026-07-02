@@ -387,6 +387,36 @@ class _ReferenceTripCard extends StatelessWidget {
                   ),
                 ),
               ),
+            if (seatsLeft == null && trip['is_flash_sale'] == true)
+              Positioned(
+                top: 14,
+                right: 14,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEA580C),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.bolt_rounded, size: 14, color: Colors.white),
+                      const SizedBox(width: 2),
+                      Text(
+                        'Flash Sale',
+                        style: appFont(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             Positioned(
               left: 14,
               right: 14,

@@ -159,6 +159,7 @@ class AppTheme {
   static const Color accentColor = Color(0xFF10B981); // Emerald 500
   static const Color errorColor = Color(0xFFE11D48); // Rose 600
   static const Color warningColor = Color(0xFFD97706); // Amber 600
+  static const Color flashSaleColor = Color(0xFFEA580C); // Orange 600 — flash sale
 
   static const Color textMain = Color(0xFF0F172A); // Slate 900
   static const Color textSecondary = Color(0xFF475569); // Slate 600
