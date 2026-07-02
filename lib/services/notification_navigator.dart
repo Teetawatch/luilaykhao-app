@@ -33,6 +33,7 @@ class NotificationNavigator {
       case 'booking_cancelled':
       case 'booking_reminder':
       case 'trip_reminder':
+      case 'trip_departure_soon':
       case 'trip_checklist':
       case 'weather_alert':
       case 'vehicle_departed':
