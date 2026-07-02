@@ -165,6 +165,7 @@ class _PremiumTextField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final TextInputAction? textInputAction;
   final List<TextInputFormatter>? inputFormatters;
+  final ValueChanged<String>? onSubmitted;
 
   const _PremiumTextField({
     required this.controller,
@@ -178,6 +179,7 @@ class _PremiumTextField extends StatelessWidget {
     this.autofillHints,
     this.textInputAction,
     this.inputFormatters,
+    this.onSubmitted,
   });
 
   @override
@@ -197,6 +199,7 @@ class _PremiumTextField extends StatelessWidget {
           autofillHints: autofillHints,
           textInputAction: textInputAction,
           inputFormatters: inputFormatters,
+          onFieldSubmitted: onSubmitted,
           decoration: _fieldDecoration(
             context: context,
             icon: icon,

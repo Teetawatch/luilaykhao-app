@@ -48,6 +48,7 @@ class _PricingQuote {
     required bool isJoinTrip,
     required List<dynamic> pickupPoints,
     List<_AddonOption> selectedAddons = const [],
+    Map<String, dynamic>? appliedPromo,
   }) {
     final basePrice = _asNum(
       isJoinTrip
@@ -81,15 +82,31 @@ class _PricingQuote {
     }
 
     final count = passengers.length;
+    final addonsTotalValue = selectedAddons.fold<num>(
+      0,
+      (sum, addon) => sum + addon.totalFor(count),
+    );
+
+    // Preview the discount using the exact rule the backend applies at booking
+    // (BookingService): percent/fixed off the trip subtotal + addons, capped at
+    // that base — so the amount shown here equals the final charge.
+    num discount = 0;
+    if (appliedPromo != null) {
+      final base = passengersTotal + addonsTotalValue;
+      final value = _asNum(appliedPromo['value']);
+      discount = textOf(appliedPromo['type']) == 'percent'
+          ? base * value / 100
+          : value;
+      if (discount > base) discount = base;
+      if (discount < 0) discount = 0;
+    }
+
     return _PricingQuote(
       pricePerTraveler: firstPrice ?? basePrice,
       travelerCount: count,
-      addonsTotal: selectedAddons.fold<num>(
-        0,
-        (sum, addon) => sum + addon.totalFor(count),
-      ),
+      addonsTotal: addonsTotalValue,
       serviceFee: 0,
-      discount: 0,
+      discount: discount,
       hasVariedPrices: pricesVary,
       passengersSubtotal: passengersTotal,
     );

@@ -139,6 +139,11 @@ class PricingSummaryCard extends StatelessWidget {
   final TextEditingController promoController;
   final bool expanded;
   final VoidCallback onExpandedChanged;
+  final Map<String, dynamic>? appliedPromo;
+  final bool promoLoading;
+  final String? promoError;
+  final VoidCallback onApplyPromo;
+  final VoidCallback onRemovePromo;
 
   const PricingSummaryCard({
     super.key,
@@ -146,6 +151,11 @@ class PricingSummaryCard extends StatelessWidget {
     required this.promoController,
     required this.expanded,
     required this.onExpandedChanged,
+    required this.appliedPromo,
+    required this.promoLoading,
+    required this.promoError,
+    required this.onApplyPromo,
+    required this.onRemovePromo,
   });
 
   @override
@@ -155,13 +165,14 @@ class PricingSummaryCard extends StatelessWidget {
       icon: Icons.receipt_long_rounded,
       child: Column(
         children: [
-          _PremiumTextField(
+          _PromoField(
             controller: promoController,
-            label: 'โค้ดส่วนลด',
-            hint: 'เช่น NEWLUILAY',
-            icon: Icons.local_offer_rounded,
-            textCapitalization: TextCapitalization.characters,
-            textInputAction: TextInputAction.done,
+            appliedPromo: appliedPromo,
+            discount: pricing.discount,
+            loading: promoLoading,
+            error: promoError,
+            onApply: onApplyPromo,
+            onRemove: onRemovePromo,
           ),
           const SizedBox(height: 16),
           if (!pricing.hasVariedPrices) ...[
@@ -201,15 +212,19 @@ class PricingSummaryCard extends StatelessWidget {
               children: [
                 _PriceRow(label: 'ค่าบริการ', value: money(pricing.serviceFee)),
                 const SizedBox(height: 10),
-                _PriceRow(
-                  label: 'ส่วนลด',
-                  value: '-${money(pricing.discount)}',
-                  valueColor: _softAccent,
-                ),
-                const SizedBox(height: 10),
               ],
             ),
           ),
+          // Discount stays visible (not tucked behind "ดูรายละเอียด") so the
+          // applied saving is obvious right here, before payment.
+          if (pricing.discount > 0) ...[
+            _PriceRow(
+              label: 'ส่วนลด${appliedPromo != null ? ' (${textOf(appliedPromo!['code'])})' : ''}',
+              value: '-${money(pricing.discount)}',
+              valueColor: _softAccent,
+            ),
+            const SizedBox(height: 10),
+          ],
           InkWell(
             borderRadius: BorderRadius.circular(14),
             onTap: onExpandedChanged,
@@ -243,20 +258,160 @@ class PricingSummaryCard extends StatelessWidget {
             value: money(pricing.total),
             isTotal: true,
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'โค้ดส่วนลดจะถูกตรวจสอบเมื่อส่งข้อมูลการจอง',
-              style: appFont(
-                color: _mutedTextColor(context),
-                fontSize: 12,
-                height: 1.35,
-              ),
-            ),
-          ),
         ],
       ),
+    );
+  }
+}
+
+/// Discount-code entry that validates inline: shows the applied code + savings
+/// (with a remove action) once accepted, or an input + "ใช้โค้ด" button and an
+/// error message before that. The discount + net total update immediately.
+class _PromoField extends StatelessWidget {
+  final TextEditingController controller;
+  final Map<String, dynamic>? appliedPromo;
+  final num discount;
+  final bool loading;
+  final String? error;
+  final VoidCallback onApply;
+  final VoidCallback onRemove;
+
+  const _PromoField({
+    required this.controller,
+    required this.appliedPromo,
+    required this.discount,
+    required this.loading,
+    required this.error,
+    required this.onApply,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (appliedPromo != null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: _softAccent.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _softAccent.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: _softAccent, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ใช้โค้ด ${textOf(appliedPromo!['code'])} แล้ว',
+                    style: appFont(
+                      color: _softAccent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'ส่วนลด ${money(discount)}',
+                    style: appFont(
+                      color: _softAccent,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            InkWell(
+              onTap: onRemove,
+              borderRadius: BorderRadius.circular(999),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: _mutedTextColor(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _PremiumTextField(
+                controller: controller,
+                label: 'โค้ดส่วนลด',
+                hint: 'เช่น NEWLUILAY',
+                icon: Icons.local_offer_rounded,
+                textCapitalization: TextCapitalization.characters,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => onApply(),
+              ),
+            ),
+            const SizedBox(width: 10),
+            SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: loading ? null : onApply,
+                style: FilledButton.styleFrom(
+                  backgroundColor: _softAccent,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        'ใช้โค้ด',
+                        style: appFont(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+        if (error != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.error_outline_rounded,
+                  size: 15, color: AppTheme.errorColor),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  error!,
+                  style: appFont(
+                    color: AppTheme.errorColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
+import '../services/api_client.dart';
 import '../services/realtime_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
@@ -110,6 +111,12 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   final _groupNotes = TextEditingController();
   final List<_PassengerControllers> _passengers = [_PassengerControllers()];
 
+  // Applied discount code — validated inline so the customer sees the final
+  // discount + net total here, before the payment step. {code, type, value}.
+  Map<String, dynamic>? _appliedPromo;
+  bool _promoLoading = false;
+  String? _promoError;
+
   int? _scheduleId;
   int? _pickupPointId;
   String? _pickupRegion;
@@ -161,7 +168,64 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     isJoinTrip: _isJoinTrip,
     pickupPoints: _pickupPoints,
     selectedAddons: _selectedAddonOptions,
+    appliedPromo: _appliedPromo,
   );
+
+  /// Validate the entered code and, on success, apply it inline so the discount
+  /// and net total update immediately. Mirrors the backend's validate rules;
+  /// the final amount is re-verified server-side at booking submit.
+  Future<void> _applyPromo() async {
+    final code = _promo.text.trim().toUpperCase();
+    if (code.isEmpty || _promoLoading) return;
+
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _promoLoading = true;
+      _promoError = null;
+    });
+
+    final app = context.read<AppProvider>();
+    try {
+      final res = await app.api.post(
+        'promotions/validate',
+        body: {'code': code, 'trip_id': widget.trip['id']},
+      );
+      final promotion = asMap(asMap(res)['promotion']);
+      if (!mounted) return;
+      setState(() {
+        _promo.text = code;
+        _appliedPromo = {
+          'code': code,
+          'type': textOf(promotion['type']),
+          'value': _asNum(promotion['value']),
+        };
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _appliedPromo = null;
+        _promoError = e.message.isNotEmpty
+            ? e.message
+            : 'โค้ดส่วนลดไม่ถูกต้องหรือใช้งานไม่ได้';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _appliedPromo = null;
+        _promoError = 'ตรวจสอบโค้ดไม่สำเร็จ กรุณาลองใหม่';
+      });
+    } finally {
+      if (mounted) setState(() => _promoLoading = false);
+    }
+  }
+
+  void _removePromo() {
+    setState(() {
+      _appliedPromo = null;
+      _promoError = null;
+      _promo.clear();
+    });
+  }
 
   List<_AddonOption> get _addonOptions => _addonOptionsFrom(widget.trip);
 
@@ -846,6 +910,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           onExpandedChanged: () {
             setState(() => _showPricingDetails = !_showPricingDetails);
           },
+          appliedPromo: _appliedPromo,
+          promoLoading: _promoLoading,
+          promoError: _promoError,
+          onApplyPromo: _applyPromo,
+          onRemovePromo: _removePromo,
         ),
       ],
     );
@@ -1024,9 +1093,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         'group_notes': _groupNotes.text.trim().isEmpty
             ? null
             : _groupNotes.text.trim(),
-        'promotion_code': _promo.text.trim().isEmpty
-            ? null
-            : _promo.text.trim().toUpperCase(),
+        // Only the inline-validated code is sent, so the charge matches the
+        // discount previewed here (backend re-verifies authoritatively).
+        'promotion_code': _appliedPromo != null
+            ? textOf(_appliedPromo!['code'])
+            : null,
         'seat_ids': _hasSeatMap ? _selectedSeatList : <String>[],
         'is_join_trip': _isJoinTrip,
         if (_selectedAddonIndexes.isNotEmpty)
