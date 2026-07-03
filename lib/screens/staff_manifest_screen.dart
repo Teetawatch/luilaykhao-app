@@ -571,6 +571,10 @@ class _PickupGroupCard extends StatelessWidget {
     final region = textOf(group['region_label']);
     final mapUrl = textOf(group['map_url']);
     final isCustom = group['is_custom'] == true;
+    // พิกัดหมุดที่ลูกค้าปักเอง — โชว์เป็นตัวเลขให้สตาฟอ่าน/เทียบได้
+    final coordsText = isCustom && group['lat'] is num && group['lng'] is num
+        ? '${(group['lat'] as num).toStringAsFixed(5)}, ${(group['lng'] as num).toStringAsFixed(5)}'
+        : '';
     final notes = textOf(group['notes']);
     final total = int.tryParse(textOf(group['passenger_count'], '0')) ?? 0;
     final checkedIn = int.tryParse(textOf(group['checked_in_count'], '0')) ?? 0;
@@ -652,6 +656,29 @@ class _PickupGroupCard extends StatelessWidget {
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      if (coordsText.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.my_location_rounded,
+                                size: 12,
+                                color: AppTheme.mutedText(context),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                coordsText,
+                                style: appFont(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.mutedText(context),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       if (notes.isNotEmpty)
