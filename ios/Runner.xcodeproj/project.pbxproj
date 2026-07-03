@@ -213,7 +213,7 @@
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				51654BD36477F739CAE53893 /* Upload Crashlytics dSYM */,
-				D8A73DE828B6BCC69A49D1C6 /* Strip Simulator Platform Slices */,
+				D1A15DBAFCB8BEC0654CB842 /* Strip Simulator Platform Slices */,
 			);
 			buildRules = (
 			);
@@ -388,7 +388,7 @@
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
 		};
-		D8A73DE828B6BCC69A49D1C6 /* Strip Simulator Platform Slices */ = {
+		D1A15DBAFCB8BEC0654CB842 /* Strip Simulator Platform Slices */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
