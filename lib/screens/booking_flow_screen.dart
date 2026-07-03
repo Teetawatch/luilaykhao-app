@@ -1021,18 +1021,19 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         );
         return;
       }
-    } else {
+    } else if (_customPickup == null) {
+      // ปักหมุดจุดรับเองแล้ว ถือว่าเลือกจุดรับครบ — ข้ามการบังคับเลือกจุดที่กำหนด
       if (_pickupPoints.isNotEmpty &&
           (_pickupRegion == null || _pickupRegion!.isEmpty)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('กรุณาเลือกภูมิภาคที่จะขึ้นรถ')),
+          const SnackBar(content: Text('กรุณาเลือกภูมิภาคที่จะขึ้นรถ หรือปักหมุดจุดรับเอง')),
         );
         return;
       }
       if (_pickupPoints.isNotEmpty && _pickupPointId == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถ')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถ หรือปักหมุดจุดรับเอง')),
+        );
         return;
       }
     }
@@ -1042,8 +1043,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกที่นั่ง')));
       return;
     }
-    // Validate per-passenger pickup points
-    if (!_isJoinTrip && _pickupPoints.isNotEmpty) {
+    // Validate per-passenger pickup points (ข้ามเมื่อปักหมุดจุดรับเอง)
+    if (!_isJoinTrip && _customPickup == null && _pickupPoints.isNotEmpty) {
       for (var i = 0; i < _passengers.length; i++) {
         if (_passengers[i].pickupPointId.value == null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1077,8 +1078,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       await _lockSelectedSeatsIfNeeded();
       final booking = await app.createBooking({
         'schedule_id': _scheduleId,
-        'pickup_point_id': _isJoinTrip ? null : _pickupPointId,
-        'pickup_region': _isJoinTrip ? null : _pickupRegion,
+        // ปักหมุดเอง = ไม่ส่ง region/จุดตายตัว ไม่งั้น backend จับคู่จุดตายตัวแล้วมองข้ามหมุด
+        'pickup_point_id': (_isJoinTrip || _customPickup != null) ? null : _pickupPointId,
+        'pickup_region': (_isJoinTrip || _customPickup != null) ? null : _pickupRegion,
         // จุดรับที่ปักหมุดเอง — ส่งเมื่อไม่ได้เลือกจุดที่กำหนด รอแอดมินยืนยันราคา
         if (!_isJoinTrip && _pickupPointId == null && _customPickup != null) ...{
           'custom_pickup_label': _customPickup!['label'],
