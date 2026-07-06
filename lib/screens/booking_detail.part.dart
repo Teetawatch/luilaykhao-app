@@ -269,6 +269,35 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   );
                 }),
 
+                // ผังที่นั่ง — แสดงตำแหน่งที่นั่งของเราในรถแบบกราฟิก
+                // (เฉพาะการจองที่มีที่นั่งจริง และรอบยังไม่ถูกยกเลิก)
+                ...(() {
+                  if (textOf(booking['status']) == 'cancelled') {
+                    return const <Widget>[];
+                  }
+                  final scheduleId = int.tryParse(textOf(schedule['id'])) ?? 0;
+                  // ที่นั่งของการจองอยู่ที่ booking['seats'] (ไม่ใช่ราย passenger)
+                  final mySeatIds = asList(booking['seats'])
+                      .map((s) => textOf(asMap(s)['seat_id']))
+                      .where((s) => s.isNotEmpty)
+                      .toSet();
+                  if (scheduleId <= 0 || mySeatIds.isEmpty) {
+                    return const <Widget>[];
+                  }
+                  return <Widget>[
+                    const SizedBox(height: 16),
+                    const _SheetSectionTitle(
+                      icon: Icons.event_seat_rounded,
+                      title: 'ที่นั่งของคุณในรถ',
+                    ),
+                    const SizedBox(height: 10),
+                    _MySeatMapSection(
+                      scheduleId: scheduleId,
+                      mySeatIds: mySeatIds,
+                    ),
+                  ];
+                })(),
+
                 // จุดขึ้นรถที่จองไว้ (พร้อมรูปจริง) — แสดงเสมอเมื่อมีจุดรับ
                 _BookingPickupSection(booking: booking, schedule: schedule),
 
@@ -619,6 +648,134 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
       _reload();
       if (context.mounted) showSnack(context, 'เปลี่ยนจุดรับสำเร็จ');
     }
+  }
+}
+
+/// ผังที่นั่งแบบอ่านอย่างเดียวในหน้ารายละเอียดการจอง — โหลดผังของรอบนั้น
+/// แล้วไฮไลต์ที่นั่งของลูกค้า (SeatTone.mine) ให้เห็นชัดว่านั่งตรงไหนในรถ
+class _MySeatMapSection extends StatefulWidget {
+  final int scheduleId;
+  final Set<String> mySeatIds;
+
+  const _MySeatMapSection({required this.scheduleId, required this.mySeatIds});
+
+  @override
+  State<_MySeatMapSection> createState() => _MySeatMapSectionState();
+}
+
+class _MySeatMapSectionState extends State<_MySeatMapSection> {
+  late Future<Map<String, dynamic>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = context.read<AppProvider>().seats(widget.scheduleId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _shell(
+            context,
+            const SizedBox(
+              height: 110,
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _shell(
+            context,
+            _seatChips(context, note: 'แสดงผังที่นั่งไม่ได้ในตอนนี้'),
+          );
+        }
+        final data = snapshot.data!;
+        // ทริปที่ไม่มีผังที่นั่งจริง — โชว์รหัสที่นั่งเป็นชิปแทน
+        if (data['has_seat_map'] != true || asList(data['seats']).isEmpty) {
+          return _shell(context, _seatChips(context));
+        }
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(8, 14, 8, 16),
+          decoration: BoxDecoration(
+            color: AppTheme.subtleSurface(context),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.5),
+            ),
+          ),
+          child: Column(
+            children: [
+              const VehicleSeatLegend(
+                tones: [SeatTone.mine, SeatTone.booked, SeatTone.available],
+              ),
+              const SizedBox(height: 16),
+              VehicleSeatMap(
+                seatMap: data,
+                // เน้นที่นั่งของเราให้เด่นชัด รู้ทันทีว่านั่งตรงไหน
+                highlightMine: true,
+                toneFor: (seat, id) {
+                  if (widget.mySeatIds.contains(id)) return SeatTone.mine;
+                  final status = textOf(seat['status'], 'available');
+                  if (status == 'booked' || status == 'locked') {
+                    return SeatTone.booked;
+                  }
+                  return SeatTone.available;
+                },
+                // อ่านอย่างเดียว — แตะเลือกไม่ได้
+                selectableFor: (_, _) => false,
+                onSeatTap: (_, _) {},
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _shell(BuildContext context, Widget child) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.5),
+        ),
+      ),
+      child: Center(child: child),
+    );
+  }
+
+  Widget _seatChips(BuildContext context, {String? note}) {
+    return Column(
+      children: [
+        if (note != null) ...[
+          Text(
+            note,
+            style: appFont(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: widget.mySeatIds
+              .map((id) => _InlineBadge('ที่นั่ง $id'))
+              .toList(),
+        ),
+      ],
+    );
   }
 }
 

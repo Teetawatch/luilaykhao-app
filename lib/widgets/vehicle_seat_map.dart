@@ -43,12 +43,17 @@ class VehicleSeatMap extends StatelessWidget {
   final SeatSelectableResolver selectableFor;
   final SeatTapHandler onSeatTap;
 
+  /// เน้นที่นั่งของผู้ใช้ (SeatTone.mine) ให้เด่นเป็นพิเศษ — ไอคอนคน + ป้ายถูก
+  /// ใหญ่ + วงแหวนไฮไลต์ ใช้ในหน้าดูการจองเพื่อบอกชัด ๆ ว่าเรานั่งที่ไหน
+  final bool highlightMine;
+
   const VehicleSeatMap({
     super.key,
     required this.seatMap,
     required this.toneFor,
     required this.selectableFor,
     required this.onSeatTap,
+    this.highlightMine = false,
   });
 
   @override
@@ -183,13 +188,15 @@ class VehicleSeatMap extends StatelessWidget {
   ) {
     final visual = _visualFor(tone);
     final emphasised = tone == SeatTone.picking || tone == SeatTone.mine;
+    // ที่นั่งของผู้ใช้ในโหมดเน้น — ทำให้เด่นชัดเป็นพิเศษ
+    final spotlight = highlightMine && tone == SeatTone.mine;
 
     return InkWell(
       onTap: selectable && seat != null ? () => onSeatTap(seat, id) : null,
       borderRadius: BorderRadius.circular(18),
       child: SizedBox(
         width: 52,
-        height: 62,
+        height: spotlight ? 66 : 62,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -202,42 +209,71 @@ class VehicleSeatMap extends StatelessWidget {
                 color: visual.fill,
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(
-                  color: emphasised
+                  color: spotlight
+                      ? Colors.white
+                      : emphasised
                       ? Colors.transparent
                       : Colors.black.withValues(alpha: 0.04),
+                  width: spotlight ? 2.5 : 1,
                 ),
                 boxShadow: emphasised
                     ? [
                         BoxShadow(
-                          color: visual.fill.withValues(alpha: 0.32),
-                          blurRadius: 12,
-                          offset: const Offset(0, 5),
+                          color: visual.fill.withValues(
+                            alpha: spotlight ? 0.5 : 0.32,
+                          ),
+                          blurRadius: spotlight ? 16 : 12,
+                          offset: Offset(0, spotlight ? 6 : 5),
                         ),
                       ]
                     : null,
               ),
               child: Stack(
                 alignment: Alignment.center,
+                clipBehavior: Clip.none,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(9),
-                    child: _SeatGlyph(color: visual.glyph),
-                  ),
+                  // ไอคอนคนสำหรับที่นั่งของเรา (โหมดเน้น) — วางกึ่งกลางเบาะ
+                  // สื่อว่า "เรานั่งตรงนี้"
+                  if (spotlight)
+                    const Center(
+                      child: Icon(
+                        Icons.person_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.all(9),
+                      child: _SeatGlyph(color: visual.glyph),
+                    ),
                   if (visual.badgeIcon != null)
                     Positioned(
-                      top: 4,
-                      right: 4,
+                      top: spotlight ? -5 : 4,
+                      right: spotlight ? -5 : 4,
                       child: Container(
-                        width: 15,
-                        height: 15,
+                        width: spotlight ? 20 : 15,
+                        height: spotlight ? 20 : 15,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: visual.badge,
                           shape: BoxShape.circle,
+                          border: spotlight
+                              ? Border.all(color: _accent, width: 2)
+                              : null,
+                          boxShadow: spotlight
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.18),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Icon(
                           visual.badgeIcon,
-                          size: 9.5,
+                          size: spotlight ? 13 : 9.5,
                           color: visual.badgeIconColor,
                         ),
                       ),
@@ -253,7 +289,7 @@ class VehicleSeatMap extends StatelessWidget {
               style: appFont(
                 color: visual.labelColor(context),
                 fontSize: 10.5,
-                fontWeight: FontWeight.w700,
+                fontWeight: spotlight ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
           ],
