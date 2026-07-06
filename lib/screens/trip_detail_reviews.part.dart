@@ -575,6 +575,8 @@ class _ReviewCard extends StatelessWidget {
                             width: 42,
                             height: 42,
                             fit: BoxFit.cover,
+                            memCacheWidth: _thumbCacheWidth(context, 42),
+                            maxWidthDiskCache: _thumbCacheWidth(context, 42),
                             errorWidget: (_, _, _) => Center(
                               child: Text(
                                 initials,
@@ -812,6 +814,8 @@ class _ReviewCard extends StatelessWidget {
                         width: 76,
                         height: 76,
                         fit: BoxFit.cover,
+                        memCacheWidth: _thumbCacheWidth(context, 76),
+                        maxWidthDiskCache: _thumbCacheWidth(context, 76),
                         placeholder: (_, _) => Container(
                           width: 76,
                           height: 76,
@@ -838,6 +842,17 @@ class _ReviewCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Decode width (physical px) for a thumbnail of [logicalWidth] logical px.
+/// Review photos are full-resolution camera uploads and every loaded card
+/// stays mounted in the trip detail's single non-recycling sliver, so images
+/// decoded at native size accumulate until the OS kills the app — cap the
+/// decode at what the tile actually displays. Width only, so the decoded
+/// frame keeps its aspect ratio for BoxFit.cover.
+int _thumbCacheWidth(BuildContext context, double logicalWidth) {
+  final dpr = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
+  return (logicalWidth * dpr).round();
 }
 
 /// Extracts non-null per-category sub-ratings from a review map as
@@ -992,6 +1007,8 @@ class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
                           width: 104,
                           height: 104,
                           fit: BoxFit.cover,
+                          memCacheWidth: _thumbCacheWidth(context, 104),
+                          maxWidthDiskCache: _thumbCacheWidth(context, 104),
                           placeholder: (_, _) => Container(
                             width: 104,
                             height: 104,
