@@ -1371,7 +1371,32 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> markChatRead(int scheduleId) async {
+    // Clear this room's unread locally first so the bottom-nav badge drops the
+    // moment the user opens the room, without waiting for a roster refresh.
+    _clearChatUnreadLocally(scheduleId);
     await api.post(ApiEndpoints.chatRead(scheduleId));
+  }
+
+  /// Zero out the cached `unread_count` for one conversation and recompute the
+  /// bottom-nav total. No-op (beyond recompute) if the room isn't cached yet.
+  void _clearChatUnreadLocally(int scheduleId) {
+    var changed = false;
+    for (final c in chatConversations) {
+      if (c is! Map) continue;
+      final id = int.tryParse('${c['schedule_id'] ?? c['id']}');
+      if (id != scheduleId) continue;
+      if ((int.tryParse('${c['unread_count']}') ?? 0) != 0) {
+        c['unread_count'] = 0;
+        changed = true;
+      }
+    }
+    final newTotal = chatConversations.fold<int>(0, (sum, c) {
+      return sum + (int.tryParse('${(c as Map?)?['unread_count']}') ?? 0);
+    });
+    if (changed || newTotal != chatUnreadTotal) {
+      chatUnreadTotal = newTotal;
+      notifyListeners();
+    }
   }
 
   Future<int> chatUnreadCount(int scheduleId) async {
