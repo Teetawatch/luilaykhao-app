@@ -19,6 +19,7 @@ import 'screens/onboarding_screen.dart';
 import 'services/analytics_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/rating_prompt_service.dart';
+import 'services/version_gate_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/active_seat_lock_overlay.dart';
 import 'widgets/app_error_boundary.dart';
@@ -26,6 +27,7 @@ import 'widgets/biometric_lock_gate.dart';
 import 'widgets/force_update_screen.dart';
 import 'widgets/maintenance_screen.dart';
 import 'widgets/offline_banner.dart';
+import 'widgets/update_available_dialog.dart';
 
 final appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -161,10 +163,13 @@ class LuilaykhaoApp extends StatelessWidget {
                     )
                   : app.versionGate.blocked
                   ? ForceUpdateScreen(result: app.versionGate)
-                  : BiometricLockGate(
-                      child: ActiveSeatLockOverlay(
-                        navigatorKey: appNavigatorKey,
-                        child: child ?? const SizedBox.shrink(),
+                  : _UpdatePromptWatcher(
+                      result: app.versionGate,
+                      child: BiometricLockGate(
+                        child: ActiveSeatLockOverlay(
+                          navigatorKey: appNavigatorKey,
+                          child: child ?? const SizedBox.shrink(),
+                        ),
                       ),
                     );
               return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -178,4 +183,51 @@ class LuilaykhaoApp extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Wraps the main app content and, once the version check reports that a newer
+/// (but non-mandatory) build is on the store, surfaces the dismissible
+/// [UpdateAvailableDialog] a single time. Firing is deferred to a post-frame
+/// callback so it lands on top of the ready UI via the root navigator.
+class _UpdatePromptWatcher extends StatefulWidget {
+  final VersionGateResult result;
+  final Widget child;
+
+  const _UpdatePromptWatcher({required this.result, required this.child});
+
+  @override
+  State<_UpdatePromptWatcher> createState() => _UpdatePromptWatcherState();
+}
+
+class _UpdatePromptWatcherState extends State<_UpdatePromptWatcher> {
+  bool _handled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _maybePrompt();
+  }
+
+  @override
+  void didUpdateWidget(_UpdatePromptWatcher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The gate result arrives asynchronously after boot, so react to updates.
+    if (widget.result.latestVersion != oldWidget.result.latestVersion) {
+      _handled = false;
+    }
+    _maybePrompt();
+  }
+
+  void _maybePrompt() {
+    if (_handled || !widget.result.updateAvailable) return;
+    _handled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = appNavigatorKey.currentContext;
+      if (context == null) return;
+      UpdateAvailableDialog.maybeShow(context, widget.result);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

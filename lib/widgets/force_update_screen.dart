@@ -70,7 +70,7 @@ class ForceUpdateScreen extends StatelessWidget {
                   ),
                 ),
                 onPressed: () async {
-                  final url = result.storeUrl;
+                  final url = result.resolvedStoreUrl;
                   if (url == null || url.isEmpty) return;
                   await launchUrl(
                     Uri.parse(url),
