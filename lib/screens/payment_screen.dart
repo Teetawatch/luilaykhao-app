@@ -42,11 +42,16 @@ class PaymentScreen extends StatefulWidget {
   /// (an already-confirmed installment booking) instead of an initial payment.
   final int? installmentNo;
 
+  /// When set, the screen collects payment for one split share (แบ่งจ่ายกลุ่ม)
+  /// of an already-confirmed booking instead of an initial payment.
+  final int? splitShareId;
+
   const PaymentScreen({
     super.key,
     required this.bookingRef,
     this.initialPaymentType = 'full',
     this.installmentNo,
+    this.splitShareId,
   });
 
   @override
@@ -60,6 +65,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   DateTime? _transferDate;
   TimeOfDay? _transferTime;
   XFile? _slipImage;
+  Map<String, dynamic>? _splitShare;
   bool _paying = false;
   bool _downloadingQr = false;
   final GlobalKey _promptPayQrKey = GlobalKey();
@@ -71,6 +77,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _paymentType = switch (widget.initialPaymentType) {
       'installment' => 'installment',
       'deposit' => 'deposit',
+      'split' => 'split',
       _ => 'full',
     };
     _future = _loadBooking();
@@ -94,6 +101,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final booking = await context.read<AppProvider>().booking(
       widget.bookingRef,
     );
+    // โหมดจ่ายส่วนแบ่งกลุ่ม: ดึงข้อมูลส่วนแบ่งของเราจาก overview การแบ่งจ่าย
+    if (widget.splitShareId != null && mounted) {
+      try {
+        final split = await context.read<AppProvider>().bookingSplit(
+          widget.bookingRef,
+        );
+        _splitShare = asList(split['shares'])
+            .map(asMap)
+            .where(
+              (s) =>
+                  (int.tryParse(textOf(s['id'])) ?? -1) == widget.splitShareId,
+            )
+            .firstOrNull;
+      } catch (_) {
+        _splitShare = null;
+      }
+    }
     final currentType = textOf(booking['payment_type'], 'full');
     // If booking already has a confirmed payment_type, respect it.
     // Otherwise keep the user-selected choice and let normalize fall back to 'full' if unsupported.
@@ -181,13 +205,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
     Map<String, dynamic> booking, {
     bool payingBalance = false,
     int? installmentNo,
+    bool payingShare = false,
   }) async {
     final payingInstallment = installmentNo != null;
-    if (!payingBalance && !payingInstallment &&
+    if (!payingBalance && !payingInstallment && !payingShare &&
         textOf(booking['status']) != 'pending') {
       return;
     }
     if (payingBalance && !_balanceUnpaid(booking)) return;
+    if (payingShare && textOf(_splitShare?['status']) != 'pending') return;
     if (_transferDate == null || _transferTime == null) {
       _showSnack('กรุณาระบุวันที่และเวลาที่โอนเงินตามสลิป');
       return;
@@ -204,7 +230,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final transferTimeStr =
           '${_transferTime!.hour.toString().padLeft(2, '0')}:${_transferTime!.minute.toString().padLeft(2, '0')}';
       final num amount;
-      if (payingBalance) {
+      if (payingShare) {
+        amount = _asNum(_splitShare?['amount']);
+        await context.read<AppProvider>().paySplitShare(
+          bookingRef: widget.bookingRef,
+          shareId: widget.splitShareId!,
+          paymentMethod: _paymentMethod,
+          transferDate: transferDateStr,
+          transferTime: transferTimeStr,
+          slipImagePath: _slipImage!.path,
+        );
+      } else if (payingBalance) {
         amount = _balanceAmount(booking);
         await context.read<AppProvider>().chargeBalance(
           bookingRef: widget.bookingRef,
@@ -361,9 +397,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
           final trip = asMap(schedule['trip']);
           final status = textOf(booking['status']);
           final balanceUnpaid = _balanceUnpaid(booking);
+          // Paying one split share (แบ่งจ่ายกลุ่ม) of a confirmed booking.
+          final payingShare = widget.splitShareId != null;
+          final shareRecord = payingShare
+              ? (_splitShare ?? const <String, dynamic>{})
+              : const <String, dynamic>{};
+          final sharePaid =
+              payingShare && textOf(shareRecord['status']) == 'paid';
+          final collectingShare =
+              payingShare && !sharePaid && shareRecord.isNotEmpty;
           // When the booking is on a deposit plan with an unpaid balance, we
           // collect the balance from this screen even though status is "confirmed".
-          final collectingBalance = status == 'confirmed' && balanceUnpaid;
+          final collectingBalance =
+              status == 'confirmed' && balanceUnpaid && !payingShare;
           // Paying one installment of an already-confirmed installment booking.
           final payingInstallment = widget.installmentNo != null;
           final installmentRecord = payingInstallment
@@ -375,18 +421,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
               payingInstallment && !installmentPaid && installmentRecord.isNotEmpty;
           final checkInReady = status == 'confirmed' &&
               !balanceUnpaid &&
-              !payingInstallment;
+              !payingInstallment &&
+              !payingShare;
           final paymentType = collectingBalance
               ? 'balance'
               : _normalizePaymentType(booking, _paymentType);
-          final amountDue = collectingBalance
-              ? _balanceAmount(booking)
-              : payingInstallment
-                  ? _asNum(installmentRecord['amount'])
-                  : _amountDue(booking, paymentType);
+          final amountDue = payingShare
+              ? _asNum(shareRecord['amount'])
+              : collectingBalance
+                  ? _balanceAmount(booking)
+                  : payingInstallment
+                      ? _asNum(installmentRecord['amount'])
+                      : _amountDue(booking, paymentType);
           final qrPayload = _buildPromptPayPayload(_promptPayId, amountDue);
-          final pendingFormVisible =
-              status == 'pending' || collectingBalance || collectingInstallment;
+          final pendingFormVisible = status == 'pending' ||
+              collectingBalance ||
+              collectingInstallment ||
+              collectingShare;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
@@ -412,6 +463,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
+              if (payingShare) ...[
+                _SplitShareBanner(
+                  booking: booking,
+                  share: shareRecord,
+                  paid: sharePaid,
+                ),
+                const SizedBox(height: 16),
+              ],
               if (checkInReady) ...[
                 _PaymentCompletedCard(booking: booking),
                 const SizedBox(height: 16),
@@ -426,8 +485,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
               if (pendingFormVisible) ...[
                 if (!collectingBalance &&
                     !payingInstallment &&
+                    !payingShare &&
                     (_installmentAvailable(booking) ||
-                        _depositAvailable(booking))) ...[
+                        _depositAvailable(booking) ||
+                        _splitAvailable(booking))) ...[
                   _PaymentTypeSection(
                     booking: booking,
                     value: paymentType,
@@ -469,16 +530,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 _SubmitButton(
                   paying: _paying,
                   amount: amountDue,
-                  label: collectingBalance
-                      ? 'ชำระยอดส่วนที่เหลือ'
-                      : collectingInstallment
-                          ? 'ชำระงวดที่ ${widget.installmentNo}'
-                          : null,
+                  label: collectingShare
+                      ? 'ชำระส่วนของฉัน'
+                      : collectingBalance
+                          ? 'ชำระยอดส่วนที่เหลือ'
+                          : collectingInstallment
+                              ? 'ชำระงวดที่ ${widget.installmentNo}'
+                              : null,
                   onPressed: () => _submit(
                     booking,
                     payingBalance: collectingBalance,
                     installmentNo:
                         collectingInstallment ? widget.installmentNo : null,
+                    payingShare: collectingShare,
                   ),
                 ),
               ],

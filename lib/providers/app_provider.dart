@@ -1247,6 +1247,143 @@ class AppProvider extends ChangeNotifier {
     return data;
   }
 
+  // ─── Trip posts / ฟีดรูปหลังทริป ────────────────────────────────────────
+
+  /// ฟีดโพสต์รูป — ส่ง slug = ฟีดของทริปเดียว, ไม่ส่ง = ฟีดรวมทุกทริป
+  /// คืน {data: [...], meta: {..., can_post?}}
+  Future<Map<String, dynamic>> tripPosts({String? slug, int page = 1}) async {
+    final response = await api.get(
+      slug == null ? ApiEndpoints.tripPosts : ApiEndpoints.tripPostsOf(slug),
+      query: {'page': page},
+    );
+    return Map<String, dynamic>.from(response as Map);
+  }
+
+  /// โพสต์รูปเข้าฟีดของทริป (สูงสุด 6 รูป + แคปชัน)
+  Future<Map<String, dynamic>> createTripPost(
+    String slug, {
+    required List<String> imagePaths,
+    String? caption,
+  }) async {
+    final files = <String, String>{};
+    for (var i = 0; i < imagePaths.length; i++) {
+      files['images[$i]'] = imagePaths[i];
+    }
+    final response = await api.postMultipart(
+      ApiEndpoints.tripPostsOf(slug),
+      fields: {'caption': ?caption},
+      files: files,
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<void> deleteTripPost(int postId) async {
+    await api.delete(ApiEndpoints.tripPost(postId));
+  }
+
+  /// กดไลก์/เลิกไลก์ — คืน {liked, likes_count}
+  Future<Map<String, dynamic>> likeTripPost(int postId) async {
+    final response = await api.post(ApiEndpoints.tripPostLike(postId));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> tripPostComments(
+    int postId, {
+    int page = 1,
+  }) async {
+    final response = await api.get(
+      ApiEndpoints.tripPostComments(postId),
+      query: {'page': page},
+    );
+    return Map<String, dynamic>.from(response as Map);
+  }
+
+  Future<Map<String, dynamic>> addTripPostComment(
+    int postId,
+    String body,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.tripPostComments(postId),
+      body: {'body': body},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<void> deleteTripPostComment(int postId, int commentId) async {
+    await api.delete(ApiEndpoints.tripPostComment(postId, commentId));
+  }
+
+  Future<void> reportTripPost(int postId, {String? reason}) async {
+    await api.post(
+      ApiEndpoints.tripPostReport(postId),
+      body: {'reason': ?reason},
+    );
+  }
+
+  // ─── Split payment (แบ่งจ่ายกลุ่ม) ──────────────────────────────────────
+
+  /// ภาพรวมการแบ่งจ่ายของการจอง: รายการส่วนแบ่ง สถานะ และลิงก์จ่าย
+  Future<Map<String, dynamic>> bookingSplit(String ref) async {
+    final response = await api.get(ApiEndpoints.bookingSplit(ref));
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// เจ้าของเริ่มแบ่งจ่าย — ไม่ส่ง shares = หารเท่าตามจำนวนผู้เดินทาง
+  Future<Map<String, dynamic>> setupBookingSplit(
+    String ref, {
+    List<Map<String, dynamic>>? shares,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.bookingSplit(ref),
+      body: {'shares': ?shares},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// เจ้าของแก้ยอด/รายชื่อของส่วนที่ยังไม่ถูกชำระ (ส่งชุด pending ครบชุด)
+  Future<Map<String, dynamic>> updateBookingSplit(
+    String ref,
+    List<Map<String, dynamic>> shares,
+  ) async {
+    final response = await api.put(
+      ApiEndpoints.bookingSplit(ref),
+      body: {'shares': shares},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// เจ้าของยกเลิกการแบ่งจ่าย (ลบเฉพาะส่วนที่ยังไม่จ่าย)
+  Future<void> cancelBookingSplit(String ref) async {
+    await api.delete(ApiEndpoints.bookingSplit(ref));
+  }
+
+  /// ชำระส่วนแบ่งของตัวเอง (หรือจ่ายแทนเพื่อน) พร้อมแนบสลิป
+  Future<Map<String, dynamic>> paySplitShare({
+    required String bookingRef,
+    required int shareId,
+    String paymentMethod = 'promptpay',
+    String? transferDate,
+    String? transferTime,
+    required String slipImagePath,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.bookingSplitSharePay(bookingRef, shareId),
+      fields: {
+        'payment_method': paymentMethod,
+        'transfer_date': ?transferDate,
+        'transfer_time': ?transferTime,
+      },
+      files: {'slip_image': slipImagePath},
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// เจ้าของกดเตือนสมาชิกที่ยังไม่จ่าย (push ผ่าน FCM)
+  Future<void> remindSplitShare(String ref, int shareId) async {
+    await api.post(ApiEndpoints.bookingSplitShareRemind(ref, shareId));
+  }
+
   // ─── Group chat ─────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> chatMessages(

@@ -236,6 +236,9 @@ class _PaymentTypeSection extends StatelessWidget {
     final depositOn = _depositAvailable(booking);
     final deposit = _depositAmount(booking);
     final balance = _balanceAmount(booking);
+    final splitOn = _splitAvailable(booking);
+    final splitShare = _splitOwnShare(booking);
+    final splitFriends = _splitPassengerCount(booking) - 1;
     final days = _daysUntilTrip(booking);
     final interval = _installmentInterval(booking);
     final maxAllowed = _maxAllowedInstallmentCount(booking);
@@ -284,11 +287,28 @@ class _PaymentTypeSection extends StatelessWidget {
                 onTap: () => onChanged('installment'),
               ),
           ],
+          // แบ่งจ่ายกับเพื่อน: เจ้าของจ่ายส่วนตัวเองตอนนี้ ที่นั่งยืนยันทันที
+          // ส่วนของเพื่อนส่งลิงก์/แจ้งเตือนให้จ่ายเองภายหลัง
+          if (splitOn) ...[
+            const SizedBox(height: 10),
+            _ChoiceTile(
+              selected: value == 'split',
+              icon: Icons.call_split_rounded,
+              title: 'แบ่งจ่ายกับเพื่อน',
+              subtitle:
+                  'จ่ายส่วนของคุณ ${money(splitShare)} · เพื่อนอีก $splitFriends คนจ่ายส่วนตัวเอง',
+              onTap: () => onChanged('split'),
+            ),
+          ],
           if (value == 'installment' && !installmentBlocked) ...[
             const SizedBox(height: 14),
             ..._installmentSchedule(booking).map(
               (row) => _InstallmentRow(row: row),
             ),
+          ],
+          if (value == 'split') ...[
+            const SizedBox(height: 14),
+            _SplitBreakdown(booking: booking),
           ],
           if (value == 'deposit') ...[
             const SizedBox(height: 14),
@@ -463,6 +483,58 @@ class _DepositBreakdown extends StatelessWidget {
             step: '3',
             label: 'ส่วนที่เหลือ · ภายใน $dueText',
             value: money(balance),
+            highlight: false,
+            warn: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// สรุปขั้นตอนการแบ่งจ่ายกับเพื่อน ก่อนเจ้าของกดชำระส่วนของตัวเอง
+class _SplitBreakdown extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _SplitBreakdown({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = booking['total_amount'];
+    final ownShare = _splitOwnShare(booking);
+    final friends = _splitPassengerCount(booking) - 1;
+    final remainder = _asNum(total) - ownShare;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _accent.withValues(
+          alpha: AppTheme.isDark(context) ? 0.14 : 0.06,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _accent.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _DepositBreakdownRow(
+            step: '1',
+            label: 'ยอดรวมทั้งหมด',
+            value: money(total),
+            highlight: false,
+          ),
+          const SizedBox(height: 8),
+          _DepositBreakdownRow(
+            step: '2',
+            label: 'ชำระส่วนของคุณตอนนี้ · ที่นั่งยืนยันทันที',
+            value: money(ownShare),
+            highlight: true,
+          ),
+          const SizedBox(height: 8),
+          _DepositBreakdownRow(
+            step: '3',
+            label: 'เพื่อนอีก $friends คนจ่ายส่วนตัวเองผ่านแอป/ลิงก์',
+            value: money(remainder),
             highlight: false,
             warn: true,
           ),

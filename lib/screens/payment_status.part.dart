@@ -329,6 +329,94 @@ class _BalanceDueBanner extends StatelessWidget {
   }
 }
 
+/// แบนเนอร์โหมดจ่ายส่วนแบ่งกลุ่ม — บอกว่ากำลังจ่าย "ส่วนของใคร" เท่าไหร่
+/// และครบกำหนดเมื่อไร (ใช้กำหนดเดียวกับยอดคงเหลือของการจอง)
+class _SplitShareBanner extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final Map<String, dynamic> share;
+  final bool paid;
+
+  const _SplitShareBanner({
+    required this.booking,
+    required this.share,
+    required this.paid,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = paid ? _accent : AppTheme.warningColor;
+    final name = textOf(share['name'], 'ผู้ร่วมทริป');
+    final isMine = share['is_mine'] == true;
+    final dueText = _balanceDueDateText(booking);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: AppTheme.isDark(context) ? 0.22 : 0.10),
+            color.withValues(alpha: AppTheme.isDark(context) ? 0.10 : 0.04),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              paid ? Icons.check_rounded : Icons.call_split_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  paid
+                      ? 'ส่วนนี้ชำระแล้ว'
+                      : isMine
+                          ? 'ชำระส่วนของคุณ (แบ่งจ่ายกลุ่ม)'
+                          : 'ชำระส่วนของ $name (แบ่งจ่ายกลุ่ม)',
+                  style: appFont(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  paid
+                      ? 'ส่วนของ $name ${money(share['amount'])} ชำระเรียบร้อยแล้ว'
+                      : 'ยอด ${money(share['amount'])} · กรุณาชำระภายในวันที่ $dueText',
+                  style: appFont(
+                    color: AppTheme.onSurface(context),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _InstallmentBanner extends StatelessWidget {
   final int no;
   final String dueDate;

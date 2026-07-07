@@ -19,6 +19,7 @@ import 'customer_app_screen.dart' show BookingDetailSheet;
 import 'document_wallet_screen.dart';
 import 'group_rooms_screen.dart';
 import 'notification_preferences_screen.dart';
+import 'trip_feed_screen.dart' show TripFeedScreen;
 import 'chat_screen.dart' show ChatScreen;
 import 'chat_list_screen.dart' show ChatListScreen;
 import 'staff_check_in_screen.dart' show StaffCheckInScreen;

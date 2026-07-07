@@ -113,6 +113,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final bookingRef = _cleanText(data['booking_ref']);
     final tripSlug = _cleanText(data['trip_slug']);
 
+    // ฟีดรูปหลังทริป: เปิดฟีดของทริปนั้น
+    if (type == 'trip_post_liked' || type == 'trip_post_comment') {
+      _pushPremium(
+        context,
+        TripFeedScreen(slug: tripSlug.isEmpty ? null : tripSlug),
+      );
+      return;
+    }
+
+    // แบ่งจ่ายกลุ่ม: เปิดหน้าชำระส่วนของตัวเองโดยตรง
+    if (type == 'split_share_created' || type == 'split_share_reminder') {
+      final shareId = int.tryParse(_cleanText(data['share_id'])) ?? 0;
+      if (bookingRef.isNotEmpty && shareId != 0) {
+        _pushPremium(
+          context,
+          PaymentScreen(bookingRef: bookingRef, splitShareId: shareId),
+        );
+        return;
+      }
+    }
+
     if (bookingRef.isNotEmpty) {
       _pushPremium(context, PaymentScreen(bookingRef: bookingRef));
       return;

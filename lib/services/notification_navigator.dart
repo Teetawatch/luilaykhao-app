@@ -7,6 +7,8 @@ import '../providers/app_provider.dart';
 import '../screens/chat_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/join_booking_screen.dart';
+import '../screens/payment_screen.dart';
+import '../screens/trip_feed_screen.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/schedule_announcements_screen.dart';
 import '../screens/sos_alert_screen.dart';
@@ -39,6 +41,19 @@ class NotificationNavigator {
       case 'vehicle_departed':
       case 'vehicle_approaching':
         _openBookingDetail(data);
+      case 'split_share_created':
+      case 'split_share_reminder':
+        // แบ่งจ่ายกลุ่ม: พาไปหน้าชำระส่วนของตัวเองโดยตรง
+        _openSplitShare(data);
+      case 'split_started':
+      case 'split_share_paid':
+      case 'split_share_receipt':
+      case 'split_all_paid':
+        _openBookingDetail(data);
+      case 'trip_post_liked':
+      case 'trip_post_comment':
+        // ฟีดรูปหลังทริป: เปิดฟีดของทริปนั้น (หรือฟีดรวมถ้าไม่มี slug)
+        _openTripFeed(data);
       case 'review_invite':
         _switchTab(2);
         _reviewPrompter?.call(data);
@@ -101,6 +116,33 @@ class NotificationNavigator {
       return;
     }
     _switchTab(2);
+  }
+
+  static void _openTripFeed(Map<String, dynamic> data) {
+    final slug = data['trip_slug']?.toString().trim() ?? '';
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => TripFeedScreen(slug: slug.isEmpty ? null : slug),
+        ),
+      ),
+    );
+  }
+
+  static void _openSplitShare(Map<String, dynamic> data) {
+    final ref = data['booking_ref']?.toString() ?? '';
+    final shareId = int.tryParse('${data['share_id']}') ?? 0;
+    if (ref.isEmpty || shareId == 0) {
+      _switchTab(2);
+      return;
+    }
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => PaymentScreen(bookingRef: ref, splitShareId: shareId),
+        ),
+      ),
+    );
   }
 
   static void _openTripFromData(Map<String, dynamic> data) {

@@ -174,6 +174,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         .where((r) => r.isNotEmpty)
                         .toList(),
                   ),
+                  // UGC social proof — รูปจริงจากนักเดินทาง (ฟีดหลังทริป)
+                  const _TravelerFeedSection(),
                   // Secondary features (invite a group / refer a friend).
                   _GroupTripSection(app: app),
                   _ReferralBanner(app: app),
@@ -4777,6 +4779,195 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                                   ),
                                 ],
                               ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Traveler Feed Section ────────────────────────────────────────────────────
+// ฟีดรูปหลังทริป (UGC) บนหน้าแรก — พรีวิวโพสต์ล่าสุด + ทางเข้าฟีดรวม
+
+class _TravelerFeedSection extends StatefulWidget {
+  const _TravelerFeedSection();
+
+  @override
+  State<_TravelerFeedSection> createState() => _TravelerFeedSectionState();
+}
+
+class _TravelerFeedSectionState extends State<_TravelerFeedSection> {
+  List<Map<String, dynamic>> _posts = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final response = await context.read<AppProvider>().tripPosts();
+      if (!mounted) return;
+      setState(() {
+        _posts = asList(response['data']).map(asMap).toList();
+      });
+    } catch (_) {
+      // ส่วนเสริมบนหน้าแรก — โหลดไม่ได้ก็แค่ไม่แสดง
+    }
+  }
+
+  void _openFeed() {
+    HapticFeedback.selectionClick();
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TripFeedScreen()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_posts.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 4, 0, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'ฟีดนักเดินทาง',
+                    style: appFont(
+                      color: const Color(0xFF063F46),
+                      fontSize: 25,
+                      height: 1.1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _openFeed,
+                  child: Text(
+                    'ดูทั้งหมด',
+                    style: appFont(
+                      color: const Color(0xFF063F46),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'รูปจริงจากลูกค้าที่เพิ่งกลับจากทริป',
+            style: appFont(
+              fontSize: 12.5,
+              color: AppTheme.mutedText(context),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 150,
+            child: ListView.separated(
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 20),
+              itemCount: _posts.take(10).length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final post = _posts[index];
+                final photos = asList(post['photos']).map(asMap).toList();
+                final url = photos.isEmpty ? '' : textOf(photos.first['url']);
+                final user = asMap(post['user']);
+                final likes = int.tryParse(textOf(post['likes_count'])) ?? 0;
+                return GestureDetector(
+                  onTap: _openFeed,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SizedBox(
+                      width: 150,
+                      height: 150,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (url.isNotEmpty)
+                            CachedNetworkImage(
+                              imageUrl: url,
+                              fit: BoxFit.cover,
+                              placeholder: (_, _) => Container(
+                                color: AppTheme.primaryColor
+                                    .withValues(alpha: 0.06),
+                              ),
+                              errorWidget: (_, _, _) => Container(
+                                color: AppTheme.primaryColor
+                                    .withValues(alpha: 0.08),
+                              ),
+                            ),
+                          // gradient ล่างให้อ่านชื่อคนโพสต์ออก
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.center,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.55),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: 8,
+                            right: 8,
+                            bottom: 8,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    textOf(user['name'], 'นักเดินทาง'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: appFont(
+                                      fontSize: 11,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                if (likes > 0) ...[
+                                  const Icon(
+                                    Icons.favorite_rounded,
+                                    size: 11,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '$likes',
+                                    style: appFont(
+                                      fontSize: 10.5,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],

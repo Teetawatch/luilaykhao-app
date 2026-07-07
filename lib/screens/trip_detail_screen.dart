@@ -24,6 +24,7 @@ import '../widgets/weather_card.dart';
 import 'booking_flow_screen.dart';
 import 'group_room_screen.dart';
 import 'login_screen.dart';
+import 'trip_feed_screen.dart';
 import 'waitlist_screen.dart';
 
 part 'trip_detail_hero.part.dart';
@@ -779,6 +780,8 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
         ),
       if (_hasCommunityPhotos)
         CommunityPhotosSection(trip: trip, reviews: widget.reviews),
+      // ฟีดรูปหลังทริป — ซ่อนตัวเองเมื่อไม่มีโพสต์และผู้ดูโพสต์ไม่ได้
+      TripFeedSection(trip: trip),
       ReviewSection(trip: trip, reviews: widget.reviews),
     ];
 

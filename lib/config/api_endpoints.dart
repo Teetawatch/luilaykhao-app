@@ -101,6 +101,23 @@ class ApiEndpoints {
   static String bookingInviteAccept(String token) =>
       'booking-invites/$token/accept';
 
+  // Trip posts / ฟีดรูปหลังทริป
+  static const tripPosts = 'trip-posts';
+  static String tripPostsOf(String slug) => 'trips/$slug/posts';
+  static String tripPost(int id) => 'trip-posts/$id';
+  static String tripPostLike(int id) => 'trip-posts/$id/like';
+  static String tripPostComments(int id) => 'trip-posts/$id/comments';
+  static String tripPostComment(int id, int commentId) =>
+      'trip-posts/$id/comments/$commentId';
+  static String tripPostReport(int id) => 'trip-posts/$id/report';
+
+  // Split payment (แบ่งจ่ายกลุ่ม)
+  static String bookingSplit(String ref) => 'bookings/$ref/split';
+  static String bookingSplitSharePay(String ref, int shareId) =>
+      'bookings/$ref/split/shares/$shareId/pay';
+  static String bookingSplitShareRemind(String ref, int shareId) =>
+      'bookings/$ref/split/shares/$shareId/remind';
+
   // Payments
   static const paymentsCharge = 'payments/charge';
   static const paymentsChargeBalance = 'payments/charge-balance';

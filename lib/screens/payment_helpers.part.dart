@@ -20,6 +20,7 @@ num _amountDue(Map<String, dynamic> booking, String paymentType) {
   final type = _normalizePaymentType(booking, paymentType);
   if (type == 'installment') return _installmentAmount(booking);
   if (type == 'deposit') return _depositAmount(booking);
+  if (type == 'split') return _splitOwnShare(booking);
   return _asNum(booking['total_amount']);
 }
 
@@ -32,7 +33,27 @@ String _normalizePaymentType(Map<String, dynamic> booking, String paymentType) {
   if (paymentType == 'deposit' && _depositAvailable(booking)) {
     return 'deposit';
   }
+  if (paymentType == 'split' && _splitAvailable(booking)) {
+    return 'split';
+  }
   return 'full';
+}
+
+/// แบ่งจ่ายกับเพื่อน: ต้องมีผู้เดินทางอย่างน้อย 2 คน และไม่ใช่จอยทริป
+bool _splitAvailable(Map<String, dynamic> booking) {
+  if (_asBool(booking['is_join_trip'])) return false;
+  return _splitPassengerCount(booking) >= 2;
+}
+
+int _splitPassengerCount(Map<String, dynamic> booking) =>
+    asList(booking['passengers']).length;
+
+/// ส่วนของเจ้าของตอนเลือก "แบ่งจ่ายกับเพื่อน" = ยอดรวม ÷ จำนวนผู้เดินทาง
+num _splitOwnShare(Map<String, dynamic> booking) {
+  final total = _asNum(booking['total_amount']);
+  final count = _splitPassengerCount(booking);
+  if (count <= 1) return total;
+  return ((total / count) * 100).round() / 100;
 }
 
 bool _installmentAvailable(Map<String, dynamic> booking) {

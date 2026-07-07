@@ -696,6 +696,13 @@ String _notificationTypeLabel(String type) {
     'payment' || 'payment_confirmed' => 'การชำระเงิน',
     'payment_rejected' => 'ชำระเงินไม่สำเร็จ',
     'installment_due' => 'ผ่อนชำระ',
+    'split_started' ||
+    'split_share_created' ||
+    'split_share_reminder' ||
+    'split_share_paid' ||
+    'split_share_receipt' ||
+    'split_all_paid' => 'แบ่งจ่ายกลุ่ม',
+    'trip_post_liked' || 'trip_post_comment' => 'ฟีดนักเดินทาง',
     'seat_alert' => 'ที่นั่งใกล้เต็ม',
     'sos_alert' => 'SOS ฉุกเฉิน',
     'promo' => 'โปรโมชัน',
@@ -720,6 +727,14 @@ IconData _notificationIcon(String type) {
     'payment_confirmed' ||
     'payment_rejected' => Icons.payments_rounded,
     'installment_due' => Icons.schedule_rounded,
+    'split_started' ||
+    'split_share_created' ||
+    'split_share_reminder' ||
+    'split_share_paid' ||
+    'split_share_receipt' ||
+    'split_all_paid' => Icons.call_split_rounded,
+    'trip_post_liked' => Icons.favorite_rounded,
+    'trip_post_comment' => Icons.mode_comment_rounded,
     'booking' || 'booking_confirmed' => Icons.confirmation_number_rounded,
     'booking_cancelled' => Icons.cancel_rounded,
     'vehicle_approaching' => Icons.directions_bus_rounded,
@@ -740,6 +755,10 @@ Color _notificationColor(String type) {
     'payment' || 'payment_confirmed' => AppTheme.primaryColor,
     'payment_rejected' || 'booking_cancelled' => AppTheme.errorColor,
     'installment_due' => const Color(0xFFD97706),
+    'split_share_created' || 'split_share_reminder' => const Color(0xFFD97706),
+    'split_all_paid' => const Color(0xFF059669),
+    'trip_post_liked' => const Color(0xFFE11D48),
+    'trip_post_comment' => const Color(0xFF2563EB),
     'booking' || 'booking_confirmed' => AppTheme.primaryColor,
     'vehicle_approaching' => const Color(0xFF2563EB),
     'staff_assignment' => const Color(0xFF2563EB),

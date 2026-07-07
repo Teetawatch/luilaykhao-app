@@ -53,12 +53,18 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
           final depositAvailable =
               _scheduleDepositAvailable(schedule) &&
               !_asBool(booking['is_join_trip']);
+          // แบ่งจ่ายกับเพื่อน: จ่ายเฉพาะส่วนตัวเองตอนจอง แล้วให้เพื่อนช่วยจ่าย
+          final splitAvailable =
+              passengers.length >= 2 && !_asBool(booking['is_join_trip']);
           final paymentType = () {
             if (_paymentType == 'installment' && installmentAvailable) {
               return 'installment';
             }
             if (_paymentType == 'deposit' && depositAvailable) {
               return 'deposit';
+            }
+            if (_paymentType == 'split' && splitAvailable) {
+              return 'split';
             }
             return 'full';
           }();
@@ -441,6 +447,16 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 // Deposit balance summary (confirmed booking with unpaid balance)
                 if (balanceUnpaid) ...[
                   _BookingDepositSummary(booking: booking),
+                  const SizedBox(height: 16),
+                  // แบ่งจ่ายกลุ่ม — เจ้าของแบ่งยอดคงเหลือให้เพื่อนช่วยจ่าย
+                  _BookingSplitSection(
+                    booking: booking,
+                    onChanged: () => setState(() {
+                      _future = context.read<AppProvider>().booking(
+                        widget.bookingRef,
+                      );
+                    }),
+                  ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -464,7 +480,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
 
                 // Payment actions (pending status)
                 if (booking['status'] == 'pending') ...[
-                  if (installmentAvailable || depositAvailable) ...[
+                  if (installmentAvailable ||
+                      depositAvailable ||
+                      splitAvailable) ...[
                     DropdownButtonFormField<String>(
                       initialValue: paymentType,
                       decoration: const InputDecoration(
@@ -484,6 +502,11 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                           const DropdownMenuItem(
                             value: 'installment',
                             child: Text('ผ่อนชำระ'),
+                          ),
+                        if (splitAvailable)
+                          const DropdownMenuItem(
+                            value: 'split',
+                            child: Text('แบ่งจ่ายกับเพื่อน'),
                           ),
                       ],
                       onChanged: (value) =>
@@ -522,6 +545,32 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                       onPressed: () => _review(context, booking),
                       icon: const Icon(Icons.star_rounded),
                       label: const Text('รีวิวทริป'),
+                    ),
+                  ),
+                ],
+
+                // แชร์รูปเข้าฟีดสาธารณะของทริป — หลังทริปจบ (backend ตรวจสิทธิ์อีกชั้น)
+                if (_isPastBooking(booking) &&
+                    textOf(trip['slug']).isNotEmpty &&
+                    ['confirmed', 'completed']
+                        .contains(textOf(booking['status']))) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TripPostComposerScreen(
+                              slug: textOf(trip['slug']),
+                              tripTitle: textOf(trip['title'], 'ทริปนี้'),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.add_a_photo_rounded),
+                      label: const Text('แชร์รูปทริปนี้ขึ้นฟีด'),
                     ),
                   ),
                 ],
