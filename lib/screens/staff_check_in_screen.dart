@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 import 'login_screen.dart';
 
 class StaffCheckInScreen extends StatefulWidget {
@@ -1741,14 +1742,14 @@ String dateText(dynamic value) {
   final raw = textOf(value);
   final date = DateTime.tryParse(raw);
   if (date == null) return raw.isEmpty ? '-' : raw;
-  return DateFormat('d MMM y', 'th_TH').format(date.toLocal());
+  return thaiDateShort(date.toLocal());
 }
 
 String dateTimeText(dynamic value) {
   final raw = textOf(value);
   final date = DateTime.tryParse(raw);
   if (date == null) return raw.isEmpty ? '-' : raw;
-  return DateFormat('d MMM y HH:mm', 'th_TH').format(date.toLocal());
+  return thaiDateTimeShort(date.toLocal());
 }
 
 String statusLabel(dynamic value) {

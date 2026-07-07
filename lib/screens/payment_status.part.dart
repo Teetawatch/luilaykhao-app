@@ -435,7 +435,7 @@ class _InstallmentBanner extends StatelessWidget {
     final color = paid ? _accent : AppTheme.warningColor;
     final due = DateTime.tryParse(dueDate);
     final dueText =
-        due == null ? '-' : DateFormat('d MMM yyyy', 'th_TH').format(due);
+        due == null ? '-' : thaiDateShort(due);
 
     return Container(
       padding: const EdgeInsets.all(16),

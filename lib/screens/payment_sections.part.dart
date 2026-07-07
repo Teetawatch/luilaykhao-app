@@ -956,7 +956,7 @@ class _TransferTimeSection extends StatelessWidget {
                   label: 'วันที่โอน',
                   value: date == null
                       ? 'เลือกวันที่'
-                      : DateFormat('d MMM yyyy', 'th_TH').format(date!),
+                      : thaiDateShort(date!),
                   filled: date != null,
                   onTap: onPickDate,
                 ),

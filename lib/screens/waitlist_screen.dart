@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 import '../widgets/travel_widgets.dart';
 import 'trip_detail_screen.dart';
 
@@ -351,7 +351,7 @@ class _WaitlistCard extends StatelessWidget {
     if (value.isEmpty) return '';
     final parsed = DateTime.tryParse(value);
     if (parsed == null) return value;
-    return DateFormat('d MMM yyyy', 'th_TH').format(parsed);
+    return thaiDateShort(parsed);
   }
 }
 

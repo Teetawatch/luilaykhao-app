@@ -745,7 +745,7 @@ String _monthGroupLabel(String yearMonthKey) {
   final year = int.tryParse(parts[0]) ?? 0;
   final month = int.tryParse(parts[1]) ?? 0;
   if (year == 0 || month == 0) return '';
-  return DateFormat('MMMM yyyy', 'th_TH').format(DateTime(year, month));
+  return thaiMonthYear(DateTime(year, month));
 }
 
 class _ScheduleChip extends StatelessWidget {

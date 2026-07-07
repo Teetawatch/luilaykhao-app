@@ -154,7 +154,7 @@ DateTime? _balanceDueDate(Map<String, dynamic> booking) {
 String _balanceDueDateText(Map<String, dynamic> booking) {
   final date = _balanceDueDate(booking);
   if (date == null) return '-';
-  return DateFormat('d MMM yyyy', 'th_TH').format(date);
+  return thaiDateShort(date);
 }
 
 int _depositPercentApprox(Map<String, dynamic> booking) {

@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/group_plan.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 import '../widgets/travel_widgets.dart';
 import 'customer_app_screen.dart' show AllTripsScreen;
 import 'group_room_screen.dart';
@@ -174,8 +174,7 @@ class _GroupRoomCard extends StatelessWidget {
     final schedule = plan.schedule;
     final image = trip?.image ?? '';
     final dateLabel = schedule?.departureDate != null
-        ? DateFormat('d MMM yyyy', 'th_TH')
-            .format(DateTime.parse(schedule!.departureDate!))
+        ? thaiDateShort(DateTime.parse(schedule!.departureDate!))
         : '';
     final claimed = plan.claimedSeatIds.length;
 

@@ -15,6 +15,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 import '../widgets/active_seat_lock_overlay.dart';
 import '../widgets/travel_widgets.dart';
 import 'booking_flow_screen.dart';

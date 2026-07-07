@@ -319,7 +319,7 @@ String dateText(dynamic value) {
   if (raw.isEmpty) return '-';
   final date = DateTime.tryParse(raw);
   if (date == null) return raw;
-  return DateFormat('d MMM yyyy', 'th_TH').format(date);
+  return thaiDateShort(date);
 }
 
 void showSnack(BuildContext context, String message) {

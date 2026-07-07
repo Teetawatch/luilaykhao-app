@@ -8,6 +8,7 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 import '../widgets/sos_button.dart';
 import '../widgets/travel_widgets.dart';
 import '../widgets/weather_card.dart';
@@ -271,10 +272,9 @@ class _CountdownHeader extends StatelessWidget {
   String _dateRange() {
     final dep = departure;
     if (dep == null) return '';
-    final fmt = DateFormat('d MMM yyyy', 'th_TH');
     final ret = returnDate;
-    if (ret == null || _sameDay(dep, ret)) return fmt.format(dep);
-    return '${DateFormat('d MMM', 'th_TH').format(dep)} - ${fmt.format(ret)}';
+    if (ret == null || _sameDay(dep, ret)) return thaiDateShort(dep);
+    return '${DateFormat('d MMM', 'th_TH').format(dep)} - ${thaiDateShort(ret)}';
   }
 
   bool _sameDay(DateTime a, DateTime b) =>

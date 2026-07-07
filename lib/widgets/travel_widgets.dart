@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 
 final _moneyFormat = NumberFormat.currency(locale: 'th_TH', symbol: '฿');
 
@@ -41,7 +42,7 @@ String dateText(dynamic value) {
   if (raw.isEmpty) return '-';
   final date = DateTime.tryParse(raw);
   if (date == null) return raw;
-  return DateFormat('d MMM yyyy', 'th_TH').format(date);
+  return thaiDateShort(date);
 }
 
 /// วัน-เวลาออกรถจริงของรอบเดินทาง (departs_at) — อาจอยู่ก่อนวันทริป เช่น
@@ -58,7 +59,7 @@ DateTime? scheduleDepartsAt(Map<String, dynamic> schedule) {
 String departureText(Map<String, dynamic> schedule) {
   final departsAt = scheduleDepartsAt(schedule);
   if (departsAt != null) {
-    final datePart = DateFormat('d MMM yyyy', 'th_TH').format(departsAt);
+    final datePart = thaiDateShort(departsAt);
     final timePart = DateFormat('HH:mm').format(departsAt);
     return '$datePart $timePart น.';
   }

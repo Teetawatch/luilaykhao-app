@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 
 /// ประกาศทางการจากผู้จัดต่อรอบเดินทาง — เปลี่ยนจุดนัดพบ / เลื่อนเวลา / ของที่ต้อง
 /// เตรียม ฯลฯ ออกแบบสะอาดตามแนวทาง Apple: การ์ดมี SF-symbol-style glyph ในกล่อง
@@ -457,5 +457,5 @@ String _relativeTime(String? iso) {
   if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
   if (diff.inHours < 24) return '${diff.inHours} ชม.ที่แล้ว';
   if (diff.inDays < 7) return '${diff.inDays} วันที่แล้ว';
-  return DateFormat('d MMM yyyy', 'th_TH').format(t);
+  return thaiDateShort(t);
 }

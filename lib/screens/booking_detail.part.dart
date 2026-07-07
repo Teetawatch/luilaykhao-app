@@ -1132,7 +1132,7 @@ class _BookingDepositSummary extends StatelessWidget {
     final dueDate = DateTime.tryParse(dueRaw);
     final dueText = dueDate == null
         ? '-'
-        : DateFormat('d MMM yyyy', 'th_TH').format(dueDate);
+        : thaiDateShort(dueDate);
     const warning = AppTheme.warningColor;
 
     return Container(
@@ -3241,7 +3241,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
   Widget _rulesNotice() {
     final deadline = _deadline;
     final deadlineText = deadline != null
-        ? DateFormat('d MMM yyyy', 'th_TH').format(deadline)
+        ? thaiDateShort(deadline)
         : null;
     return Container(
       width: double.infinity,
@@ -3346,7 +3346,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
     final dep = DateTime.tryParse(textOf(sched['departure_date']));
     final ret = DateTime.tryParse(textOf(sched['return_date']));
     final dateLine = dep != null
-        ? DateFormat('EEE d MMM yyyy', 'th_TH').format(dep)
+        ? thaiDateShortWeekday(dep)
         : departureText(sched);
     String? nights;
     if (dep != null && ret != null) {

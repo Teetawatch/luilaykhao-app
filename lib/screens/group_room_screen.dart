@@ -10,6 +10,7 @@ import '../models/group_plan.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 import '../widgets/vehicle_seat_map.dart';
 import 'payment_screen.dart';
 
@@ -648,8 +649,7 @@ class _TripCard extends StatelessWidget {
     final schedule = plan.schedule;
     final image = trip?.image ?? '';
     final dateLabel = schedule?.departureDate != null
-        ? DateFormat('d MMM yyyy', 'th_TH')
-            .format(DateTime.parse(schedule!.departureDate!))
+        ? thaiDateShort(DateTime.parse(schedule!.departureDate!))
         : '';
 
     return Container(

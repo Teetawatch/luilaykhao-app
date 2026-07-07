@@ -3659,7 +3659,7 @@ class _HomeNextTripCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          DateFormat('d MMM yyyy', 'th_TH').format(travelDate),
+                          thaiDateShort(travelDate),
                           style: appFont(
                             color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 12.5,

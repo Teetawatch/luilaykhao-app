@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 import '../widgets/travel_widgets.dart';
 
 class RefundStatusScreen extends StatefulWidget {
@@ -638,7 +639,8 @@ DateTime? _toDate(dynamic value) {
 
 String? _formatDate(DateTime? date) {
   if (date == null) return null;
-  return DateFormat('d MMM y · HH:mm', 'th_TH').format(date.toLocal());
+  final d = date.toLocal();
+  return '${thaiDateShort(d)} · ${DateFormat('HH:mm').format(d)}';
 }
 
 String _money(num? value) {
