@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -98,6 +99,7 @@ class _RefundBody extends StatelessWidget {
     final cancelledAt = _toDate(booking['cancelled_at']);
     final refundedAt = _toDate(booking['refunded_at']);
     final reason = textOf(booking['cancellation_reason']).trim();
+    final slipUrl = textOf(booking['refund_slip_url']).trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -119,6 +121,11 @@ class _RefundBody extends StatelessWidget {
             if (reason.isNotEmpty) _MetaRow('เหตุผล', reason),
           ],
         ),
+        const SizedBox(height: 20),
+        if (slipUrl.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _RefundSlipCard(url: slipUrl),
+        ],
         const SizedBox(height: 20),
         _RefundTimeline(
           status: refundStatus,
@@ -535,6 +542,106 @@ class _MetaRow {
   final String label;
   final String value;
   const _MetaRow(this.label, this.value);
+}
+
+/// Proof-of-transfer slip the admin attaches when the refund is paid out.
+/// Tapping opens a zoomable full-screen view.
+class _RefundSlipCard extends StatelessWidget {
+  final String url;
+  const _RefundSlipCard({required this.url});
+
+  void _openFull(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+            elevation: 0,
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4,
+              child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.receipt_long_rounded,
+                size: 18,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'หลักฐานการโอนคืนเงิน',
+                style: appFont(
+                  color: AppTheme.onSurface(context),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          GestureDetector(
+            onTap: () => _openFull(context),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: CachedNetworkImage(
+                imageUrl: url,
+                height: 220,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => Container(
+                  height: 220,
+                  color: AppTheme.background(context),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (_, _, _) => Container(
+                  height: 220,
+                  color: AppTheme.background(context),
+                  child: Icon(
+                    Icons.broken_image_rounded,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'แตะเพื่อดูภาพเต็ม',
+            style: appFont(
+              color: AppTheme.mutedText(context),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ErrorState extends StatelessWidget {
