@@ -109,6 +109,12 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 20),
                 ],
 
+                // Flexi-Price (Go Together) — ข้อเสนอ "ไปต่อกันไหม?" เมื่อรอบคนไม่ครบ
+                // การ์ดจัดการ visibility/spacing ของตัวเอง (ซ่อนเมื่อไม่มีข้อเสนอ)
+                if (textOf(booking['status']) == 'confirmed' &&
+                    !_isTripFinished(schedule))
+                  _FlexiOfferCard(bookingRef: widget.bookingRef),
+
                 // Check-in card (confirmed only)
                 if (textOf(booking['status']) == 'confirmed') ...[
                   _BookingCheckInCard(booking: booking),
@@ -1843,6 +1849,338 @@ class _CustomPickupBriefing extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// Apple HIG system colors (light/dark) สำหรับการ์ด Flexi-Price — ไลบรารีแอปลูกค้า
+// ไม่ได้แชร์ helper สีจากไลบรารีหน้ารายละเอียดทริป จึงนิยามเฉพาะที่นี่
+Color _flexiGreen(bool isDark) =>
+    isDark ? const Color(0xFF30D158) : const Color(0xFF34C759);
+Color _flexiOrange(bool isDark) =>
+    isDark ? const Color(0xFFFF9F0A) : const Color(0xFFFF9500);
+Color _flexiRed(bool isDark) =>
+    isDark ? const Color(0xFFFF453A) : const Color(0xFFFF3B30);
+
+/// ระบบ Flexi-Price (Go Together) — การ์ดข้อเสนอ "ไปต่อกันไหม?" เมื่อรอบเดินทาง
+/// มีผู้จองไม่ครบ ผู้จัดขอเก็บส่วนต่างค่ารถท่านละ X (เก็บวันเดินทาง) เพื่อให้ทริป
+/// ยังออกได้ตามกำหนดเดิม แสดงเฉพาะเมื่อมีข้อเสนอที่เปิดอยู่หรือเพิ่งยืนยันไปต่อ
+/// โหลดข้อมูลเอง ซ่อนตัว (SizedBox.shrink) เมื่อไม่มีอะไรต้องแสดง
+class _FlexiOfferCard extends StatefulWidget {
+  final String bookingRef;
+
+  const _FlexiOfferCard({required this.bookingRef});
+
+  @override
+  State<_FlexiOfferCard> createState() => _FlexiOfferCardState();
+}
+
+class _FlexiOfferCardState extends State<_FlexiOfferCard> {
+  Map<String, dynamic>? _offer;
+  bool _loaded = false;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final offer = await context
+          .read<AppProvider>()
+          .bookingFlexiOffer(widget.bookingRef);
+      if (mounted) setState(() => _offer = offer);
+    } catch (_) {
+      // best-effort — การ์ดนี้เป็นส่วนเสริม ไม่ควรทำให้หน้าจอพัง
+    } finally {
+      if (mounted) setState(() => _loaded = true);
+    }
+  }
+
+  Future<void> _respond(bool accept) async {
+    if (_submitting) return;
+
+    // อ้างอิง provider ไว้ก่อนมี async gap (dialog) เพื่อไม่ใช้ context ข้าม await
+    final app = context.read<AppProvider>();
+
+    // ปฏิเสธเป็น action ที่กลับไม่ได้ — ยืนยันก่อน
+    if (!accept) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(
+            'ยืนยันการสละสิทธิ์?',
+            style: appFont(fontWeight: FontWeight.w800, fontSize: 17),
+          ),
+          content: Text(
+            'หากคุณไม่ไปต่อ ทริปรอบนี้อาจไม่สามารถออกเดินทางได้ '
+            'และทีมงานจะติดต่อกลับเรื่องการคืนเงิน ยืนยันหรือไม่?',
+            style: appFont(fontSize: 14, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('ยกเลิก', style: appFont(fontWeight: FontWeight.w600)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                'ยืนยันสละสิทธิ์',
+                style: appFont(
+                  fontWeight: FontWeight.w700,
+                  color: _flexiRed(AppTheme.isDark(context)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    HapticFeedback.selectionClick();
+    setState(() => _submitting = true);
+    try {
+      final updated =
+          await app.respondBookingFlexiOffer(widget.bookingRef, accept: accept);
+      if (!mounted) return;
+      setState(() {
+        _offer = updated ?? _offer;
+        _submitting = false;
+      });
+      showSnack(
+        context,
+        accept ? 'ยืนยันการไปต่อแล้ว ขอบคุณครับ 🙌' : 'รับทราบการตอบกลับแล้ว',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      showSnack(context, e.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final offer = _offer;
+    if (!_loaded || offer == null) return const SizedBox.shrink();
+
+    final status = textOf(offer['status']);
+    final isOpen = offer['is_open'] == true;
+    final myConsent = textOf(offer['my_consent']);
+    final confirmed = status == 'confirmed';
+
+    // แสดงเฉพาะข้อเสนอที่ยังเปิดอยู่ หรือที่เพิ่งยืนยันไปต่อสำเร็จ
+    // (declined/expired ปล่อยให้ push แจ้ง ไม่รกในหน้าใบจอง)
+    if (!isOpen && !confirmed) return const SizedBox.shrink();
+
+    final isDark = AppTheme.isDark(context);
+    final tint = confirmed ? _flexiGreen(isDark) : _flexiOrange(isDark);
+    final perPerson = money(offer['surcharge_per_person']);
+    final myTotal = money(offer['my_surcharge_total']);
+    final progress = asMap(offer['progress']);
+    final accepted = int.tryParse(textOf(progress['accepted'], '0')) ?? 0;
+    final total = int.tryParse(textOf(progress['total'], '0')) ?? 0;
+    final reason = textOf(offer['reason']);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: tint.withValues(alpha: isDark ? 0.14 : 0.10),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: tint.withValues(alpha: 0.32)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
+                  child: Icon(
+                    confirmed
+                        ? Icons.celebration_rounded
+                        : Icons.airport_shuttle_rounded,
+                    size: 22,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    confirmed ? 'ทริปไปต่อแน่นอน! 🎉' : 'ไปต่อกันไหม?',
+                    style: appFont(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.onSurface(context),
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              confirmed
+                  ? 'ทุกท่านยินดีไปต่อแล้ว รอบนี้ออกเดินทางตามกำหนดเดิม '
+                      'ส่วนต่างค่ารถ ฿$myTotal จะเก็บในวันเดินทาง'
+                  : 'รอบนี้มีผู้เดินทางไม่ครบ หากช่วยกันจ่ายส่วนต่างค่ารถเพิ่ม '
+                      'ท่านละ ฿$perPerson ทริปจะออกเดินทางได้ตามกำหนดเดิม '
+                      '(เก็บในวันเดินทาง)',
+              style: appFont(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.onSurface(context).withValues(alpha: 0.85),
+                height: 1.45,
+              ),
+            ),
+            if (!confirmed && reason.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                '“$reason”',
+                style: appFont(
+                  fontSize: 12.5,
+                  fontStyle: FontStyle.italic,
+                  color: AppTheme.mutedText(context),
+                  height: 1.4,
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            // ส่วนต่างของการจองนี้ + ความคืบหน้าการตอบรับของกลุ่ม
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.surface(context).withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'ส่วนต่างของคุณ',
+                          style: appFont(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '฿$myTotal',
+                          style: appFont(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: tint,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (total > 0)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'ตอบรับแล้ว',
+                          style: appFont(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$accepted / $total คน',
+                          style: appFont(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.onSurface(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            if (isOpen && myConsent == 'pending') ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _submitting ? null : () => _respond(true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: tint,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: _submitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              'ยินดีไปต่อ',
+                              style: appFont(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  TextButton(
+                    onPressed: _submitting ? null : () => _respond(false),
+                    child: Text(
+                      'ขอสละสิทธิ์',
+                      style: appFont(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (isOpen && myConsent == 'accepted') ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Icon(Icons.check_circle_rounded, size: 18, color: tint),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'คุณยืนยันไปต่อแล้ว กำลังรอเพื่อนร่วมทริปตอบรับให้ครบ',
+                      style: appFont(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

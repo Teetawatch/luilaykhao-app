@@ -118,6 +118,11 @@ class ApiEndpoints {
   static String bookingSplitShareRemind(String ref, int shareId) =>
       'bookings/$ref/split/shares/$shareId/remind';
 
+  // Flexi-Price (Go Together) — ข้อเสนอส่วนต่างค่ารถเมื่อรอบคนไม่ครบ
+  static String bookingFlexiOffer(String ref) => 'bookings/$ref/flexi-offer';
+  static String bookingFlexiOfferRespond(String ref) =>
+      'bookings/$ref/flexi-offer/respond';
+
   // Payments
   static const paymentsCharge = 'payments/charge';
   static const paymentsChargeBalance = 'payments/charge-balance';

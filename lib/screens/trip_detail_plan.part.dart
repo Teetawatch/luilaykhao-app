@@ -137,6 +137,10 @@ class TravelPlanSelectionSection extends StatelessWidget {
                     onChanged: onScheduleChanged,
                   ),
 
+                // สถานะการันตีออกเดินทางของรอบที่เลือก (waiting/almost/guaranteed)
+                // + แถบความคืบหน้า เพื่อให้ลูกค้าเห็นว่ารอบนี้จะได้ออกไหม
+                ..._departureStatusNotice(context, scheduleMaps, scheduleValue),
+
                 // เวลาออกรถจริงของรอบที่เลือก — สำคัญมากเมื่อรถออกคืนก่อน
                 // วันทริป (เช่น ทริปเสาร์ที่ 13 แต่รถออกศุกร์ที่ 12 เวลา 23:30)
                 ..._departureTimeNotice(context, scheduleMaps, scheduleValue),
@@ -226,6 +230,156 @@ List<Widget> _departureTimeNotice(
                 color: AppTheme.onSurface(context),
               ),
             ),
+          ),
+        ],
+      ),
+    ),
+  ];
+}
+
+/// ระบบสถานะการันตีออกเดินทาง (Trip Status) — แสดงสถานะ 3 ระดับของรอบที่เลือก
+/// พร้อมแถบความคืบหน้าไปสู่การการันตีออกเดินทาง เพื่อให้ลูกค้าเห็นภาพชัดว่ารอบนี้
+/// จะได้ออกไหม และช่วยกันดันยอดให้ครบ (อ่านฟิลด์ที่ backend คำนวณให้)
+List<Widget> _departureStatusNotice(
+  BuildContext context,
+  List<Map<String, dynamic>> schedules,
+  int? selectedId,
+) {
+  if (selectedId == null) return const [];
+
+  final schedule = schedules.firstWhere(
+    (s) => int.tryParse(s['id'].toString()) == selectedId,
+    orElse: () => const {},
+  );
+  if (schedule.isEmpty) return const [];
+
+  final status = textOf(schedule['departure_status']);
+  // เหมาคัน (status = null) หรือรอบที่ผ่านไปแล้ว ไม่ต้องแสดงสถานะการันตี
+  if (status.isEmpty || _isSchedulePast(schedule)) return const [];
+
+  final booked = int.tryParse(textOf(schedule['booked_seats'], '0')) ?? 0;
+  final guaranteeMin =
+      int.tryParse(textOf(schedule['guarantee_min_seats'], '8')) ?? 8;
+  final toGuarantee =
+      int.tryParse(textOf(schedule['seats_to_guarantee'], '0')) ?? 0;
+
+  final isDark = AppTheme.isDark(context);
+
+  final Color tint;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  switch (status) {
+    case 'guaranteed':
+      tint = _appleGreen(isDark);
+      icon = Icons.verified_rounded;
+      title = 'การันตีออกเดินทางแน่นอน';
+      subtitle = 'มีผู้ร่วมทางครบแล้ว รถออกชัวร์ 100% 🎉';
+      break;
+    case 'almost_ready':
+      tint = _appleOrange(isDark);
+      icon = Icons.local_fire_department_rounded;
+      title = 'อีกนิดเดียว รถตู้การันตีออก!';
+      subtitle = toGuarantee > 0
+          ? 'ขาดอีกเพียง $toGuarantee ที่นั่ง ก็การันตีออกเดินทางทันที'
+          : 'ใกล้ครบแล้ว ชวนเพื่อนมาปิดรอบกันเถอะ';
+      break;
+    default: // waiting
+      tint = _appleRed(isDark);
+      icon = Icons.groups_rounded;
+      title = 'กำลังหาเพื่อนร่วมทาง';
+      subtitle = 'จองแล้ว $booked ที่นั่ง — ครบ $guaranteeMin คนเมื่อไหร่ '
+          'รถออกแน่นอน ชวนเพื่อนมาช่วยกันดัน!';
+  }
+
+  final progress = guaranteeMin > 0
+      ? (booked / guaranteeMin).clamp(0.0, 1.0).toDouble()
+      : 0.0;
+
+  return [
+    const SizedBox(height: 12),
+    Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: isDark ? 0.14 : 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tint.withValues(alpha: 0.32)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: tint,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 19, color: Colors.white),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: appFont(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: appFont(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.mutedText(context),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // แถบความคืบหน้าไปสู่การการันตีออกเดินทาง
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: tint.withValues(alpha: isDark ? 0.20 : 0.16),
+              valueColor: AlwaysStoppedAnimation<Color>(tint),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'จองแล้ว $booked ที่นั่ง',
+                style: appFont(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: tint,
+                ),
+              ),
+              Text(
+                'การันตีที่ $guaranteeMin ที่นั่ง',
+                style: appFont(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
           ),
         ],
       ),

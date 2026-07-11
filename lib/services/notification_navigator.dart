@@ -51,6 +51,12 @@ class NotificationNavigator {
       case 'split_share_receipt':
       case 'split_all_paid':
         _openBookingDetail(data);
+      case 'flexi_offer':
+      case 'flexi_offer_confirmed':
+      case 'flexi_offer_declined':
+      case 'flexi_offer_expired':
+        // Flexi-Price (ไปต่อกันไหม?) — เปิดใบจองเพื่อตอบรับ/ดูผล
+        _openBookingDetail(data);
       case 'trip_post_liked':
       case 'trip_post_comment':
         // ฟีดรูปหลังทริป: เปิดฟีดของทริปนั้น (หรือฟีดรวมถ้าไม่มี slug)
@@ -63,6 +69,8 @@ class NotificationNavigator {
       case 'trip_alert':
       case 'new_trip':
       case 'low_seats':
+      case 'almost_ready':
+      case 'guaranteed':
       case 'booking_winback':
         _openTripFromData(data);
       case 'sos_alert':

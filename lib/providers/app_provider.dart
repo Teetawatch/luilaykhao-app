@@ -1052,20 +1052,32 @@ class AppProvider extends ChangeNotifier {
     await api.post('sos/$id/resolve');
   }
 
-  Future<Map<String, dynamic>> lookupStaffCheckIn(String qrCode) async {
+  /// Looks up a booking for staff check-in. Returns the booking plus `meta`,
+  /// which carries the pickup-point summary (how many travellers this stop
+  /// receives in total and how many are already checked in).
+  Future<({Map<String, dynamic> booking, Map<String, dynamic> meta})>
+  lookupStaffCheckIn(String qrCode) async {
     final response = await api.post(
       'staff/check-in/lookup',
       body: {'qr_code': qrCode},
     );
-    return Map<String, dynamic>.from(api.data(response) as Map);
+    final envelope = Map<String, dynamic>.from(response as Map);
+    return (
+      booking: Map<String, dynamic>.from(envelope['data'] as Map),
+      meta: envelope['meta'] is Map
+          ? Map<String, dynamic>.from(envelope['meta'] as Map)
+          : <String, dynamic>{},
+    );
   }
 
-  /// Confirms a staff QR check-in. Returns `{ booking, message }` — the message
-  /// reflects server-side side effects (e.g. auto-notifying the next pickup
-  /// point once everyone at this point has checked in).
-  Future<({Map<String, dynamic> booking, String message})> confirmStaffCheckIn(
-    String qrCode,
-  ) async {
+  /// Confirms a staff QR check-in. Returns `{ booking, meta, message }` — the
+  /// message reflects server-side side effects (e.g. auto-notifying the next
+  /// pickup point once everyone at this point has checked in); `meta` carries
+  /// the refreshed pickup-point summary.
+  Future<
+    ({Map<String, dynamic> booking, Map<String, dynamic> meta, String message})
+  >
+  confirmStaffCheckIn(String qrCode) async {
     final response = await api.post(
       'staff/check-in/confirm',
       body: {'qr_code': qrCode},
@@ -1073,6 +1085,9 @@ class AppProvider extends ChangeNotifier {
     final envelope = Map<String, dynamic>.from(response as Map);
     return (
       booking: Map<String, dynamic>.from(envelope['data'] as Map),
+      meta: envelope['meta'] is Map
+          ? Map<String, dynamic>.from(envelope['meta'] as Map)
+          : <String, dynamic>{},
       message: envelope['message']?.toString() ?? 'เช็คอินสำเร็จแล้ว',
     );
   }
@@ -1355,6 +1370,26 @@ class AppProvider extends ChangeNotifier {
   /// เจ้าของยกเลิกการแบ่งจ่าย (ลบเฉพาะส่วนที่ยังไม่จ่าย)
   Future<void> cancelBookingSplit(String ref) async {
     await api.delete(ApiEndpoints.bookingSplit(ref));
+  }
+
+  /// ระบบ Flexi-Price (Go Together) — ดูข้อเสนอไปต่อของการจอง (null = ไม่มีข้อเสนอ)
+  Future<Map<String, dynamic>?> bookingFlexiOffer(String ref) async {
+    final response = await api.get(ApiEndpoints.bookingFlexiOffer(ref));
+    final data = api.data(response);
+    return data is Map ? Map<String, dynamic>.from(data) : null;
+  }
+
+  /// เจ้าของตอบรับ/ปฏิเสธข้อเสนอไปต่อ — คืนสถานะข้อเสนอล่าสุด
+  Future<Map<String, dynamic>?> respondBookingFlexiOffer(
+    String ref, {
+    required bool accept,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.bookingFlexiOfferRespond(ref),
+      body: {'accept': accept},
+    );
+    final data = api.data(response);
+    return data is Map ? Map<String, dynamic>.from(data) : null;
   }
 
   /// ชำระส่วนแบ่งของตัวเอง (หรือจ่ายแทนเพื่อน) พร้อมแนบสลิป

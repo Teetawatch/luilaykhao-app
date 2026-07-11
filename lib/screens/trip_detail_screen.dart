@@ -51,9 +51,12 @@ const Color _systemRed = Color(0xFFFF3B30);
 const Color _systemRedDark = Color(0xFFFF453A);
 const Color _systemOrange = Color(0xFFFF9500);
 const Color _systemOrangeDark = Color(0xFFFF9F0A);
+const Color _systemGreen = Color(0xFF34C759);
+const Color _systemGreenDark = Color(0xFF30D158);
 
 Color _appleRed(bool isDark) => isDark ? _systemRedDark : _systemRed;
 Color _appleOrange(bool isDark) => isDark ? _systemOrangeDark : _systemOrange;
+Color _appleGreen(bool isDark) => isDark ? _systemGreenDark : _systemGreen;
 
 class TripDetailScreen extends StatefulWidget {
   final String? slug;
