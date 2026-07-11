@@ -23,6 +23,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
   final TextEditingController _manualController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   Map<String, dynamic>? _booking;
+  Map<String, dynamic>? _meta;
   String? _currentCode;
   String? _error;
   String? _success;
@@ -68,16 +69,20 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
       _error = null;
       _success = null;
       _booking = null;
+      _meta = null;
       _currentCode = code;
     });
     _successAnimController.reset();
 
     try {
-      final booking = await context.read<AppProvider>().lookupStaffCheckIn(
+      final result = await context.read<AppProvider>().lookupStaffCheckIn(
         code,
       );
       if (!mounted) return;
-      setState(() => _booking = booking);
+      setState(() {
+        _booking = result.booking;
+        _meta = result.meta;
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
@@ -107,6 +112,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
       HapticFeedback.heavyImpact();
       setState(() {
         _booking = result.booking;
+        _meta = result.meta;
         _success = result.message;
       });
       _successAnimController.forward(from: 0);
@@ -126,6 +132,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
   void _reset() {
     setState(() {
       _booking = null;
+      _meta = null;
       _currentCode = null;
       _error = null;
       _success = null;
@@ -258,7 +265,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
             else if (booking == null)
               const _EmptyState()
             else ...[
-              _BookingDetail(booking: booking),
+              _BookingDetail(booking: booking, meta: _meta),
               const SizedBox(height: 16),
 
               // ── Check-in button ──────────────────────────────────
@@ -591,8 +598,9 @@ class _CheckInButton extends StatelessWidget {
 
 class _BookingDetail extends StatelessWidget {
   final Map<String, dynamic> booking;
+  final Map<String, dynamic>? meta;
 
-  const _BookingDetail({required this.booking});
+  const _BookingDetail({required this.booking, this.meta});
 
   @override
   Widget build(BuildContext context) {
@@ -600,6 +608,10 @@ class _BookingDetail extends StatelessWidget {
     final schedule = asMap(booking['schedule']);
     final trip = asMap(schedule['trip']);
     final vehicle = asMap(schedule['vehicle']);
+    final pickupGroup = asMap(meta?['pickup_group']);
+    final pickupTotal = (pickupGroup['total_passengers'] as num?)?.toInt() ?? 0;
+    final pickupCheckedIn =
+        (pickupGroup['checked_in_passengers'] as num?)?.toInt() ?? 0;
     final pickup = asMap(booking['pickup_point']);
     final passengers = asList(booking['passengers']).map(asMap).toList();
     final seats = asList(booking['seats']).map(asMap).toList();
@@ -647,10 +659,18 @@ class _BookingDetail extends StatelessWidget {
             _InfoRow(
               icon: Icons.location_on_rounded,
               label: 'จุดรับ',
-              value: pickup.isNotEmpty
-                  ? textOf(pickup['pickup_location'], '-')
-                  : textOf(booking['pickup_region'], '-'),
+              value: pickupGroup.isNotEmpty
+                  ? textOf(pickupGroup['label'], '-')
+                  : (pickup.isNotEmpty
+                        ? textOf(pickup['pickup_location'], '-')
+                        : textOf(booking['pickup_region'], '-')),
             ),
+            if (pickupTotal > 0)
+              _InfoRow(
+                icon: Icons.groups_2_rounded,
+                label: 'รับที่จุดนี้',
+                value: 'เช็คอินแล้ว $pickupCheckedIn / $pickupTotal คน',
+              ),
             if (vehicle.isNotEmpty)
               _InfoRow(
                 icon: Icons.directions_bus_rounded,
