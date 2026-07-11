@@ -860,6 +860,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
     final totalSeats = _numberValue(s['total_seats']);
     final pickupBreakdown = (s['pickup_breakdown'] as List? ?? []).map(_toMap).toList();
     final noPickupCount = _numberValue(s['no_pickup_count']);
+    final noPickupPassengers = (s['no_pickup_passengers'] as List? ?? []).toList();
 
     final checkinProgress = totalConfirmed > 0
         ? (checkedIn / totalConfirmed).clamp(0.0, 1.0)
@@ -1105,6 +1106,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                               point: {
                                 'label': 'ไม่ระบุจุดรับ',
                                 'passenger_count': noPickupCount,
+                                'passengers': noPickupPassengers,
                               },
                               isDefault: true,
                             ),
@@ -1130,74 +1132,208 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
   }
 }
 
-class _PickupPointRow extends StatelessWidget {
+/// หนึ่งจุดขึ้นรถบนการ์ดงานสตาฟ — แตะเพื่อกางดูรายชื่อผู้โดยสารที่ขึ้นจุดนั้น
+/// (ชื่อ/ชื่อเล่น + เบอร์กดโทรได้ + สถานะเช็คอิน) เพื่อให้สตาฟรู้ว่าใครขึ้นจุดไหน
+/// โดยไม่ต้องเข้าหน้ารายชื่อเต็ม
+class _PickupPointRow extends StatefulWidget {
   final Map<String, dynamic> point;
   final bool isDefault;
 
   const _PickupPointRow({required this.point, this.isDefault = false});
 
   @override
-  Widget build(BuildContext context) {
-    final label = _cleanText(point['label'], fallback: 'จุดรับไม่ระบุ');
-    final regionLabel = _cleanText(point['region_label']);
-    final showRegion = !isDefault && regionLabel.isNotEmpty && regionLabel != label;
-    final count = _numberValue(point['passenger_count']);
+  State<_PickupPointRow> createState() => _PickupPointRowState();
+}
 
-    return Row(
+class _PickupPointRowState extends State<_PickupPointRow> {
+  bool _expanded = false;
+
+  static const Color _teal = Color(0xFF0D9488);
+
+  List<Map<String, dynamic>> get _passengers =>
+      (widget.point['passengers'] as List? ?? []).map(_toMap).toList();
+
+  Future<void> _call(String phone) async {
+    final cleaned = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleaned.isEmpty) return;
+    final uri = Uri(scheme: 'tel', path: cleaned);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _cleanText(widget.point['label'], fallback: 'จุดรับไม่ระบุ');
+    final regionLabel = _cleanText(widget.point['region_label']);
+    final showRegion =
+        !widget.isDefault && regionLabel.isNotEmpty && regionLabel != label;
+    final count = _numberValue(widget.point['passenger_count']);
+    final passengers = _passengers;
+    final canExpand = passengers.isNotEmpty;
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: Icon(
-            isDefault ? Icons.help_outline : Icons.trip_origin,
-            size: 14,
-            color: isDefault ? AppTheme.textSecondary : const Color(0xFF0D9488),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
+        GestureDetector(
+          onTap: canExpand
+              ? () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _expanded = !_expanded);
+                }
+              : null,
+          behavior: HitTestBehavior.opaque,
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: appFont(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isDefault ? AppTheme.textSecondary : AppTheme.textMain,
-                  letterSpacing: -0.1,
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(
+                  widget.isDefault ? Icons.help_outline : Icons.trip_origin,
+                  size: 14,
+                  color: widget.isDefault ? AppTheme.textSecondary : _teal,
                 ),
               ),
-              if (showRegion)
-                Text(
-                  regionLabel,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: appFont(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isDefault
+                            ? AppTheme.textSecondary
+                            : AppTheme.textMain,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                    if (showRegion)
+                      Text(
+                        regionLabel,
+                        style: appFont(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _teal.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '$count คน',
                   style: appFont(
                     fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w700,
+                    color: _teal,
+                    letterSpacing: -0.1,
                   ),
                 ),
+              ),
+              if (canExpand) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: AppTheme.mutedText(context),
+                ),
+              ],
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0D9488).withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            '$count คน',
-            style: appFont(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF0D9488),
-              letterSpacing: -0.1,
+        if (_expanded && canExpand) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 22),
+            child: Column(
+              children: [
+                for (final p in passengers)
+                  _PickupPassengerRow(
+                    passenger: p,
+                    onCall: _call,
+                  ),
+              ],
             ),
           ),
-        ),
+        ],
       ],
+    );
+  }
+}
+
+/// รายชื่อผู้โดยสารหนึ่งคนในจุดที่กางออก — สถานะเช็คอิน + ชื่อ + ปุ่มโทร
+class _PickupPassengerRow extends StatelessWidget {
+  final Map<String, dynamic> passenger;
+  final Future<void> Function(String phone) onCall;
+
+  const _PickupPassengerRow({required this.passenger, required this.onCall});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = _cleanText(passenger['name'], fallback: 'ผู้โดยสาร');
+    final phone = _cleanText(passenger['phone']);
+    final checkedIn = passenger['checked_in'] == true;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            checkedIn
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
+            size: 15,
+            color: checkedIn
+                ? const Color(0xFF0D9488)
+                : AppTheme.mutedText(context),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              name,
+              style: appFont(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textMain,
+              ),
+            ),
+          ),
+          if (phone.isNotEmpty)
+            GestureDetector(
+              onTap: () => onCall(phone),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Row(
+                  children: [
+                    const Icon(Icons.phone_rounded,
+                        size: 13, color: Color(0xFF2563EB)),
+                    const SizedBox(width: 4),
+                    Text(
+                      phone,
+                      style: appFont(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2563EB),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
