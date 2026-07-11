@@ -40,6 +40,7 @@ class NotificationNavigator {
       case 'weather_alert':
       case 'vehicle_departed':
       case 'vehicle_approaching':
+      case 'safe_travels':
         _openBookingDetail(data);
       case 'split_share_created':
       case 'split_share_reminder':
