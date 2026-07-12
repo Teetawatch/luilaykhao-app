@@ -672,14 +672,20 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     }
     // ปักหมุดจุดรับเองแล้ว ถือว่าเลือกจุดรับครบ ข้ามการบังคับเลือกจุดที่กำหนด
     if (_customPickup != null) return true;
-    if (_pickupPoints.isNotEmpty &&
-        (_pickupRegion == null || _pickupRegion!.isEmpty)) {
+    // รอบที่ไม่มีจุดขึ้นรถตายตัว → บังคับให้ปักหมุดจุดรับเอง (กันการจองที่ไม่มีจุดรับ)
+    if (_pickupPoints.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณาปักหมุดจุดรับของคุณบนแผนที่')),
+      );
+      return false;
+    }
+    if (_pickupRegion == null || _pickupRegion!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('กรุณาเลือกภูมิภาคที่จะขึ้นรถ หรือปักหมุดจุดรับเอง')),
       );
       return false;
     }
-    if (_pickupPoints.isNotEmpty && _pickupPointId == null) {
+    if (_pickupPointId == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถ หรือปักหมุดจุดรับเอง')));
@@ -1023,14 +1029,20 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       }
     } else if (_customPickup == null) {
       // ปักหมุดจุดรับเองแล้ว ถือว่าเลือกจุดรับครบ — ข้ามการบังคับเลือกจุดที่กำหนด
-      if (_pickupPoints.isNotEmpty &&
-          (_pickupRegion == null || _pickupRegion!.isEmpty)) {
+      // รอบที่ไม่มีจุดขึ้นรถตายตัว → บังคับให้ปักหมุดจุดรับเอง
+      if (_pickupPoints.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('กรุณาปักหมุดจุดรับของคุณบนแผนที่')),
+        );
+        return;
+      }
+      if (_pickupRegion == null || _pickupRegion!.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('กรุณาเลือกภูมิภาคที่จะขึ้นรถ หรือปักหมุดจุดรับเอง')),
         );
         return;
       }
-      if (_pickupPoints.isNotEmpty && _pickupPointId == null) {
+      if (_pickupPointId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถ หรือปักหมุดจุดรับเอง')),
         );
