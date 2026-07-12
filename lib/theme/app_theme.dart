@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 /// rendered exactly. Set as the primary family on every platform.
 const String _latinFont = 'Inter';
 
-/// Thai face (assets/fonts/Kanit-*.ttf, weights 400–800). Declared as the
-/// fallback after [_latinFont] so Latin/numeric glyphs render in Inter while
-/// Thai code points — which Inter lacks — fall through to Kanit. This is the
-/// "Kanit + Inter" pairing: crisp Latin numerals, warm Thai text.
-const String _thaiFont = 'Kanit';
+/// Thai face (assets/fonts/LINESeedSansTH_A_*.ttf, Regular 400 + Bold 700).
+/// Declared as the fallback after [_latinFont] so Latin/numeric glyphs render in
+/// Inter while Thai code points — which Inter lacks — fall through to LINE Seed
+/// Sans TH. This is the "LINE Seed Sans TH + Inter" pairing: crisp Latin
+/// numerals, clean modern Thai text. (Only Regular/Bold are shipped, so the
+/// in-between weights and w800 headings render at the nearest weight, 700.)
+const String _thaiFont = 'LINE Seed Sans TH';
 
 /// Fallback chain applied alongside [_latinFont] everywhere.
 const List<String> _fontFallback = [_thaiFont];
@@ -65,10 +67,10 @@ TextStyle appFont({
   );
 }
 
-/// App type scale (Kanit + Inter). Lean on **weight** for hierarchy more than
-/// size, and keep generous line-height so Thai diacritics (สระบน/ล่าง, ไม้โท)
-/// never collide. Every style flows through [appFont] so the Inter→Kanit
-/// fallback is always attached.
+/// App type scale (LINE Seed Sans TH + Inter). Lean on **weight** for hierarchy
+/// more than size, and keep generous line-height so Thai diacritics (สระบน/ล่าง,
+/// ไม้โท) never collide. Every style flows through [appFont] so the Inter→LINE
+/// Seed Sans TH fallback is always attached.
 ///
 /// | Role                  | Size | Weight     |
 /// |-----------------------|------|------------|

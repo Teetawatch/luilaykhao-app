@@ -88,16 +88,13 @@ flutter:
       fonts:
         - asset: assets/fonts/Inter-Variable.ttf
     # Thai face (static weights). Used as the fallback after Inter so Latin
-    # glyphs render in Inter and Thai glyphs fall through to Kanit.
-    - family: Kanit
+    # glyphs render in Inter and Thai glyphs fall through to LINE Seed Sans TH.
+    # Note: only Regular (400) and Bold (700) are shipped; requests for the
+    # in-between weights (500/600) and w800 render at the nearest available
+    # weight.
+    - family: LINE Seed Sans TH
       fonts:
-        - asset: assets/fonts/Kanit-Regular.ttf
+        - asset: assets/fonts/LINESeedSansTH_A_Rg.ttf
           weight: 400
-        - asset: assets/fonts/Kanit-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Kanit-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Kanit-Bold.ttf
+        - asset: assets/fonts/LINESeedSansTH_A_Bd.ttf
           weight: 700
-        - asset: assets/fonts/Kanit-ExtraBold.ttf
-          weight: 800
