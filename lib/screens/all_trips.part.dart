@@ -42,6 +42,7 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   String _selectedDifficulty = '';
   String _sortOrder = 'popular';
   String? _error;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -55,13 +56,36 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.removeListener(_handleSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
+  // Rebuild for the clear button / active-filter state, and refetch shortly
+  // after the user stops typing so search feels live without a separate
+  // "apply" button.
   void _handleSearchChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (mounted) _fetchTrips();
+    });
+  }
+
+  // Enter key on the keyboard — fetch immediately instead of waiting out the
+  // debounce, and drop the keyboard so results are visible.
+  void _applySearch() {
+    _searchDebounce?.cancel();
+    FocusManager.instance.primaryFocus?.unfocus();
+    _fetchTrips();
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _searchDebounce?.cancel();
+    _fetchTrips();
   }
 
   Future<void> _fetchTrips([int page = 1]) async {
@@ -158,6 +182,7 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
 
   void _clearFilters() {
     _searchController.clear();
+    _searchDebounce?.cancel();
     setState(() {
       _selectedType = '';
       _selectedDifficulty = '';
@@ -214,7 +239,8 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
                         difficulties: _difficulties,
                         onToggleType: _toggleType,
                         onToggleDifficulty: _toggleDifficulty,
-                        onApply: () => _fetchTrips(),
+                        onSubmitSearch: _applySearch,
+                        onClearSearch: _clearSearch,
                         onClear: _clearFilters,
                         hasFilters: _hasFilters,
                       ),
@@ -286,6 +312,11 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   }
 }
 
+/// Concise, Klook/Airbnb-style search section: a single prominent search field
+/// with an inline clear button, then a horizontally scrolling row of category
+/// chips (led by an "all" option) and an inline difficulty strip. Filters apply
+/// live — category taps and debounced typing refetch on their own, so there is
+/// no separate "apply" button.
 class _TripsFilterPanel extends StatelessWidget {
   final TextEditingController searchController;
   final List<Map<String, dynamic>> categories;
@@ -294,7 +325,8 @@ class _TripsFilterPanel extends StatelessWidget {
   final List<(String, String)> difficulties;
   final ValueChanged<String> onToggleType;
   final ValueChanged<String> onToggleDifficulty;
-  final VoidCallback onApply;
+  final VoidCallback onSubmitSearch;
+  final VoidCallback onClearSearch;
   final VoidCallback onClear;
   final bool hasFilters;
 
@@ -306,174 +338,195 @@ class _TripsFilterPanel extends StatelessWidget {
     required this.difficulties,
     required this.onToggleType,
     required this.onToggleDifficulty,
-    required this.onApply,
+    required this.onSubmitSearch,
+    required this.onClearSearch,
     required this.onClear,
     required this.hasFilters,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.border(context).withValues(alpha: 0.55),
+    final chipCategories = [
+      for (final category in categories)
+        if (textOf(category['slug']).isNotEmpty) category,
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SearchField(
+          controller: searchController,
+          hasQuery: searchController.text.trim().isNotEmpty,
+          onSubmitted: onSubmitSearch,
+          onClear: onClearSearch,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _FilterTitle(icon: Icons.search_rounded, label: 'ค้นหา'),
-          const SizedBox(height: 10),
-          TextField(
-            controller: searchController,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => onApply(),
-            decoration: InputDecoration(
-              hintText: 'ค้นหาทริป...',
-              hintStyle: appFont(
-                color: AppTheme.mutedText(context),
-                fontSize: 14.5,
-                fontWeight: FontWeight.w500,
-              ),
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                size: 18,
-                color: AppTheme.mutedText(context),
-              ),
-              isDense: true,
-              filled: true,
-              fillColor: AppTheme.subtleSurface(context),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: AppTheme.primaryColor,
-                  width: 1.5,
-                ),
-              ),
-            ),
-            style: appFont(
-              fontWeight: FontWeight.w600,
-              fontSize: 14.5,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const _FilterTitle(icon: Icons.category_rounded, label: 'หมวดหมู่กิจกรรม'),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+        if (chipCategories.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _ChipStrip(
             children: [
-              for (final category in categories)
-                if (textOf(category['slug']).isNotEmpty)
-                  _FilterChipButton(
-                    label: textOf(category['name'], textOf(category['slug'])),
-                    icon: categoryIcon(textOf(category['icon']).isEmpty
-                        ? null
-                        : textOf(category['icon'])),
-                    selected: selectedType == textOf(category['slug']),
-                    onTap: () => onToggleType(textOf(category['slug'])),
-                  ),
+              _FilterChipButton(
+                label: 'ทั้งหมด',
+                icon: Icons.apps_rounded,
+                selected: selectedType.isEmpty,
+                onTap: () {
+                  if (selectedType.isNotEmpty) onToggleType(selectedType);
+                },
+              ),
+              for (final category in chipCategories)
+                _FilterChipButton(
+                  label: textOf(category['name'], textOf(category['slug'])),
+                  icon: categoryIcon(textOf(category['icon']).isEmpty
+                      ? null
+                      : textOf(category['icon'])),
+                  selected: selectedType == textOf(category['slug']),
+                  onTap: () => onToggleType(textOf(category['slug'])),
+                ),
             ],
           ),
-          if (selectedType == 'trekking') ...[
-            const SizedBox(height: 20),
-            const _FilterTitle(icon: Icons.terrain_rounded, label: 'ระดับความยาก'),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final item in difficulties)
-                  _FilterChipButton(
-                    label: item.$2,
-                    selected: selectedDifficulty == item.$1,
-                    onTap: () => onToggleDifficulty(item.$1),
+        ],
+        if (selectedType == 'trekking') ...[
+          const SizedBox(height: 10),
+          _ChipStrip(
+            children: [
+              for (final item in difficulties)
+                _FilterChipButton(
+                  label: item.$2,
+                  selected: selectedDifficulty == item.$1,
+                  onTap: () => onToggleDifficulty(item.$1),
+                ),
+            ],
+          ),
+        ],
+        if (hasFilters) ...[
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: onClear,
+            borderRadius: BorderRadius.circular(999),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.close_rounded,
+                    size: 15,
+                    color: AppTheme.mutedText(context),
                   ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: onApply,
-              icon: const Icon(Icons.filter_list_rounded, size: 18),
-              label: const Text('ใช้ตัวกรอง'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: appFont(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.1,
-                ),
+                  const SizedBox(width: 5),
+                  Text(
+                    'ล้างตัวกรองทั้งหมด',
+                    style: appFont(
+                      color: AppTheme.mutedText(context),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          if (hasFilters) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton.icon(
-                onPressed: onClear,
-                icon: const Icon(Icons.close_rounded, size: 16),
-                label: Text(
-                  'ล้างตัวกรอง',
-                  style: appFont(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.mutedText(context),
-                ),
-              ),
-            ),
-          ],
         ],
+      ],
+    );
+  }
+}
+
+/// Prominent, rounded search field with a live clear button. Rebuilds from the
+/// parent on every keystroke, so [hasQuery] toggles the trailing clear icon.
+class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final bool hasQuery;
+  final VoidCallback onSubmitted;
+  final VoidCallback onClear;
+
+  const _SearchField({
+    required this.controller,
+    required this.hasQuery,
+    required this.onSubmitted,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      textInputAction: TextInputAction.search,
+      onSubmitted: (_) => onSubmitted(),
+      cursorColor: AppTheme.primaryColor,
+      style: appFont(fontWeight: FontWeight.w600, fontSize: 15),
+      decoration: InputDecoration(
+        hintText: 'ค้นหาทริป ปลายทาง หรือกิจกรรม',
+        hintStyle: appFont(
+          color: AppTheme.mutedText(context),
+          fontSize: 14.5,
+          fontWeight: FontWeight.w500,
+        ),
+        prefixIcon: Icon(
+          Icons.search_rounded,
+          size: 21,
+          color: AppTheme.mutedText(context),
+        ),
+        prefixIconConstraints: const BoxConstraints(minWidth: 46),
+        suffixIcon: hasQuery
+            ? IconButton(
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: AppTheme.mutedText(context),
+                ),
+                splashRadius: 18,
+                tooltip: 'ล้างคำค้นหา',
+                onPressed: onClear,
+              )
+            : null,
+        isDense: true,
+        filled: true,
+        fillColor: AppTheme.subtleSurface(context),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 15),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: AppTheme.border(context).withValues(alpha: 0.6),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: AppTheme.border(context).withValues(alpha: 0.6),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(
+            color: AppTheme.primaryColor,
+            width: 1.5,
+          ),
+        ),
       ),
     );
   }
 }
 
-class _FilterTitle extends StatelessWidget {
-  final IconData icon;
-  final String label;
+/// A single-line, horizontally scrolling row of filter chips. The strip keeps
+/// the section height stable no matter how many categories exist and hints —
+/// by clipping the last chip at the edge — that more lie off-screen.
+class _ChipStrip extends StatelessWidget {
+  final List<Widget> children;
 
-  const _FilterTitle({required this.icon, required this.label});
+  const _ChipStrip({required this.children});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: AppTheme.primaryColor, size: 17),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: appFont(
-            color: AppTheme.textMain,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.1,
-          ),
-        ),
-      ],
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.zero,
+        itemCount: children.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, index) => children[index],
+      ),
     );
   }
 }
@@ -483,8 +536,7 @@ class _FilterChipButton extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  /// Optional leading glyph (used by category chips). When absent the chip
-  /// shows a check mark while selected instead.
+  /// Optional leading glyph (used by category chips).
   final IconData? icon;
 
   const _FilterChipButton({
@@ -498,19 +550,20 @@ class _FilterChipButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(999),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected
               ? AppTheme.primaryColor
-              : AppTheme.primaryColor.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(12),
+              : AppTheme.subtleSurface(context),
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: selected
                 ? AppTheme.primaryColor
-                : AppTheme.primaryColor.withValues(alpha: 0.14),
+                : AppTheme.border(context).withValues(alpha: 0.7),
           ),
         ),
         child: Row(
@@ -519,18 +572,15 @@ class _FilterChipButton extends StatelessWidget {
             if (icon != null) ...[
               Icon(
                 icon,
-                color: selected ? Colors.white : AppTheme.primaryColor,
-                size: 15,
+                color: selected ? Colors.white : AppTheme.mutedText(context),
+                size: 16,
               ),
-              const SizedBox(width: 5),
-            ] else if (selected) ...[
-              const Icon(Icons.check_rounded, color: Colors.white, size: 14),
-              const SizedBox(width: 5),
+              const SizedBox(width: 6),
             ],
             Text(
               label,
               style: appFont(
-                color: selected ? Colors.white : AppTheme.primaryColor,
+                color: selected ? Colors.white : AppTheme.textMain,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.1,
