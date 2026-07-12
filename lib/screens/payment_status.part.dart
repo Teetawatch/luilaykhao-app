@@ -132,15 +132,6 @@ class _PaymentProgress extends StatelessWidget {
                             ? _accent
                             : AppTheme.subtleSurface(context),
                         shape: BoxShape.circle,
-                        boxShadow: isDone || isActive
-                            ? [
-                                BoxShadow(
-                                  color: _accent.withValues(alpha: 0.30),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ]
-                            : null,
                       ),
                       child: Icon(
                         isDone ? Icons.check_rounded : step.icon,

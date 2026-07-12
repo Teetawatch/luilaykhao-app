@@ -401,13 +401,6 @@ class _CheckInQrBox extends StatelessWidget {
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.14),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: QrImageView(
         data: code,

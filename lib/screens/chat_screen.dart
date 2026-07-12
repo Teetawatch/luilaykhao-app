@@ -1580,13 +1580,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         border: Border(
           top: BorderSide(color: AppTheme.border(context)),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, -3),
-          ),
-        ],
       ),
       child: (suggestions.isEmpty && !showAll)
           ? Padding(
@@ -3300,7 +3293,7 @@ class _JumpToLatestButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      elevation: 3,
+      elevation: 0,
       shape: const CircleBorder(),
       color: AppTheme.surface(context),
       child: InkWell(
@@ -3335,7 +3328,7 @@ class _MentionJumpChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      elevation: 3,
+      elevation: 0,
       color: AppTheme.primaryColor,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
@@ -3385,13 +3378,6 @@ class _JoinedBanner extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.primaryColor.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(999),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

@@ -40,15 +40,6 @@ class BookingProgressStepper extends StatelessWidget {
                     border: Border.all(
                       color: isActive || isDone ? _softAccent : borderColor,
                     ),
-                    boxShadow: isActive
-                        ? [
-                            BoxShadow(
-                              color: _softAccent.withValues(alpha: 0.28),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ]
-                        : null,
                   ),
                   child: Center(
                     child: isDone

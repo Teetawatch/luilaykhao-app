@@ -573,15 +573,6 @@ class _NavItemState extends State<_NavItem>
                                   : Colors.white,
                               width: 2,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.errorColor.withValues(
-                                  alpha: 0.55,
-                                ),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                           ),
                           constraints: const BoxConstraints(
                             minWidth: 19,

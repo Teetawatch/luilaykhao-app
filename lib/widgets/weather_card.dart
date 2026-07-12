@@ -69,13 +69,6 @@ class WeatherCard extends StatelessWidget {
           colors: gradient,
         ),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: gradient.last.withValues(alpha: 0.36),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

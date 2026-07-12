@@ -175,13 +175,6 @@ class _HeroCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [Color(0xFF047857), Color(0xFF10B981)],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF059669).withValues(alpha: 0.30),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

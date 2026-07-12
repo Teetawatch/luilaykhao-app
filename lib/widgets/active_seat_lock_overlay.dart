@@ -182,7 +182,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
     final remainingText = _remainingText(remainingSeconds);
 
     return Material(
-      elevation: 14,
+      elevation: 0,
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(18),
       child: Container(
@@ -191,15 +191,6 @@ class ActiveSeatLockBanner extends StatelessWidget {
           color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: accent.withValues(alpha: 0.22)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(
-                alpha: AppTheme.isDark(context) ? 0.28 : 0.12,
-              ),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
-            ),
-          ],
         ),
         child: Row(
           children: [

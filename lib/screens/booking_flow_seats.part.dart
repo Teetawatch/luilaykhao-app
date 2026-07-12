@@ -164,15 +164,6 @@ class _VehiclePhotoPreviewState extends State<_VehiclePhotoPreview> {
                                         borderRadius: BorderRadius.circular(
                                           999,
                                         ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.18,
-                                            ),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
                                       ),
                                     );
                                   }),
@@ -851,15 +842,6 @@ class _SeatButton extends StatelessWidget {
                         ? Colors.transparent
                         : Colors.black.withValues(alpha: 0.04),
                   ),
-                  boxShadow: selected
-                      ? [
-                          BoxShadow(
-                            color: _softAccent.withValues(alpha: 0.28),
-                            blurRadius: 12,
-                            offset: const Offset(0, 5),
-                          ),
-                        ]
-                      : null,
                 ),
                 child: Stack(
                   alignment: Alignment.center,

@@ -209,13 +209,6 @@ class _NextTripHeroCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: badgeColor,
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: badgeColor.withValues(alpha: 0.30),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: Text(
                           badge,
@@ -271,15 +264,6 @@ class _SummaryPill extends StatelessWidget {
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(
-              alpha: AppTheme.isDark(context) ? 0.12 : 0.03,
-            ),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -358,15 +342,6 @@ class ReservationSegmentTabs extends StatelessWidget {
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.55),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(
-                alpha: AppTheme.isDark(context) ? 0.12 : 0.03,
-              ),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Row(
           children: [
@@ -680,15 +655,6 @@ class ReservationCard extends StatelessWidget {
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.55),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(
-                alpha: AppTheme.isDark(context) ? 0.16 : 0.05,
-              ),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

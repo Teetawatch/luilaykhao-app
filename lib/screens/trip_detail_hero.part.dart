@@ -39,6 +39,16 @@ class TravelSliverAppBar extends StatelessWidget {
           : Colors.transparent,
       surfaceTintColor: Colors.transparent,
       shadowColor: Colors.black.withValues(alpha: 0.08),
+      // A hairline under the collapsed bar separates it from the content that
+      // scrolls beneath, the way Airbnb / Klook headers do.
+      shape: isCollapsed
+          ? Border(
+              bottom: BorderSide(color: AppTheme.border(context), width: 0.5),
+            )
+          : null,
+      // Left-aligned so the collapsed title flows from the back button and
+      // ellipsizes gracefully, instead of being squeezed into a narrow centred
+      // slot between the leading button and the actions.
       title: AnimatedOpacity(
         opacity: isCollapsed ? 1 : 0,
         duration: const Duration(milliseconds: 180),
@@ -47,16 +57,17 @@ class TravelSliverAppBar extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: appFont(
-            color: _premiumText,
+            color: AppTheme.onSurface(context),
             fontSize: 16,
             fontWeight: FontWeight.w800,
           ),
         ),
       ),
-      centerTitle: true,
-      leadingWidth: 64,
+      centerTitle: false,
+      titleSpacing: 8,
+      leadingWidth: 58,
       leading: Padding(
-        padding: const EdgeInsets.only(left: 16),
+        padding: const EdgeInsets.only(left: 14),
         child: FloatingActionIconButton(
           icon: Icons.arrow_back_ios_new_rounded,
           isCollapsed: isCollapsed,
@@ -69,7 +80,7 @@ class TravelSliverAppBar extends StatelessWidget {
           isCollapsed: isCollapsed,
           onPressed: onSharePressed,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         FloatingActionIconButton(
           icon: isAlertOn
               ? Icons.notifications_active_rounded
@@ -78,7 +89,7 @@ class TravelSliverAppBar extends StatelessWidget {
           foregroundColor: isAlertOn ? const Color(0xFFF59E0B) : null,
           onPressed: onAlertPressed,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         FloatingActionIconButton(
           icon: isFavorite
               ? Icons.favorite_rounded
@@ -87,7 +98,7 @@ class TravelSliverAppBar extends StatelessWidget {
           foregroundColor: isFavorite ? const Color(0xFFE11D48) : null,
           onPressed: onFavoritePressed,
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 14),
       ],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
@@ -190,37 +201,41 @@ class _FloatingActionIconButtonState extends State<FloatingActionIconButton> {
 
   @override
   Widget build(BuildContext context) {
+    // Over the photo: a flat solid white disc with a dark icon — no shadow, no
+    // glow, just clean colour. Once the bar collapses to a solid surface, the
+    // disc drops away, leaving a bare icon on the clean white bar.
+    final overImage = !widget.isCollapsed;
     final foreground =
         widget.foregroundColor ??
-        (widget.isCollapsed ? AppTheme.onSurface(context) : Colors.white);
-    final background = widget.isCollapsed
-        ? AppTheme.surface(context).withValues(alpha: 0.94)
-        : Colors.white.withValues(alpha: 0.18);
-    final border = widget.isCollapsed
-        ? AppTheme.border(context)
-        : Colors.white.withValues(alpha: 0.30);
+        (overImage ? const Color(0xFF1F2937) : AppTheme.onSurface(context));
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapCancel: () => setState(() => _isPressed = false),
       onTapUp: (_) => setState(() => _isPressed = false),
       child: AnimatedScale(
-        scale: _isPressed ? 0.94 : 1,
+        scale: _isPressed ? 0.9 : 1,
         duration: const Duration(milliseconds: 110),
-        child: ClipOval(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Material(
-              color: background,
-              shape: CircleBorder(side: BorderSide(color: border)),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: widget.onPressed,
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Icon(widget.icon, size: 20, color: foreground),
-                ),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: overImage
+              ? const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                )
+              : null,
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                widget.onPressed();
+              },
+              child: Center(
+                child: Icon(widget.icon, size: 20, color: foreground),
               ),
             ),
           ),

@@ -170,13 +170,6 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: _accent.withValues(alpha: 0.18)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _accent.withValues(alpha: 0.14),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
                 ),
                 child: QrImageView(
                   data: checkInCode,

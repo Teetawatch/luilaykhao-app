@@ -63,18 +63,6 @@ class PopularTripCardLegacy extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1A1C1C).withValues(alpha: 0.06),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
-            ),
-            BoxShadow(
-              color: const Color(0xFF1A1C1C).withValues(alpha: 0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -732,13 +720,6 @@ class TripCard extends StatelessWidget {
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.3),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primaryColor.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -515,15 +515,6 @@ class _ToggleChip extends StatelessWidget {
             // iOS-style white thumb that fills the segment when selected.
             color: selected ? AppTheme.surface(context) : Colors.transparent,
             borderRadius: BorderRadius.circular(11),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -578,13 +569,6 @@ class _GuestHeroHeader extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppTheme.primaryColor,
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.32),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
-                ),
-              ],
             ),
             child: const Icon(
               Icons.confirmation_number_rounded,
@@ -903,15 +887,6 @@ class _LookupButton extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: enabled ? AppTheme.primaryColor : const Color(0xFFD0D5DD),
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.28),
-                    blurRadius: 12,
-                    offset: const Offset(0, 5),
-                  ),
-                ]
-              : null,
         ),
         child: FilledButton(
           onPressed: enabled ? onPressed : null,
@@ -1032,13 +1007,6 @@ class _GuestBookingResultCard extends StatelessWidget {
             border: Border.all(
               color: AppTheme.border(context).withValues(alpha: 0.55),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1194,13 +1162,6 @@ class _GuestBookingResultCard extends StatelessWidget {
                     border: Border.all(
                       color: AppTheme.primaryColor.withValues(alpha: 0.14),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.06),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   child: QrImageView(
                     data: qrCode,
@@ -1233,13 +1194,6 @@ class _GuestBookingResultCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               color: AppTheme.primaryColor,
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.28),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
-                ),
-              ],
             ),
             child: FilledButton.icon(
               onPressed: onTrack,

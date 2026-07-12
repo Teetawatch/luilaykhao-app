@@ -217,13 +217,6 @@ class _StaffCheckInCta extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [Color(0xFF0D9488), Color(0xFF0F766E)],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0D9488).withValues(alpha: 0.30),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: Row(
             children: [
@@ -309,13 +302,6 @@ class _StaffTodayHero extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [Color(0xFF0F766E), Color(0xFF064E45)],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF064E45).withValues(alpha: 0.30),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -880,13 +866,6 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
               ? const Color(0xFFDC2626).withValues(alpha: 0.22)
               : AppTheme.border(context).withValues(alpha: 0.55),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

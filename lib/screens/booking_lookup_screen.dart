@@ -357,13 +357,6 @@ class HeroTrackingHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 24,
-            offset: Offset(0, 10),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,13 +428,6 @@ class _MiniMapPreview extends StatelessWidget {
                   color: AppTheme.primaryColor,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.24),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
                 ),
                 child: const Icon(
                   Icons.directions_bus_filled_rounded,
@@ -553,13 +539,6 @@ class BookingCodeField extends StatelessWidget {
               color: hasError ? AppTheme.errorColor : AppTheme.border(context),
               width: hasError ? 1.4 : 1,
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0A000000),
-                blurRadius: 14,
-                offset: Offset(0, 6),
-              ),
-            ],
           ),
           child: TextField(
             controller: controller,
@@ -637,15 +616,6 @@ class PrimaryTrackButton extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           color: enabled ? AppTheme.primaryColor : const Color(0xFFD0D5DD),
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.22),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
         ),
         child: FilledButton(
           onPressed: enabled ? onPressed : null,

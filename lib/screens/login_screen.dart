@@ -483,13 +483,6 @@ class _LoginSheet extends StatelessWidget {
                           clipBehavior: Clip.antiAlias,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
                           ),
                           child: Image.asset('logo_ios.png', fit: BoxFit.cover),
                         ),
@@ -891,15 +884,6 @@ class _SheetTextFieldState extends State<_SheetTextField> {
               : const Color(0xFFE2E8F0),
           width: focused ? 1.5 : 1,
         ),
-        boxShadow: focused
-            ? [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : null,
       ),
       child: TextField(
         controller: widget.controller,
@@ -999,15 +983,6 @@ class _LoginButtonState extends State<_LoginButton> {
                   )
                 : null,
             color: enabled ? null : const Color(0xFFCBD5E1),
-            boxShadow: enabled
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF059669).withValues(alpha: 0.30),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ]
-                : null,
           ),
           child: Center(
             child: AnimatedSwitcher(
@@ -1288,13 +1263,6 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
         color: fillColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor, width: _hasFocus ? 1.3 : 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: _hasFocus ? 0.07 : 0.035),
-            blurRadius: _hasFocus ? 18 : 12,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: TextField(
         controller: widget.controller,

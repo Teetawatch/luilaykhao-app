@@ -167,13 +167,6 @@ class ProfileHeader extends StatelessWidget {
           color: AppTheme.border(context).withValues(alpha: 0.55),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -837,13 +830,6 @@ class _BookingsShortcutCard extends StatelessWidget {
                 colors: [Color(0xFF059669), Color(0xFF10B981)],
               ),
               borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF059669).withValues(alpha: 0.28),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),

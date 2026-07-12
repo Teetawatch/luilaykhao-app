@@ -434,13 +434,6 @@ class _PlanStepLabel extends StatelessWidget {
               colors: [Color(0xFF059669), Color(0xFF10B981)],
             ),
             borderRadius: BorderRadius.circular(7),
-            boxShadow: [
-              BoxShadow(
-                color: _softAccent.withValues(alpha: 0.25),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
           ),
           child: Center(
             child: Text(
@@ -534,15 +527,6 @@ class _RegionPill extends StatelessWidget {
                 : AppTheme.border(context).withValues(alpha: 0.6),
             width: 1.5,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: _softAccent.withValues(alpha: 0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
         ),
         child: Text(
           label,
@@ -984,15 +968,6 @@ class _ScheduleChip extends StatelessWidget {
           color: bg,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: border, width: 1.5),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: _softAccent.withValues(alpha: 0.28),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1230,13 +1205,6 @@ class _PickupTimeBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: _softAccent,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: _softAccent.withValues(alpha: 0.30),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

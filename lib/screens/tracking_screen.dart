@@ -371,13 +371,6 @@ class TrackingTopBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppTheme.surface(context).withValues(alpha: 0.96),
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 24,
-                    offset: Offset(0, 10),
-                  ),
-                ],
               ),
               child: Row(
                 children: [
@@ -476,15 +469,6 @@ class TrackingBottomSheet extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: AppTheme.isDark(context) ? 0.32 : 0.10,
-                ),
-                blurRadius: 32,
-                offset: const Offset(0, -10),
-              ),
-            ],
           ),
           child: SafeArea(
             top: false,
@@ -615,13 +599,6 @@ class TrackingStatusBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.primaryColor,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.24),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -684,13 +661,6 @@ class _VehicleMarker extends StatelessWidget {
                   color: AppTheme.primaryColor,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.28),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
                 ),
                 child: const Icon(
                   Icons.navigation_rounded,
@@ -733,9 +703,6 @@ class _MapPin extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(999),
-            boxShadow: const [
-              BoxShadow(color: Color(0x14000000), blurRadius: 8),
-            ],
           ),
           child: Text(
             label,
@@ -761,7 +728,6 @@ class _UserMarker extends StatelessWidget {
         color: const Color(0xFF2F80ED),
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 3),
-        boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 8)],
       ),
       child: const Icon(Icons.person_rounded, color: Colors.white, size: 20),
     );
@@ -946,17 +912,8 @@ class _FloatingAction extends StatelessWidget {
           child: Container(
             width: 48,
             height: 48,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(
-                    alpha: AppTheme.isDark(context) ? 0.24 : 0.08,
-                  ),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
             ),
             child: Icon(icon, color: AppTheme.onSurface(context), size: 20),
           ),
@@ -979,13 +936,6 @@ class _TrackingLoadingOverlay extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(18),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 20,
-                offset: Offset(0, 8),
-              ),
-            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

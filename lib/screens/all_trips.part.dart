@@ -321,13 +321,6 @@ class _TripsFilterPanel extends StatelessWidget {
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -953,13 +946,6 @@ class _AllTripCard extends StatelessWidget {
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.55),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1200,14 +1186,6 @@ class _AllTripCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor,
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  AppTheme.primaryColor.withValues(alpha: 0.28),
-                              blurRadius: 14,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1436,13 +1414,6 @@ class _PromotionListCard extends StatelessWidget {
         color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppTheme.border(context)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         children: [

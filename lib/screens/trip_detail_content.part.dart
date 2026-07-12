@@ -287,13 +287,6 @@ class _ItineraryTimelineItem extends StatelessWidget {
                       ],
                     ),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: accentColor.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
                   ),
                   child: Center(
                     child: Text(

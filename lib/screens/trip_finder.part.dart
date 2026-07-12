@@ -439,7 +439,6 @@ class TripFinderEntryCard extends StatelessWidget {
               colors: [AppTheme.primaryColor, AppTheme.accentColor],
             ),
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-            boxShadow: AppTheme.softShadow,
           ),
           child: Row(
             children: [
@@ -498,7 +497,6 @@ class _OptionCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
               border: Border.all(color: AppTheme.outlineColor.withValues(alpha: 0.6)),
-              boxShadow: AppTheme.softShadow,
             ),
             child: Row(
               children: [

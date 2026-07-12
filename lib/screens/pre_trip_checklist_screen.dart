@@ -296,13 +296,6 @@ class _ChecklistHeader extends StatelessWidget {
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Row(
         children: [

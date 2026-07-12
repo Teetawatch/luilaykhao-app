@@ -173,10 +173,6 @@ class AppTheme {
   static const Color surfaceDark = Color(0xFF111827); // Gray 900
   static const Color outlineDark = Color(0xFF334155); // Slate 700
 
-  static const List<BoxShadow> softShadow = [
-    BoxShadow(color: Color(0x0F000000), blurRadius: 24, offset: Offset(0, 8)),
-  ];
-
   static const double radiusSmall = 16;
   static const double radiusMedium = 24;
   static const double radiusLarge = 32;
@@ -234,15 +230,6 @@ class AppTheme {
       border: Border.all(
         color: borderColor ?? border(context).withValues(alpha: 0.55),
       ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(
-            alpha: isDark(context) ? shadowOpacity * 3.5 : shadowOpacity,
-          ),
-          blurRadius: 24,
-          offset: const Offset(0, 10),
-        ),
-      ],
     );
   }
 
@@ -275,7 +262,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surfaceLight,
-        elevation: 10,
+        elevation: 0,
         indicatorColor: primaryColor.withValues(alpha: 0.1),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
@@ -371,7 +358,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surfaceDark,
-        elevation: 10,
+        elevation: 0,
         indicatorColor: accentColor.withValues(alpha: 0.18),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);

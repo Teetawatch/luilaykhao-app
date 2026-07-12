@@ -125,21 +125,6 @@ class StickyBookingBar extends StatelessWidget {
                       ? AppTheme.outlineDark.withValues(alpha: 0.5)
                       : const Color(0xFFE2E8F0),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark
-                        ? Colors.black.withValues(alpha: 0.4)
-                        : const Color(0xFF0F172A).withValues(alpha: 0.10),
-                    blurRadius: 32,
-                    offset: const Offset(0, -6),
-                  ),
-                  if (!isDark)
-                    BoxShadow(
-                      color: _softAccent.withValues(alpha: 0.06),
-                      blurRadius: 20,
-                      offset: const Offset(0, -4),
-                    ),
-                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -472,13 +457,6 @@ class _WaitlistButtonState extends State<_WaitlistButton> {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.28),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -552,15 +530,6 @@ class _BookingButtonState extends State<_BookingButton> {
                 ? AppTheme.primaryColor
                 : const Color(0xFFD1D5DB),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: widget.enabled
-                ? [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.28),
-                      blurRadius: 12,
-                      offset: const Offset(0, 5),
-                    ),
-                  ]
-                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

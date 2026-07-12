@@ -197,13 +197,6 @@ class _PointsHero extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [Color(0xFF065F46), Color(0xFF0F9D77)],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF059669).withValues(alpha: 0.28),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,15 +339,6 @@ class _Segmented extends StatelessWidget {
                         ? AppTheme.surface(context)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(11),
-                    boxShadow: index == i
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : null,
                   ),
                   child: Text(
                     labels[i],

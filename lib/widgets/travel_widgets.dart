@@ -236,17 +236,6 @@ class PrimaryCTAButton extends StatelessWidget {
               )
             : null,
         color: onPressed == null ? Colors.grey[300] : null,
-        boxShadow: onPressed != null
-            ? [
-                BoxShadow(
-                  color: (color ?? AppTheme.primaryColor).withValues(
-                    alpha: 0.3,
-                  ),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : null,
       ),
       child: ElevatedButton(
         onPressed: onPressed,

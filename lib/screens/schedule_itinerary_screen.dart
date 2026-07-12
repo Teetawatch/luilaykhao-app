@@ -206,13 +206,6 @@ class _ProgressHeader extends StatelessWidget {
         color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.border(context).withValues(alpha: 0.55)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,13 +450,6 @@ class _TimelineRow extends StatelessWidget {
                               : AppTheme.border(context).withValues(alpha: 0.55)),
                     width: isNext ? 1.5 : 1,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

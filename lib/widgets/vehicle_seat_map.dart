@@ -216,17 +216,6 @@ class VehicleSeatMap extends StatelessWidget {
                       : Colors.black.withValues(alpha: 0.04),
                   width: spotlight ? 2.5 : 1,
                 ),
-                boxShadow: emphasised
-                    ? [
-                        BoxShadow(
-                          color: visual.fill.withValues(
-                            alpha: spotlight ? 0.5 : 0.32,
-                          ),
-                          blurRadius: spotlight ? 16 : 12,
-                          offset: Offset(0, spotlight ? 6 : 5),
-                        ),
-                      ]
-                    : null,
               ),
               child: Stack(
                 alignment: Alignment.center,
@@ -260,15 +249,6 @@ class VehicleSeatMap extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: spotlight
                               ? Border.all(color: _accent, width: 2)
-                              : null,
-                          boxShadow: spotlight
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.18),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ]
                               : null,
                         ),
                         child: Icon(

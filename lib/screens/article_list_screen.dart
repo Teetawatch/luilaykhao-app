@@ -161,15 +161,6 @@ class _CategoryFilter extends StatelessWidget {
             border: Border.all(
               color: active ? AppTheme.primaryColor : AppTheme.border(context),
             ),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.22),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
           ),
           child: Text(
             label,

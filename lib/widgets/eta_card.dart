@@ -27,15 +27,6 @@ class ETACard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(
-              alpha: AppTheme.isDark(context) ? 0.22 : 0.08,
-            ),
-            blurRadius: 30,
-            offset: const Offset(0, -10),
-          ),
-        ],
       ),
       child: SafeArea(
         top: false,

@@ -739,15 +739,6 @@ class EmptyStateWidget extends StatelessWidget {
         color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(32),
         border: Border.all(color: AppTheme.border(context)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(
-              alpha: AppTheme.isDark(context) ? 0.18 : 0.05,
-            ),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -883,13 +874,6 @@ class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
             border: Border.all(
               color: AppTheme.primaryColor.withValues(alpha: 0.30),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryColor.withValues(alpha: 0.06),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(

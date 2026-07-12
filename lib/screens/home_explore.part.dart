@@ -523,15 +523,6 @@ class _HeroTopBar extends StatelessWidget {
                 width: 0.5,
               ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: 0.05 * backgroundProgress,
-                ),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: SafeArea(
             bottom: false,
@@ -650,15 +641,6 @@ class _HeroTopBar extends StatelessWidget {
                               color: AppTheme.errorColor,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.errorColor.withValues(
-                                    alpha: 0.55,
-                                  ),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
                             ),
                             child: Text(
                               notificationCount > 99
@@ -696,16 +678,9 @@ class _HomeInspiredTopSection extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -772,15 +747,6 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
           color: _focused ? const Color(0xFF0B8A6E) : const Color(0xFFE5EBEB),
           width: _focused ? 1.5 : 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: _focused
-                ? const Color(0xFF0B8A6E).withValues(alpha: 0.14)
-                : const Color(0xFF082A30).withValues(alpha: 0.12),
-            blurRadius: _focused ? 18 : 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -1218,13 +1184,6 @@ class _TrustHub extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0B6E5F).withValues(alpha: 0.16),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
@@ -1339,13 +1298,6 @@ class _HomeTopSectionState extends State<HomeTopSection> {
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 40,
-            offset: const Offset(0, 16),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2167,13 +2119,6 @@ class _DepartureCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFFEAF0F0)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF082A30).withValues(alpha: 0.05),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Row(
           children: [
@@ -2654,13 +2599,6 @@ class PromotionsSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(56)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 20,
-            offset: const Offset(0, -8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2778,13 +2716,6 @@ class _PromotionCard extends StatelessWidget {
           colors: [AppTheme.primaryColor, AppTheme.accentColor],
         ),
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3193,13 +3124,6 @@ class _GuestBookingBanner extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor,
                   borderRadius: BorderRadius.circular(13),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.32),
-                      blurRadius: 12,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
                 ),
                 child: const Icon(
                   Icons.confirmation_number_rounded,
@@ -3560,13 +3484,6 @@ class _HomeNextTripCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           color: const Color(0xFF0B3D42),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0B3D42).withValues(alpha: 0.22),
-              blurRadius: 22,
-              offset: const Offset(0, 12),
-            ),
-          ],
         ),
         child: Stack(
           fit: StackFit.expand,
@@ -4016,13 +3933,6 @@ class _HomeGroupCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFFEAF0F0)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF082A30).withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4128,13 +4038,6 @@ class _GroupPromoCard extends StatelessWidget {
           colors: [Color(0xFFF3FBF8), Colors.white],
         ),
         border: Border.all(color: const Color(0xFFE3EFEC)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF082A30).withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4249,15 +4152,6 @@ class _PromoButton extends StatelessWidget {
           color: filled ? AppTheme.primaryColor : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: filled ? null : Border.all(color: const Color(0xFFD7E6E1)),
-          boxShadow: filled
-              ? [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.28),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -4511,13 +4405,6 @@ class _ReferralBannerState extends State<_ReferralBanner> {
               end: Alignment.bottomRight,
               colors: [Color(0xFF047857), Color(0xFF10B981)],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF059669).withValues(alpha: 0.22),
-                blurRadius: 18,
-                offset: const Offset(0, 9),
-              ),
-            ],
           ),
           child: Row(
             children: [

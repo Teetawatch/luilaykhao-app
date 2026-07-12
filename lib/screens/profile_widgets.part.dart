@@ -135,16 +135,9 @@ class _EditableProfilePhoto extends StatelessWidget {
                 width: 112,
                 height: 112,
                 padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.10),
-                      blurRadius: 22,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
                 ),
                 child: ClipOval(
                   child: localImagePath != null
@@ -170,7 +163,7 @@ class _EditableProfilePhoto extends StatelessWidget {
                 child: Material(
                   color: AppTheme.primaryColor,
                   shape: const CircleBorder(),
-                  elevation: 3,
+                  elevation: 0,
                   child: InkWell(
                     onTap: onPick,
                     customBorder: const CircleBorder(),
@@ -673,13 +666,6 @@ BoxDecoration _sectionDecoration({BuildContext? context, double radius = 24}) {
     color: Colors.white,
     borderRadius: BorderRadius.circular(radius),
     border: Border.all(color: AppTheme.outlineColor.withValues(alpha: 0.55)),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.035),
-        blurRadius: 24,
-        offset: const Offset(0, 10),
-      ),
-    ],
   );
 }
 

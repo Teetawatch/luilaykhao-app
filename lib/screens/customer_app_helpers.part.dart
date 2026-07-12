@@ -550,20 +550,6 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
                     color: accent.withValues(alpha: 0.25),
                     width: 1,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: isDark ? 0.45 : 0.12,
-                      ),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                    BoxShadow(
-                      color: accent.withValues(alpha: isDark ? 0.12 : 0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
                 child: Row(
                   children: [

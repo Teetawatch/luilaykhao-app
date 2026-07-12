@@ -286,14 +286,6 @@ class _HeroVisual extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: gradient,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: gradient.first.withValues(alpha: 0.38),
-                  blurRadius: 32,
-                  spreadRadius: -4,
-                  offset: const Offset(0, 18),
-                ),
-              ],
             ),
             child: Icon(icon, color: Colors.white, size: 58),
           ),
@@ -324,14 +316,6 @@ class _PrimaryButton extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: gradient),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: gradient.first.withValues(alpha: 0.34),
-            blurRadius: 20,
-            spreadRadius: -2,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,

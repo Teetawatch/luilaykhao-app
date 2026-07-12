@@ -108,14 +108,7 @@ class PrimaryCTAButton extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: 56, // Modern tall button
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+      decoration: const BoxDecoration(
       ),
       child: FilledButton.icon(
         onPressed: onPressed,

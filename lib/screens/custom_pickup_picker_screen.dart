@@ -165,12 +165,6 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                     decoration: BoxDecoration(
                       color: AppTheme.surface(context),
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 10,
-                        ),
-                      ],
                     ),
                     child: Row(
                       children: [
@@ -198,7 +192,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                   child: Material(
                     color: AppTheme.surface(context),
                     shape: const CircleBorder(),
-                    elevation: 3,
+                    elevation: 0,
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       onTap: _locating ? null : _goToMyLocation,

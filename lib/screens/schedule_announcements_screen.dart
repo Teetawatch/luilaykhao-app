@@ -256,13 +256,6 @@ class _AnnouncementCard extends StatelessWidget {
               : AppTheme.border(context).withValues(alpha: 0.5),
           width: pinned ? 1.5 : 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

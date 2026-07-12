@@ -824,18 +824,6 @@ class _PromptPayPanel extends StatelessWidget {
                 border: Border.all(
                   color: _accent.withValues(alpha: 0.18),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: _accent.withValues(alpha: 0.12),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: QrImageView(
                 data: qrPayload,
