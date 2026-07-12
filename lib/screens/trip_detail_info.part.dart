@@ -1027,6 +1027,135 @@ class _MustKnowItemRow extends StatelessWidget {
   }
 }
 
+/// คำถามที่พบบ่อย — accordion แบบแตะเพื่อกางคำตอบ ช่วยคลายข้อสงสัยก่อนจอง
+/// โดยไม่ทำให้หน้ายาวเกินไป (คำตอบซ่อนไว้จนกว่าจะแตะ)
+class FaqSection extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const FaqSection({super.key, required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _faqItems(trip['faqs']);
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return _PremiumCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeader(
+            icon: Icons.quiz_rounded,
+            title: 'คำถามที่พบบ่อย',
+            subtitle: 'ข้อสงสัยก่อนออกเดินทาง',
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < items.length; i++)
+            _FaqItem(
+              question: items[i].question,
+              answer: items[i].answer,
+              showDivider: i < items.length - 1,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FaqItem extends StatefulWidget {
+  final String question;
+  final String answer;
+  final bool showDivider;
+
+  const _FaqItem({
+    required this.question,
+    required this.answer,
+    required this.showDivider,
+  });
+
+  @override
+  State<_FaqItem> createState() => _FaqItemState();
+}
+
+class _FaqItemState extends State<_FaqItem> {
+  bool _open = false;
+
+  void _toggle() {
+    HapticFeedback.selectionClick();
+    setState(() => _open = !_open);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    final answerColor =
+        isDark ? Colors.white.withValues(alpha: 0.8) : _mutedText;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: _toggle,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.question,
+                    style: appFont(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : _premiumText,
+                      height: 1.4,
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                AnimatedRotation(
+                  turns: _open ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 22,
+                    color: _softAccent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox(width: double.infinity),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Text(
+              widget.answer,
+              style: appFont(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: answerColor,
+                height: 1.55,
+              ),
+            ),
+          ),
+          crossFadeState:
+              _open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 220),
+          sizeCurve: Curves.easeOutCubic,
+        ),
+        if (widget.showDivider)
+          Divider(
+            height: 1,
+            color: AppTheme.border(context).withValues(alpha: 0.5),
+          ),
+      ],
+    );
+  }
+}
+
 class PreparationsSection extends StatelessWidget {
   final Map<String, dynamic> trip;
 

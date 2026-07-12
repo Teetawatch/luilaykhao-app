@@ -270,6 +270,21 @@ List<String> _textItems(dynamic raw) {
       .toList();
 }
 
+/// คำถามที่พบบ่อยของทริป — backend เก็บเป็น list ของ {question, answer}.
+/// ตัดรายการที่ขาดคำถามหรือคำตอบทิ้ง เพื่อไม่ให้ accordion มีหัวข้อว่างๆ
+List<({String question, String answer})> _faqItems(dynamic raw) {
+  final out = <({String question, String answer})>[];
+  for (final item in asList(raw)) {
+    final data = asMap(item);
+    final question = textOf(data['question'] ?? data['q'] ?? data['title']).trim();
+    final answer = textOf(data['answer'] ?? data['a'] ?? data['description']).trim();
+    if (question.isNotEmpty && answer.isNotEmpty) {
+      out.add((question: question, answer: answer));
+    }
+  }
+  return out;
+}
+
 List<_MustKnowItem> _mustKnowItems(Map<String, dynamic> trip) {
   final raw = trip['must_know'];
   if (raw is String) {
@@ -669,22 +684,31 @@ bool _scheduleIsBookable(Map<String, dynamic> schedule) {
   return _scheduleAvailableSeats(schedule) > 0;
 }
 
-/// รอบแรกที่จองได้จาก list (กรองตาม region ถ้าระบุ) — ไว้ใช้เป็นค่าเริ่มต้น
-/// เพื่อไม่ให้ระบบเลือกรอบที่เต็ม/ผ่านแล้วมาให้ผู้ใช้ตั้งแต่เปิดหน้า
+/// รอบที่จองได้ "ใกล้ที่สุด" (กรองตาม region ถ้าระบุ) — ไว้ใช้เป็นค่าเริ่มต้น
+/// เพื่อให้เปิดหน้ามาแล้วเลือกวันเดินทางที่ใกล้ที่สุดที่ยังจองได้ให้เลย ถ้าวันนั้น
+/// เต็มก็ขยับไปวันถัดไปเอง เลือกด้วยวันเดินทางจริง ไม่พึ่งลำดับของ list ที่ส่งมา
+/// (payload บางชุดเรียงตามลำดับการสร้าง ไม่ได้เรียงตามวัน)
 Map<String, dynamic> _firstBookableSchedule(
   List<dynamic> schedules, {
   String? regionKey,
 }) {
   final key = regionKey?.trim();
+  Map<String, dynamic> best = const <String, dynamic>{};
+  DateTime? bestDate;
   for (final item in schedules) {
     final schedule = asMap(item);
     if (!_scheduleIsBookable(schedule)) continue;
     if (key != null && key.isNotEmpty && !_scheduleHasPickupRegion(schedule, key)) {
       continue;
     }
-    return schedule;
+    final date = DateTime.tryParse(textOf(schedule['departure_date']));
+    // รอบที่ไม่มีวันเดินทางชัดเจนให้ถือว่าอยู่ท้ายสุด
+    if (bestDate == null || (date != null && date.isBefore(bestDate))) {
+      best = schedule;
+      if (date != null) bestDate = date;
+    }
   }
-  return <String, dynamic>{};
+  return best;
 }
 
 Map<String, dynamic> _selectedPickupPointFor(

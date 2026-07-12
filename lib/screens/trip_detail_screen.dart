@@ -782,6 +782,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
           pickupRegionKey: _effectivePickupRegionKey,
           pickupRegionLabel: _pickupRegionLabel(_selectedPickupPoint),
         ),
+      if (_faqItems(trip['faqs']).isNotEmpty) FaqSection(trip: trip),
       if (_hasCommunityPhotos)
         CommunityPhotosSection(trip: trip, reviews: widget.reviews),
       // ฟีดรูปหลังทริป — ซ่อนตัวเองเมื่อไม่มีโพสต์และผู้ดูโพสต์ไม่ได้
