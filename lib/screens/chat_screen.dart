@@ -16,6 +16,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/weather_card.dart';
+import 'schedule_itinerary_screen.dart';
 
 /// Group chat room for a trip schedule. Members are the customers booked on
 /// the schedule, the assigned staff, and admins. Real-time via Reverb.
@@ -107,6 +109,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   List<String> _reactionEmojis = const ['👍', '❤️', '😂', '😮', '😢', '🙏'];
   int? _myUserId;
 
+  // Per-message keys so reply-quote and mention jumps can precisely anchor the
+  // target via Scrollable.ensureVisible instead of a scroll-ratio guess.
+  final Map<int, GlobalKey> _messageKeys = {};
+  // Message briefly highlighted after a jump, to confirm where we landed.
+  int _highlightId = 0;
+  Timer? _highlightTimer;
+
   VoidCallback? _signalsDisposer;
 
   @override
@@ -123,6 +132,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _stopPolling();
     _typingSweeper?.cancel();
     _joinedSweeper?.cancel();
+    _highlightTimer?.cancel();
     _disposer?.call();
     _signalsDisposer?.call();
     _input.dispose();
@@ -389,31 +399,139 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final replyId = _replyingTo == null
         ? null
         : int.tryParse('${_replyingTo!['id']}');
+    final replyPreview = _replyPreviewOf(_replyingTo);
+    // Optimistically render the message right away, then dispatch. On failure it
+    // stays put with a "tap to retry" affordance instead of vanishing — key for
+    // flaky connections on the bus/mountain.
+    setState(() {
+      _sending = false;
+      _input.clear();
+      _replyingTo = null;
+      _mentionPicks.clear();
+      _mentionQuery = null;
+    });
+    _enqueueText(
+      text,
+      replyId: replyId,
+      mentions: mentions,
+      replyPreview: replyPreview,
+    );
+  }
+
+  /// Generates a per-message client token used to track an optimistic send from
+  /// insertion → server ack (or failure), and to dedupe against poll/socket
+  /// echoes of the same message.
+  String _newClientToken() =>
+      'llk-${DateTime.now().microsecondsSinceEpoch}-${_messages.length}';
+
+  /// Builds the trimmed `reply_to` payload the quoted-reply UI expects from the
+  /// message being replied to (so optimistic bubbles show the quote too).
+  Map<String, dynamic>? _replyPreviewOf(Map<String, dynamic>? m) {
+    if (m == null) return null;
+    final user = m['user'] is Map
+        ? Map<String, dynamic>.from(m['user'] as Map)
+        : const <String, dynamic>{};
+    final name = m['is_mine'] == true
+        ? 'ตัวคุณเอง'
+        : ((user['nickname']?.toString().isNotEmpty ?? false)
+            ? user['nickname'].toString()
+            : (user['name']?.toString() ?? 'ผู้ใช้'));
+    return {
+      'id': m['id'],
+      'sender_name': name,
+      'body': m['body'],
+      'has_image': (m['image_url']?.toString().isNotEmpty ?? false),
+    };
+  }
+
+  /// Inserts an optimistic text message and kicks off its dispatch.
+  void _enqueueText(
+    String text, {
+    int? replyId,
+    List<int> mentions = const [],
+    Map<String, dynamic>? replyPreview,
+  }) {
+    final token = _newClientToken();
+    final optimistic = <String, dynamic>{
+      'client_token': token,
+      'is_mine': true,
+      'sender_role': 'customer',
+      'body': text,
+      'created_at': DateTime.now().toIso8601String(),
+      'reply_to': ?replyPreview,
+      '_pending': true,
+      '_mentions': mentions,
+      '_reply_to_id': ?replyId,
+    };
+    setState(() => _messages.add(optimistic));
+    _scrollToBottom();
+    _dispatchOptimistic(token);
+  }
+
+  /// Sends (or re-sends) the optimistic message identified by [token]. Resolves
+  /// to replacing the placeholder with the server message, or flagging it failed
+  /// so the bubble offers a retry.
+  Future<void> _dispatchOptimistic(String token) async {
+    final startIdx = _messages.indexWhere((m) => m['client_token'] == token);
+    if (startIdx < 0) return;
+    setState(() {
+      _messages[startIdx]['_pending'] = true;
+      _messages[startIdx]['_failed'] = false;
+    });
+    final opt = _messages[startIdx];
+    final app = context.read<AppProvider>();
     try {
-      final message = await app.sendChatMessage(
-        widget.scheduleId,
-        text,
-        replyToId: replyId,
-        mentions: mentions,
-      );
+      final Map<String, dynamic> server;
+      final imagePath = opt['_local_image_path']?.toString();
+      final replyId = int.tryParse('${opt['_reply_to_id']}');
+      if (imagePath != null && imagePath.isNotEmpty) {
+        server = await app.sendChatImage(
+          widget.scheduleId,
+          imagePath,
+          body: opt['body']?.toString(),
+          replyToId: replyId,
+        );
+      } else {
+        server = await app.sendChatMessage(
+          widget.scheduleId,
+          opt['body']?.toString() ?? '',
+          replyToId: replyId,
+          mentions: List<int>.from(opt['_mentions'] ?? const []),
+        );
+      }
+      if (!mounted) return;
+      _replaceOptimistic(token, server);
+      _refreshRoom();
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _messages.add(message);
-        _input.clear();
-        _replyingTo = null;
-        _mentionPicks.clear();
-        _mentionQuery = null;
-        _sending = false;
+        final i = _messages.indexWhere((m) => m['client_token'] == token);
+        if (i >= 0) {
+          _messages[i]['_pending'] = false;
+          _messages[i]['_failed'] = true;
+        }
       });
-      _scrollToBottom();
-      _refreshRoom();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _sending = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
     }
+  }
+
+  /// Swaps the optimistic placeholder for the confirmed server message. If a
+  /// poll/socket already delivered the same message (matched by server id), drop
+  /// the placeholder instead of leaving a duplicate.
+  void _replaceOptimistic(String token, Map<String, dynamic> server) {
+    setState(() {
+      final serverId = server['id'];
+      final optIdx = _messages.indexWhere((m) => m['client_token'] == token);
+      final existingIdx = serverId == null
+          ? -1
+          : _messages.indexWhere((m) => m['id'] == serverId);
+      if (existingIdx >= 0 && existingIdx != optIdx) {
+        if (optIdx >= 0) _messages.removeAt(optIdx);
+      } else if (optIdx >= 0) {
+        _messages[optIdx] = server;
+      } else {
+        _messages.add(server);
+      }
+    });
   }
 
   /// Matches the "@All" everyone-token (LINE-style). Word-boundary so a name
@@ -443,7 +561,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _pickAndSendImage(ImageSource source) async {
-    if (_sending) return;
     final XFile? picked;
     try {
       picked = await _picker.pickImage(
@@ -460,31 +577,27 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
     if (picked == null || !mounted) return;
 
-    setState(() => _sending = true);
-    final app = context.read<AppProvider>();
     final replyId = _replyingTo == null
         ? null
         : int.tryParse('${_replyingTo!['id']}');
-    try {
-      final message = await app.sendChatImage(
-        widget.scheduleId,
-        picked.path,
-        replyToId: replyId,
-      );
-      if (!mounted) return;
-      setState(() {
-        _messages.add(message);
-        _replyingTo = null;
-        _sending = false;
-      });
-      _scrollToBottom();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _sending = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    }
+    final replyPreview = _replyPreviewOf(_replyingTo);
+    final token = _newClientToken();
+    final optimistic = <String, dynamic>{
+      'client_token': token,
+      'is_mine': true,
+      'sender_role': 'customer',
+      'created_at': DateTime.now().toIso8601String(),
+      '_local_image_path': picked.path,
+      'reply_to': ?replyPreview,
+      '_reply_to_id': ?replyId,
+      '_pending': true,
+    };
+    setState(() {
+      _messages.add(optimistic);
+      _replyingTo = null;
+    });
+    _scrollToBottom();
+    _dispatchOptimistic(token);
   }
 
   void _snack(String message) {
@@ -498,8 +611,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// link — the most common need in a trip chat ("I'm here" / meeting points).
   /// Sent through the normal text path, so no backend change is required.
   Future<void> _shareLocation() async {
-    if (_sending) return;
-
     final Position pos;
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
@@ -532,22 +643,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
     final text = '📍 ตำแหน่งของฉัน\n$url';
 
-    setState(() => _sending = true);
-    final app = context.read<AppProvider>();
-    try {
-      final message = await app.sendChatMessage(widget.scheduleId, text);
-      if (!mounted) return;
-      setState(() {
-        _messages.add(message);
-        _sending = false;
-      });
-      _scrollToBottom();
-      _refreshRoom();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _sending = false);
-      _snack(e.toString());
-    }
+    _enqueueText(text);
   }
 
   void _showImageSourceSheet() {
@@ -1024,24 +1120,64 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
   }
 
+  GlobalKey _keyFor(int messageId) =>
+      _messageKeys.putIfAbsent(messageId, () => GlobalKey());
+
   /// Scrolls to a message already loaded in the list (e.g. tapping a reply
-  /// quote). No-op if it's not in the current window.
+  /// quote or the mention chip). Anchors precisely with [Scrollable.ensureVisible]
+  /// when the target widget is built; otherwise approximates the jump first and
+  /// anchors on the next frame once the target lays out.
   void _scrollToMessage(int messageId) {
-    final idx = _messages.indexWhere((m) => int.tryParse('${m['id']}') == messageId);
+    final idx =
+        _messages.indexWhere((m) => int.tryParse('${m['id']}') == messageId);
     if (idx == -1 || !_scroll.hasClients) return;
-    // Approximate: jump proportionally. Precise anchoring would need item keys;
-    // this lands close enough for a short reply hop.
+
+    final ctx = _messageKeys[messageId]?.currentContext;
+    if (ctx != null) {
+      _anchorOn(ctx);
+      _flashMessage(messageId);
+      return;
+    }
+
+    // Off-screen and not yet built — jump proportionally to bring it into range,
+    // then anchor precisely once it's laid out.
     final ratio = _messages.isEmpty ? 1.0 : idx / _messages.length;
-    _scroll.animateTo(
-      _scroll.position.maxScrollExtent * ratio,
+    final target = (_scroll.position.maxScrollExtent * ratio)
+        .clamp(0.0, _scroll.position.maxScrollExtent);
+    _scroll.jumpTo(target);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final built = _messageKeys[messageId]?.currentContext;
+      if (built != null) {
+        _anchorOn(built);
+        _flashMessage(messageId);
+      }
+    });
+  }
+
+  void _anchorOn(BuildContext ctx) {
+    Scrollable.ensureVisible(
+      ctx,
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOut,
+      alignment: 0.3,
     );
+  }
+
+  /// Briefly outlines a message after jumping to it so the eye can find it.
+  void _flashMessage(int messageId) {
+    _highlightTimer?.cancel();
+    setState(() => _highlightId = messageId);
+    _highlightTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _highlightId = 0);
+    });
   }
 
   void _openMessageMenu(Map<String, dynamic> message) {
     final role = message['sender_role']?.toString() ?? 'customer';
     if (role == 'system' || message['is_deleted'] == true) return;
+    // Optimistic messages (still sending / failed) aren't actionable yet.
+    if (message['_pending'] == true || message['_failed'] == true) return;
     HapticFeedback.mediumImpact();
     final body = message['body']?.toString() ?? '';
     final messageId = int.tryParse('${message['id']}') ?? 0;
@@ -1170,6 +1306,27 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ? Map<String, dynamic>.from(_room!['vehicle'] as Map)
           : null;
 
+  // Trip-info shortcuts surfaced in the room-info sheet (weather / pickup /
+  // itinerary), sourced from the room payload — see ChatController@room.
+  Map<String, dynamic>? get _weather => _room?['weather'] is Map
+      ? Map<String, dynamic>.from(_room!['weather'] as Map)
+      : null;
+
+  List<Map<String, dynamic>> get _pickupPoints =>
+      (_room?['pickup_points'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+  bool get _hasItinerary => _room?['has_itinerary'] == true;
+
+  String get _tripTitle {
+    final fromWidget = widget.title?.trim() ?? '';
+    if (fromWidget.isNotEmpty) return fromWidget;
+    final sched = _room?['schedule'];
+    if (sched is Map) return sched['trip_title']?.toString() ?? '';
+    return '';
+  }
+
   String get _vehicleName => _vehicle?['name']?.toString().trim() ?? '';
 
   String _subtitle() {
@@ -1205,6 +1362,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         vehicle: _vehicle,
         members: _members,
         memberCount: _memberCount,
+        scheduleId: widget.scheduleId,
+        tripTitle: _tripTitle,
+        weather: _weather,
+        pickupPoints: _pickupPoints,
+        hasItinerary: _hasItinerary,
       ),
     );
   }
@@ -1484,24 +1646,37 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ? _readCountFor(mId)
           : 0;
 
-      items.add(
-        _MessageBubble(
-          message: m,
-          showAuthor: isFirstInGroup,
-          showAvatar: isLastInGroup,
-          showTimestamp: isLastInGroup,
-          isFirstInGroup: isFirstInGroup,
-          isLastInGroup: isLastInGroup,
-          readByCount: readByCount,
-          myUserId: _myUserId,
-          mentionsMe: _mentionsMe(m),
-          onCopy: _copyMessage,
-          onLongPress: () => _openMessageMenu(m),
-          onSwipeReply: () => _startReply(m),
-          onReplyTap: _scrollToMessage,
-          onReactionTap: (emoji) => _toggleReaction(mId, emoji),
-        ),
+      final pending = m['_pending'] == true;
+      final failed = m['_failed'] == true;
+      final token = m['client_token']?.toString();
+
+      final bubble = _MessageBubble(
+        message: m,
+        showAuthor: isFirstInGroup,
+        showAvatar: isLastInGroup,
+        showTimestamp: isLastInGroup,
+        isFirstInGroup: isFirstInGroup,
+        isLastInGroup: isLastInGroup,
+        readByCount: readByCount,
+        myUserId: _myUserId,
+        mentionsMe: _mentionsMe(m),
+        highlight: mId > 0 && mId == _highlightId,
+        pending: pending,
+        failed: failed,
+        onRetry: (failed && token != null)
+            ? () => _dispatchOptimistic(token)
+            : null,
+        onCopy: _copyMessage,
+        onLongPress: () => _openMessageMenu(m),
+        onSwipeReply: () => _startReply(m),
+        onReplyTap: _scrollToMessage,
+        onReactionTap: (emoji) => _toggleReaction(mId, emoji),
       );
+
+      // Keyed so jumps can anchor exactly on this bubble (see _scrollToMessage).
+      items.add(mId > 0
+          ? KeyedSubtree(key: _keyFor(mId), child: bubble)
+          : bubble);
     }
 
     return items;
@@ -2064,6 +2239,10 @@ class _MessageBubble extends StatelessWidget {
   final int readByCount;
   final int? myUserId;
   final bool mentionsMe;
+  final bool highlight;
+  final bool pending;
+  final bool failed;
+  final VoidCallback? onRetry;
   final ValueChanged<String> onCopy;
   final VoidCallback onLongPress;
   final VoidCallback onSwipeReply;
@@ -2080,6 +2259,10 @@ class _MessageBubble extends StatelessWidget {
     required this.readByCount,
     required this.myUserId,
     required this.mentionsMe,
+    required this.highlight,
+    required this.pending,
+    required this.failed,
+    required this.onRetry,
     required this.onCopy,
     required this.onLongPress,
     required this.onSwipeReply,
@@ -2118,8 +2301,13 @@ class _MessageBubble extends StatelessWidget {
     final isEdited = message['edited_at'] != null;
     final body = message['body']?.toString() ?? '';
     final imageUrl = isDeleted ? '' : ApiConfig.mediaUrl(message['image_url']);
+    // A locally-picked image shown while an optimistic send is in flight (before
+    // the server returns its hosted URL).
+    final localImagePath =
+        isDeleted ? '' : (message['_local_image_path']?.toString() ?? '');
     final hasText = !isDeleted && body.isNotEmpty;
     final hasImage = imageUrl.isNotEmpty;
+    final hasLocalImage = imageUrl.isEmpty && localImagePath.isNotEmpty;
 
     final replyTo = message['reply_to'] is Map
         ? Map<String, dynamic>.from(message['reply_to'] as Map)
@@ -2207,7 +2395,7 @@ class _MessageBubble extends StatelessWidget {
                 GestureDetector(
                   onLongPress: onLongPress,
                   child: Container(
-                    padding: hasImage && !hasText
+                    padding: (hasImage || hasLocalImage) && !hasText
                         ? const EdgeInsets.all(4)
                         : const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -2216,9 +2404,9 @@ class _MessageBubble extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: bg,
                       borderRadius: shape,
-                      // Tint the bubble when this message tags me, so it stands
-                      // out while scrolling (LINE-style mention highlight).
-                      border: mentionsMe && !isMine
+                      // Outline the bubble when this message tags me (LINE-style
+                      // mention highlight) or when we just jumped to it.
+                      border: (mentionsMe && !isMine) || highlight
                           ? Border.all(
                               color: AppTheme.primaryColor.withValues(alpha: 0.9),
                               width: 1.5,
@@ -2241,6 +2429,9 @@ class _MessageBubble extends StatelessWidget {
                         ],
                         if (hasImage) ...[
                           _ChatImage(url: imageUrl),
+                          if (hasText) const SizedBox(height: 6),
+                        ] else if (hasLocalImage) ...[
+                          _LocalChatImage(path: localImagePath),
                           if (hasText) const SizedBox(height: 6),
                         ],
                         if (isDeleted)
@@ -2281,7 +2472,58 @@ class _MessageBubble extends StatelessWidget {
                     onTap: onReactionTap,
                   ),
                 ],
-                if (showTimestamp) ...[
+                if (isMine && failed) ...[
+                  const SizedBox(height: 3),
+                  GestureDetector(
+                    onTap: onRetry,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            size: 13,
+                            color: AppTheme.errorColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'ส่งไม่สำเร็จ · แตะเพื่อลองใหม่',
+                            style: appFont(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.errorColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else if (isMine && pending) ...[
+                  const SizedBox(height: 3),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 11,
+                          color: AppTheme.mutedText(context),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'กำลังส่ง…',
+                          style: appFont(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (showTimestamp) ...[
                   const SizedBox(height: 3),
                   Padding(
                     padding: EdgeInsets.only(
@@ -2329,8 +2571,9 @@ class _MessageBubble extends StatelessWidget {
       ),
     );
 
-    // Deleted notices aren't repliable, so skip the swipe affordance there.
-    if (isDeleted) return content;
+    // Deleted notices and in-flight/failed optimistic sends aren't repliable,
+    // so skip the swipe affordance there.
+    if (isDeleted || pending || failed) return content;
 
     // Swipe-right to reply (LINE/iMessage style). confirmDismiss returns false
     // so the bubble springs back instead of actually dismissing.
@@ -2465,6 +2708,36 @@ class _ChatImage extends StatelessWidget {
   }
 }
 
+/// Local file preview shown inside an optimistic image bubble before the server
+/// returns the hosted URL. Mirrors [_ChatImage]'s framing but reads from disk.
+class _LocalChatImage extends StatelessWidget {
+  final String path;
+
+  const _LocalChatImage({required this.path});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 240),
+        child: Image.file(
+          File(path),
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(
+            width: 200,
+            height: 120,
+            color: AppTheme.subtleSurface(context),
+            alignment: Alignment.center,
+            child: Icon(Icons.broken_image_rounded,
+                color: AppTheme.mutedText(context)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ImageViewer extends StatelessWidget {
   final String url;
   final String? title;
@@ -2577,12 +2850,90 @@ class _RoomInfoSheet extends StatelessWidget {
   final Map<String, dynamic>? vehicle;
   final List<Map<String, dynamic>> members;
   final int memberCount;
+  final int scheduleId;
+  final String tripTitle;
+  final Map<String, dynamic>? weather;
+  final List<Map<String, dynamic>> pickupPoints;
+  final bool hasItinerary;
 
   const _RoomInfoSheet({
     required this.vehicle,
     required this.members,
     required this.memberCount,
+    required this.scheduleId,
+    required this.tripTitle,
+    required this.weather,
+    required this.pickupPoints,
+    required this.hasItinerary,
   });
+
+  bool get _hasAnyShortcut =>
+      hasItinerary ||
+      pickupPoints.isNotEmpty ||
+      (weather?.isNotEmpty ?? false);
+
+  void _openItinerary(BuildContext context) {
+    final nav = Navigator.of(context);
+    nav.pop();
+    nav.push(MaterialPageRoute(
+      builder: (_) => ScheduleItineraryScreen(
+        scheduleId: scheduleId,
+        tripTitle: tripTitle,
+      ),
+    ));
+  }
+
+  void _openPickups(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.surface(context),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _PickupPointsSheet(points: pickupPoints),
+    );
+  }
+
+  void _openWeather(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.wb_cloudy_rounded,
+                      size: 20, color: AppTheme.primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'อากาศวันเดินทาง',
+                    style: appFont(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.onSurface(context),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              WeatherCard(weather: weather!, compact: false),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2642,6 +2993,42 @@ class _RoomInfoSheet extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 children: [
+                  if (_hasAnyShortcut) ...[
+                    Row(
+                      children: [
+                        if (hasItinerary)
+                          Expanded(
+                            child: _TripInfoAction(
+                              icon: Icons.route_rounded,
+                              label: 'กำหนดการ',
+                              onTap: () => _openItinerary(context),
+                            ),
+                          ),
+                        if (hasItinerary && pickupPoints.isNotEmpty)
+                          const SizedBox(width: 10),
+                        if (pickupPoints.isNotEmpty)
+                          Expanded(
+                            child: _TripInfoAction(
+                              icon: Icons.pin_drop_rounded,
+                              label: 'จุดรับ',
+                              onTap: () => _openPickups(context),
+                            ),
+                          ),
+                        if ((hasItinerary || pickupPoints.isNotEmpty) &&
+                            (weather?.isNotEmpty ?? false))
+                          const SizedBox(width: 10),
+                        if (weather?.isNotEmpty ?? false)
+                          Expanded(
+                            child: _TripInfoAction(
+                              icon: Icons.wb_cloudy_rounded,
+                              label: 'อากาศ',
+                              onTap: () => _openWeather(context),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   if (vehicle != null) ...[
                     _VehicleCard(vehicle: vehicle!),
                     const SizedBox(height: 14),
@@ -2662,6 +3049,247 @@ class _RoomInfoSheet extends StatelessWidget {
                       ),
                     ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Flat quick-action tile for the trip-info shortcuts row (กำหนดการ/จุดรับ/อากาศ).
+class _TripInfoAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _TripInfoAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.primaryColor.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          child: Column(
+            children: [
+              Icon(icon, size: 22, color: AppTheme.primaryColor),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.onSurface(context),
+                  letterSpacing: -0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet listing the round's pickup points with time, note and a map link.
+class _PickupPointsSheet extends StatelessWidget {
+  final List<Map<String, dynamic>> points;
+
+  const _PickupPointsSheet({required this.points});
+
+  String _t(dynamic v) => v?.toString().trim() ?? '';
+
+  Future<void> _openMap(Map<String, dynamic> p) async {
+    final mapUrl = _t(p['map_url']);
+    final lat = p['latitude'];
+    final lng = p['longitude'];
+    final Uri? uri;
+    if (mapUrl.isNotEmpty) {
+      uri = Uri.tryParse(mapUrl);
+    } else if (lat != null && lng != null) {
+      uri = Uri.tryParse(
+        'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+      );
+    } else {
+      uri = null;
+    }
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.mutedText(context).withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.pin_drop_rounded,
+                      size: 20, color: AppTheme.primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'จุดรับ-ส่ง',
+                    style: appFont(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.onSurface(context),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                itemCount: points.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (_, i) {
+                  final p = points[i];
+                  final region = _t(p['region_label']);
+                  final location = _t(p['pickup_location']);
+                  final time = _t(p['pickup_time']);
+                  final notes = _t(p['notes']);
+                  final hasMap = _t(p['map_url']).isNotEmpty ||
+                      (p['latitude'] != null && p['longitude'] != null);
+
+                  return Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.subtleSurface(context),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.border(context)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                region.isEmpty ? location : region,
+                                style: appFont(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.onSurface(context),
+                                  letterSpacing: -0.1,
+                                ),
+                              ),
+                            ),
+                            if (time.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.schedule_rounded,
+                                        size: 13,
+                                        color: AppTheme.primaryColor),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      time,
+                                      style: appFont(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.primaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (region.isNotEmpty && location.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            location,
+                            style: appFont(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.mutedText(context),
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                        if (notes.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            notes,
+                            style: appFont(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.mutedText(context),
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                        if (hasMap) ...[
+                          const SizedBox(height: 10),
+                          InkWell(
+                            onTap: () => _openMap(p),
+                            borderRadius: BorderRadius.circular(999),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.map_rounded,
+                                    size: 16, color: AppTheme.primaryColor),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'เปิดแผนที่',
+                                  style: appFont(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -2782,6 +3410,9 @@ class _MemberTile extends StatelessWidget {
     final role = member['role']?.toString() ?? 'customer';
     final isMe = member['is_me'] == true;
     final avatarUrl = ApiConfig.mediaUrl(member['avatar_url']);
+    // Staff/admin expose a phone so travellers can reach their guide (customer
+    // numbers are never sent — see ChatController@room).
+    final phone = member['phone']?.toString().trim() ?? '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
@@ -2820,6 +3451,23 @@ class _MemberTile extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           _RoleTag(role: role, alwaysShow: true),
+          if (phone.isNotEmpty && !isMe) ...[
+            const SizedBox(width: 6),
+            IconButton(
+              tooltip: 'โทรหา$name',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => launchUrl(Uri.parse('tel:$phone')),
+              icon: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.phone_rounded,
+                    color: AppTheme.primaryColor, size: 16),
+              ),
+            ),
+          ],
         ],
       ),
     );
