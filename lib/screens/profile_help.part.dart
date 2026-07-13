@@ -37,9 +37,11 @@ class HelpCenterScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   _HelpTile(
                     icon: Icons.support_agent_outlined,
-                    title: 'ส่งข้อความหาทีมงาน',
-                    body: 'ส่งข้อความถึงทีมงานลุยเลเขา เราจะตอบกลับโดยเร็วที่สุด',
-                    onTap: () => _pushPremium(context, const ContactUsScreen()),
+                    title: 'แชทกับทีมงาน',
+                    body: 'พิมพ์คุยกับทีมงานลุยเลเขาได้เลย เราจะตอบกลับโดยเร็วที่สุด',
+                    badge: context.watch<AppProvider>().supportUnread,
+                    onTap: () =>
+                        _pushPremium(context, const SupportChatScreen()),
                   ),
                 ],
               ),

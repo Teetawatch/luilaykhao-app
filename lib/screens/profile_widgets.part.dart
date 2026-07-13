@@ -566,12 +566,14 @@ class _HelpTile extends StatelessWidget {
   final String title;
   final String body;
   final VoidCallback onTap;
+  final int badge;
 
   const _HelpTile({
     required this.icon,
     required this.title,
     required this.body,
     required this.onTap,
+    this.badge = 0,
   });
 
   @override
@@ -614,6 +616,24 @@ class _HelpTile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (badge > 0)
+                Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    badge > 99 ? '99+' : '$badge',
+                    style: appFont(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               Icon(Icons.chevron_right, color: Colors.grey[300]),
             ],
           ),

@@ -22,6 +22,7 @@ import 'group_rooms_screen.dart';
 import 'notification_preferences_screen.dart';
 import 'trip_feed_screen.dart' show TripFeedScreen;
 import 'chat_screen.dart' show ChatScreen;
+import 'support_chat_screen.dart' show SupportChatScreen;
 import 'chat_list_screen.dart' show ChatListScreen;
 import 'staff_check_in_screen.dart' show StaffCheckInScreen;
 import 'staff_manifest_screen.dart' show StaffManifestScreen;

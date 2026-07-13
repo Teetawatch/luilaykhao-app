@@ -55,6 +55,12 @@ class ApiEndpoints {
   static String chatReact(int scheduleId, int messageId) =>
       'schedules/$scheduleId/chat/messages/$messageId/react';
 
+  // Support inbox (ศูนย์ช่วยเหลือ — ลูกค้าคุยกับทีมงาน)
+  static const supportConversation = 'support/conversation';
+  static const supportMessages = 'support/messages';
+  static const supportRead = 'support/read';
+  static const supportUnreadCount = 'support/unread-count';
+
   // Announcements (ประกาศจากผู้จัด ต่อรอบเดินทาง)
   static String announcements(int scheduleId) =>
       'schedules/$scheduleId/announcements';

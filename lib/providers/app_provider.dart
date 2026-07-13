@@ -76,6 +76,8 @@ class AppProvider extends ChangeNotifier {
   // Trip group-chat rooms the user belongs to (for the "แชท" tab) + total unread.
   List<dynamic> chatConversations = [];
   int chatUnreadTotal = 0;
+  // Unread messages from the team in the support inbox (ศูนย์ช่วยเหลือ).
+  int supportUnread = 0;
   Map<String, dynamic>? loyalty;
   Map<String, dynamic>? referral;
   Map<String, dynamic>? stats;
@@ -903,6 +905,7 @@ class AppProvider extends ChangeNotifier {
       safe(api.get(ApiEndpoints.loyaltyCoupons)),
       safe(api.get(ApiEndpoints.reviewsMy)),
       safe(api.get(ApiEndpoints.chatMyConversations)),
+      safe(api.get(ApiEndpoints.supportUnreadCount)),
       if (hasStaff) safe(api.get(ApiEndpoints.staffSchedulesMy)),
     ]);
 
@@ -929,8 +932,12 @@ class AppProvider extends ChangeNotifier {
         return sum + n;
       });
     }
-    if (hasStaff && results.length > 7 && results[7] != null) {
-      final staffData = api.data(results[7]) as Map?;
+    if (results[7] != null) {
+      final supportData = api.data(results[7]) as Map?;
+      supportUnread = int.tryParse('${supportData?['count']}') ?? 0;
+    }
+    if (hasStaff && results.length > 8 && results[8] != null) {
+      final staffData = api.data(results[8]) as Map?;
       staffSchedules = List<dynamic>.from(staffData?['schedules'] ?? []);
       staffSummary = Map<String, dynamic>.from(staffData?['summary'] ?? {});
     }
@@ -1583,6 +1590,82 @@ class AppProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> chatRoom(int scheduleId) async {
     final response = await api.get(ApiEndpoints.chatRoom(scheduleId));
     return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  // ── Support inbox (ศูนย์ช่วยเหลือ — ลูกค้าคุยกับทีมงาน) ────────────────────────
+
+  /// The customer's support conversation meta (id, status, unread). Creates the
+  /// room server-side on first call.
+  Future<Map<String, dynamic>> supportConversation() async {
+    final response = await api.get(ApiEndpoints.supportConversation);
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// Fetch the customer's support thread. `beforeId` pages older messages,
+  /// `afterId` polls only messages newer than the given id.
+  Future<Map<String, dynamic>> supportMessages({
+    int? beforeId,
+    int? afterId,
+  }) async {
+    final response = await api.get(
+      ApiEndpoints.supportMessages,
+      query: {'per_page': 30, 'before_id': ?beforeId, 'after_id': ?afterId},
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  Future<Map<String, dynamic>> sendSupportMessage(String body) async {
+    final response = await api.post(
+      ApiEndpoints.supportMessages,
+      body: {'body': body},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> sendSupportImage(
+    String imagePath, {
+    String? body,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.supportMessages,
+      fields: {if (body != null && body.isNotEmpty) 'body': body},
+      files: {'image': imagePath},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<void> markSupportRead() async {
+    // Drop the badge immediately; the server call just persists the pointer.
+    if (supportUnread != 0) {
+      supportUnread = 0;
+      notifyListeners();
+    }
+    try {
+      await api.post(ApiEndpoints.supportRead);
+    } catch (_) {}
+  }
+
+  Future<int> supportUnreadCount() async {
+    final response = await api.get(ApiEndpoints.supportUnreadCount);
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    final count = int.tryParse('${data['count']}') ?? 0;
+    if (count != supportUnread) {
+      supportUnread = count;
+      notifyListeners();
+    }
+    return count;
+  }
+
+  /// Live updates for the customer's own support thread. Returns a disposer.
+  Future<VoidCallback> subscribeSupport(
+    int conversationId,
+    RealtimeEventHandler handler,
+  ) {
+    return realtime.subscribe(
+      channel: 'private-support.conversation.$conversationId',
+      event: 'support.message',
+      handler: handler,
+    );
   }
 
   // ── Announcements (ประกาศจากผู้จัด ต่อรอบเดินทาง) ─────────────────────────────

@@ -12,6 +12,7 @@ import '../screens/trip_feed_screen.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/schedule_announcements_screen.dart';
 import '../screens/sos_alert_screen.dart';
+import '../screens/support_chat_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
 import '../screens/waitlist_screen.dart';
 import 'sos_alarm_service.dart';
@@ -77,6 +78,8 @@ class NotificationNavigator {
         _openSosAlert(data);
       case 'chat_message':
         _openChat(data);
+      case 'support_message':
+        _openSupport();
       case 'schedule_announcement':
         _openAnnouncements(data);
       case 'waitlist_offered':
@@ -172,6 +175,14 @@ class NotificationNavigator {
     _withNav(
       (nav) => nav.push(
         MaterialPageRoute(builder: (_) => ChatScreen(scheduleId: id)),
+      ),
+    );
+  }
+
+  static void _openSupport() {
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => const SupportChatScreen()),
       ),
     );
   }
