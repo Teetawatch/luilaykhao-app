@@ -24,6 +24,13 @@ class TrackingProvider extends ChangeNotifier {
   bool _locationPermissionDenied = false;
   String? _locationError;
 
+  // เส้นทางตามถนนจริง (รถ → จุดของลูกค้า) สำหรับวาดเส้นบนแผนที่แบบ Grab
+  List<LatLng> _routePoints = const [];
+  LatLng? _lastRouteFrom;
+  LatLng? _lastRouteTo;
+  DateTime? _lastRouteAt;
+  bool _routeFetching = false;
+
   BookingInfo? get booking => _booking;
   VehicleTracking? get vehicleTracking => _vehicleTracking;
   ETAResult? get eta => _eta;
@@ -34,6 +41,7 @@ class TrackingProvider extends ChangeNotifier {
   LatLng? get customerLocation => _customerLocation;
   bool get locationPermissionDenied => _locationPermissionDenied;
   String? get locationError => _locationError;
+  List<LatLng> get routePoints => _routePoints;
 
   /// เริ่มติดตามสำหรับ guest ที่ผ่านการ verify แล้ว — ข้าม fetchBookingInfo เพราะมีข้อมูลครบแล้ว
   Future<void> startTrackingAsGuest(BookingInfo bookingInfo) async {
@@ -46,6 +54,7 @@ class TrackingProvider extends ChangeNotifier {
     _customerLocation = null;
     _locationPermissionDenied = false;
     _locationError = null;
+    _resetRoute();
     _phase = TrackingPhase.far;
     _service.authToken = null;
     notifyListeners();
@@ -68,18 +77,7 @@ class TrackingProvider extends ChangeNotifier {
     _isTracking = true;
     notifyListeners();
 
-    _locationService.startTracking(
-      onLocation: (loc) {
-        _customerLocation = loc;
-        _recomputeETA();
-        notifyListeners();
-      },
-      onError: (err) {
-        _locationError = err;
-        _locationPermissionDenied = true;
-        notifyListeners();
-      },
-    );
+    _beginCustomerLocation();
 
     _service.startAdaptivePolling(
       vehicleId: bookingInfo.vehicleId,
@@ -119,6 +117,7 @@ class TrackingProvider extends ChangeNotifier {
     _customerLocation = null;
     _locationPermissionDenied = false;
     _locationError = null;
+    _resetRoute();
     _phase = TrackingPhase.far;
     _service.authToken = authToken;
     notifyListeners();
@@ -149,18 +148,7 @@ class TrackingProvider extends ChangeNotifier {
     _isTracking = true;
     notifyListeners();
 
-    _locationService.startTracking(
-      onLocation: (loc) {
-        _customerLocation = loc;
-        _recomputeETA();
-        notifyListeners();
-      },
-      onError: (err) {
-        _locationError = err;
-        _locationPermissionDenied = true;
-        notifyListeners();
-      },
-    );
+    _beginCustomerLocation();
 
     _service.startAdaptivePolling(
       vehicleId: booking.vehicleId,
@@ -190,6 +178,34 @@ class TrackingProvider extends ChangeNotifier {
     );
   }
 
+  /// เริ่มสตรีมตำแหน่งลูกค้า (GPS) — ใช้ร่วมกันทั้งตอนเริ่มติดตามและตอนกดลองใหม่
+  void _beginCustomerLocation() {
+    _locationService.startTracking(
+      onLocation: (loc) {
+        _customerLocation = loc;
+        _locationPermissionDenied = false;
+        _locationError = null;
+        _recomputeETA();
+        _maybeRefreshRoute();
+        notifyListeners();
+      },
+      onError: (err) {
+        _locationError = err;
+        _locationPermissionDenied = true;
+        notifyListeners();
+      },
+    );
+  }
+
+  /// ลองขอสิทธิ์/เริ่มจับตำแหน่งลูกค้าใหม่ (หลังผู้ใช้เปิดสิทธิ์ในตั้งค่า)
+  Future<void> retryCustomerLocation() async {
+    _locationService.stop();
+    _locationPermissionDenied = false;
+    _locationError = null;
+    notifyListeners();
+    _beginCustomerLocation();
+  }
+
   void _handleNewTracking(VehicleTracking? tracking) {
     if (tracking != null && _booking != null) {
       _vehicleTracking = VehicleTracking(
@@ -209,6 +225,46 @@ class TrackingProvider extends ChangeNotifier {
       _vehicleTracking = tracking;
     }
     _recomputeETA();
+    _maybeRefreshRoute();
+  }
+
+  /// ดึงเส้นทางตามถนนจริง (throttle: รีเฟรชเมื่อรถ/ลูกค้าขยับ >120m หรือทุก ~25 วิ)
+  Future<void> _maybeRefreshRoute() async {
+    final from = _vehicleTracking?.driverLocation;
+    final to = _customerLocation ?? _booking?.pickupPoint;
+    if (from == null || to == null) return;
+    if (to.latitude == 0 && to.longitude == 0) return;
+    if (_routeFetching) return;
+
+    const distance = Distance();
+    final movedFar = _lastRouteFrom == null ||
+        distance.as(LengthUnit.Meter, _lastRouteFrom!, from) > 120 ||
+        (_lastRouteTo != null &&
+            distance.as(LengthUnit.Meter, _lastRouteTo!, to) > 120);
+    final stale = _lastRouteAt == null ||
+        DateTime.now().difference(_lastRouteAt!) > const Duration(seconds: 25);
+    if (_routePoints.isNotEmpty && !movedFar && !stale) return;
+
+    _routeFetching = true;
+    _lastRouteAt = DateTime.now();
+    _lastRouteFrom = from;
+    _lastRouteTo = to;
+    try {
+      final pts = await _service.fetchRoute(from, to);
+      if (pts.isNotEmpty) {
+        _routePoints = pts;
+        notifyListeners();
+      }
+    } finally {
+      _routeFetching = false;
+    }
+  }
+
+  void _resetRoute() {
+    _routePoints = const [];
+    _lastRouteFrom = null;
+    _lastRouteTo = null;
+    _lastRouteAt = null;
   }
 
   void _recomputeETA() {

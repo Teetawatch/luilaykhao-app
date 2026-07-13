@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 
 import '../models/tracking_model.dart';
 
@@ -72,6 +73,58 @@ class TrackingService {
       debugPrint('[TrackingService] fetchVehicleLocation error: $e');
     }
     return null;
+  }
+
+  /// เส้นทางขับรถตามถนนจริงจากรถไปยังจุดของลูกค้า (วาดเส้นแบบ Grab)
+  /// คืน list ว่างเมื่อ backend ไม่มีคีย์/หาเส้นทางไม่ได้ → ผู้เรียก fallback เส้นตรง
+  Future<List<LatLng>> fetchRoute(LatLng from, LatLng to) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          '$baseUrl/tracking/route?from_lat=${from.latitude}&from_lng=${from.longitude}'
+          '&to_lat=${to.latitude}&to_lng=${to.longitude}',
+        ),
+        headers: _headers,
+      );
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        final points = body['data']?['polyline'];
+        if (points is String && points.isNotEmpty) {
+          return _decodePolyline(points);
+        }
+      }
+    } catch (e) {
+      debugPrint('[TrackingService] fetchRoute error: $e');
+    }
+    return const [];
+  }
+
+  /// ถอดรหัส Google encoded polyline → พิกัด
+  List<LatLng> _decodePolyline(String encoded) {
+    final points = <LatLng>[];
+    int index = 0, lat = 0, lng = 0;
+
+    while (index < encoded.length) {
+      int shift = 0, result = 0, b;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+
+      points.add(LatLng(lat / 1e5, lng / 1e5));
+    }
+    return points;
   }
 
   void startAdaptivePolling({

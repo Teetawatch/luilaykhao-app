@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -26,15 +27,20 @@ class TrackingMapPage extends StatelessWidget {
   Widget build(BuildContext context) => const TrackingScreen();
 }
 
+/// มุมมองกล้อง: เห็นทั้งคู่ / ตามรถ / ตามฉัน / อิสระ (ผู้ใช้ลากแผนที่เอง)
+enum FollowMode { both, vehicle, me, free }
+
 class _TrackingScreenState extends State<TrackingScreen>
-    with TickerProviderStateMixin {
-  bool _isFollowing = true;
+    with TickerProviderStateMixin, WidgetsBindingObserver {
+  // เปิดหน้ามาให้กล้องเริ่มที่ "ตำแหน่งของฉัน" ก่อน แล้วผู้ใช้กด "ดูทั้งคู่"/"ดูรถ" ได้
+  FollowMode _mode = FollowMode.me;
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -45,7 +51,19 @@ class _TrackingScreenState extends State<TrackingScreen>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // กลับเข้าแอปหลังไปเปิดสิทธิ์ตำแหน่งในตั้งค่า → ลองจับตำแหน่งใหม่อัตโนมัติ
+    if (state == AppLifecycleState.resumed && mounted) {
+      final provider = context.read<TrackingProvider>();
+      if (provider.locationPermissionDenied) {
+        provider.retryCustomerLocation();
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulseController.dispose();
     super.dispose();
   }
@@ -105,11 +123,14 @@ class _TrackingScreenState extends State<TrackingScreen>
                   tracking: tracking,
                   booking: booking,
                   customerLocation: provider.customerLocation,
+                  routePoints: provider.routePoints,
                   phase: provider.phase,
                   pulse: _pulseAnimation,
-                  isFollowing: _isFollowing,
+                  mode: _mode,
                   onUserGesture: () {
-                    if (_isFollowing) setState(() => _isFollowing = false);
+                    if (_mode != FollowMode.free) {
+                      setState(() => _mode = FollowMode.free);
+                    }
                   },
                 ),
                 TrackingTopBar(
@@ -121,19 +142,18 @@ class _TrackingScreenState extends State<TrackingScreen>
                   },
                   onShare: () => _shareTracking(booking),
                 ),
-                if (!_isFollowing)
-                  Positioned(
-                    right: 16,
-                    bottom: MediaQuery.sizeOf(context).height * 0.38,
-                    child: _FloatingAction(
-                      icon: Icons.my_location_rounded,
-                      label: 'ติดตามตำแหน่ง',
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _isFollowing = true);
-                      },
-                    ),
+                Positioned(
+                  right: 16,
+                  bottom: MediaQuery.sizeOf(context).height * 0.38,
+                  child: _FollowModeControl(
+                    mode: _mode,
+                    hasCustomer: provider.customerLocation != null,
+                    onSelect: (m) {
+                      HapticFeedback.selectionClick();
+                      setState(() => _mode = m);
+                    },
                   ),
+                ),
                 TrackingBottomSheet(
                   booking: booking,
                   tracking: tracking,
@@ -142,6 +162,18 @@ class _TrackingScreenState extends State<TrackingScreen>
                   onCall: () => _callDriver(phone),
                   onChat: () => _chatDriver(phone),
                 ),
+                if (provider.locationPermissionDenied)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    top: MediaQuery.paddingOf(context).top + 76,
+                    child: _LocationPermissionBanner(
+                      message: provider.locationError ??
+                          'เปิดสิทธิ์ตำแหน่งเพื่อแสดงจุดที่คุณอยู่บนแผนที่',
+                      onRetry: () => provider.retryCustomerLocation(),
+                      onOpenSettings: () => Geolocator.openAppSettings(),
+                    ),
+                  ),
                 if (provider.isLoading) const _TrackingLoadingOverlay(),
                 if (provider.phase == TrackingPhase.imminent)
                   Positioned(
@@ -163,9 +195,10 @@ class VehicleMapWidget extends StatefulWidget {
   final VehicleTracking? tracking;
   final BookingInfo? booking;
   final LatLng? customerLocation;
+  final List<LatLng> routePoints;
   final TrackingPhase phase;
   final Animation<double> pulse;
-  final bool isFollowing;
+  final FollowMode mode;
   final VoidCallback onUserGesture;
 
   const VehicleMapWidget({
@@ -173,9 +206,10 @@ class VehicleMapWidget extends StatefulWidget {
     required this.tracking,
     required this.booking,
     required this.customerLocation,
+    required this.routePoints,
     required this.phase,
     required this.pulse,
-    required this.isFollowing,
+    required this.mode,
     required this.onUserGesture,
   });
 
@@ -195,6 +229,23 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
   }
 
   @override
+  void didUpdateWidget(covariant VehicleMapWidget old) {
+    super.didUpdateWidget(old);
+    if (!_isMapReady || widget.mode == FollowMode.free) return;
+
+    // Grab/LineMan-style: keep the camera framed for the chosen mode. Re-fit
+    // when the mode changes or the van/customer actually moves.
+    final modeChanged = widget.mode != old.mode;
+    final vehicleMoved =
+        _changed(widget.tracking?.driverLocation, old.tracking?.driverLocation);
+    final userMoved = _changed(widget.customerLocation, old.customerLocation);
+
+    if (modeChanged || vehicleMoved || userMoved) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _recenter());
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final target = widget.tracking?.driverLocation;
 
@@ -210,17 +261,59 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
       duration: const Duration(milliseconds: 850),
       curve: Curves.easeOutCubic,
       onEnd: () => _lastVehicleLocation = target,
-      builder: (context, animatedVehicle, _) {
-        if (widget.isFollowing && _isMapReady) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _isMapReady && widget.isFollowing) {
-              _mapController.move(animatedVehicle, _mapController.camera.zoom);
-            }
-          });
-        }
-        return _buildMap(animatedVehicle);
-      },
+      builder: (context, animatedVehicle, _) => _buildMap(animatedVehicle),
     );
+  }
+
+  /// Frame the camera for the active follow mode. "both" fits the van, the
+  /// customer and the pickup; "vehicle"/"me" centre on one. Padding leaves room
+  /// for the top bar and the bottom sheet so no marker hides behind the UI.
+  void _recenter() {
+    if (!mounted || !_isMapReady) return;
+
+    final vehicle = _validPoint(widget.tracking?.driverLocation);
+    final customer = _validPoint(widget.customerLocation);
+
+    switch (widget.mode) {
+      case FollowMode.free:
+        return;
+      case FollowMode.vehicle:
+        if (vehicle != null) _mapController.move(vehicle, 15.5);
+        return;
+      case FollowMode.me:
+        if (customer != null) _mapController.move(customer, 15.5);
+        return;
+      case FollowMode.both:
+        break;
+    }
+
+    final points = <LatLng>[
+      ?vehicle,
+      ?customer,
+      ?_validPoint(widget.booking?.pickupPoint),
+    ];
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      _mapController.move(points.first, 15.5);
+      return;
+    }
+
+    _mapController.fitCamera(
+      CameraFit.coordinates(
+        coordinates: points,
+        padding: const EdgeInsets.fromLTRB(64, 180, 64, 320),
+        maxZoom: 16.5,
+      ),
+    );
+  }
+
+  // ~22m threshold so GPS jitter doesn't re-frame the camera every tick — only
+  // real movement of the van or the customer nudges the view.
+  bool _changed(LatLng? a, LatLng? b) {
+    if (a == null && b == null) return false;
+    if (a == null || b == null) return true;
+    return (a.latitude - b.latitude).abs() > 0.0002 ||
+        (a.longitude - b.longitude).abs() > 0.0002;
   }
 
   Widget _buildMap(LatLng? vehicleLocation) {
@@ -231,7 +324,10 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
         initialZoom: 14.5,
         minZoom: 5,
         maxZoom: 18,
-        onMapReady: () => setState(() => _isMapReady = true),
+        onMapReady: () {
+          setState(() => _isMapReady = true);
+          WidgetsBinding.instance.addPostFrameCallback((_) => _recenter());
+        },
         onPositionChanged: (_, hasGesture) {
           if (hasGesture) widget.onUserGesture();
         },
@@ -250,14 +346,27 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
   }
 
   LatLng _initialCenter(LatLng? animatedVehicle) {
-    return animatedVehicle ??
-        widget.customerLocation ??
+    // เริ่มที่ตำแหน่งของฉันก่อน (fallback ไปรถ/จุดรับเมื่อยังไม่มีพิกัดผู้ใช้)
+    return _validPoint(widget.customerLocation) ??
+        animatedVehicle ??
         _validPoint(widget.booking?.pickupPoint) ??
         widget.booking?.destinationPoint ??
         const LatLng(13.7563, 100.5018);
   }
 
   List<Polyline> _routeLines(LatLng? vehicle) {
+    // เส้นทางตามถนนจริง (จาก Directions API) — วาดจากรถถึงจุดของลูกค้าแบบ Grab
+    if (widget.routePoints.length >= 2) {
+      return [
+        Polyline(
+          points: widget.routePoints,
+          strokeWidth: 5,
+          color: AppTheme.primaryColor.withValues(alpha: 0.86),
+        ),
+      ];
+    }
+
+    // Fallback: เส้นตรงเมื่อยังไม่มีเส้นทางถนน (ไม่มีคีย์/ยังโหลดไม่เสร็จ)
     final pickup = _validPoint(widget.booking?.pickupPoint);
     final destination =
         widget.tracking?.destinationPoint ?? widget.booking?.destinationPoint;
@@ -271,7 +380,7 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
       Polyline(
         points: route,
         strokeWidth: 5,
-        color: AppTheme.primaryColor.withValues(alpha: 0.86),
+        color: AppTheme.primaryColor.withValues(alpha: 0.5),
       ),
     ];
   }
@@ -306,9 +415,9 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
       if (widget.customerLocation != null)
         Marker(
           point: widget.customerLocation!,
-          width: 44,
-          height: 44,
-          child: const _UserMarker(),
+          width: 70,
+          height: 68,
+          child: _UserMarker(pulse: widget.pulse),
         ),
       if (vehicle != null)
         Marker(
@@ -719,17 +828,185 @@ class _MapPin extends StatelessWidget {
 }
 
 class _UserMarker extends StatelessWidget {
-  const _UserMarker();
+  final Animation<double> pulse;
+
+  const _UserMarker({required this.pulse});
+
+  @override
+  Widget build(BuildContext context) {
+    const blue = Color(0xFF2F80ED);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 46,
+          height: 46,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // วงกลม accuracy ที่ค่อยๆ ขยายและจางหาย (แบบจุดสีน้ำเงินของ Grab)
+              AnimatedBuilder(
+                animation: pulse,
+                builder: (context, _) {
+                  final t = ((pulse.value - 1.0) / 0.28).clamp(0.0, 1.0);
+                  return Container(
+                    width: 30 + 16 * t,
+                    height: 30 + 16 * t,
+                    decoration: BoxDecoration(
+                      color: blue.withValues(alpha: 0.22 * (1 - t)),
+                      shape: BoxShape.circle,
+                    ),
+                  );
+                },
+              ),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: blue,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                ),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: Colors.white,
+                  size: 15,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 2),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: blue,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            'คุณ',
+            style: appFont(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 10,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LocationPermissionBanner extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onOpenSettings;
+
+  const _LocationPermissionBanner({
+    required this.message,
+    required this.onRetry,
+    required this.onOpenSettings,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF2F80ED),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 3),
+        color: AppTheme.surface(context).withValues(alpha: 0.98),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF2F80ED).withValues(alpha: 0.35)),
       ),
-      child: const Icon(Icons.person_rounded, color: Colors.white, size: 20),
+      child: Row(
+        children: [
+          const Icon(Icons.location_off_rounded, color: Color(0xFF2F80ED), size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'ยังไม่เห็นตำแหน่งของคุณ',
+                  style: appFont(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: appFont(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _BannerButton(
+                      label: 'ลองใหม่',
+                      filled: true,
+                      onTap: onRetry,
+                    ),
+                    const SizedBox(width: 8),
+                    _BannerButton(
+                      label: 'ตั้งค่า',
+                      filled: false,
+                      onTap: onOpenSettings,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BannerButton extends StatelessWidget {
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+
+  const _BannerButton({
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const blue = Color(0xFF2F80ED);
+    return Material(
+      color: filled ? blue : Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: filled ? null : Border.all(color: blue.withValues(alpha: 0.5)),
+          ),
+          child: Text(
+            label,
+            style: appFont(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: filled ? Colors.white : blue,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -882,6 +1159,71 @@ class _ActionButton extends StatelessWidget {
                 ),
               ),
             ),
+    );
+  }
+}
+
+class _FollowModeControl extends StatelessWidget {
+  final FollowMode mode;
+  final bool hasCustomer;
+  final ValueChanged<FollowMode> onSelect;
+
+  const _FollowModeControl({
+    required this.mode,
+    required this.hasCustomer,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context).withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(26),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _button(context, FollowMode.both, Icons.fit_screen_rounded, 'ดูทั้งคู่'),
+          _button(context, FollowMode.vehicle,
+              Icons.directions_bus_filled_rounded, 'ดูรถ'),
+          if (hasCustomer)
+            _button(context, FollowMode.me, Icons.my_location_rounded, 'ดูฉัน'),
+        ],
+      ),
+    );
+  }
+
+  Widget _button(
+    BuildContext context,
+    FollowMode value,
+    IconData icon,
+    String label,
+  ) {
+    final active = mode == value;
+    return Semantics(
+      label: label,
+      button: true,
+      selected: active,
+      child: Material(
+        color: active ? AppTheme.primaryColor : Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => onSelect(value),
+          child: Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              size: 20,
+              color: active ? Colors.white : AppTheme.onSurface(context),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
