@@ -987,6 +987,12 @@ class AppProvider extends ChangeNotifier {
     return const [];
   }
 
+  /// Trip Recap — สถิติสรุปทริปแบบ story หลังจบทริป (สายเดินป่า Wrapped รายทริป).
+  Future<Map<String, dynamic>> bookingRecap(String ref) async {
+    final response = await api.get('bookings/$ref/recap');
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   /// Triggers an SOS, retrying on network/server failures with backoff.
   ///
   /// SOS must reach the server even on a weak (3G) connection, so each attempt

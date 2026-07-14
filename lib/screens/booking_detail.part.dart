@@ -178,6 +178,13 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 16),
 
+                // สรุปทริป (Recap) — โผล่หลังจบทริปแล้ว ให้แชร์อวดเพื่อน
+                if (textOf(booking['status']) != 'cancelled' &&
+                    _tripCompleted(schedule)) ...[
+                  _TripRecapButton(bookingRef: textOf(booking['booking_ref'])),
+                  const SizedBox(height: 16),
+                ],
+
                 // เพิ่มลงปฏิทิน — กันลืมรอบ โดยเฉพาะรอบที่รถออกคืนก่อนวันทริป
                 if (textOf(booking['status']) != 'cancelled' &&
                     _realDepartureDate(schedule) != null) ...[
@@ -1278,6 +1285,17 @@ DateTime? _realDepartureDate(Map<String, dynamic> schedule) {
   return DateTime(dep.year, dep.month, dep.day);
 }
 
+/// True เมื่อทริปจบแล้ว (วันกลับ หรือวันเดินทางผ่านมาแล้ว) — ใช้เปิดปุ่มสรุปทริป
+bool _tripCompleted(Map<String, dynamic> schedule) {
+  final ret = DateTime.tryParse(textOf(schedule['return_date']));
+  final end = ret ?? _realDepartureDate(schedule);
+  if (end == null) return false;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  return DateTime(end.year, end.month, end.day).isBefore(today) ||
+      DateTime(end.year, end.month, end.day) == today;
+}
+
 /// True when departure is 0-3 days away (today through departure day inclusive).
 bool _isPreTripWindow(Map<String, dynamic> schedule) {
   final start = _realDepartureDate(schedule);
@@ -1377,6 +1395,54 @@ class _RentedEquipmentList extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+/// "ดูสรุปทริป" — เปิด Trip Recap แบบ story หลังจบทริป (แชร์อวดเพื่อนได้)
+class _TripRecapButton extends StatelessWidget {
+  final String bookingRef;
+
+  const _TripRecapButton({required this.bookingRef});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        TripRecapScreen.open(context, bookingRef);
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFFEA580C), Color(0xFF9333EA)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🏔️', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 8),
+            Text(
+              'ดูสรุปทริป • Recap',
+              style: appFont(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: -0.1,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.auto_awesome_rounded,
+                size: 17, color: Colors.white),
+          ],
+        ),
+      ),
     );
   }
 }
