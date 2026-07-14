@@ -178,6 +178,13 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 16),
 
+                // เพิ่มลงปฏิทิน — กันลืมรอบ โดยเฉพาะรอบที่รถออกคืนก่อนวันทริป
+                if (textOf(booking['status']) != 'cancelled' &&
+                    _realDepartureDate(schedule) != null) ...[
+                  _AddToCalendarButton(booking: booking, schedule: schedule),
+                  const SizedBox(height: 16),
+                ],
+
                 // Departure-day weather (only present when the backend resolved
                 // a forecast for the trip's coordinates).
                 if (asMap(schedule['weather']).isNotEmpty) ...[
@@ -1266,6 +1273,112 @@ bool _isPreTripWindow(Map<String, dynamic> schedule) {
   final today = DateTime(now.year, now.month, now.day);
   final diff = start.difference(today).inDays;
   return diff >= 0 && diff <= 3;
+}
+
+/// "เพิ่มลงปฏิทิน" — เปิดหน้าเพิ่มอีเวนต์ของ OS ด้วยวัน-เวลาออกรถของรอบนี้
+/// พร้อมจุดขึ้นรถ + เลขที่การจอง เพื่อกันลูกค้าลืมรอบเดินทาง
+class _AddToCalendarButton extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final Map<String, dynamic> schedule;
+
+  const _AddToCalendarButton({required this.booking, required this.schedule});
+
+  String _pickupLocation() {
+    final custom = asMap(booking['custom_pickup']);
+    if (custom.isNotEmpty) {
+      final name = textOf(custom['location_name'], textOf(custom['address']));
+      if (name.isNotEmpty) return name;
+    }
+    final booked = asMap(booking['pickup_point']);
+    final loc = textOf(booked['pickup_location']);
+    if (loc.isNotEmpty) return loc;
+    return '';
+  }
+
+  Future<void> _add(BuildContext context) async {
+    HapticFeedback.selectionClick();
+    final messenger = ScaffoldMessenger.of(context);
+    final trip = asMap(schedule['trip']);
+    final location = _pickupLocation();
+    final ref = textOf(booking['booking_ref']);
+    final pickupTime = textOf(asMap(booking['pickup_point'])['pickup_time']);
+
+    final descParts = <String>[
+      if (ref.isNotEmpty) 'เลขที่การจอง: $ref',
+      if (pickupTime.isNotEmpty) 'เวลาขึ้นรถ: $pickupTime น.',
+      if (location.isNotEmpty) 'จุดขึ้นรถ: $location',
+    ];
+
+    try {
+      final ok = await addTripToCalendar(
+        title: textOf(trip['title'], 'ทริปเดินทาง'),
+        departsAt: scheduleDepartsAt(schedule),
+        departureDate: DateTime.tryParse(textOf(schedule['departure_date'])),
+        returnDate: DateTime.tryParse(textOf(schedule['return_date'])),
+        location: location,
+        description: descParts.join('\n'),
+      );
+      if (!ok) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'เปิดปฏิทินเพื่อบันทึกวันเดินทางแล้ว',
+            style: appFont(color: Colors.white),
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'เพิ่มลงปฏิทินไม่สำเร็จ ลองใหม่อีกครั้ง',
+            style: appFont(color: Colors.white),
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    return GestureDetector(
+      onTap: () => _add(context),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.primaryColor.withValues(alpha: 0.12)
+              : AppTheme.primaryColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryColor.withValues(alpha: 0.30),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.calendar_month_rounded,
+              size: 19,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'เพิ่มลงปฏิทิน',
+              style: appFont(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primaryColor,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _PreTripBriefingCard extends StatelessWidget {

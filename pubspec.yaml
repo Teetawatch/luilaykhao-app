@@ -46,6 +46,7 @@ dependencies:
   sign_in_with_apple: ^8.1.0
   flutter_svg: ^2.3.0
   flutter_widget_from_html_core: ^0.17.2
+  add_2_calendar: ^3.0.1
 
 dev_dependencies:
   flutter_test:

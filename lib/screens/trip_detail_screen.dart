@@ -33,6 +33,7 @@ part 'trip_detail_info.part.dart';
 part 'trip_detail_plan.part.dart';
 part 'trip_detail_content.part.dart';
 part 'trip_detail_reviews.part.dart';
+part 'trip_detail_related.part.dart';
 part 'trip_detail_booking.part.dart';
 part 'trip_detail_widgets.part.dart';
 part 'trip_detail_helpers.part.dart';
@@ -788,6 +789,8 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       // ฟีดรูปหลังทริป — ซ่อนตัวเองเมื่อไม่มีโพสต์และผู้ดูโพสต์ไม่ได้
       TripFeedSection(trip: trip),
       ReviewSection(trip: trip, reviews: widget.reviews),
+      // "ทริปที่คล้ายกัน" — self-loading; renders nothing until it has matches.
+      if (!widget.isLoading) RelatedTripsSection(trip: trip),
     ];
 
     return Column(

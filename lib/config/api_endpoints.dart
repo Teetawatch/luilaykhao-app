@@ -19,6 +19,7 @@ class ApiEndpoints {
   static const tripsFeatured = 'trips/featured';
   static String trip(String slug) => 'trips/$slug';
   static String tripSchedules(String slug) => 'trips/$slug/schedules';
+  static String tripRelated(String slug) => 'trips/$slug/related';
   static const categories = 'categories';
   static const stats = 'stats';
   static const heroSlides = 'hero-slides';

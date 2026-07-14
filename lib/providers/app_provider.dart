@@ -510,6 +510,13 @@ class AppProvider extends ChangeNotifier {
     return List<dynamic>.from(api.data(response) ?? []);
   }
 
+  /// "ทริปที่คล้ายกัน" — up to 6 other active trips the backend ranks as
+  /// related (same type/region, upcoming rounds preferred).
+  Future<List<dynamic>> relatedTrips(String slug) async {
+    final response = await api.get('trips/$slug/related');
+    return List<dynamic>.from(api.data(response) ?? []);
+  }
+
   // ── Waitlist (คิวรอที่นั่งว่าง) ─────────────────────────────────────────────
   // Backend manages the queue, offers seats on cancellation (15-min TTL) and
   // pushes waitlist_offered/expired notifications; the app just drives the

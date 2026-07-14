@@ -573,8 +573,17 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
   static const double _dividerWidth = 30;
   static const double _chipSpacing = 8;
 
+  // The inline strip only ever shows a short window of the nearest departures —
+  // long-running trips (weekly for months) would otherwise become an endless
+  // horizontal swipe. Everything else lives behind the "ดูทั้งหมด" sheet.
+  static const int _maxInlineChips = 6;
+
   final ScrollController _controller = ScrollController();
   late List<_StripEntry> _entries;
+
+  // True when the strip only shows a subset of departures — drives the
+  // "ดูทั้งหมด" trigger and the end-of-strip tile.
+  bool _hasHidden = false;
 
   // "Swipe to see more" affordance — shown only when the strip actually
   // overflows, and dismissed once the user starts scrolling.
@@ -584,7 +593,7 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
   @override
   void initState() {
     super.initState();
-    _entries = _buildEntries(widget.schedules);
+    _rebuildEntries();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Auto-scroll first, then start listening — otherwise the programmatic
       // jump would be mistaken for a user swipe and dismiss the hint instantly.
@@ -604,14 +613,104 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
     if (_scheduleSignature(oldWidget.schedules) !=
         _scheduleSignature(widget.schedules)) {
       setState(() {
-        _entries = _buildEntries(widget.schedules);
+        _rebuildEntries();
         _hintDismissed = false;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_controller.hasClients) _controller.jumpTo(0);
         _refreshScrollHint();
       });
+      return;
     }
+    // Picking a far-off date from the "ดูทั้งหมด" sheet leaves the schedule set
+    // unchanged but moves the selection outside the visible window — re-window
+    // so the chosen date slides into the strip (and stays selected there).
+    if (oldWidget.selectedId != widget.selectedId &&
+        !_entriesContain(widget.selectedId)) {
+      setState(_rebuildEntries);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToInitial();
+        _refreshScrollHint();
+      });
+    }
+  }
+
+  // Recomputes the visible strip window (and whether anything is hidden) from
+  // the current schedules + selection.
+  void _rebuildEntries() {
+    final sorted = _dateSorted(widget.schedules);
+    final window = _inlineWindow(sorted, widget.selectedId, _maxInlineChips);
+    _entries = _buildEntries(window);
+    _hasHidden = window.length < sorted.length;
+  }
+
+  bool _entriesContain(int? scheduleId) {
+    if (scheduleId == null) return false;
+    return _entries.any((e) =>
+        e.schedule != null &&
+        int.tryParse(e.schedule!['id'].toString()) == scheduleId);
+  }
+
+  static List<Map<String, dynamic>> _dateSorted(
+    List<Map<String, dynamic>> schedules,
+  ) {
+    final copy = [...schedules];
+    copy.sort((a, b) {
+      final da = DateTime.tryParse(textOf(a['departure_date']));
+      final db = DateTime.tryParse(textOf(b['departure_date']));
+      if (da == null && db == null) return 0;
+      if (da == null) return 1;
+      if (db == null) return -1;
+      return da.compareTo(db);
+    });
+    return copy;
+  }
+
+  // A contiguous run of at most [max] departures, starting at the first
+  // upcoming date so past rounds don't eat the window — but shifted to keep the
+  // selected round visible when it lies further ahead.
+  static List<Map<String, dynamic>> _inlineWindow(
+    List<Map<String, dynamic>> sorted,
+    int? selectedId,
+    int max,
+  ) {
+    if (sorted.length <= max) return sorted;
+
+    var start = sorted.indexWhere((s) => !_isSchedulePast(s));
+    if (start < 0) start = 0;
+
+    if (selectedId != null) {
+      final selIdx = sorted.indexWhere(
+        (s) => int.tryParse(s['id'].toString()) == selectedId,
+      );
+      if (selIdx >= 0) {
+        if (selIdx < start) {
+          start = selIdx; // a selected past round — pull it into view
+        } else if (selIdx > start + max - 1) {
+          start = selIdx - max + 1; // end the window on the selected round
+        }
+      }
+    }
+
+    var end = start + max;
+    if (end > sorted.length) end = sorted.length;
+    start = (end - max).clamp(0, sorted.length);
+    return sorted.sublist(start, end);
+  }
+
+  void _openAllSchedulesSheet() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ScheduleDateSheet(
+        schedules: _dateSorted(widget.schedules),
+        selectedId: widget.selectedId,
+        regionKey: widget.regionKey,
+        onSelect: widget.onChanged,
+      ),
+    );
   }
 
   // The ordered departure ids — changes only when the actual set of rounds
@@ -695,7 +794,13 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
     if (_entries.isEmpty) return const SizedBox.shrink();
 
     final muted = AppTheme.mutedText(context);
-    final showHint = _canScroll && !_hintDismissed;
+    // When departures are hidden behind the sheet, a "ดูทั้งหมด" link is the
+    // primary affordance; the swipe hint only matters when the whole set is
+    // already inline but still overflows.
+    final showSeeAll = _hasHidden;
+    final showHint = !showSeeAll && _canScroll && !_hintDismissed;
+    final totalCount = widget.schedules.length;
+    final itemCount = _hasHidden ? _entries.length + 1 : _entries.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -704,15 +809,18 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeInOut,
           alignment: Alignment.topCenter,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: showHint ? 1 : 0,
-            child: showHint
-                ? Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
+          child: (showSeeAll || showHint)
+              ? Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (showSeeAll)
+                        _SeeAllDatesButton(
+                          count: totalCount,
+                          onTap: _openAllSchedulesSheet,
+                        )
+                      else ...[
                         Icon(Icons.swipe_rounded, size: 14, color: muted),
                         const SizedBox(width: 5),
                         Text(
@@ -725,10 +833,10 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
                           ),
                         ),
                       ],
-                    ),
-                  )
-                : const SizedBox(width: double.infinity),
-          ),
+                    ],
+                  ),
+                )
+              : const SizedBox(width: double.infinity),
         ),
         SizedBox(
           height: 122,
@@ -737,9 +845,16 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.zero,
-            itemCount: _entries.length,
+            itemCount: itemCount,
             separatorBuilder: (_, _) => const SizedBox(width: _chipSpacing),
             itemBuilder: (context, i) {
+              // Trailing tile → opens the full month-grouped date sheet.
+              if (i == _entries.length) {
+                return _SeeAllDatesTile(
+                  count: totalCount,
+                  onTap: _openAllSchedulesSheet,
+                );
+              }
               final entry = _entries[i];
               if (entry.isDivider) {
                 return _MonthDivider(label: entry.monthLabel!);
@@ -765,6 +880,108 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "ดูทั้งหมด" text link shown above the strip when departures are hidden.
+class _SeeAllDatesButton extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _SeeAllDatesButton({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.calendar_month_rounded, size: 15, color: _softAccent),
+          const SizedBox(width: 5),
+          Text(
+            'ดูวันทั้งหมด ($count วัน)',
+            style: appFont(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: _softAccent,
+              letterSpacing: 0.1,
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, size: 16, color: _softAccent),
+        ],
+      ),
+    );
+  }
+}
+
+/// Trailing tile in the strip — same footprint as a date chip, opens the sheet.
+class _SeeAllDatesTile extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _SeeAllDatesTile({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 84,
+        height: 122,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isDark
+              ? _softAccent.withValues(alpha: 0.10)
+              : const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: _softAccent.withValues(alpha: isDark ? 0.35 : 0.30),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: _softAccent.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.calendar_month_rounded,
+                size: 19,
+                color: _softAccent,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'ดูทั้งหมด',
+              textAlign: TextAlign.center,
+              style: appFont(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: _softAccent,
+                height: 1.1,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$count วัน',
+              style: appFont(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: _softAccent.withValues(alpha: 0.75),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1124,6 +1341,408 @@ String _shortThaiWeekday(DateTime date) {
   const labels = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'];
   // DateTime.weekday: 1 = Monday … 7 = Sunday.
   return labels[date.weekday - 1];
+}
+
+// ─── "ดูทั้งหมด" date sheet ────────────────────────────────────────────────────
+
+/// Full month-grouped list of departures, opened from the strip when there are
+/// too many dates to browse inline. Scales to any number of rounds: dates are
+/// grouped under month headers and each row shows the same seat/status context
+/// as the strip chips, but laid out vertically so they're easy to scan.
+class _ScheduleDateSheet extends StatelessWidget {
+  final List<Map<String, dynamic>> schedules;
+  final int? selectedId;
+  final String? regionKey;
+  final ValueChanged<int?> onSelect;
+
+  const _ScheduleDateSheet({
+    required this.schedules,
+    required this.selectedId,
+    required this.regionKey,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+
+    // Only upcoming departures are actionable — past rounds would just clutter
+    // the top of the list. (The strip already greys them out inline.)
+    final upcoming =
+        schedules.where((s) => !_isSchedulePast(s)).toList(growable: false);
+    final groups = _groupSchedulesByMonth(upcoming);
+
+    // Flatten into a single item list (String = month header, Map = a date)
+    // so it can drive one lazy ListView.
+    final items = <Object>[];
+    for (final group in groups) {
+      items.add(group.label);
+      items.addAll(group.schedules);
+    }
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.72,
+      minChildSize: 0.45,
+      maxChildSize: 0.94,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.surfaceDark : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            children: [
+              // Grab handle
+              Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 4),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.border(context),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 12, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'เลือกวันเดินทาง',
+                            style: appFont(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.onSurface(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${upcoming.length} วันเดินทางที่เปิดจอง',
+                            style: appFont(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.mutedText(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(
+                height: 1,
+                color: AppTheme.border(context).withValues(alpha: 0.5),
+              ),
+              // Grouped date list
+              Expanded(
+                child: items.isEmpty
+                    ? const _EmptySelectionNotice(
+                        icon: Icons.calendar_month_outlined,
+                        text: 'ยังไม่มีวันเดินทางที่เปิดจอง',
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        itemCount: items.length,
+                        itemBuilder: (context, i) {
+                          final item = items[i];
+                          if (item is String) {
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                top: i == 0 ? 8 : 20,
+                                bottom: 10,
+                                left: 4,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 3,
+                                    height: 15,
+                                    decoration: BoxDecoration(
+                                      color: _softAccent,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    item,
+                                    style: appFont(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.onSurface(context),
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          final schedule = item as Map<String, dynamic>;
+                          final id =
+                              int.tryParse(schedule['id'].toString());
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _SheetDateRow(
+                              schedule: schedule,
+                              isSelected: id != null && id == selectedId,
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                onSelect(id);
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// A single departure row inside the "ดูทั้งหมด" sheet — a compact date badge
+/// on the left, night count + seat/status on the right.
+class _SheetDateRow extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SheetDateRow({
+    required this.schedule,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    final isCharter = _asBool(schedule['is_charter']);
+    final departureDate = DateTime.tryParse(textOf(schedule['departure_date']));
+    final returnDate = DateTime.tryParse(textOf(schedule['return_date']));
+    final seats = int.tryParse(textOf(schedule['available_seats'], '0')) ?? 0;
+    final isPast = _isSchedulePast(schedule);
+    final isLowSeats = !isCharter && !isPast && seats > 0 && seats <= 5;
+    final isFull = !isCharter && !isPast && seats == 0;
+    final disabled = isCharter || isPast || isFull;
+
+    final accent = isLowSeats ? _appleOrange(isDark) : _softAccent;
+
+    final Color bg;
+    final Color border;
+    if (isSelected) {
+      bg = isDark
+          ? _softAccent.withValues(alpha: 0.16)
+          : const Color(0xFFF0FDF4);
+      border = _softAccent;
+    } else if (disabled) {
+      bg = isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF9FAFB);
+      border = AppTheme.border(context).withValues(alpha: 0.4);
+    } else {
+      bg = isDark ? AppTheme.subtleSurface(context) : Colors.white;
+      border = AppTheme.border(context).withValues(alpha: 0.55);
+    }
+
+    final dayLabel = departureDate != null ? departureDate.day.toString() : '?';
+    final monthLabel = departureDate != null
+        ? DateFormat('MMM', 'th_TH').format(departureDate)
+        : '—';
+    final weekdayLabel =
+        departureDate != null ? _shortThaiWeekday(departureDate) : '';
+
+    String? nightsLabel;
+    if (departureDate != null && returnDate != null) {
+      final nights = returnDate.difference(departureDate).inDays;
+      if (nights > 0) nightsLabel = '$nights คืน';
+    }
+
+    // Right-hand status line
+    final String statusText;
+    final Color statusColor;
+    if (isCharter) {
+      statusText = 'รอบเหมา';
+      statusColor = AppTheme.mutedText(context);
+    } else if (isPast) {
+      statusText = 'ผ่านแล้ว';
+      statusColor = AppTheme.mutedText(context);
+    } else if (isFull) {
+      statusText = 'เต็มแล้ว';
+      statusColor = _appleRed(isDark);
+    } else if (seats <= 2) {
+      statusText = 'เหลือ $seats ที่สุดท้าย';
+      statusColor = _appleOrange(isDark);
+    } else {
+      statusText = 'ว่าง $seats ที่';
+      statusColor = isLowSeats ? _appleOrange(isDark) : accent;
+    }
+
+    final Color dateFg = disabled
+        ? AppTheme.mutedText(context).withValues(alpha: 0.45)
+        : (isDark ? Colors.white : _premiumText);
+
+    return Opacity(
+      opacity: disabled && !isSelected ? 0.7 : 1,
+      child: GestureDetector(
+        onTap: disabled ? null : onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: border, width: isSelected ? 1.5 : 1),
+          ),
+          child: Row(
+            children: [
+              // Date badge
+              Container(
+                width: 52,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? _softAccent
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF1F5F9)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      weekdayLabel,
+                      style: appFont(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white.withValues(alpha: 0.85)
+                            : AppTheme.mutedText(context),
+                        height: 1.0,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      dayLabel,
+                      style: appFont(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: isSelected ? Colors.white : dateFg,
+                        height: 1.05,
+                      ),
+                    ),
+                    Text(
+                      monthLabel,
+                      style: appFont(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white.withValues(alpha: 0.85)
+                            : AppTheme.mutedText(context),
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              // Info column
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          statusText,
+                          style: appFont(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: disabled && !isFull
+                                ? AppTheme.mutedText(context)
+                                : statusColor,
+                          ),
+                        ),
+                        if (nightsLabel != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? _softAccent.withValues(alpha: 0.14)
+                                  : const Color(0xFFD1FAE5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              nightsLabel,
+                              style: appFont(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: _softAccent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      departureDate != null
+                          ? thaiDateShort(departureDate)
+                          : 'ไม่ระบุวัน',
+                      style: appFont(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Selection / chevron
+              if (isSelected)
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: const BoxDecoration(
+                    color: _softAccent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                )
+              else if (!disabled)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppTheme.mutedText(context).withValues(alpha: 0.6),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Pickup point selector ────────────────────────────────────────────────────
