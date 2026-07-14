@@ -256,6 +256,16 @@ class _BookingCheckInCard extends StatelessWidget {
     }
 
     final bookingRef = textOf(booking['booking_ref'], '-');
+
+    // เมื่อ QR ถูกสแกนเช็คอินแล้ว รหัสจะใช้ไม่ได้อีก — สลับเป็นการ์ดสถานะ
+    // "เช็คอินแล้ว" แทนการโชว์ QR ที่สแกนได้ เพื่อบอกผู้ใช้ชัดเจนว่าถูกสแกนไปแล้ว
+    if (booking['checked_in'] == true) {
+      return _CheckedInCard(
+        bookingRef: bookingRef,
+        checkedInAt: booking['checked_in_at'],
+      );
+    }
+
     final checkInCode = textOf(booking['qr_code']).trim();
     final isDark = AppTheme.isDark(context);
 
@@ -292,6 +302,83 @@ class _BookingCheckInCard extends StatelessWidget {
             const SizedBox(height: 20),
             _CheckInQrBox(code: checkInCode, size: 180, padding: 14),
           ],
+          const SizedBox(height: 16),
+          _BookingReferencePanel(bookingRef: bookingRef),
+        ],
+      ),
+    );
+  }
+}
+
+/// สถานะหลัง QR ถูกสแกนเช็คอินสำเร็จ — ไม่โชว์ QR ที่สแกนได้อีก
+class _CheckedInCard extends StatelessWidget {
+  final String bookingRef;
+  final dynamic checkedInAt;
+
+  const _CheckedInCard({required this.bookingRef, required this.checkedInAt});
+
+  String get _checkedInText {
+    final raw = textOf(checkedInAt);
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return '';
+    return 'เช็คอินเมื่อ ${thaiDateTimeShort(parsed.toLocal())}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    final when = _checkedInText;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.primaryColor.withValues(alpha: 0.16)
+            : AppTheme.primaryColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.20),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_circle_rounded,
+              color: AppTheme.primaryColor,
+              size: 34,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'เช็คอินแล้ว',
+            style: appFont(
+              color: AppTheme.onSurface(context),
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            when.isNotEmpty
+                ? when
+                : 'QR นี้ถูกสแกนเช็คอินเรียบร้อยแล้ว',
+            textAlign: TextAlign.center,
+            style: appFont(
+              color: AppTheme.mutedText(context),
+              fontSize: 12.5,
+              height: 1.4,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 16),
           _BookingReferencePanel(bookingRef: bookingRef),
         ],
