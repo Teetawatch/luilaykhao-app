@@ -373,20 +373,21 @@ class _HeroBg extends StatelessWidget {
                 'ยินดีต้อนรับ\nกลับมา',
                 style: appFont(
                   color: Colors.white,
-                  fontSize: 42,
-                  fontWeight: FontWeight.w900,
-                  height: 1.05,
-                  letterSpacing: -0.5,
+                  fontSize: 40,
+                  fontWeight: FontWeight.w800,
+                  height: 1.04,
+                  letterSpacing: -0.8,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
                 'การผจญภัยครั้งใหม่รอคุณอยู่',
                 style: appFont(
-                  color: Colors.white.withValues(alpha: 0.65),
+                  color: Colors.white.withValues(alpha: 0.62),
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                   height: 1.4,
+                  letterSpacing: -0.1,
                 ),
               ),
             ],
@@ -543,28 +544,14 @@ class _LoginSheet extends StatelessWidget {
                       const _DividerOr(),
                       const SizedBox(height: 22),
 
-                      // Email field
-                      _SheetTextField(
-                        controller: emailController,
-                        hint: 'อีเมลของคุณ',
-                        icon: Icons.alternate_email_rounded,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Password field
-                      _SheetTextField(
-                        controller: passwordController,
-                        hint: 'รหัสผ่าน',
-                        icon: Icons.lock_outline_rounded,
-                        obscureText: !isPasswordVisible,
-                        textInputAction: TextInputAction.done,
+                      // Email + password grouped into one inset card with a
+                      // hairline divider — the calm, native iOS form look.
+                      _CredentialsCard(
+                        emailController: emailController,
+                        passwordController: passwordController,
+                        isPasswordVisible: isPasswordVisible,
+                        onTogglePassword: onTogglePassword,
                         onSubmitted: (_) => onLogin?.call(),
-                        suffix: _ToggleVisibilityButton(
-                          isVisible: isPasswordVisible,
-                          onTap: onTogglePassword,
-                        ),
                       ),
 
                       // Forgot password
@@ -823,9 +810,58 @@ class _DividerOr extends StatelessWidget {
   }
 }
 
-// ─── Text Field ───────────────────────────────────────────────────────────────
+// ─── Credentials Fields ───────────────────────────────────────────────────────
 
-class _SheetTextField extends StatefulWidget {
+/// Email and password as two distinct, separated fields. Grouping related-but-
+/// independent inputs with clear spacing (rather than fusing them) keeps each
+/// target obvious and gives the form breathing room.
+class _CredentialsCard extends StatelessWidget {
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final bool isPasswordVisible;
+  final VoidCallback onTogglePassword;
+  final ValueChanged<String>? onSubmitted;
+
+  const _CredentialsCard({
+    required this.emailController,
+    required this.passwordController,
+    required this.isPasswordVisible,
+    required this.onTogglePassword,
+    this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _FieldRow(
+          controller: emailController,
+          hint: 'อีเมลของคุณ',
+          icon: Icons.alternate_email_rounded,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 12),
+        _FieldRow(
+          controller: passwordController,
+          hint: 'รหัสผ่าน',
+          icon: Icons.lock_outline_rounded,
+          obscureText: !isPasswordVisible,
+          textInputAction: TextInputAction.done,
+          onSubmitted: onSubmitted,
+          suffix: _ToggleVisibilityButton(
+            isVisible: isPasswordVisible,
+            onTap: onTogglePassword,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A single self-contained input field (its own rounded card + hairline border)
+/// with a subtle focus highlight.
+class _FieldRow extends StatefulWidget {
   final TextEditingController controller;
   final String hint;
   final IconData icon;
@@ -835,7 +871,7 @@ class _SheetTextField extends StatefulWidget {
   final Widget? suffix;
   final ValueChanged<String>? onSubmitted;
 
-  const _SheetTextField({
+  const _FieldRow({
     required this.controller,
     required this.hint,
     required this.icon,
@@ -847,10 +883,10 @@ class _SheetTextField extends StatefulWidget {
   });
 
   @override
-  State<_SheetTextField> createState() => _SheetTextFieldState();
+  State<_FieldRow> createState() => _FieldRowState();
 }
 
-class _SheetTextFieldState extends State<_SheetTextField> {
+class _FieldRowState extends State<_FieldRow> {
   late final FocusNode _focus;
 
   @override
@@ -877,11 +913,11 @@ class _SheetTextFieldState extends State<_SheetTextField> {
       curve: Curves.easeOut,
       decoration: BoxDecoration(
         color: focused ? Colors.white : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: focused
               ? AppTheme.primaryColor.withValues(alpha: 0.6)
-              : const Color(0xFFE2E8F0),
+              : const Color(0xFFE6EAF0),
           width: focused ? 1.5 : 1,
         ),
       ),
@@ -906,7 +942,7 @@ class _SheetTextFieldState extends State<_SheetTextField> {
             fontWeight: FontWeight.w500,
           ),
           prefixIcon: Padding(
-            padding: const EdgeInsets.only(left: 18, right: 12),
+            padding: const EdgeInsets.only(left: 16, right: 10),
             child: Icon(
               widget.icon,
               size: 20,
@@ -917,7 +953,7 @@ class _SheetTextFieldState extends State<_SheetTextField> {
           suffixIcon: widget.suffix,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 18,
+            horizontal: 6,
             vertical: 18,
           ),
         ),
@@ -972,17 +1008,10 @@ class _LoginButtonState extends State<_LoginButton> {
         duration: const Duration(milliseconds: 100),
         scale: _pressed ? 0.975 : 1.0,
         child: Container(
-          height: 58,
+          height: 54,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: enabled
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF059669), Color(0xFF047857)],
-                  )
-                : null,
-            color: enabled ? null : const Color(0xFFCBD5E1),
+            borderRadius: BorderRadius.circular(16),
+            color: enabled ? AppTheme.primaryColor : const Color(0xFFCBD5E1),
           ),
           child: Center(
             child: AnimatedSwitcher(

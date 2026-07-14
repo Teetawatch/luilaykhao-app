@@ -275,37 +275,7 @@ class CustomBottomNav extends StatefulWidget {
   State<CustomBottomNav> createState() => _CustomBottomNavState();
 }
 
-class _CustomBottomNavState extends State<CustomBottomNav>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.94).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-  }
-
-  @override
-  void didUpdateWidget(CustomBottomNav old) {
-    super.didUpdateWidget(old);
-    if (old.index != widget.index) {
-      _controller.forward().then((_) => _controller.reverse());
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _CustomBottomNavState extends State<CustomBottomNav> {
   @override
   Widget build(BuildContext context) {
     final isDark = AppTheme.isDark(context);
@@ -362,33 +332,30 @@ class _CustomBottomNavState extends State<CustomBottomNav>
                 bottom: (MediaQuery.viewPaddingOf(context).bottom - 4)
                     .clamp(0.0, double.infinity),
               ),
-              child: ScaleTransition(
-                scale: _scaleAnim,
-                child: SizedBox(
-                  height: 68,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: [
-                        for (int i = 0; i < items.length; i++)
-                          Expanded(
-                            child: _NavItem(
-                              icon: items[i].icon,
-                              activeIcon: items[i].activeIcon,
-                              label: items[i].label,
-                              isSelected: widget.index == i,
-                              // Chat tab (index 3) → unread messages. Unread
-                              // notifications live on the home header bell, not
-                              // the "บัญชี" tab.
-                              badge: i == 3 ? widget.unreadChatCount : 0,
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                widget.onChanged(i);
-                              },
-                            ),
+              child: SizedBox(
+                height: 68,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    children: [
+                      for (int i = 0; i < items.length; i++)
+                        Expanded(
+                          child: _NavItem(
+                            icon: items[i].icon,
+                            activeIcon: items[i].activeIcon,
+                            label: items[i].label,
+                            isSelected: widget.index == i,
+                            // Chat tab (index 3) → unread messages. Unread
+                            // notifications live on the home header bell, not
+                            // the "บัญชี" tab.
+                            badge: i == 3 ? widget.unreadChatCount : 0,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              widget.onChanged(i);
+                            },
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -480,8 +447,8 @@ class _NavItemState extends State<_NavItem>
       duration: const Duration(milliseconds: 280),
       value: widget.isSelected ? 1.0 : 0.0,
     );
-    _iconScale = Tween<double>(begin: 1.0, end: 1.15).animate(
-      CurvedAnimation(parent: _anim, curve: Curves.easeOutBack),
+    _iconScale = Tween<double>(begin: 1.0, end: 1.12).animate(
+      CurvedAnimation(parent: _anim, curve: Curves.easeOut),
     );
     _pillWidth = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _anim, curve: Curves.easeInOut),

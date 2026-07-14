@@ -1376,6 +1376,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
+        centerTitle: false,
         titleSpacing: 0,
         title: InkWell(
           onTap: _room == null ? null : _showRoomInfo,

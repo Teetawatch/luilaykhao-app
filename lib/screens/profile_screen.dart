@@ -1095,6 +1095,8 @@ class SupportMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final supportUnread = context.watch<AppProvider>().supportUnread;
+
     return MenuSection(
       title: 'ช่วยเหลือ',
       items: [
@@ -1104,11 +1106,42 @@ class SupportMenu extends StatelessWidget {
           onTap: () => _pushPremium(context, const HelpCenterScreen()),
         ),
         _MenuItem(
+          icon: Icons.support_agent_outlined,
+          label: 'แชทกับทีมงาน',
+          trailingWidget: supportUnread > 0 ? _UnreadPill(supportUnread) : null,
+          onTap: () => _pushPremium(context, const SupportChatScreen()),
+        ),
+        _MenuItem(
           icon: Icons.chat_bubble_outline,
           label: 'ติดต่อเรา',
           onTap: () => _pushPremium(context, const ContactUsScreen()),
         ),
       ],
+    );
+  }
+}
+
+class _UnreadPill extends StatelessWidget {
+  final int count;
+
+  const _UnreadPill(this.count);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppTheme.errorColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: appFont(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 }

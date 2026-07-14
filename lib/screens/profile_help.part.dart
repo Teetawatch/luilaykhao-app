@@ -34,15 +34,6 @@ class HelpCenterScreen extends StatelessWidget {
                       const ProfileBookingsScreen(title: 'การจองของฉัน'),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _HelpTile(
-                    icon: Icons.support_agent_outlined,
-                    title: 'แชทกับทีมงาน',
-                    body: 'พิมพ์คุยกับทีมงานลุยเลเขาได้เลย เราจะตอบกลับโดยเร็วที่สุด',
-                    badge: context.watch<AppProvider>().supportUnread,
-                    onTap: () =>
-                        _pushPremium(context, const SupportChatScreen()),
-                  ),
                 ],
               ),
             ),
