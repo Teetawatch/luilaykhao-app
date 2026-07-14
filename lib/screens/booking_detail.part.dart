@@ -320,6 +320,19 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 // จุดขึ้นรถที่จองไว้ (พร้อมรูปจริง) — แสดงเสมอเมื่อมีจุดรับ
                 _BookingPickupSection(booking: booking, schedule: schedule),
 
+                // อุปกรณ์ที่เช่ามาพร้อมทริป (ถ้ามี)
+                if (asList(booking['selected_rentals']).isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const _SheetSectionTitle(
+                    icon: Icons.backpack_rounded,
+                    title: 'อุปกรณ์ที่เช่า',
+                  ),
+                  const SizedBox(height: 10),
+                  _RentedEquipmentList(
+                    rentals: asList(booking['selected_rentals']),
+                  ),
+                ],
+
                 // Operator announcements (ประกาศจากผู้จัด) — self-loading,
                 // renders nothing when the round has no announcements yet.
                 if (textOf(booking['status']) != 'cancelled' &&
@@ -1273,6 +1286,99 @@ bool _isPreTripWindow(Map<String, dynamic> schedule) {
   final today = DateTime(now.year, now.month, now.day);
   final diff = start.difference(today).inDays;
   return diff >= 0 && diff <= 3;
+}
+
+/// รายการอุปกรณ์ที่ลูกค้าเช่ามาพร้อมทริป (จาก booking.selected_rentals snapshot)
+class _RentedEquipmentList extends StatelessWidget {
+  final List<dynamic> rentals;
+
+  const _RentedEquipmentList({required this.rentals});
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF0369A1);
+    return Column(
+      children: rentals.map((raw) {
+        final rental = asMap(raw);
+        final name = textOf(rental['name'], 'อุปกรณ์เช่า');
+        final qty = int.tryParse(textOf(rental['quantity'], '1')) ?? 1;
+        final image = ApiConfig.mediaUrl(rental['image_url']);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.subtleSurface(context),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppTheme.border(context).withValues(alpha: 0.6),
+              ),
+            ),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: image.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: image,
+                          width: 46,
+                          height: 46,
+                          fit: BoxFit.cover,
+                          placeholder: (_, _) => Container(
+                            width: 46,
+                            height: 46,
+                            color: const Color(0xFFDBEAFE),
+                          ),
+                          errorWidget: (_, _, _) => Container(
+                            width: 46,
+                            height: 46,
+                            color: const Color(0xFFDBEAFE),
+                            child: const Icon(Icons.backpack_rounded,
+                                size: 20, color: accent),
+                          ),
+                        )
+                      : Container(
+                          width: 46,
+                          height: 46,
+                          color: const Color(0xFFDBEAFE),
+                          child: const Icon(Icons.backpack_rounded,
+                              size: 20, color: accent),
+                        ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    name,
+                    style: appFont(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Text(
+                    '×$qty',
+                    style: appFont(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: accent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
 }
 
 /// "เพิ่มลงปฏิทิน" — เปิดหน้าเพิ่มอีเวนต์ของ OS ด้วยวัน-เวลาออกรถของรอบนี้

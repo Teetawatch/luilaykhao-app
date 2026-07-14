@@ -20,6 +20,7 @@ class _PricingQuote {
   final num pricePerTraveler;
   final int travelerCount;
   final num addonsTotal;
+  final num rentalsTotal;
   final num serviceFee;
   final num discount;
   final bool hasVariedPrices;
@@ -29,6 +30,7 @@ class _PricingQuote {
     required this.pricePerTraveler,
     required this.travelerCount,
     required this.addonsTotal,
+    this.rentalsTotal = 0,
     required this.serviceFee,
     required this.discount,
     this.hasVariedPrices = false,
@@ -38,7 +40,7 @@ class _PricingQuote {
   num get tripSubtotal => _passengersSubtotal ?? pricePerTraveler * travelerCount;
 
   num get total {
-    final value = tripSubtotal + addonsTotal + serviceFee - discount;
+    final value = tripSubtotal + addonsTotal + rentalsTotal + serviceFee - discount;
     return value < 0 ? 0 : value;
   }
 
@@ -48,6 +50,7 @@ class _PricingQuote {
     required bool isJoinTrip,
     required List<dynamic> pickupPoints,
     List<_AddonOption> selectedAddons = const [],
+    List<_RentalSelection> selectedRentals = const [],
     Map<String, dynamic>? appliedPromo,
   }) {
     final basePrice = _asNum(
@@ -86,13 +89,17 @@ class _PricingQuote {
       0,
       (sum, addon) => sum + addon.totalFor(count),
     );
+    final rentalsTotalValue = selectedRentals.fold<num>(
+      0,
+      (sum, rental) => sum + rental.total,
+    );
 
     // Preview the discount using the exact rule the backend applies at booking
-    // (BookingService): percent/fixed off the trip subtotal + addons, capped at
-    // that base — so the amount shown here equals the final charge.
+    // (BookingService): percent/fixed off the trip subtotal + addons + rentals,
+    // capped at that base — so the amount shown here equals the final charge.
     num discount = 0;
     if (appliedPromo != null) {
-      final base = passengersTotal + addonsTotalValue;
+      final base = passengersTotal + addonsTotalValue + rentalsTotalValue;
       final value = _asNum(appliedPromo['value']);
       discount = textOf(appliedPromo['type']) == 'percent'
           ? base * value / 100
@@ -105,6 +112,7 @@ class _PricingQuote {
       pricePerTraveler: firstPrice ?? basePrice,
       travelerCount: count,
       addonsTotal: addonsTotalValue,
+      rentalsTotal: rentalsTotalValue,
       serviceFee: 0,
       discount: discount,
       hasVariedPrices: pricesVary,
@@ -135,6 +143,60 @@ class _AddonOption {
   String get priceTypeLabel => isPerPerson ? 'ต่อคน' : 'ครั้งเดียว';
 
   num totalFor(int travelerCount) => price * (isPerPerson ? travelerCount : 1);
+}
+
+/// One rentable equipment item defined on the trip (`trip.rental_items`),
+/// identified by its position so the backend can re-resolve it by index.
+class _RentalOption {
+  final int index;
+  final String name;
+  final num price;
+  final String imageUrl;
+  final String description;
+
+  const _RentalOption({
+    required this.index,
+    required this.name,
+    required this.price,
+    this.imageUrl = '',
+    this.description = '',
+  });
+
+  bool get hasImage => imageUrl.isNotEmpty;
+}
+
+/// A rental item plus the quantity the customer picked (>= 1).
+class _RentalSelection {
+  final _RentalOption option;
+  final int quantity;
+
+  const _RentalSelection({required this.option, required this.quantity});
+
+  num get total => option.price * quantity;
+}
+
+List<_RentalOption> _rentalOptionsFrom(Map<String, dynamic> trip) {
+  final rawItems = asList(trip['rental_items']);
+  final options = <_RentalOption>[];
+
+  for (var i = 0; i < rawItems.length; i++) {
+    final data = asMap(rawItems[i]);
+    final name = textOf(data['name'] ?? data['title']).trim();
+    final price = _asNum(data['price']);
+    if (name.isEmpty || price <= 0) continue;
+
+    options.add(
+      _RentalOption(
+        index: i,
+        name: name,
+        price: price,
+        imageUrl: textOf(data['image_url']).trim(),
+        description: textOf(data['description']).trim(),
+      ),
+    );
+  }
+
+  return options;
 }
 
 // Fullscreen, zoomable viewer for an add-on item image.

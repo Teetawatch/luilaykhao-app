@@ -202,6 +202,14 @@ class PricingSummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ],
+          if (pricing.rentalsTotal > 0) ...[
+            _PriceRow(
+              label: 'ค่าเช่าอุปกรณ์',
+              value: money(pricing.rentalsTotal),
+              valueColor: const Color(0xFF0369A1),
+            ),
+            const SizedBox(height: 10),
+          ],
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 180),
             crossFadeState: expanded
@@ -605,6 +613,259 @@ class AddonSelectionSection extends StatelessWidget {
             );
           }),
         ],
+      ),
+    );
+  }
+}
+
+/// Equipment rental picker — each item has a quantity stepper (rent 2 sleeping
+/// bags, 1 trekking pole, …). Sky-blue accent to set it apart from the amber
+/// add-ons above it.
+class RentalSelectionSection extends StatelessWidget {
+  static const Color _accent = Color(0xFF0369A1);
+  static const int _maxQty = 20;
+
+  final List<_RentalOption> rentals;
+  final Map<int, int> quantities;
+  final void Function(int index, int quantity) onChanged;
+
+  const RentalSelectionSection({
+    super.key,
+    required this.rentals,
+    required this.quantities,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedTotal = rentals.fold<num>(
+      0,
+      (sum, r) => sum + r.price * (quantities[r.index] ?? 0),
+    );
+
+    return _SectionShell(
+      title: 'เช่าอุปกรณ์',
+      icon: Icons.backpack_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (selectedTotal > 0) ...[
+            _PriceRow(
+              label: 'ค่าเช่าอุปกรณ์ที่เลือก',
+              value: money(selectedTotal),
+              valueColor: _accent,
+            ),
+            const SizedBox(height: 12),
+          ],
+          ...rentals.map((rental) {
+            final qty = quantities[rental.index] ?? 0;
+            final selected = qty > 0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFFEFF6FF)
+                      : AppTheme.fieldSurface(context),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: selected ? _accent : AppTheme.border(context),
+                    width: selected ? 1.4 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Image (tap to zoom) or blue placeholder
+                    GestureDetector(
+                      onTap: rental.hasImage
+                          ? () => _openAddonImage(context, rental.imageUrl)
+                          : null,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: rental.hasImage
+                            ? CachedNetworkImage(
+                                imageUrl: rental.imageUrl,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                placeholder: (_, _) => Container(
+                                  width: 60,
+                                  height: 60,
+                                  color: const Color(0xFFDBEAFE),
+                                ),
+                                errorWidget: (_, _, _) => Container(
+                                  width: 60,
+                                  height: 60,
+                                  color: const Color(0xFFDBEAFE),
+                                  child: const Icon(
+                                    Icons.broken_image_rounded,
+                                    size: 22,
+                                    color: _accent,
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                width: 60,
+                                height: 60,
+                                color: const Color(0xFFDBEAFE),
+                                child: const Icon(
+                                  Icons.backpack_rounded,
+                                  size: 24,
+                                  color: _accent,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            rental.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: appFont(
+                              color: AppTheme.onSurface(context),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.1,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${money(rental.price)} / ชิ้น',
+                            style: appFont(
+                              color: AppTheme.mutedText(context),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (selected) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              '+${money(rental.price * qty)}',
+                              style: appFont(
+                                color: _accent,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Quantity stepper
+                    _QuantityStepper(
+                      quantity: qty,
+                      accent: _accent,
+                      onDecrement: qty > 0
+                          ? () => onChanged(rental.index, qty - 1)
+                          : null,
+                      onIncrement: qty < _maxQty
+                          ? () => onChanged(rental.index, qty + 1)
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact − [n] + control used by the rental picker.
+class _QuantityStepper extends StatelessWidget {
+  final int quantity;
+  final Color accent;
+  final VoidCallback? onDecrement;
+  final VoidCallback? onIncrement;
+
+  const _QuantityStepper({
+    required this.quantity,
+    required this.accent,
+    required this.onDecrement,
+    required this.onIncrement,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _StepperButton(
+          icon: Icons.remove_rounded,
+          accent: accent,
+          onTap: onDecrement,
+        ),
+        SizedBox(
+          width: 30,
+          child: Text(
+            '$quantity',
+            textAlign: TextAlign.center,
+            style: appFont(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: quantity > 0
+                  ? AppTheme.onSurface(context)
+                  : AppTheme.mutedText(context),
+            ),
+          ),
+        ),
+        _StepperButton(
+          icon: Icons.add_rounded,
+          accent: accent,
+          onTap: onIncrement,
+        ),
+      ],
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  final IconData icon;
+  final Color accent;
+  final VoidCallback? onTap;
+
+  const _StepperButton({
+    required this.icon,
+    required this.accent,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: enabled
+          ? () {
+              HapticFeedback.selectionClick();
+              onTap!();
+            }
+          : null,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: enabled ? accent.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(
+            color: enabled
+                ? accent.withValues(alpha: 0.35)
+                : AppTheme.border(context),
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled ? accent : AppTheme.mutedText(context).withValues(alpha: 0.4),
+        ),
       ),
     );
   }

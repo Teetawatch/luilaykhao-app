@@ -19,6 +19,7 @@ class _BookingSummaryCard extends StatelessWidget {
     final passengers = asList(booking['passengers']);
     final seats = asList(booking['seats']);
     final selectedAddons = asList(booking['selected_addons']).map(asMap).toList();
+    final selectedRentals = asList(booking['selected_rentals']).map(asMap).toList();
     final pickupPoint = asMap(booking['pickup_point']);
     final pickupText = textOf(
       pickupPoint['pickup_location'] ??
@@ -156,6 +157,22 @@ class _BookingSummaryCard extends StatelessWidget {
                         label: qty == '1' ? name : '$name ×$qty',
                         value: money(addon['total_price']),
                         valueColor: AppTheme.warningColor,
+                      ),
+                    );
+                  }),
+                ],
+                if (selectedRentals.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ...selectedRentals.map((rental) {
+                    final qty = textOf(rental['quantity'], '1');
+                    final name = textOf(rental['name'], 'อุปกรณ์เช่า');
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _SummaryRow(
+                        icon: Icons.backpack_rounded,
+                        label: qty == '1' ? name : '$name ×$qty',
+                        value: money(rental['total_price']),
+                        valueColor: const Color(0xFF0369A1),
                       ),
                     );
                   }),

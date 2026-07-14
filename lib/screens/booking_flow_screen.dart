@@ -137,6 +137,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   final Set<String> _selectedSeatIds = <String>{};
   final Set<String> _lockedSeatIds = <String>{};
   final Set<int> _selectedAddonIndexes = <int>{};
+  // Equipment rentals keyed by option index → chosen quantity (>= 1).
+  final Map<int, int> _rentalQuantities = <int, int>{};
 
   Map<String, dynamic> get _selectedSchedule {
     if (widget.schedules.isEmpty) return <String, dynamic>{};
@@ -168,6 +170,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     isJoinTrip: _isJoinTrip,
     pickupPoints: _pickupPoints,
     selectedAddons: _selectedAddonOptions,
+    selectedRentals: _selectedRentals,
     appliedPromo: _appliedPromo,
   );
 
@@ -231,6 +234,16 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   List<_AddonOption> get _selectedAddonOptions => _addonOptions
       .where((option) => _selectedAddonIndexes.contains(option.index))
+      .toList(growable: false);
+
+  List<_RentalOption> get _rentalOptions => _rentalOptionsFrom(widget.trip);
+
+  List<_RentalSelection> get _selectedRentals => _rentalOptions
+      .where((option) => (_rentalQuantities[option.index] ?? 0) > 0)
+      .map((option) => _RentalSelection(
+            option: option,
+            quantity: _rentalQuantities[option.index]!,
+          ))
       .toList(growable: false);
 
   bool get _selectedScheduleAllowsJoinTrip =>
@@ -909,6 +922,22 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           ),
           const SizedBox(height: 24),
         ],
+        if (_rentalOptions.isNotEmpty) ...[
+          RentalSelectionSection(
+            rentals: _rentalOptions,
+            quantities: _rentalQuantities,
+            onChanged: (index, quantity) {
+              setState(() {
+                if (quantity > 0) {
+                  _rentalQuantities[index] = quantity;
+                } else {
+                  _rentalQuantities.remove(index);
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 24),
+        ],
         PricingSummaryCard(
           pricing: _pricing,
           promoController: _promo,
@@ -1116,6 +1145,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         'is_join_trip': _isJoinTrip,
         if (_selectedAddonIndexes.isNotEmpty)
           'selected_addons': (_selectedAddonIndexes.toList()..sort()),
+        if (_selectedRentals.isNotEmpty)
+          'selected_rentals': _selectedRentals
+              .map((r) => {'index': r.option.index, 'quantity': r.quantity})
+              .toList(),
         'passengers': _passengers.map((p) => p.payload()).toList(),
       });
       if (!mounted) return;
