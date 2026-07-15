@@ -626,8 +626,8 @@ class _BookingActionDeck extends StatelessWidget {
     );
   }
 
-  /// Centered pill actions shown under a booking: add-to-calendar (confirmed
-  /// upcoming) plus reschedule / change-pickup when still modifiable.
+  /// Centered pill actions shown under a booking. Add-to-calendar และเปลี่ยนจุดรับ
+  /// ย้ายไปอยู่ในหน้า "ดูตั๋ว/รายละเอียด" แล้ว เหลือเฉพาะเปลี่ยนวันเป็นทางลัดในการ์ด.
   List<Widget> _chipActions(
     BuildContext context,
     bool confirmed,
@@ -636,12 +636,6 @@ class _BookingActionDeck extends StatelessWidget {
     bool hasPickupPoints,
   ) {
     return [
-      if (confirmed && _isUpcomingBooking(booking))
-        _ActionChipButton(
-          icon: Icons.calendar_month_rounded,
-          label: 'ปฏิทิน',
-          onPressed: () => _addToCalendar(context),
-        ),
       // เปลี่ยนวันได้เฉพาะเมื่อยังไม่เคยใช้สิทธิ์ และก่อนเดินทางอย่างน้อย 20 วัน
       if (canReschedule)
         _ActionChipButton(
@@ -649,54 +643,7 @@ class _BookingActionDeck extends StatelessWidget {
           label: 'เปลี่ยนวัน',
           onPressed: () => _openReschedule(context),
         ),
-      if (canModify && hasPickupPoints)
-        _ActionChipButton(
-          icon: Icons.location_on_rounded,
-          label: 'จุดรับ',
-          onPressed: () => _openChangePickup(context),
-        ),
     ];
-  }
-
-  Future<void> _addToCalendar(BuildContext context) async {
-    final schedule = asMap(booking['schedule']);
-    final trip = asMap(schedule['trip']);
-    final start = bookingTravelDate(booking);
-    if (start == null) {
-      showSnack(context, 'ยังไม่มีวันเดินทาง');
-      return;
-    }
-    // Google Calendar all-day events use an exclusive end date.
-    final end = (_bookingReturnDate(booking) ?? start).add(
-      const Duration(days: 1),
-    );
-    String ymd(DateTime d) =>
-        '${d.year.toString().padLeft(4, '0')}'
-        '${d.month.toString().padLeft(2, '0')}'
-        '${d.day.toString().padLeft(2, '0')}';
-
-    final location = textOf(
-      trip['departure_point'],
-      textOf(trip['location']),
-    ).trim();
-    final details = [
-      'รหัสการจอง ${textOf(booking['booking_ref'])}',
-      if (location.isNotEmpty) 'จุดนัดพบ: $location',
-    ].join('\n');
-
-    final uri = Uri.https('calendar.google.com', '/calendar/render', {
-      'action': 'TEMPLATE',
-      'text': textOf(trip['title'], 'ทริปลุยลายเขา'),
-      'dates': '${ymd(start)}/${ymd(end)}',
-      'details': details,
-      if (location.isNotEmpty) 'location': location,
-    });
-
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else if (context.mounted) {
-      showSnack(context, 'ไม่สามารถเปิดปฏิทินได้');
-    }
   }
 
   Future<void> _openReschedule(BuildContext context) async {
@@ -713,19 +660,6 @@ class _BookingActionDeck extends StatelessWidget {
     }
   }
 
-  Future<void> _openChangePickup(BuildContext context) async {
-    final app = context.read<AppProvider>();
-    final changed = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ChangePickupSheet(booking: booking),
-    );
-    if (changed == true && context.mounted) {
-      await app.loadAccountData();
-      if (context.mounted) showSnack(context, 'เปลี่ยนจุดรับสำเร็จ');
-    }
-  }
 }
 
 class EmptyStateWidget extends StatelessWidget {
