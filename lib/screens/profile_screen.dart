@@ -38,6 +38,7 @@ import 'tracking_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 import 'referral_screen.dart' show ReferralScreen;
 import 'rewards_screen.dart' show RewardsScreen;
+import 'passport_screen.dart' show PassportScreen;
 
 part 'profile_edit.part.dart';
 part 'profile_bookings.part.dart';
@@ -1005,6 +1006,12 @@ class TravelMenu extends StatelessWidget {
     return MenuSection(
       title: 'การเดินทางของฉัน',
       items: [
+        _MenuItem(
+          icon: Icons.hiking_rounded,
+          label: 'สมุดสะสมการเดินทาง',
+          subtitle: 'สถิติตลอดชีพ ระยะทาง ความสูงสะสม และตราสะสม',
+          onTap: () => _pushPremium(context, const PassportScreen()),
+        ),
         _MenuItem(
           icon: Icons.confirmation_number_outlined,
           label: 'การจองของฉัน',

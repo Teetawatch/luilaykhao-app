@@ -552,6 +552,12 @@ class AppProvider extends ChangeNotifier {
     return List<dynamic>.from(api.data(response) ?? []);
   }
 
+  /// สมุดสะสมการเดินทาง (Passport) — สถิติตลอดชีพ + ตราสะสมของผู้ใช้ปัจจุบัน.
+  Future<Map<String, dynamic>> fetchPassport() async {
+    final response = await api.get('me/passport');
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
   Future<List<dynamic>> tripReviews(int tripId) async {
     final response = await api.get(
       'reviews',
