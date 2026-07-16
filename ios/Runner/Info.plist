@@ -52,6 +52,8 @@
 		<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุดและติดตามรถรับส่งระหว่างทริป</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>ใช้รูปภาพเพื่ออัปโหลดโปรไฟล์หรือหลักฐานการชำระเงิน</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>ใช้เพื่อบันทึกรูปภาพจากทริปลงในคลังรูปภาพของคุณ</string>
 		<key>NSCalendarsUsageDescription</key>
 		<string>ใช้เพื่อเพิ่มวันเดินทางของทริปลงในปฏิทินของคุณ</string>
 		<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
