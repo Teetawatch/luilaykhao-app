@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../models/schedule_route.dart';
 import '../models/tracking_model.dart';
 import '../services/customer_location_service.dart';
 import '../services/tracking_service.dart';
@@ -24,6 +25,9 @@ class TrackingProvider extends ChangeNotifier {
   bool _locationPermissionDenied = false;
   String? _locationError;
 
+  // เส้นทางเดินรถทั้งรอบ (จุดรับทุกจุด → ปลายทาง) — เส้นพื้นหลัง + หมุดจุดจอด
+  ScheduleRouteData? _scheduleRoute;
+
   // เส้นทางตามถนนจริง (รถ → จุดของลูกค้า) สำหรับวาดเส้นบนแผนที่แบบ Grab
   List<LatLng> _routePoints = const [];
   LatLng? _lastRouteFrom;
@@ -42,6 +46,7 @@ class TrackingProvider extends ChangeNotifier {
   bool get locationPermissionDenied => _locationPermissionDenied;
   String? get locationError => _locationError;
   List<LatLng> get routePoints => _routePoints;
+  ScheduleRouteData? get scheduleRoute => _scheduleRoute;
 
   /// เริ่มติดตามสำหรับ guest ที่ผ่านการ verify แล้ว — ข้าม fetchBookingInfo เพราะมีข้อมูลครบแล้ว
   Future<void> startTrackingAsGuest(BookingInfo bookingInfo) async {
@@ -69,6 +74,7 @@ class TrackingProvider extends ChangeNotifier {
     _booking = bookingInfo;
     _cachedDriverName = bookingInfo.driverName;
     _cachedDriverPhone = bookingInfo.driverPhone;
+    _loadScheduleRoute(bookingInfo.scheduleId);
 
     final initial = await _service.fetchVehicleLocation(bookingInfo.vehicleId);
     _handleNewTracking(initial);
@@ -140,6 +146,7 @@ class TrackingProvider extends ChangeNotifier {
     _booking = booking;
     _cachedDriverName = booking.driverName;
     _cachedDriverPhone = booking.driverPhone;
+    _loadScheduleRoute(booking.scheduleId);
 
     final initial = await _service.fetchVehicleLocation(booking.vehicleId);
     _handleNewTracking(initial);
@@ -265,6 +272,15 @@ class TrackingProvider extends ChangeNotifier {
     _lastRouteFrom = null;
     _lastRouteTo = null;
     _lastRouteAt = null;
+    _scheduleRoute = null;
+  }
+
+  /// ดึงเส้นทางเดินรถทั้งรอบครั้งเดียวตอนเริ่มติดตาม (backend cache ให้แล้ว)
+  Future<void> _loadScheduleRoute(int scheduleId) async {
+    final data = await _service.fetchScheduleRoute(scheduleId);
+    if (data == null || data.isEmpty) return;
+    _scheduleRoute = data;
+    notifyListeners();
   }
 
   void _recomputeETA() {

@@ -327,6 +327,19 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 // จุดขึ้นรถที่จองไว้ (พร้อมรูปจริง) — แสดงเสมอเมื่อมีจุดรับ
                 _BookingPickupSection(booking: booking, schedule: schedule),
 
+                // เส้นทางเดินรถของรอบ (จุดรับทุกจุด → ปลายทาง) — self-loading,
+                // ไฮไลต์จุดที่ลูกค้าจองไว้; ซ่อนตัวเองเมื่อไม่มีจุดจอด
+                if (textOf(booking['status']) != 'cancelled' &&
+                    (int.tryParse(textOf(schedule['id'])) ?? 0) > 0) ...[
+                  const SizedBox(height: 16),
+                  RouteMapCard(
+                    scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
+                    highlightPickupPointId: int.tryParse(
+                      textOf(asMap(booking['pickup_point'])['id']),
+                    ),
+                  ),
+                ],
+
                 // อุปกรณ์ที่เช่ามาพร้อมทริป (ถ้ามี)
                 if (asList(booking['selected_rentals']).isNotEmpty) ...[
                   const SizedBox(height: 16),

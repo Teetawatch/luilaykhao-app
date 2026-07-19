@@ -20,6 +20,7 @@ import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/flash_countdown_pill.dart';
+import '../widgets/route_map_card.dart';
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
 import '../widgets/weather_card.dart';
 import 'booking_flow_screen.dart';
@@ -766,6 +767,13 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
         onScheduleChanged: _handleScheduleChanged,
         onPickupChanged: _handlePickupChanged,
       ),
+      // เส้นทางเดินรถของรอบที่เลือก (จุดรับทุกจุด → ปลายทาง) — self-loading,
+      // ซ่อนตัวเองเมื่อรอบไม่มีจุดจอดให้แสดง
+      if (_selectedScheduleId != null)
+        RouteMapCard(
+          scheduleId: _selectedScheduleId!,
+          highlightPickupPointId: _selectedPickupPointId,
+        ),
       if (_selectedScheduleId != null)
         _GroupInviteEntry(
           onPressed: () => GroupRoomScreen.startFlow(

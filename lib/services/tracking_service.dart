@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import '../models/schedule_route.dart';
 import '../models/tracking_model.dart';
 
 class TrackingService {
@@ -90,7 +91,7 @@ class TrackingService {
         final body = json.decode(response.body);
         final points = body['data']?['polyline'];
         if (points is String && points.isNotEmpty) {
-          return _decodePolyline(points);
+          return decodeGooglePolyline(points);
         }
       }
     } catch (e) {
@@ -99,32 +100,27 @@ class TrackingService {
     return const [];
   }
 
-  /// ถอดรหัส Google encoded polyline → พิกัด
-  List<LatLng> _decodePolyline(String encoded) {
-    final points = <LatLng>[];
-    int index = 0, lat = 0, lng = 0;
-
-    while (index < encoded.length) {
-      int shift = 0, result = 0, b;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
-
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
-
-      points.add(LatLng(lat / 1e5, lng / 1e5));
+  /// เส้นทางเดินรถทั้งรอบ (จุดรับทุกจุด → ปลายทาง) สำหรับวาดเส้นเต็ม
+  /// + หมุดจุดจอดบนแผนที่ติดตามรถ; คืน null เมื่อดึงไม่ได้
+  Future<ScheduleRouteData?> fetchScheduleRoute(int scheduleId) async {
+    if (scheduleId <= 0) return null;
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/schedules/$scheduleId/route'),
+        headers: _headers,
+      );
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        if (body['success'] == true && body['data'] is Map) {
+          return ScheduleRouteData.fromJson(
+            Map<String, dynamic>.from(body['data'] as Map),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[TrackingService] fetchScheduleRoute error: $e');
     }
-    return points;
+    return null;
   }
 
   void startAdaptivePolling({

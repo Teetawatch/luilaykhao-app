@@ -9,9 +9,11 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/schedule_route.dart';
 import '../models/tracking_model.dart';
 import '../providers/tracking_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/route_map_card.dart';
 
 class TrackingScreen extends StatefulWidget {
   const TrackingScreen({super.key});
@@ -124,6 +126,7 @@ class _TrackingScreenState extends State<TrackingScreen>
                   booking: booking,
                   customerLocation: provider.customerLocation,
                   routePoints: provider.routePoints,
+                  scheduleRoute: provider.scheduleRoute,
                   phase: provider.phase,
                   pulse: _pulseAnimation,
                   mode: _mode,
@@ -158,6 +161,7 @@ class _TrackingScreenState extends State<TrackingScreen>
                   booking: booking,
                   tracking: tracking,
                   eta: eta,
+                  scheduleRoute: provider.scheduleRoute,
                   phase: provider.phase,
                   onCall: () => _callDriver(phone),
                   onChat: () => _chatDriver(phone),
@@ -196,6 +200,7 @@ class VehicleMapWidget extends StatefulWidget {
   final BookingInfo? booking;
   final LatLng? customerLocation;
   final List<LatLng> routePoints;
+  final ScheduleRouteData? scheduleRoute;
   final TrackingPhase phase;
   final Animation<double> pulse;
   final FollowMode mode;
@@ -207,6 +212,7 @@ class VehicleMapWidget extends StatefulWidget {
     required this.booking,
     required this.customerLocation,
     required this.routePoints,
+    required this.scheduleRoute,
     required this.phase,
     required this.pulse,
     required this.mode,
@@ -355,15 +361,35 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
   }
 
   List<Polyline> _routeLines(LatLng? vehicle) {
-    // เส้นทางตามถนนจริง (จาก Directions API) — วาดจากรถถึงจุดของลูกค้าแบบ Grab
+    final lines = <Polyline>[];
+
+    // เส้นพื้นหลัง: เส้นทางเดินรถทั้งรอบ (จุดรับทุกจุด → ปลายทาง) สีจางกว่า
+    // เพื่อให้เห็นภาพรวมว่ารถวิ่งเส้นไหน อยู่ช่วงไหนของเส้นทาง
+    final full = widget.scheduleRoute;
+    if (full != null) {
+      final fullLine =
+          full.polyline.length >= 2 ? full.polyline : full.stopPoints;
+      if (fullLine.length >= 2) {
+        lines.add(
+          Polyline(
+            points: fullLine,
+            strokeWidth: 4,
+            color: const Color(0xFF94A3B8).withValues(alpha: 0.65),
+          ),
+        );
+      }
+    }
+
+    // เส้นหลัก: เส้นทางตามถนนจริงจากรถถึงจุดของลูกค้าแบบ Grab
     if (widget.routePoints.length >= 2) {
-      return [
+      lines.add(
         Polyline(
           points: widget.routePoints,
           strokeWidth: 5,
           color: AppTheme.primaryColor.withValues(alpha: 0.86),
         ),
-      ];
+      );
+      return lines;
     }
 
     // Fallback: เส้นตรงเมื่อยังไม่มีเส้นทางถนน (ไม่มีคีย์/ยังโหลดไม่เสร็จ)
@@ -375,21 +401,70 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
       ?pickup,
       if (destination != null && !_samePoint(destination, pickup)) destination,
     ];
-    if (route.length < 2) return const [];
-    return [
-      Polyline(
-        points: route,
-        strokeWidth: 5,
-        color: AppTheme.primaryColor.withValues(alpha: 0.5),
-      ),
-    ];
+    if (route.length >= 2) {
+      lines.add(
+        Polyline(
+          points: route,
+          strokeWidth: 5,
+          color: AppTheme.primaryColor.withValues(alpha: 0.5),
+        ),
+      );
+    }
+    return lines;
+  }
+
+  /// หมุดจุดรับอื่นๆ ตามเส้นทาง (ไม่รวมจุดของลูกค้าเองที่มีหมุด "จุดรับ" อยู่แล้ว)
+  /// — จุดที่รับแล้วเป็นติ๊กเขียว จุดที่ยังไม่ถึงเป็นเลขลำดับสีเทา
+  List<Marker> _stopMarkers(LatLng? myPickup) {
+    final stops = widget.scheduleRoute?.stops ?? const <RouteStop>[];
+    final markers = <Marker>[];
+    var number = 0;
+    for (final stop in stops) {
+      if (stop.isDestination) continue;
+      number++;
+      final point = stop.point;
+      if (point == null || _samePoint(point, myPickup)) continue;
+      markers.add(
+        Marker(
+          point: point,
+          width: 24,
+          height: 24,
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: stop.completed
+                  ? const Color(0xFF10B981)
+                  : const Color(0xFF475569),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2.5),
+            ),
+            child: stop.completed
+                ? const Icon(Icons.check_rounded, color: Colors.white, size: 13)
+                : Text(
+                    '$number',
+                    style: appFont(
+                      color: Colors.white,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+          ),
+        ),
+      );
+    }
+    return markers;
   }
 
   List<Marker> _markers(LatLng? vehicle) {
     final pickup = _validPoint(widget.booking?.pickupPoint);
-    final destination =
-        widget.tracking?.destinationPoint ?? widget.booking?.destinationPoint;
+    final destination = widget.tracking?.destinationPoint ??
+        widget.booking?.destinationPoint ??
+        widget.scheduleRoute?.stops
+            .where((s) => s.isDestination)
+            .firstOrNull
+            ?.point;
     return [
+      ..._stopMarkers(pickup),
       if (destination != null && !_samePoint(destination, pickup))
         Marker(
           point: destination,
@@ -551,6 +626,7 @@ class TrackingBottomSheet extends StatelessWidget {
   final BookingInfo? booking;
   final VehicleTracking? tracking;
   final ETAResult? eta;
+  final ScheduleRouteData? scheduleRoute;
   final TrackingPhase phase;
   final VoidCallback onCall;
   final VoidCallback onChat;
@@ -560,10 +636,28 @@ class TrackingBottomSheet extends StatelessWidget {
     required this.booking,
     required this.tracking,
     required this.eta,
+    required this.scheduleRoute,
     required this.phase,
     required this.onCall,
     required this.onChat,
   });
+
+  /// จุดรับของลูกค้าใน timeline — เทียบจากพิกัดจุดรับที่จองไว้ (BookingInfo
+  /// ไม่ได้ส่ง pickup_point_id มา จึงจับคู่จากระยะห่าง ~30 ม.)
+  int? _myStopId() {
+    final myPickup = booking?.pickupPoint;
+    final stops = scheduleRoute?.stops;
+    if (myPickup == null || stops == null) return null;
+    if (myPickup.latitude == 0 && myPickup.longitude == 0) return null;
+    const distance = Distance();
+    for (final stop in stops) {
+      if (stop.isDestination || stop.point == null) continue;
+      if (distance.as(LengthUnit.Meter, stop.point!, myPickup) < 30) {
+        return stop.id;
+      }
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -680,6 +774,35 @@ class TrackingBottomSheet extends StatelessWidget {
                     ),
                   ],
                 ),
+
+                // เส้นทางเดินรถทั้งรอบ — เลื่อนแผ่นขึ้นมาดูว่ารถผ่านจุดไหนบ้าง
+                // จุดไหนรับแล้ว และจุดของเราอยู่ลำดับที่เท่าไร
+                if (scheduleRoute != null && !scheduleRoute!.isEmpty) ...[
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.route_rounded,
+                        color: AppTheme.primaryColor,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'เส้นทางเดินรถ',
+                        style: appFont(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  RouteTimeline(
+                    stops: scheduleRoute!.stops,
+                    highlightPickupPointId: _myStopId(),
+                  ),
+                ],
               ],
             ),
           ),
