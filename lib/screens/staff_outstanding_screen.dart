@@ -12,8 +12,8 @@ import '../utils/thai_date.dart';
 /// ยอดค้างชำระของรอบเดินทาง — สำหรับสตาฟใช้หน้างาน
 ///
 /// ลูกค้าที่ผ่อนชำระบางคนลืมจ่ายงวดที่เหลือ สตาฟเปิดหน้านี้เพื่อดูว่าใครค้าง
-/// เท่าไหร่ แล้วให้ลูกค้า "สแกน QR ด้วยกล้องมือถือตัวเอง" — QR ชี้ไปหน้า
-/// /pay/{token} ซึ่งมี QR PromptPay ยอดถูกต้อง + ช่องแนบสลิปอยู่แล้ว
+/// งวดไหนบ้าง เท่าไหร่ แล้วให้ลูกค้า "สแกน QR ด้วยกล้องมือถือตัวเอง" — QR ชี้ไป
+/// หน้า /pay/{token} ซึ่งมี QR PromptPay ยอดถูกต้อง + ช่องแนบสลิปอยู่แล้ว
 ///
 /// เหตุผลที่ไม่แสดง QR PromptPay บนจอสตาฟโดยตรง: สลิปโอนเงินอยู่ในแอปธนาคาร
 /// ของลูกค้า ถ้าลูกค้าสแกนจากจอสตาฟ สลิปก็ยังต้องเดินทางกลับมาที่สตาฟอยู่ดี
@@ -60,7 +60,7 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
             (e) => Map<String, dynamic>.from(e as Map),
           ),
         );
-        _totalDue = (data['total_due'] as num?)?.toDouble() ?? 0;
+        _totalDue = _num(data['total_due']);
       });
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -125,75 +125,66 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
       itemBuilder: (_, i) {
         if (i == 0) return _summaryBar();
         final row = _items[i - 1];
-        return _OutstandingCard(row: row, onTap: () => _openPaySheet(row));
+        return _OutstandingCard(row: row, onPay: () => _openPaySheet(row));
       },
     );
   }
 
   Widget _summaryBar() {
     final overdue = _items.where((e) => e['overdue'] == true).length;
+    final awaiting = _items.where((e) => e['slip_pending'] == true).length;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: AppTheme.cardDecoration(context),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ค้างชำระ',
-                  style: appFont(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.mutedText(context),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_items.length} คน',
-                  style: appFont(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.onSurface(context),
-                  ),
-                ),
-                if (overdue > 0) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'เลยกำหนด $overdue คน',
-                    style: appFont(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.errorColor,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             children: [
-              Text(
-                'ยอดรวม',
-                style: appFont(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.mutedText(context),
+              Expanded(
+                child: _StatBlock(
+                  label: 'ค้างชำระ',
+                  value: '${_items.length} คน',
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                '฿${_money(_totalDue)}',
-                style: appFont(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.primaryColor,
-                ),
+              _StatBlock(
+                label: 'ยอดที่ต้องเก็บรอบนี้',
+                value: '฿${_money(_totalDue)}',
+                valueColor: AppTheme.primaryColor,
+                alignEnd: true,
               ),
             ],
+          ),
+          if (overdue > 0 || awaiting > 0) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (overdue > 0)
+                  _Pill(
+                    text: 'เลยกำหนด $overdue คน',
+                    color: AppTheme.errorColor,
+                  ),
+                if (awaiting > 0)
+                  _Pill(
+                    text: 'รอตรวจสลิป $awaiting คน',
+                    color: AppTheme.warningColor,
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 10),
+          Text(
+            // ยอดรวมนับเฉพาะ "งวดที่ถึงกำหนดถัดไป" ของแต่ละคน ไม่ใช่หนี้ทั้งก้อน
+            // ต้องบอกให้ชัด ไม่งั้นยอดที่สตาฟเห็นกับที่ลูกค้าค้างจริงจะไม่ตรงกัน
+            'นับเฉพาะงวดที่ถึงกำหนดถัดไปของแต่ละคน',
+            style: appFont(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.mutedText(context),
+            ),
           ),
         ],
       ),
@@ -222,6 +213,8 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
   }
 }
 
+double _num(dynamic value) => (value as num?)?.toDouble() ?? 0;
+
 String _money(num value) {
   final whole = value.round();
   final digits = whole.abs().toString();
@@ -233,119 +226,403 @@ String _money(num value) {
   return '${whole < 0 ? '-' : ''}$buffer';
 }
 
-String _dueLabel(String? date) {
-  if (date == null || date.isEmpty) return '';
-  final parsed = DateTime.tryParse(date);
-  return parsed == null ? date : thaiDateShort(parsed);
+String _dateLabel(dynamic value) {
+  final text = value?.toString() ?? '';
+  if (text.isEmpty) return '';
+  final parsed = DateTime.tryParse(text);
+  return parsed == null ? text : thaiDateShort(parsed.toLocal());
 }
 
-class _OutstandingCard extends StatelessWidget {
-  final Map<String, dynamic> row;
-  final VoidCallback onTap;
+List<Map<String, dynamic>> _scheduleOf(Map<String, dynamic> row) {
+  final raw = row['schedule'] as List? ?? const [];
+  return raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+}
 
-  const _OutstandingCard({required this.row, required this.onTap});
+class _StatBlock extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool alignEnd;
+
+  const _StatBlock({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.alignEnd = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: appFont(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.mutedText(context),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: appFont(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: valueColor ?? AppTheme.onSurface(context),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// การ์ดลูกค้าหนึ่งคน — ยอดงวดถัดไปเด่นที่สุด แล้วกางดูทุกงวดได้
+class _OutstandingCard extends StatefulWidget {
+  final Map<String, dynamic> row;
+  final VoidCallback onPay;
+
+  const _OutstandingCard({required this.row, required this.onPay});
+
+  @override
+  State<_OutstandingCard> createState() => _OutstandingCardState();
+}
+
+class _OutstandingCardState extends State<_OutstandingCard> {
+  bool _expanded = false;
+
+  Future<void> _call(String phone) async {
+    final uri = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final row = widget.row;
     final overdue = row['overdue'] == true;
     final slipPending = row['slip_pending'] == true;
     final name = (row['customer_name'] ?? '-').toString();
     final phone = (row['phone'] ?? '').toString();
+    final bookingRef = (row['booking_ref'] ?? '').toString();
     final label = (row['label'] ?? '').toString();
-    final amount = (row['amount_due'] as num?)?.toDouble() ?? 0;
-    final dueDate = _dueLabel(row['due_date']?.toString());
+    final amountDue = _num(row['amount_due']);
+    final paidTotal = _num(row['paid_total']);
+    final remainingTotal = _num(row['remaining_total']);
+    final totalAmount = _num(row['total_amount']);
+    final paidCount = (row['paid_count'] as num?)?.toInt() ?? 0;
+    final stepCount = (row['installment_count'] as num?)?.toInt() ?? 0;
+    final schedule = _scheduleOf(row);
+    final dueDate = _dateLabel(row['due_date']);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: AppTheme.cardDecoration(
-            context,
-            borderColor: overdue && !slipPending
-                ? AppTheme.errorColor.withValues(alpha: 0.4)
-                : null,
+    final progress = totalAmount > 0
+        ? (paidTotal / totalAmount).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Container(
+      decoration: AppTheme.cardDecoration(
+        context,
+        borderColor: overdue && !slipPending
+            ? AppTheme.errorColor.withValues(alpha: 0.4)
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── ชื่อลูกค้า + รหัสจอง ──
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: appFont(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.onSurface(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            bookingRef,
+                            style: appFont(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.mutedText(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (phone.isNotEmpty)
+                      IconButton(
+                        onPressed: () => _call(phone),
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(
+                          Icons.call_outlined,
+                          size: 20,
+                          color: AppTheme.primaryColor,
+                        ),
+                        tooltip: 'โทรหา $phone',
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // ── ยอดที่ต้องเก็บตอนนี้ (ตัวเลขที่สตาฟใช้จริง) ──
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (slipPending
+                            ? AppTheme.warningColor
+                            : overdue
+                            ? AppTheme.errorColor
+                            : AppTheme.primaryColor)
+                        .withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ต้องเก็บตอนนี้ · $label',
+                              style: appFont(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.mutedText(context),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '฿${_money(amountDue)}',
+                              style: appFont(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.onSurface(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (slipPending)
+                        const _Pill(
+                          text: 'รอตรวจสลิป',
+                          color: AppTheme.warningColor,
+                        )
+                      else if (overdue)
+                        const _Pill(
+                          text: 'เลยกำหนด',
+                          color: AppTheme.errorColor,
+                        )
+                      else if (dueDate.isNotEmpty)
+                        _Pill(
+                          text: 'ครบกำหนด $dueDate',
+                          color: AppTheme.mutedText(context),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // ── ความคืบหน้าการชำระทั้งก้อน ──
+                Row(
+                  children: [
+                    Text(
+                      'ชำระแล้ว $paidCount/$stepCount งวด',
+                      style: appFont(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '฿${_money(paidTotal)} / ฿${_money(totalAmount)}',
+                      style: appFont(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: AppTheme.mutedText(
+                      context,
+                    ).withValues(alpha: 0.15),
+                    valueColor: const AlwaysStoppedAnimation(
+                      AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'ยังค้างทั้งหมด ฿${_money(remainingTotal)}',
+                  style: appFont(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // ── ไทม์ไลน์ทุกงวด (กางเก็บได้) ──
+          if (schedule.isNotEmpty)
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                onExpansionChanged: (v) => setState(() => _expanded = v),
+                title: Text(
+                  _expanded ? 'ซ่อนรายละเอียดงวด' : 'ดูรายละเอียดทุกงวด',
+                  style: appFont(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                iconColor: AppTheme.primaryColor,
+                collapsedIconColor: AppTheme.primaryColor,
+                children: [
+                  for (var i = 0; i < schedule.length; i++)
+                    _InstallmentRow(
+                      step: schedule[i],
+                      isLast: i == schedule.length - 1,
+                    ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: widget.onPay,
+                icon: const Icon(Icons.qr_code_2_rounded, size: 18),
+                label: Text(
+                  'ให้ลูกค้าสแกนจ่าย',
+                  style: appFont(fontSize: 14, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// หนึ่งงวดในไทม์ไลน์ — จุดสถานะ + เส้นเชื่อม + ยอด/กำหนด/วันที่จ่าย
+class _InstallmentRow extends StatelessWidget {
+  final Map<String, dynamic> step;
+  final bool isLast;
+
+  const _InstallmentRow({required this.step, required this.isLast});
+
+  @override
+  Widget build(BuildContext context) {
+    final paid = step['status'] == 'paid';
+    final slipPending = step['slip_pending'] == true;
+    final overdue = step['overdue'] == true;
+    final label = (step['label'] ?? '').toString();
+    final amount = _num(step['amount']);
+    final dueDate = _dateLabel(step['due_date']);
+    final paidAt = _dateLabel(step['paid_at']);
+
+    final (Color color, IconData icon, String status) = paid
+        ? (AppTheme.primaryColor, Icons.check_circle_rounded, 'ชำระแล้ว')
+        : slipPending
+        ? (AppTheme.warningColor, Icons.schedule_rounded, 'แนบสลิปแล้ว รอตรวจ')
+        : overdue
+        ? (AppTheme.errorColor, Icons.error_rounded, 'เลยกำหนด')
+        : (AppTheme.mutedText(context), Icons.circle_outlined, 'ยังไม่ชำระ');
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
             children: [
-              Row(
+              Icon(icon, size: 18, color: color),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    margin: const EdgeInsets.symmetric(vertical: 2),
+                    color: AppTheme.mutedText(context).withValues(alpha: 0.2),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 4 : 14),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          label,
                           style: appFont(
-                            fontSize: 15,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.onSurface(context),
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          phone.isEmpty ? label : '$label · $phone',
-                          style: appFont(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.mutedText(context),
-                          ),
+                      ),
+                      Text(
+                        '฿${_money(amount)}',
+                        style: appFont(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: paid
+                              ? AppTheme.mutedText(context)
+                              : AppTheme.onSurface(context),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(height: 3),
                   Text(
-                    '฿${_money(amount)}',
+                    [
+                      status,
+                      if (paid && paidAt.isNotEmpty)
+                        'เมื่อ $paidAt'
+                      else if (dueDate.isNotEmpty)
+                        'ครบกำหนด $dueDate',
+                    ].join(' · '),
                     style: appFont(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.onSurface(context),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: color,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (slipPending)
-                    // สลิปแนบแล้วแต่ VerifySlipJob ยังตรวจไม่เสร็จ — บอกสตาฟไว้
-                    // ไม่งั้นจะไปทวงคนที่เพิ่งจ่ายไปเมื่อกี้
-                    const _Pill(
-                      text: 'แนบสลิปแล้ว รอตรวจ',
-                      color: AppTheme.warningColor,
-                    )
-                  else if (overdue)
-                    const _Pill(text: 'เลยกำหนด', color: AppTheme.errorColor)
-                  else if (dueDate.isNotEmpty)
-                    _Pill(
-                      text: 'ครบกำหนด $dueDate',
-                      color: AppTheme.mutedText(context),
-                    ),
-                  const Spacer(),
-                  const Icon(
-                    Icons.qr_code_2_rounded,
-                    size: 18,
-                    color: AppTheme.primaryColor,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'ให้ลูกค้าสแกน',
-                    style: appFont(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -373,7 +650,7 @@ class _Pill extends StatelessWidget {
   }
 }
 
-/// QR เต็มจอให้ลูกค้ายกกล้องสแกน + ทางออกสำรอง (ส่งลิงก์ / โทรหา)
+/// QR เต็มจอให้ลูกค้ายกกล้องสแกน + สรุปงวดที่กำลังจะจ่าย
 class _PaySheet extends StatefulWidget {
   final int scheduleId;
   final Map<String, dynamic> row;
@@ -425,85 +702,117 @@ class _PaySheetState extends State<_PaySheet> {
     final name = (row['customer_name'] ?? '-').toString();
     final label = (row['label'] ?? '').toString();
     final phone = (row['phone'] ?? '').toString();
-    final amount = (row['amount_due'] as num?)?.toDouble() ?? 0;
+    final amount = _num(row['amount_due']);
+    final remainingTotal = _num(row['remaining_total']);
+    final dueDate = _dateLabel(row['due_date']);
+    final unpaid = _scheduleOf(row).where((e) => e['status'] != 'paid').toList();
 
     return SafeArea(
       top: false,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.surface(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, controller) => Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: ListView(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.mutedText(context).withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(999),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.mutedText(context).withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
-              Text(
-                name,
-                style: appFont(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.onSurface(context),
+              Center(
+                child: Text(
+                  name,
+                  style: appFont(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                label,
-                style: appFont(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.mutedText(context),
+              Center(
+                child: Text(
+                  dueDate.isEmpty ? label : '$label · ครบกำหนด $dueDate',
+                  style: appFont(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.mutedText(context),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                '฿${_money(amount)}',
-                style: appFont(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.primaryColor,
+              Center(
+                child: Text(
+                  '฿${_money(amount)}',
+                  style: appFont(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
               ),
+              if (remainingTotal > amount) ...[
+                const SizedBox(height: 4),
+                Center(
+                  child: Text(
+                    'ยังค้างทั้งหมด ฿${_money(remainingTotal)}',
+                    style: appFont(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               if (payUrl.isEmpty)
-                Text(
-                  'ไม่พบลิงก์ชำระเงินของรายการนี้',
-                  style: appFont(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.errorColor,
+                Center(
+                  child: Text(
+                    'ไม่พบลิงก์ชำระเงินของรายการนี้',
+                    style: appFont(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.errorColor,
+                    ),
                   ),
                 )
               else ...[
                 // QR สีขาวเสมอ ไม่ตามธีมมืด — กล้องอ่าน QR ที่ inverted ไม่ออก
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: QrImageView(
-                    data: payUrl,
-                    version: QrVersions.auto,
-                    size: 220,
-                    backgroundColor: Colors.white,
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.square,
-                      color: Color(0xFF0F172A),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.square,
-                      color: Color(0xFF0F172A),
+                    child: QrImageView(
+                      data: payUrl,
+                      version: QrVersions.auto,
+                      size: 220,
+                      backgroundColor: Colors.white,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Color(0xFF0F172A),
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
                   ),
                 ),
@@ -513,6 +822,33 @@ class _PaySheetState extends State<_PaySheet> {
                   textAlign: TextAlign.center,
                   style: appFont(
                     fontSize: 13,
+                    height: 1.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+              if (unpaid.length > 1) ...[
+                const SizedBox(height: 24),
+                Text(
+                  'งวดที่ยังค้าง',
+                  style: appFont(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                for (var i = 0; i < unpaid.length; i++)
+                  _InstallmentRow(
+                    step: unpaid[i],
+                    isLast: i == unpaid.length - 1,
+                  ),
+                Text(
+                  // หน้า /pay รับทีละงวดตามลำดับ กันสตาฟบอกลูกค้าผิดว่าจ่ายรวดเดียวได้
+                  'ลูกค้าจ่ายได้ทีละงวดตามลำดับ หากต้องการจ่ายหลายงวด ให้สแกนซ้ำอีกครั้ง',
+                  style: appFont(
+                    fontSize: 11.5,
                     height: 1.5,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedText(context),
