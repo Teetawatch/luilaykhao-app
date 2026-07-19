@@ -1197,6 +1197,27 @@ class AppProvider extends ChangeNotifier {
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
+  /// ยอดค้างชำระของรอบที่สตาฟรับผิดชอบ — คืน `{count, total_due, items}`
+  /// แต่ละ item มี `pay_url` ให้ทำเป็น QR ให้ลูกค้าสแกนจ่ายเองหน้างาน
+  Future<Map<String, dynamic>> loadStaffOutstanding(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.staffOutstanding(scheduleId));
+    final data = api.data(response);
+    if (data is! Map) return const {'count': 0, 'total_due': 0, 'items': []};
+    return Map<String, dynamic>.from(data);
+  }
+
+  /// ส่งลิงก์ชำระเงินซ้ำให้ลูกค้าที่ค้างชำระ (email / sms)
+  Future<void> sendStaffPaymentLink(
+    int scheduleId,
+    String bookingRef, {
+    List<String> channels = const ['email'],
+  }) async {
+    await api.post(
+      ApiEndpoints.staffOutstandingSendLink(scheduleId, bookingRef),
+      body: {'channels': channels},
+    );
+  }
+
   /// Mark an incident resolved.
   Future<Map<String, dynamic>> resolveIncident(int id) async {
     final response = await api.post('driver/incidents/$id/resolve');

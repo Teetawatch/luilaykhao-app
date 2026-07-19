@@ -179,4 +179,10 @@ class ApiEndpoints {
   static const staffCheckInConfirm = 'staff/check-in/confirm';
   static const staffSchedulesMy = 'staff/schedules/my';
   static const staffReviewsMy = 'staff/reviews/my';
+
+  static String staffOutstanding(int scheduleId) =>
+      'staff/schedules/$scheduleId/outstanding';
+
+  static String staffOutstandingSendLink(int scheduleId, String ref) =>
+      'staff/schedules/$scheduleId/outstanding/$ref/send-link';
 }

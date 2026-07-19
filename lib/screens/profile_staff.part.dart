@@ -483,6 +483,18 @@ class _StaffToolbar extends StatelessWidget {
             ),
           ),
           _StaffToolTile(
+            icon: Icons.qr_code_2_rounded,
+            label: 'ค้างชำระ',
+            color: const Color(0xFFD97706),
+            onTap: () => _pushPremium(
+              context,
+              StaffOutstandingScreen(
+                scheduleId: scheduleId,
+                title: tripTitle,
+              ),
+            ),
+          ),
+          _StaffToolTile(
             icon: Icons.forum_outlined,
             label: 'แชทกลุ่ม',
             color: AppTheme.primaryColor,
@@ -1371,6 +1383,22 @@ class _StaffScheduleAction extends StatelessWidget {
               onTap: () => _pushPremium(
                 context,
                 StaffManifestScreen(scheduleId: scheduleId, title: tripTitle),
+              ),
+            ),
+          ],
+          // ยอดค้างชำระ — ลูกค้าผ่อนชำระที่ยังจ่ายไม่ครบ พร้อม QR ให้สแกนจ่าย
+          if (hasSchedule) ...[
+            divider(),
+            _StaffActionRow(
+              icon: Icons.qr_code_2_rounded,
+              label: 'ยอดค้างชำระของลูกค้า',
+              color: const Color(0xFFD97706),
+              onTap: () => _pushPremium(
+                context,
+                StaffOutstandingScreen(
+                  scheduleId: scheduleId,
+                  title: tripTitle,
+                ),
               ),
             ),
           ],
