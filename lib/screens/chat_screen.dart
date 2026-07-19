@@ -1319,6 +1319,47 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   bool get _hasItinerary => _room?['has_itinerary'] == true;
 
+  /// คนที่ผู้ร่วมทริปโทรหาได้ — สตาฟ/ทีมงานประจำรอบ แล้วต่อด้วยคนขับ
+  ///
+  /// เอาเฉพาะคนที่มีเบอร์จริง เพราะแถบนี้มีไว้ให้ "กดโทร" การโชว์คนที่โทรไม่ได้
+  /// ทำให้แถบยาวขึ้นโดยไม่ได้อะไร (ดูว่าใครอยู่ในห้องดูได้จากชีตสมาชิกอยู่แล้ว)
+  List<_ChatContact> get _contacts {
+    final list = <_ChatContact>[];
+
+    for (final m in _members) {
+      if (m['is_me'] == true) continue;
+      final role = m['role']?.toString() ?? 'customer';
+      if (role != 'staff' && role != 'admin') continue;
+      final phone = m['phone']?.toString().trim() ?? '';
+      if (phone.isEmpty) continue;
+
+      final nickname = m['nickname']?.toString().trim() ?? '';
+      list.add(
+        _ChatContact(
+          name: nickname.isNotEmpty ? nickname : (m['name']?.toString() ?? 'สตาฟ'),
+          roleLabel: role == 'admin' ? 'ทีมงาน' : 'สตาฟประจำรอบ',
+          phone: phone,
+          avatarUrl: ApiConfig.mediaUrl(m['avatar_url']),
+        ),
+      );
+    }
+
+    final driverPhone = _vehicle?['driver_phone']?.toString().trim() ?? '';
+    final driverName = _vehicle?['driver_name']?.toString().trim() ?? '';
+    if (driverPhone.isNotEmpty) {
+      list.add(
+        _ChatContact(
+          name: driverName.isEmpty ? 'คนขับ' : driverName,
+          roleLabel: _vehicleName.isEmpty ? 'คนขับ' : 'คนขับ · $_vehicleName',
+          phone: driverPhone,
+          avatarUrl: ApiConfig.mediaUrl(_vehicle?['driver_photo']),
+        ),
+      );
+    }
+
+    return list;
+  }
+
   String get _tripTitle {
     final fromWidget = widget.title?.trim() ?? '';
     if (fromWidget.isNotEmpty) return fromWidget;
@@ -1422,6 +1463,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       ),
       body: Column(
         children: [
+          // แถบติดต่อปักไว้ใต้ AppBar (แบบ Line Man) — สตาฟ/คนขับพร้อมปุ่มโทร
+          // อยู่เหนือข้อความที่ปักหมุด เพราะ "โทรหาใครสักคน" เร่งด่วนกว่าเสมอ
+          if (_contacts.isNotEmpty) _ContactBar(contacts: _contacts),
           if (_pinned != null)
             _PinnedBanner(
               pinned: _pinned!,
@@ -4092,6 +4136,147 @@ class _UnreadDivider extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// คนที่กดโทรได้จากแถบด้านบนแชท (สตาฟ / ทีมงาน / คนขับ)
+class _ChatContact {
+  final String name;
+  final String roleLabel;
+  final String phone;
+  final String avatarUrl;
+
+  const _ChatContact({
+    required this.name,
+    required this.roleLabel,
+    required this.phone,
+    required this.avatarUrl,
+  });
+}
+
+/// แถบติดต่อที่ปักอยู่ใต้ AppBar ตลอดเวลา — ชื่อ รูป เบอร์ และปุ่มโทร
+///
+/// คนเดียวจะกางเต็มความกว้าง หลายคนจะเลื่อนแนวนอนโดยให้การ์ดถัดไปโผล่ขอบมา
+/// เล็กน้อย เป็นสัญญาณว่ายังมีคนให้เลื่อนดูต่อ
+class _ContactBar extends StatelessWidget {
+  final List<_ChatContact> contacts;
+
+  const _ContactBar({required this.contacts});
+
+  Future<void> _call(BuildContext context, _ChatContact contact) async {
+    HapticFeedback.selectionClick();
+    final uri = Uri.parse('tel:${contact.phone}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('โทรออกไม่ได้ เบอร์ ${contact.phone}')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final single = contacts.length == 1;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        border: Border(
+          bottom: BorderSide(color: AppTheme.border(context), width: 1),
+        ),
+      ),
+      padding: EdgeInsets.symmetric(vertical: 10, horizontal: single ? 14 : 0),
+      child: single
+          ? _ContactCard(
+              contact: contacts.first,
+              onCall: () => _call(context, contacts.first),
+            )
+          : SizedBox(
+              height: 52,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                itemCount: contacts.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, i) => SizedBox(
+                  // ให้การ์ดถัดไปโผล่ขอบมาบอกว่ายังเลื่อนได้
+                  width: (MediaQuery.of(context).size.width * 0.72).clamp(
+                    240.0,
+                    320.0,
+                  ),
+                  child: _ContactCard(
+                    contact: contacts[i],
+                    onCall: () => _call(context, contacts[i]),
+                  ),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+class _ContactCard extends StatelessWidget {
+  final _ChatContact contact;
+  final VoidCallback onCall;
+
+  const _ContactCard({required this.contact, required this.onCall});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _Avatar(url: contact.avatarUrl, name: contact.name),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                contact.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.onSurface(context),
+                  letterSpacing: -0.1,
+                ),
+              ),
+              Text(
+                '${contact.roleLabel} · ${contact.phone}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        // ปุ่มโทรเป็นวงกลมทึบ แตะได้เต็มพื้นที่ตามขนาดขั้นต่ำที่ควรเป็น
+        Material(
+          color: AppTheme.primaryColor,
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: onCall,
+            customBorder: const CircleBorder(),
+            child: Tooltip(
+              message: 'โทรหา${contact.name}',
+              child: const SizedBox(
+                width: 40,
+                height: 40,
+                child: Icon(Icons.phone_rounded, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
