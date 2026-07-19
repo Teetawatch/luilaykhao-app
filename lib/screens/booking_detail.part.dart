@@ -178,6 +178,12 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 16),
 
+                // ของขวัญ 🎁 — ผู้ให้เห็นโค้ดไว้ส่งต่อ ผู้รับเห็นการ์ดคำอวยพร
+                if (_asBool(booking['is_gift'])) ...[
+                  _GiftCard(booking: booking, trip: trip, schedule: schedule),
+                  const SizedBox(height: 16),
+                ],
+
                 // สรุปทริป (Recap) — โผล่หลังจบทริปแล้ว ให้แชร์อวดเพื่อน
                 if (textOf(booking['status']) != 'cancelled' &&
                     _tripCompleted(schedule)) ...[
@@ -4499,6 +4505,230 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
               label: const Text('ยืนยันเปลี่ยนจุดรับ'),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// การ์ดของขวัญบนรายละเอียดการจอง 🎁
+/// - ผู้ให้ (ยังไม่ถูกรับ): โชว์โค้ดตัวใหญ่ + ปุ่มคัดลอก/ส่งให้ผู้รับ
+/// - ผู้ให้ (ถูกรับแล้ว): สถานะว่าผู้รับกดรับเรียบร้อย
+/// - ผู้รับ: การ์ดคำอวยพรจากผู้ให้
+class _GiftCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final Map<String, dynamic> trip;
+  final Map<String, dynamic> schedule;
+
+  const _GiftCard({
+    required this.booking,
+    required this.trip,
+    required this.schedule,
+  });
+
+  Map<String, dynamic> get _gift => asMap(booking['gift']);
+
+  String get _code => textOf(_gift['code']);
+
+  String get _shareUrl => textOf(_gift['share_url']);
+
+  String _shareMessage() {
+    final from = textOf(_gift['from_name'], 'เพื่อนของคุณ');
+    final title = textOf(trip['title'], 'ทริปเดินทาง');
+    final date = departureText(schedule);
+    final message = textOf(_gift['message']);
+    final url = _shareUrl;
+    return [
+      '🎁 $from ส่งของขวัญให้คุณ!',
+      'ทริป "$title" เดินทาง $date',
+      if (message.isNotEmpty) '"$message"',
+      '',
+      // ลิงก์เปิดหน้าเปิดของขวัญบนเว็บ + ปุ่มเปิดในแอปเพื่อกดรับ
+      if (url.isNotEmpty)
+        'เปิดของขวัญที่นี่:\n$url'
+      else
+        'เปิดแอปลุยลายเขา → โปรไฟล์ → รับของขวัญ',
+      'โค้ดของขวัญ: $_code',
+    ].join('\n');
+  }
+
+  Future<void> _copyCode(BuildContext context) async {
+    HapticFeedback.selectionClick();
+    await Clipboard.setData(ClipboardData(text: _code));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('คัดลอกโค้ดของขวัญแล้ว')),
+    );
+  }
+
+  Future<void> _share(BuildContext context) async {
+    HapticFeedback.selectionClick();
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: _shareMessage(), subject: 'ของขวัญทริปเดินทาง 🎁'),
+      );
+    } catch (_) {
+      if (context.mounted) await _copyCode(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gift = _gift;
+    if (gift.isEmpty) return const SizedBox.shrink();
+
+    final claimed = gift['claimed'] == true;
+    final viewerIsGiver = gift['viewer_is_giver'] == true;
+    final fullyPaid = gift['is_fully_paid'] == true;
+    final cancelled = textOf(booking['status']) == 'cancelled';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: AppTheme.cardDecoration(
+        context,
+        radius: 20,
+        borderColor: AppTheme.primaryColor.withValues(alpha: 0.35),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🎁', style: TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  viewerIsGiver
+                      ? 'ของขวัญที่คุณส่ง'
+                      : 'ของขวัญจาก ${textOf(gift['from_name'], 'คนพิเศษ')}',
+                  style: appFont(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+              if (claimed)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    'รับแล้ว',
+                    style: appFont(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (textOf(gift['message']).isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.subtleSurface(context),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                '"${textOf(gift['message'])}"',
+                style: appFont(
+                  fontSize: 13.5,
+                  height: 1.6,
+                  fontStyle: FontStyle.italic,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+            ),
+          ],
+          if (viewerIsGiver && !claimed && !cancelled) ...[
+            const SizedBox(height: 14),
+            if (!fullyPaid)
+              Text(
+                'ชำระเงินให้ครบก่อน แล้วโค้ดของขวัญจะพร้อมส่งให้ผู้รับ',
+                style: appFont(
+                  fontSize: 13,
+                  height: 1.6,
+                  color: AppTheme.mutedText(context),
+                ),
+              )
+            else ...[
+              // โค้ดตัวใหญ่ อ่านง่าย — แตะเพื่อคัดลอก
+              InkWell(
+                onTap: () => _copyCode(context),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.subtleSurface(context),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppTheme.border(context).withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _code,
+                        style: appFont(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 4,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.copy_rounded,
+                        size: 18,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => _share(context),
+                  icon: const Icon(Icons.send_rounded, size: 18),
+                  label: const Text('ส่งของขวัญให้ผู้รับ'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'ผู้รับกรอกโค้ดนี้ในแอป (โปรไฟล์ → รับของขวัญ) เพื่อรับทริปไปเป็นของตัวเอง',
+                style: appFont(
+                  fontSize: 12,
+                  height: 1.6,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ],
+          if (viewerIsGiver && claimed) ...[
+            const SizedBox(height: 10),
+            Text(
+              'ผู้รับกดรับของขวัญเรียบร้อยแล้ว ทริปนี้เป็นของผู้รับแล้ว 🎉',
+              style: appFont(
+                fontSize: 13,
+                height: 1.6,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+          ],
         ],
       ),
     );

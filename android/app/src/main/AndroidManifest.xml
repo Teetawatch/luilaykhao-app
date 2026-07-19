@@ -52,6 +52,20 @@
                     android:host="luilaykhao.com"
                     android:pathPrefix="/tracking"/>
             </intent-filter>
+            <!-- App Links: https://luilaykhao.com/gift/* เปิดแอปโดยตรง (ต้องมี assetlinks.json)
+                 autoVerify ให้ Android ตรวจ /.well-known/assetlinks.json อัตโนมัติ -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="luilaykhao.com"
+                    android:pathPrefix="/gift"/>
+                <data
+                    android:scheme="luilaykhao"
+                    android:host="gift"/>
+            </intent-filter>
         </activity>
         <meta-data
             android:name="flutterEmbedding"

@@ -31,6 +31,7 @@ import 'incident_list_screen.dart' show IncidentListScreen;
 import 'schedule_itinerary_screen.dart' show ScheduleItineraryScreen;
 import 'wishlist_screen.dart';
 import 'waitlist_screen.dart';
+import 'gift_screen.dart';
 import 'login_screen.dart';
 import 'payment_screen.dart';
 import 'sos_alert_screen.dart';
@@ -1041,6 +1042,12 @@ class TravelMenu extends StatelessWidget {
           label: 'คิวรอที่นั่ง',
           subtitle: 'ติดตามทริปที่เต็มแล้วลงคิวรอที่นั่งว่างไว้',
           onTap: () => _pushPremium(context, const WaitlistScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.redeem_rounded,
+          label: 'ของขวัญ',
+          subtitle: 'รับของขวัญด้วยโค้ด หรือดูของขวัญที่คุณส่ง',
+          onTap: () => _pushPremium(context, const GiftScreen()),
         ),
         _MenuItem(
           icon: Icons.reviews_outlined,

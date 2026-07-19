@@ -109,6 +109,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   final _travelerFormKey = GlobalKey();
   final _promo = TextEditingController();
   final _groupNotes = TextEditingController();
+  // ซื้อเป็นของขวัญ — ข้ามฟอร์มผู้เดินทาง ผู้รับเติมข้อมูลเองตอนกดรับ
+  bool _isGift = false;
+  final _giftRecipientName = TextEditingController();
+  final _giftFromName = TextEditingController();
+  final _giftMessage = TextEditingController();
   final List<_PassengerControllers> _passengers = [_PassengerControllers()];
 
   // Applied discount code — validated inline so the customer sees the final
@@ -305,6 +310,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     _stopSeatRealtimeRefresh();
     _promo.dispose();
     _groupNotes.dispose();
+    _giftRecipientName.dispose();
+    _giftFromName.dispose();
+    _giftMessage.dispose();
     for (final passenger in _passengers) {
       passenger.dispose();
     }
@@ -345,6 +353,19 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       _pickupPointId = null;
       _pickupRegion = null;
     }
+  }
+
+  /// เปิด/ปิดโหมดซื้อเป็นของขวัญ — เปิดครั้งแรก prefill ชื่อผู้ให้จากโปรไฟล์
+  void _setGiftMode(bool value) {
+    setState(() {
+      _isGift = value;
+      if (value && _giftFromName.text.trim().isEmpty) {
+        final user = context.read<AppProvider>().user;
+        final nickname = textOf(user?['nickname']);
+        final name = textOf(user?['name']);
+        _giftFromName.text = nickname.isNotEmpty ? nickname : name;
+      }
+    });
   }
 
   void _addPassenger() {
@@ -892,19 +913,33 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     return Column(
       key: const ValueKey('passenger-step'),
       children: [
-        TravelerFormSection(
-          key: _travelerFormKey,
-          passengers: _passengers,
-          groupNotes: _groupNotes,
+        GiftModeSection(
+          enabled: _isGift,
+          onChanged: _setGiftMode,
+          recipientName: _giftRecipientName,
+          fromName: _giftFromName,
+          message: _giftMessage,
+          travelerCount: _hasSeatMap ? _selectedSeatIds.length : _passengers.length,
           isSeatSelectionMode: _hasSeatMap,
-          selectedSeatIds: _hasSeatMap ? _selectedSeatList : const <String>[],
-          pickupPoints: _isJoinTrip ? const [] : _pickupPoints,
-          onAddPassenger: _addPassenger,
-          onRemovePassenger: _removePassenger,
-          onUseProfile: _fillPassengerFromProfile,
-          onUseWallet: _fillPassengerFromWallet,
+          onAddTraveler: _addPassenger,
+          onRemoveTraveler: _removePassenger,
         ),
         const SizedBox(height: 24),
+        if (!_isGift) ...[
+          TravelerFormSection(
+            key: _travelerFormKey,
+            passengers: _passengers,
+            groupNotes: _groupNotes,
+            isSeatSelectionMode: _hasSeatMap,
+            selectedSeatIds: _hasSeatMap ? _selectedSeatList : const <String>[],
+            pickupPoints: _isJoinTrip ? const [] : _pickupPoints,
+            onAddPassenger: _addPassenger,
+            onRemovePassenger: _removePassenger,
+            onUseProfile: _fillPassengerFromProfile,
+            onUseWallet: _fillPassengerFromWallet,
+          ),
+          const SizedBox(height: 24),
+        ],
         if (_addonOptions.isNotEmpty) ...[
           AddonSelectionSection(
             addons: _addonOptions,
@@ -1084,8 +1119,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกที่นั่ง')));
       return;
     }
-    // Validate per-passenger pickup points (ข้ามเมื่อปักหมุดจุดรับเอง)
-    if (!_isJoinTrip && _customPickup == null && _pickupPoints.isNotEmpty) {
+    // Validate per-passenger pickup points (ข้ามเมื่อปักหมุดจุดรับเอง
+    // หรือซื้อเป็นของขวัญ — ของขวัญใช้จุดรับระดับการจองจุดเดียว)
+    if (!_isGift && !_isJoinTrip && _customPickup == null && _pickupPoints.isNotEmpty) {
       for (var i = 0; i < _passengers.length; i++) {
         if (_passengers[i].pickupPointId.value == null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1149,7 +1185,23 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           'selected_rentals': _selectedRentals
               .map((r) => {'index': r.option.index, 'quantity': r.quantity})
               .toList(),
-        'passengers': _passengers.map((p) => p.payload()).toList(),
+        // ของขวัญ: ส่งแค่ชื่อผู้รับ — ข้อมูลจริงถูกเติมจากโปรไฟล์ผู้รับตอนกดรับ
+        'is_gift': _isGift,
+        if (_isGift) 'gift_from_name': _giftFromName.text.trim(),
+        if (_isGift && _giftMessage.text.trim().isNotEmpty)
+          'gift_message': _giftMessage.text.trim(),
+        'passengers': _isGift
+            ? List.generate(_passengers.length, (i) {
+                final recipient = _giftRecipientName.text.trim();
+                return {
+                  'name': i == 0 ? recipient : 'ผู้ร่วมทริปของ$recipient คนที่ ${i + 1}',
+                  if (i == 0) 'nickname': recipient,
+                  'pickup_point_id': (_isJoinTrip || _customPickup != null)
+                      ? null
+                      : _pickupPointId,
+                };
+              })
+            : _passengers.map((p) => p.payload()).toList(),
       });
       if (!mounted) return;
       Navigator.pushReplacement(

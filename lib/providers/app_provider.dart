@@ -999,6 +999,32 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// ดูรายละเอียดของขวัญจากโค้ด ก่อนกดรับ (ไม่เปิดเผยราคาให้ผู้รับ)
+  Future<Map<String, dynamic>> giftPreview(String code) async {
+    final response = await api.get('gifts/${code.trim().toUpperCase()}');
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// กดรับของขวัญ — การจองย้ายมาเป็นของผู้รับ แล้วรีเฟรชรายการจอง
+  Future<Map<String, dynamic>> claimGift(String code) async {
+    final response = await api.post(
+      'gifts/${code.trim().toUpperCase()}/claim',
+    );
+    final booking = Map<String, dynamic>.from(api.data(response) as Map);
+    await loadAccountData();
+    return booking;
+  }
+
+  /// ของขวัญที่ฉันเป็นผู้ให้ — โค้ด/สถานะการรับของแต่ละชิ้น
+  Future<List<Map<String, dynamic>>> sentGifts() async {
+    final response = await api.get('gifts/sent');
+    final data = api.data(response);
+    if (data is List) {
+      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return const [];
+  }
+
   /// Triggers an SOS, retrying on network/server failures with backoff.
   ///
   /// SOS must reach the server even on a weak (3G) connection, so each attempt

@@ -1687,3 +1687,136 @@ class _TravelerCard extends StatelessWidget {
     );
   }
 }
+
+/// ซื้อเป็นของขวัญ 🎁 — เปิดโหมดนี้แล้วข้ามฟอร์มผู้เดินทางทั้งหมด
+/// ผู้ให้กรอกแค่ชื่อผู้รับ + คำอวยพร ข้อมูลผู้เดินทางจริงจะถูกเติมจาก
+/// โปรไฟล์ของผู้รับตอนกดรับของขวัญในแอป
+class GiftModeSection extends StatelessWidget {
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+  final TextEditingController recipientName;
+  final TextEditingController fromName;
+  final TextEditingController message;
+  final int travelerCount;
+  final bool isSeatSelectionMode;
+  final VoidCallback onAddTraveler;
+  final VoidCallback onRemoveTraveler;
+
+  const GiftModeSection({
+    super.key,
+    required this.enabled,
+    required this.onChanged,
+    required this.recipientName,
+    required this.fromName,
+    required this.message,
+    required this.travelerCount,
+    required this.isSeatSelectionMode,
+    required this.onAddTraveler,
+    required this.onRemoveTraveler,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionShell(
+      title: 'ซื้อเป็นของขวัญ',
+      icon: Icons.card_giftcard_rounded,
+      trailing: Switch.adaptive(
+        value: enabled,
+        activeTrackColor: _softAccent,
+        onChanged: (value) {
+          HapticFeedback.selectionClick();
+          onChanged(value);
+        },
+      ),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: !enabled
+            ? Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'ซื้อทริปนี้ให้แฟน เพื่อน หรือคนพิเศษ — ชำระเงินแล้วรับโค้ดของขวัญส่งต่อให้ผู้รับกดรับในแอป',
+                  style: appFont(
+                    fontSize: 13,
+                    height: 1.6,
+                    color: _mutedTextColor(context),
+                  ),
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _PremiumTextField(
+                    controller: recipientName,
+                    label: 'ชื่อผู้รับของขวัญ',
+                    hint: 'เช่น น้องมายด์',
+                    icon: Icons.favorite_rounded,
+                    textCapitalization: TextCapitalization.words,
+                    validator: _requiredValidator('กรุณากรอกชื่อผู้รับของขวัญ'),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'จำนวนผู้เดินทาง',
+                          style: _labelStyle(context),
+                        ),
+                      ),
+                      if (isSeatSelectionMode)
+                        _SeatDrivenTravelerCount(count: travelerCount)
+                      else
+                        TravelerCounter(
+                          count: travelerCount,
+                          onAdd: onAddTraveler,
+                          onRemove: onRemoveTraveler,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _PremiumTextField(
+                    controller: fromName,
+                    label: 'จากผู้ให้',
+                    hint: 'ชื่อที่จะแสดงบนการ์ดของขวัญ',
+                    icon: Icons.person_outline_rounded,
+                    textCapitalization: TextCapitalization.words,
+                    validator: _requiredValidator('กรุณากรอกชื่อผู้ให้'),
+                  ),
+                  const SizedBox(height: 16),
+                  _PremiumTextField(
+                    controller: message,
+                    label: 'ข้อความถึงผู้รับ (ไม่บังคับ)',
+                    hint: 'เช่น สุขสันต์วันเกิดนะ ขอให้เที่ยวให้สนุก!',
+                    icon: Icons.mail_outline_rounded,
+                    maxLines: 3,
+                    textInputAction: TextInputAction.newline,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _softAccent.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _softAccent.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Text(
+                      'ไม่ต้องกรอกข้อมูลผู้เดินทาง — เมื่อผู้รับกดรับของขวัญ '
+                      'ระบบจะดึงข้อมูลจากโปรไฟล์ของผู้รับให้อัตโนมัติ '
+                      'หลังชำระเงินคุณจะได้โค้ดของขวัญไว้ส่งให้ผู้รับ',
+                      style: appFont(
+                        fontSize: 12.5,
+                        height: 1.6,
+                        color: _premiumText(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}

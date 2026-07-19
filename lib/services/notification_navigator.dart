@@ -5,6 +5,7 @@ import '../main.dart' show appNavigatorKey;
 import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../screens/chat_screen.dart';
+import '../screens/gift_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/join_booking_screen.dart';
 import '../screens/payment_screen.dart';
@@ -277,6 +278,18 @@ class NotificationNavigator {
   /// Returns true when the link was recognised so the caller can swallow
   /// it; unrecognised links fall through to the social-login handler.
   static bool handleDeepLink(Uri uri) {
+    // Universal / App Links — https://luilaykhao.com/gift/CODE เปิดหน้ารับของขวัญ
+    // (ลิงก์เว็บที่ผู้ให้แชร์) แมพ path segment แรกเป็น host แบบเดียวกับ custom scheme
+    if ((uri.scheme == 'https' || uri.scheme == 'http') &&
+        (uri.host == 'luilaykhao.com' || uri.host == 'www.luilaykhao.com')) {
+      final segments = uri.pathSegments;
+      if (segments.length >= 2 && segments.first == 'gift') {
+        _openGift(segments[1]);
+        return true;
+      }
+      return false;
+    }
+
     if (uri.scheme != 'luilaykhao') return false;
 
     switch (uri.host) {
@@ -300,8 +313,21 @@ class NotificationNavigator {
         if (token == null) return false;
         _openJoinBooking(token);
         return true;
+      case 'gift':
+        final code = _firstSegment(uri.pathSegments);
+        if (code == null) return false;
+        _openGift(code);
+        return true;
     }
     return false;
+  }
+
+  static void _openGift(String code) {
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => GiftScreen(initialCode: code)),
+      ),
+    );
   }
 
   static void _openJoinBooking(String token) {
