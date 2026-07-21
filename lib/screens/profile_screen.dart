@@ -397,6 +397,7 @@ class ProfileStatsSection extends StatelessWidget {
       return s != 'cancelled' && s != 'refunded';
     }).length;
     final tier = _cleanText(loyalty['tier'] ?? loyalty['level']);
+    final tierLabel = _cleanText(loyalty['tier_label']);
     final points = _numberValue(loyalty['points']);
     final nextLevelPoints = _numberValue(
       loyalty['next_level_points'],
@@ -465,7 +466,7 @@ class ProfileStatsSection extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _loyaltyTierLabel(tier),
+                          _loyaltyTierLabel(tier, label: tierLabel),
                           style: appFont(
                             color: AppTheme.primaryColor,
                             fontSize: 11.5,

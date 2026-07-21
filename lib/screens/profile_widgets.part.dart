@@ -983,15 +983,22 @@ String _statusLabel(String status) {
   };
 }
 
-/// Maps a loyalty tier code from the backend (regular/silver/gold) to its
-/// Thai display label. Falls back to the raw value for any future tier.
-String _loyaltyTierLabel(String tier) {
+/// ชื่อระดับสมาชิกที่จะแสดง
+///
+/// ใช้ `tier_label` ที่ backend ส่งมาเป็นหลักเสมอ — เดิมแอปแปลเองจากโค้ดระดับ
+/// ทำให้เว็บกับแอปเรียกชื่อไม่ตรงกัน (เว็บได้ "Silver Member" แอปได้ "ระดับเงิน")
+/// และพอ backend เพิ่มระดับใหม่ แอปก็โชว์โค้ดดิบออกมา
+///
+/// [fallbackCodes] เหลือไว้เผื่อ response เก่าที่ยังไม่มี tier_label เท่านั้น
+String _loyaltyTierLabel(String tier, {String label = ''}) {
+  if (label.trim().isNotEmpty) return label.trim();
+
   return switch (tier.toLowerCase()) {
-    'regular' => 'สมาชิกทั่วไป',
-    'silver' => 'ระดับเงิน',
-    'gold' => 'ระดับทอง',
-    'platinum' => 'ระดับแพลทินัม',
-    _ => tier,
+    'friend' => 'เพื่อนร่วมทาง',
+    'frequent' => 'ขาประจำ',
+    'comrade' => 'สหายนักเดิน',
+    'insider' => 'คนกันเอง',
+    _ => 'เพื่อนร่วมทาง',
   };
 }
 
