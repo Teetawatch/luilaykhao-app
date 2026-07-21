@@ -34,6 +34,7 @@ part 'trip_detail_info.part.dart';
 part 'trip_detail_plan.part.dart';
 part 'trip_detail_content.part.dart';
 part 'trip_detail_reviews.part.dart';
+part 'trip_detail_readiness.part.dart';
 part 'trip_detail_related.part.dart';
 part 'trip_detail_booking.part.dart';
 part 'trip_detail_widgets.part.dart';
@@ -751,6 +752,10 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
           isExpanded: widget.isDescriptionExpanded,
           onToggle: widget.onDescriptionToggle,
         ),
+      // "ทริปนี้ไหวไหม" — วางก่อนแกลเลอรี ให้เห็นความจริงก่อนโดนรูปสวยชวนซื้อ
+      // self-loading + ซ่อนตัวเองเมื่อทริปไม่มีระยะทาง/ความสูงให้เทียบ
+      if (textOf(trip['slug']).isNotEmpty)
+        TripReadinessSection(slug: textOf(trip['slug'])),
       if (_detailGalleryImages(trip).isNotEmpty)
         PhotoGallerySection(trip: trip),
       if (_tripVideos(trip).isNotEmpty) VideoGallerySection(trip: trip),

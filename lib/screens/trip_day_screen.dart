@@ -9,8 +9,10 @@ import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
+import '../widgets/rally_card.dart';
 import '../widgets/sos_button.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/trip_progress_card.dart';
 import '../widgets/weather_card.dart';
 import 'chat_screen.dart';
 import 'pre_trip_checklist_screen.dart';
@@ -81,6 +83,20 @@ class TripDayScreen extends StatelessWidget {
           // immediate rather than tucked behind a tile.
           if (_withinTripWindow && _scheduleId > 0) ...[
             SosButton(scheduleId: _scheduleId),
+            const SizedBox(height: 16),
+          ],
+
+          // ชวนเพื่อนเติมรอบที่ยังไม่การันตีออกเดินทาง — ซ่อนตัวเองเมื่อรอบ
+          // ครบแล้ว/ยังไกล/เต็มแล้ว
+          if (_scheduleId > 0) ...[
+            RallyCard(scheduleId: _scheduleId),
+            const SizedBox(height: 16),
+          ],
+
+          // "ตอนนี้ถึงไหนแล้ว" — ซ่อนตัวเองเมื่อรอบยังไม่มีกำหนดการ
+          // อ่านจากแคชได้เมื่อไม่มีสัญญาณ ซึ่งเป็นสถานการณ์ปกติบนดอย
+          if (textOf(booking['booking_ref']).isNotEmpty) ...[
+            TripProgressCard(bookingRef: textOf(booking['booking_ref'])),
             const SizedBox(height: 16),
           ],
 

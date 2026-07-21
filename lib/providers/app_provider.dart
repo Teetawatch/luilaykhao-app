@@ -517,6 +517,60 @@ class AppProvider extends ChangeNotifier {
     return List<dynamic>.from(api.data(response) ?? []);
   }
 
+  // ── "ทริปนี้ไหวไหม" ────────────────────────────────────────────────────────
+  // เทียบระยะทาง/ความสูงของทริปกับสิ่งที่ผู้ใช้เคยเดินมา (ประวัติจริงก่อน
+  // ถ้าไม่มีจึงใช้ค่าที่กรอกเอง) endpoint เป็น public จึงเรียกได้แม้ยังไม่ล็อกอิน
+
+  Future<Map<String, dynamic>> tripReadiness(String slug) async {
+    final response = await api.get('trips/$slug/readiness');
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  // ── ความคืบหน้าระหว่างทริป ────────────────────────────────────────────────
+  // สร้างจากกำหนดการที่ทีมงานกดยืนยัน ไม่ใช้ GPS ลูกค้า
+  //
+  // แคชผลไว้ต่อ booking เพราะหน้านี้ถูกเปิดตอนอยู่บนดอยที่มักไม่มีสัญญาณ
+  // ผู้ใช้ควรเห็นหมุดล่าสุดที่โหลดไว้ แทนที่จะเห็นจอเปล่า
+
+  static String _progressCacheKey(String ref) => 'trip_progress.$ref';
+
+  /// ความคืบหน้าที่แคชไว้ล่าสุดของการจองนี้ (null เมื่อยังไม่เคยโหลดสำเร็จ)
+  Map<String, dynamic>? cachedTripProgress(String ref) {
+    final cached = OfflineCache.instance.readAccount<Map>(
+      _progressCacheKey(ref),
+    );
+    return cached == null ? null : Map<String, dynamic>.from(cached);
+  }
+
+  Future<Map<String, dynamic>> tripProgress(String ref) async {
+    final response = await api.get('bookings/$ref/progress');
+    final data = Map<String, dynamic>.from(api.data(response) ?? const {});
+
+    OfflineCache.instance.writeAccount(_progressCacheKey(ref), {
+      ...data,
+      'cached_at': DateTime.now().toIso8601String(),
+    });
+
+    return data;
+  }
+
+  /// "ช่วยกันเปิดรอบ" — สถานะการชวนเพื่อนของรอบนี้ (403 เมื่อยังไม่ได้จอง)
+  Future<Map<String, dynamic>> scheduleRally(int scheduleId) async {
+    final response = await api.get('schedules/$scheduleId/rally');
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// บันทึกค่าอ้างอิงที่ผู้ใช้กรอกเอง (อย่างน้อยหนึ่งค่า)
+  Future<void> saveHikingBaseline({
+    double? maxDistanceKm,
+    int? maxElevationGainM,
+  }) async {
+    await api.post('me/hiking-baseline', body: {
+      'max_distance_km': ?maxDistanceKm,
+      'max_elevation_gain_m': ?maxElevationGainM,
+    });
+  }
+
   // ── Waitlist (คิวรอที่นั่งว่าง) ─────────────────────────────────────────────
   // Backend manages the queue, offers seats on cancellation (15-min TTL) and
   // pushes waitlist_offered/expired notifications; the app just drives the
