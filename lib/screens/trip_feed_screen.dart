@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/tier_badge.dart';
 
 /// ฟีดรูปหลังทริป (community feed) — โพสต์สาธารณะจากลูกค้าที่เดินทางจริง
 /// ใช้ได้ 2 โหมด: ฟีดรวมทุกทริป (slug == null) และฟีดของทริปเดียว
@@ -372,6 +373,7 @@ class _TripPostCardState extends State<_TripPostCard> {
   @override
   Widget build(BuildContext context) {
     final user = asMap(post['user']);
+    final tierBadge = TierBadge.fromUser(user, compact: true);
     final trip = asMap(post['trip']);
     final photos = asList(post['photos']).map(asMap).toList();
     final caption = textOf(post['caption']);
@@ -414,13 +416,25 @@ class _TripPostCardState extends State<_TripPostCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        textOf(user['name'], 'นักเดินทาง'),
-                        style: appFont(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13.5,
-                          color: AppTheme.onSurface(context),
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              textOf(user['name'], 'นักเดินทาง'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13.5,
+                                color: AppTheme.onSurface(context),
+                              ),
+                            ),
+                          ),
+                          if (tierBadge != null) ...[
+                            const SizedBox(width: 6),
+                            tierBadge,
+                          ],
+                        ],
                       ),
                       Text(
                         widget.showTripName &&

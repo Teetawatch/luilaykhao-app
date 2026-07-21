@@ -2370,6 +2370,7 @@ class _HomeReviewCard extends StatelessWidget {
     final comment = textOf(review['comment']).trim();
     final tripTitle = textOf(review['trip_title']).trim();
     final initial = name.isNotEmpty ? name.characters.first.toUpperCase() : '?';
+    final tierBadge = TierBadge.fromUser(user, compact: true);
     final images = asList(review['images'])
         .map((e) => ApiConfig.mediaUrl(e.toString()))
         .where((s) => s.isNotEmpty)
@@ -2434,6 +2435,10 @@ class _HomeReviewCard extends StatelessWidget {
                             size: 13,
                             color: const Color(0xFFE8A117),
                           ),
+                        if (tierBadge != null) ...[
+                          const SizedBox(width: 6),
+                          Flexible(child: tierBadge),
+                        ],
                       ],
                     ),
                   ],

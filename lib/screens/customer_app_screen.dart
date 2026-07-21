@@ -29,6 +29,7 @@ import '../widgets/review_dialog.dart';
 import '../widgets/route_map_card.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/sos_button.dart';
+import '../widgets/tier_badge.dart';
 import '../widgets/travel_widgets.dart';
 import '../widgets/vehicle_seat_map.dart';
 import '../widgets/weather_card.dart';

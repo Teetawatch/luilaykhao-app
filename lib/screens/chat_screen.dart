@@ -17,6 +17,7 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/weather_card.dart';
+import '../widgets/tier_badge.dart';
 import 'schedule_itinerary_screen.dart';
 
 /// Group chat room for a trip schedule. Members are the customers booked on
@@ -2341,6 +2342,7 @@ class _MessageBubble extends StatelessWidget {
         ? user['nickname'].toString()
         : (user['name']?.toString() ?? 'ผู้ใช้');
     final avatarUrl = ApiConfig.mediaUrl(user['avatar_url']);
+    final tierBadge = TierBadge.fromUser(user, compact: true);
 
     final isDeleted = message['is_deleted'] == true;
     final isEdited = message['edited_at'] != null;
@@ -2433,6 +2435,10 @@ class _MessageBubble extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         _RoleTag(role: role),
+                        if (tierBadge != null) ...[
+                          const SizedBox(width: 4),
+                          tierBadge,
+                        ],
                       ],
                     ),
                   ),
@@ -3453,6 +3459,7 @@ class _MemberTile extends StatelessWidget {
         ? member['nickname'].toString()
         : (member['name']?.toString() ?? 'ผู้ใช้');
     final role = member['role']?.toString() ?? 'customer';
+    final tierBadge = TierBadge.fromUser(member, compact: true);
     final isMe = member['is_me'] == true;
     final avatarUrl = ApiConfig.mediaUrl(member['avatar_url']);
     // Staff/admin expose a phone so travellers can reach their guide (customer
@@ -3496,6 +3503,7 @@ class _MemberTile extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           _RoleTag(role: role, alwaysShow: true),
+          if (tierBadge != null) ...[const SizedBox(width: 4), tierBadge],
           if (phone.isNotEmpty && !isMe) ...[
             const SizedBox(width: 6),
             IconButton(
