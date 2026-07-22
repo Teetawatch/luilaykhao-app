@@ -3467,10 +3467,164 @@ class _YourTripSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          // ยอดที่ยังต้องชำระ วางไว้เหนือการ์ดทริป — ของค้างจ่ายต้องมาหาลูกค้า
+          // ไม่ใช่ให้ลูกค้าไปหาว่าจ่ายที่ไหน
+          _OutstandingPaymentBanner(bookings: upcoming),
           _HomeNextTripCard(booking: next),
         ],
       ),
     );
+  }
+}
+
+/// แถบยอดค้างชำระ — กดแล้วไปหน้าชำระเงินของการจองนั้นทันที
+///
+/// เลือกการจองที่ครบกำหนดเร็วที่สุดมาแสดงหนึ่งรายการ ถ้ามีหลายรายการจะบอก
+/// จำนวนที่เหลือต่อท้าย เพื่อไม่ให้หน้าแรกกลายเป็นรายการบิล
+class _OutstandingPaymentBanner extends StatelessWidget {
+  final List<Map<String, dynamic>> bookings;
+
+  const _OutstandingPaymentBanner({required this.bookings});
+
+  /// ยอดที่ยังต้องจ่ายของการจองหนึ่ง — 0 เมื่อจ่ายครบหรือรอตรวจสลิปอยู่
+  static double _outstanding(Map<String, dynamic> booking) {
+    final status = textOf(booking['status']);
+    if (status == 'cancelled') return 0;
+
+    final balance = double.tryParse('${booking['balance_amount'] ?? 0}') ?? 0;
+    if (balance > 0 && booking['balance_paid_at'] == null) return balance;
+
+    final total = double.tryParse('${booking['total_amount'] ?? 0}') ?? 0;
+    final paid = double.tryParse('${booking['paid_amount'] ?? 0}') ?? 0;
+    final remaining = total - paid;
+
+    return remaining > 0 ? remaining : 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final due = bookings
+        .where((b) => _outstanding(b) > 0)
+        .toList()
+      ..sort((a, b) {
+        final ad = DateTime.tryParse(textOf(a['balance_due_at'])) ??
+            bookingTravelDate(a) ??
+            DateTime(2100);
+        final bd = DateTime.tryParse(textOf(b['balance_due_at'])) ??
+            bookingTravelDate(b) ??
+            DateTime(2100);
+        return ad.compareTo(bd);
+      });
+
+    if (due.isEmpty) return const SizedBox.shrink();
+
+    final booking = due.first;
+    final amount = _outstanding(booking);
+    final ref = textOf(booking['booking_ref']);
+    final dueAt = DateTime.tryParse(textOf(booking['balance_due_at']));
+    final daysLeft = dueAt == null
+        ? null
+        : dueAt.difference(DateTime.now()).inDays;
+    final overdue = daysLeft != null && daysLeft < 0;
+
+    final tone = overdue ? AppTheme.errorColor : AppTheme.warningColor;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: ref.isEmpty
+              ? null
+              : () {
+                  HapticFeedback.selectionClick();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PaymentScreen(bookingRef: ref),
+                    ),
+                  );
+                },
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: tone.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: tone.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.account_balance_wallet_rounded, size: 20, color: tone),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'ยังต้องชำระ ${money(amount)}',
+                        style: appFont(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF063F46),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _subtitle(booking, daysLeft, overdue, due.length),
+                        style: appFont(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tone,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    'ชำระเงิน',
+                    style: appFont(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _subtitle(
+    Map<String, dynamic> booking,
+    int? daysLeft,
+    bool overdue,
+    int total,
+  ) {
+    final title = textOf(asMap(booking['trip'])['title'], 'ทริปของคุณ');
+    final more = total > 1 ? ' · อีก ${total - 1} รายการ' : '';
+
+    if (overdue) {
+      return 'เกินกำหนดชำระ ${-daysLeft!} วัน · $title$more';
+    }
+    if (daysLeft != null) {
+      return daysLeft == 0
+          ? 'ครบกำหนดวันนี้ · $title$more'
+          : 'ครบกำหนดในอีก $daysLeft วัน · $title$more';
+    }
+    return '$title$more';
   }
 }
 

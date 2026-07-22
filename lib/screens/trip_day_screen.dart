@@ -12,6 +12,7 @@ import '../utils/thai_date.dart';
 import '../widgets/rally_card.dart';
 import '../widgets/sos_button.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/right_now_card.dart';
 import '../widgets/trek_recorder_card.dart';
 import '../widgets/trip_progress_card.dart';
 import '../widgets/weather_card.dart';
@@ -79,6 +80,14 @@ class TripDayScreen extends StatelessWidget {
             returnDate: _return,
           ),
           const SizedBox(height: 16),
+
+          // "ตอนนี้ต้องทำอะไร" — บรรทัดเดียวที่ตอบคำถามของคนที่ยืนรอรถอยู่
+          // ซ่อนตัวเองเมื่อยังไม่มีอะไรจะบอก
+          if (_withinTripWindow &&
+              textOf(booking['booking_ref']).isNotEmpty) ...[
+            RightNowCard(bookingRef: textOf(booking['booking_ref'])),
+            const SizedBox(height: 16),
+          ],
 
           // SOS first while on/near the trip — it's the one action that must be
           // immediate rather than tucked behind a tile.

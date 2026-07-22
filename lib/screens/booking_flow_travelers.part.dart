@@ -69,6 +69,7 @@ class TravelerFormSection extends StatelessWidget {
   final VoidCallback onRemovePassenger;
   final ValueChanged<int> onUseProfile;
   final ValueChanged<int> onUseWallet;
+  final ValueChanged<int> onUseSavedTraveller;
   final List<dynamic> pickupPoints;
 
   const TravelerFormSection({
@@ -81,6 +82,7 @@ class TravelerFormSection extends StatelessWidget {
     required this.onRemovePassenger,
     required this.onUseProfile,
     required this.onUseWallet,
+    required this.onUseSavedTraveller,
     this.pickupPoints = const [],
   });
 
@@ -109,6 +111,7 @@ class TravelerFormSection extends StatelessWidget {
               pickupPoints: pickupPoints,
               onUseProfile: () => onUseProfile(index),
               onUseWallet: () => onUseWallet(index),
+              onUseSavedTraveller: () => onUseSavedTraveller(index),
             );
           }),
           AnimatedSwitcher(
@@ -1164,6 +1167,7 @@ class _TravelerCard extends StatelessWidget {
   final List<dynamic> pickupPoints;
   final VoidCallback onUseProfile;
   final VoidCallback onUseWallet;
+  final VoidCallback onUseSavedTraveller;
 
   const _TravelerCard({
     required this.index,
@@ -1173,6 +1177,7 @@ class _TravelerCard extends StatelessWidget {
     this.pickupPoints = const [],
     required this.onUseProfile,
     required this.onUseWallet,
+    required this.onUseSavedTraveller,
   });
 
   @override
@@ -1238,11 +1243,27 @@ class _TravelerCard extends StatelessWidget {
                 onSelected: (val) {
                   if (val == 'profile') onUseProfile();
                   if (val == 'wallet') onUseWallet();
+                  if (val == 'book') onUseSavedTraveller();
                 },
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 itemBuilder: (_) => [
+                  // สมุดผู้ร่วมเดินทางอยู่บนสุด — เป็นทางที่ใช้บ่อยที่สุดเมื่อ
+                  // จองให้คนอื่น ส่วนโปรไฟล์ใช้ได้กับตัวเองคนเดียว
+                  PopupMenuItem(
+                    value: 'book',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.people_alt_rounded,
+                            size: 18, color: _softAccent),
+                        const SizedBox(width: 10),
+                        Text('สมุดผู้ร่วมเดินทาง',
+                            style: appFont(
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
                   PopupMenuItem(
                     value: 'profile',
                     child: Row(

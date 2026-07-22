@@ -331,6 +331,12 @@ class _PassengerControllers {
     halalFood.value = wallet['halal_food'] == true;
   }
 
+  /// เติมจากสมุดผู้ร่วมเดินทาง — payload มาจาก backend ในรูปแบบเดียวกับ
+  /// โปรไฟล์อยู่แล้ว จึงใช้ตัวแปลงชุดเดียวกัน
+  void applySavedTraveller(Map<String, dynamic> traveller) {
+    applyProfile(traveller);
+  }
+
   void applyProfile(Map<String, dynamic> user) {
     title.text = _profileTitle(user['title']);
     name.text = textOf(user['name']);

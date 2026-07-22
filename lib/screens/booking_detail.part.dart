@@ -191,6 +191,17 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 16),
                 ],
 
+                // เก็บผู้ร่วมเดินทางเข้าสมุด — ตรงนี้ข้อมูลถูกกรอกครบไปแล้ว
+                // การจองครั้งหน้าจึงเหลือแค่กดเลือกชื่อ
+                if (textOf(booking['status']) != 'cancelled' &&
+                    asList(booking['passengers']).isNotEmpty) ...[
+                  _SaveTravellersButton(
+                    bookingRef: textOf(booking['booking_ref']),
+                    passengerCount: asList(booking['passengers']).length,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // เพิ่มลงปฏิทิน — กันลืมรอบ โดยเฉพาะรอบที่รถออกคืนก่อนวันทริป
                 if (textOf(booking['status']) != 'cancelled' &&
                     _realDepartureDate(schedule) != null) ...[
@@ -295,6 +306,13 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                               ],
                             ),
                           ),
+                          // ให้เพื่อนกรอกข้อมูลของตัวเอง — คนจองจะได้ไม่ต้อง
+                          // ไล่ถามเลขบัตร/โรคประจำตัวทางแชท
+                          if (textOf(booking['status']) != 'cancelled')
+                            _PassengerInviteButton(
+                              bookingRef: textOf(booking['booking_ref']),
+                              passenger: p,
+                            ),
                         ],
                       ),
                     ),
@@ -1460,6 +1478,208 @@ class _TripRecapButton extends StatelessWidget {
             const Icon(Icons.auto_awesome_rounded,
                 size: 17, color: Colors.white),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ปุ่มสร้างลิงก์ให้ผู้โดยสารคนนั้นกรอกข้อมูลของตัวเอง แล้วแชร์ต่อทันที
+///
+/// ลิงก์เป็นหน้าเว็บธรรมดา เพื่อนไม่ต้องมีแอปและไม่ต้องสมัครสมาชิก เปิดใน
+/// เบราว์เซอร์ของ LINE ได้ตรง ๆ
+class _PassengerInviteButton extends StatefulWidget {
+  final String bookingRef;
+  final Map<String, dynamic> passenger;
+
+  const _PassengerInviteButton({
+    required this.bookingRef,
+    required this.passenger,
+  });
+
+  @override
+  State<_PassengerInviteButton> createState() => _PassengerInviteButtonState();
+}
+
+class _PassengerInviteButtonState extends State<_PassengerInviteButton> {
+  bool _busy = false;
+
+  Future<void> _invite() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    HapticFeedback.selectionClick();
+
+    final messenger = ScaffoldMessenger.of(context);
+    final passengerId =
+        int.tryParse(textOf(widget.passenger['id'])) ?? 0;
+
+    try {
+      final result = await context.read<AppProvider>().createPassengerInvite(
+        widget.bookingRef,
+        passengerId,
+      );
+      if (!mounted) return;
+      setState(() => _busy = false);
+
+      final url = textOf(result['url']);
+      if (url.isEmpty) throw Exception('no url');
+
+      final tripName = textOf(
+        asMap(asMap(widget.passenger['booking'])['trip'])['title'],
+      );
+
+      await SharePlus.instance.share(
+        ShareParams(
+          text: tripName.isEmpty
+              ? 'ช่วยกรอกข้อมูลผู้เดินทางให้หน่อยนะ (ใช้เวลาไม่ถึง 2 นาที)\n$url'
+              : 'ช่วยกรอกข้อมูลผู้เดินทางสำหรับทริป $tripName ให้หน่อยนะ\n$url',
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('สร้างลิงก์ไม่สำเร็จ ลองใหม่อีกครั้ง')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'ส่งลิงก์ให้กรอกข้อมูลเอง',
+      onPressed: _busy ? null : _invite,
+      icon: _busy
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              Icons.person_add_alt_rounded,
+              size: 19,
+              color: AppTheme.mutedText(context),
+            ),
+    );
+  }
+}
+
+/// "เก็บผู้ร่วมเดินทางไว้ใช้ครั้งหน้า" — คัดลอกผู้โดยสารของการจองนี้เข้าสมุด
+/// ส่วนตัว คนที่มีอยู่แล้วจะถูกข้าม กดซ้ำจึงไม่ได้รายชื่อซ้ำ
+class _SaveTravellersButton extends StatefulWidget {
+  final String bookingRef;
+  final int passengerCount;
+
+  const _SaveTravellersButton({
+    required this.bookingRef,
+    required this.passengerCount,
+  });
+
+  @override
+  State<_SaveTravellersButton> createState() => _SaveTravellersButtonState();
+}
+
+class _SaveTravellersButtonState extends State<_SaveTravellersButton> {
+  bool _saving = false;
+  bool _done = false;
+
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    HapticFeedback.selectionClick();
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final result = await context
+          .read<AppProvider>()
+          .importTravellersFromBooking(widget.bookingRef);
+      if (!mounted) return;
+
+      final created = int.tryParse('${result['created_count'] ?? 0}') ?? 0;
+      setState(() {
+        _saving = false;
+        _done = true;
+      });
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            created > 0
+                ? 'เก็บผู้ร่วมเดินทาง \$created คนเข้าสมุดแล้ว'
+                : 'ทุกคนอยู่ในสมุดอยู่แล้ว',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _done || _saving ? null : _save,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppTheme.subtleSurface(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.border(context)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                _done ? Icons.check_circle_rounded : Icons.people_alt_rounded,
+                size: 20,
+                color: _done
+                    ? AppTheme.primaryColor
+                    : AppTheme.mutedText(context),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _done
+                          ? 'เก็บเข้าสมุดแล้ว'
+                          : 'เก็บผู้ร่วมเดินทางไว้ใช้ครั้งหน้า',
+                      style: appFont(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _done
+                          ? 'ครั้งหน้าเลือกชื่อจากสมุดได้เลย'
+                          : 'จองรอบหน้าไม่ต้องกรอกใหม่ทั้ง ${widget.passengerCount} คน',
+                      style: appFont(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_saving)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
         ),
       ),
     );

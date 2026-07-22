@@ -28,6 +28,7 @@ class ScheduleItineraryScreen extends StatefulWidget {
 class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
   List<Map<String, dynamic>> _items = const [];
   bool _loading = true;
+  bool _fromCache = false;
   String? _error;
   int? _togglingId;
 
@@ -39,6 +40,17 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
 
   Future<void> _load() async {
     final app = context.read<AppProvider>();
+
+    // แสดงของที่แคชไว้ก่อน แล้วค่อยไปเอาของสดตามหลัง — บนดอยมักไม่มีสัญญาณ
+    final cached = app.cachedScheduleItinerary(widget.scheduleId);
+    if (cached != null && cached.isNotEmpty && mounted) {
+      setState(() {
+        _items = cached;
+        _loading = false;
+        _fromCache = true;
+      });
+    }
+
     try {
       final list = await app.scheduleItinerary(widget.scheduleId);
       if (!mounted) return;
@@ -46,12 +58,14 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
         _items = list;
         _loading = false;
         _error = null;
+        _fromCache = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        // มีของแคชอยู่แล้วก็ไม่ต้องขึ้น error — ผู้ใช้ยังใช้งานได้
+        _error = _items.isEmpty ? e.toString() : null;
       });
     }
   }
@@ -112,10 +126,46 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
           ],
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        color: AppTheme.primaryColor,
-        child: _buildBody(),
+      body: Column(
+        children: [
+          // บอกตรง ๆ ว่ากำลังดูของที่บันทึกไว้ ไม่ใช่ของสด
+          if (_fromCache)
+            Container(
+              width: double.infinity,
+              color: AppTheme.subtleSurface(context),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.cloud_off_rounded,
+                    size: 15,
+                    color: AppTheme.mutedText(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'กำลังแสดงกำหนดการที่บันทึกไว้ (ออฟไลน์)',
+                      style: appFont(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _load,
+              color: AppTheme.primaryColor,
+              child: _buildBody(),
+            ),
+          ),
+        ],
       ),
     );
   }

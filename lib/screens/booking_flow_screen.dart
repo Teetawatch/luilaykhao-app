@@ -11,6 +11,8 @@ import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../services/realtime_service.dart';
 import '../theme/app_theme.dart';
+import '../services/booking_draft_store.dart';
+import '../widgets/saved_traveller_picker.dart';
 import '../widgets/travel_widgets.dart';
 import 'custom_pickup_picker_screen.dart';
 import 'document_wallet_screen.dart';
@@ -303,6 +305,136 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     if (!_isJoinTrip) {
       _loadSeatMap(preserveSelection: initialSeatIds.isNotEmpty);
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _offerDraft());
+  }
+
+  String get _draftSlug => textOf(widget.trip['slug']);
+
+  /// Offers back a booking the customer started and did not finish. Asked once
+  /// on entry rather than restored silently — reappearing form data nobody
+  /// asked for is worse than retyping it.
+  Future<void> _offerDraft() async {
+    // Resuming a locked-seat flow already carries its own state; a draft on top
+    // of that would fight with it.
+    if (widget.resumeLockedSeats || widget.initialSeatIds.isNotEmpty) return;
+
+    final draft = await BookingDraftStore.load(_draftSlug);
+    if (draft == null || !mounted) return;
+    if (!BookingDraftStore.isWorthRestoring(draft)) return;
+
+    final restore = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('กรอกค้างไว้เมื่อครั้งก่อน'),
+        content: const Text(
+          'พบข้อมูลผู้เดินทางที่คุณกรอกค้างไว้สำหรับทริปนี้ '
+          'ต้องการกรอกต่อจากเดิมไหม?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('เริ่มใหม่'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('กรอกต่อ'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (restore != true) {
+      await BookingDraftStore.clear(_draftSlug);
+      return;
+    }
+
+    _applyDraft(draft);
+  }
+
+  void _applyDraft(Map<String, dynamic> draft) {
+    final passengers = (draft['passengers'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    if (passengers.isEmpty) return;
+
+    setState(() {
+      // Seats are deliberately not restored — a lock from days ago is gone and
+      // the seat map may have changed underneath.
+      _syncPassengerCount(passengers.length);
+      for (var i = 0; i < passengers.length && i < _passengers.length; i++) {
+        _passengers[i].applyProfile(passengers[i]);
+      }
+
+      _groupNotes.text = textOf(draft['group_notes']);
+
+      final scheduleId = int.tryParse('${draft['schedule_id'] ?? ''}');
+      if (scheduleId != null &&
+          widget.schedules.any(
+            (s) => asMap(s)['id'].toString() == scheduleId.toString(),
+          )) {
+        _scheduleId = scheduleId;
+        _syncPickup(_selectedSchedule);
+      }
+
+      final pickupId = int.tryParse('${draft['pickup_point_id'] ?? ''}');
+      if (pickupId != null &&
+          _pickupPoints.any(
+            (p) => asMap(p)['id'].toString() == pickupId.toString(),
+          )) {
+        _pickupPointId = pickupId;
+      }
+
+      _selectedAddonIndexes
+        ..clear()
+        ..addAll(
+          (draft['addons'] as List? ?? const [])
+              .map((e) => int.tryParse('$e'))
+              .whereType<int>()
+              .where((i) => i >= 0 && i < _addonOptions.length),
+        );
+
+      _rentalQuantities.clear();
+      final rentals = draft['rentals'];
+      if (rentals is Map) {
+        rentals.forEach((key, value) {
+          final index = int.tryParse('$key');
+          final qty = int.tryParse('$value');
+          if (index != null &&
+              qty != null &&
+              qty > 0 &&
+              index >= 0 &&
+              index < _rentalOptions.length) {
+            _rentalQuantities[index] = qty;
+          }
+        });
+      }
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('กรอกข้อมูลที่ค้างไว้ให้แล้ว')),
+    );
+  }
+
+  /// Saves quietly as the customer moves between steps. Never blocks or warns —
+  /// a draft that fails to save should be invisible.
+  void _saveDraft() {
+    if (_draftSlug.isEmpty) return;
+    BookingDraftStore.save(
+      tripSlug: _draftSlug,
+      draft: {
+        'schedule_id': _scheduleId,
+        'pickup_point_id': _pickupPointId,
+        'group_notes': _groupNotes.text,
+        'passengers': [for (final p in _passengers) p.payload()],
+        'addons': _selectedAddonIndexes.toList(),
+        'rentals': _rentalQuantities.map((k, v) => MapEntry('$k', v)),
+      },
+    );
   }
 
   @override
@@ -398,6 +530,26 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('ดึงข้อมูลโปรไฟล์ให้ผู้เดินทางคนที่ ${index + 1} แล้ว'),
+      ),
+    );
+  }
+
+  /// เลือกคนจากสมุดผู้ร่วมเดินทางมากรอกให้ — ทางที่เร็วที่สุดเมื่อจองให้คนเดิม
+  /// เพราะโปรไฟล์ใช้ได้กับตัวเองคนเดียว และ Wallet เก็บได้แค่คนเดียว
+  Future<void> _fillPassengerFromSavedBook(int index) async {
+    if (index < 0 || index >= _passengers.length) return;
+
+    final picked = await SavedTravellerPicker.show(context);
+    if (picked == null || !mounted) return;
+    if (index >= _passengers.length) return;
+
+    HapticFeedback.selectionClick();
+    setState(() => _passengers[index].applySavedTraveller(picked));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'กรอก ${picked['name'] ?? ''} ให้ผู้เดินทางคนที่ ${index + 1} แล้ว',
+        ),
       ),
     );
   }
@@ -742,6 +894,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   Future<void> _goNext() async {
     FocusScope.of(context).unfocus();
     final step = _safeCurrentStep;
+    // Anything typed so far survives leaving the screen from here on.
+    _saveDraft();
 
     if (step == 0) {
       if (!_validatePickupStep()) return;
@@ -779,6 +933,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   void _goBack() {
     FocusScope.of(context).unfocus();
+    _saveDraft();
     final step = _safeCurrentStep;
     if (step == 0) {
       Navigator.pop(context);
@@ -937,6 +1092,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             onRemovePassenger: _removePassenger,
             onUseProfile: _fillPassengerFromProfile,
             onUseWallet: _fillPassengerFromWallet,
+            onUseSavedTraveller: _fillPassengerFromSavedBook,
           ),
           const SizedBox(height: 24),
         ],
@@ -1203,6 +1359,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
               })
             : _passengers.map((p) => p.payload()).toList(),
       });
+      // The booking exists now; the draft has nothing left to protect and
+      // carries ID numbers, so it goes immediately.
+      await BookingDraftStore.clear(_draftSlug);
       if (!mounted) return;
       Navigator.pushReplacement(
         context,

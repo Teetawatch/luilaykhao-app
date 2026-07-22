@@ -10,6 +10,7 @@ import '../config/api_endpoints.dart';
 import '../models/sos_alert.dart';
 import '../services/analytics_service.dart';
 import '../services/api_client.dart';
+import '../services/booking_draft_store.dart';
 import '../services/connectivity_service.dart';
 import '../services/notification_navigator.dart';
 import '../services/offline_cache.dart';
@@ -612,6 +613,46 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) ?? const {});
   }
 
+  /// สร้างลิงก์ให้ผู้โดยสารคนหนึ่งกรอกข้อมูลของตัวเอง (ลิงก์เก่าจะใช้ไม่ได้ทันที)
+  Future<Map<String, dynamic>> createPassengerInvite(
+    String bookingRef,
+    int passengerId,
+  ) async {
+    final response = await api.post(
+      'bookings/$bookingRef/passengers/$passengerId/invite',
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// สมุดผู้ร่วมเดินทาง — คนที่เก็บไว้กรอกซ้ำ (เรียงคนที่ใช้ล่าสุดขึ้นก่อน).
+  Future<List<dynamic>> savedTravellers() async {
+    final response = await api.get('saved-travellers');
+    return List<dynamic>.from(api.data(response) ?? const []);
+  }
+
+  Future<Map<String, dynamic>> saveTraveller(Map<String, dynamic> body) async {
+    final response = await api.post('saved-travellers', body: body);
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  Future<void> deleteSavedTraveller(int id) async {
+    await api.delete('saved-travellers/$id');
+  }
+
+  /// บอกเซิร์ฟเวอร์ว่าเพิ่งเลือกคนนี้ไปใช้ เพื่อจัดลำดับครั้งถัดไป.
+  /// ล้มเหลวเงียบ ๆ ได้ — เป็นแค่การจัดลำดับ ไม่ควรขวางการจอง.
+  Future<void> markSavedTravellerUsed(int id) async {
+    try {
+      await api.post('saved-travellers/$id/used');
+    } catch (_) {}
+  }
+
+  /// เก็บผู้โดยสารจากการจองที่ทำไปแล้วเข้าสมุด.
+  Future<Map<String, dynamic>> importTravellersFromBooking(String ref) async {
+    final response = await api.post('bookings/$ref/save-travellers');
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
   /// แผนที่พิชิต — ทริปที่เดินจบแล้ววางบนแผนที่ + ความลึกรายภาค.
   Future<Map<String, dynamic>> fetchConquestMap() async {
     final response = await api.get('me/passport/map');
@@ -963,6 +1004,8 @@ class AppProvider extends ChangeNotifier {
     api.token = null;
     user = null;
     await OfflineCache.instance.clearAccount();
+    // Drafts hold ID numbers and health notes belonging to this account.
+    await BookingDraftStore.clearAll();
     await _unbindUserChannel();
     await AnalyticsService.instance.setUser(id: null);
     stopActiveSeatLockPolling();
@@ -1829,11 +1872,37 @@ class AppProvider extends ChangeNotifier {
 
   /// กำหนดการของรอบเดินทาง (สตาฟอ่านอย่างเดียว) — คืนรายการ item ตามลำดับ
   /// วัน → เวลา → ลำดับ จาก backend แต่ละ item: { item_date, time, title, detail }.
+  static String _itineraryCacheKey(int scheduleId) => 'itinerary.$scheduleId';
+
+  /// กำหนดการที่แคชไว้ครั้งล่าสุด — คืน null เมื่อยังไม่เคยโหลดสำเร็จ
+  ///
+  /// หน้ากำหนดการถูกเปิดตอนอยู่บนดอยที่มักไม่มีสัญญาณ การเห็นแผนเดินทางเวอร์ชัน
+  /// ที่โหลดไว้ก่อนออกเดินทาง ดีกว่าเห็นข้อความ error
+  List<Map<String, dynamic>>? cachedScheduleItinerary(int scheduleId) {
+    final cached = OfflineCache.instance.readAccount<List>(
+      _itineraryCacheKey(scheduleId),
+    );
+    if (cached == null) return null;
+    return cached
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
   Future<List<Map<String, dynamic>>> scheduleItinerary(int scheduleId) async {
     final response = await api.get(ApiEndpoints.scheduleItinerary(scheduleId));
     final data = Map<String, dynamic>.from(api.data(response) ?? {});
     final items = (data['items'] as List? ?? const []);
-    return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final parsed = items
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+
+    OfflineCache.instance.writeAccount(
+      _itineraryCacheKey(scheduleId),
+      parsed,
+    );
+
+    return parsed;
   }
 
   /// เช็คอิน/ยกเลิกเช็คอินจุดกำหนดการ (สตาฟ) — คืนรายการที่อัปเดตแล้ว
