@@ -19,6 +19,7 @@ import '../config/api_config.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
+import '../widgets/elevation_profile_chart.dart';
 import '../widgets/flash_countdown_pill.dart';
 import '../widgets/route_map_card.dart';
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
@@ -752,6 +753,9 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
           isExpanded: widget.isDescriptionExpanded,
           onToggle: widget.onDescriptionToggle,
         ),
+      // ตัวเลขเส้นทางจริง วางต่อจากคำบรรยาย — ซ่อนตัวเองถ้าทริปยังไม่มี
+      // ระยะทาง/ความสูง (ตรงกับ routeFacts บนหน้าเว็บ)
+      RouteFactsSection(trip: trip),
       // "ทริปนี้ไหวไหม" — วางก่อนแกลเลอรี ให้เห็นความจริงก่อนโดนรูปสวยชวนซื้อ
       // self-loading + ซ่อนตัวเองเมื่อทริปไม่มีระยะทาง/ความสูงให้เทียบ
       if (textOf(trip['slug']).isNotEmpty)

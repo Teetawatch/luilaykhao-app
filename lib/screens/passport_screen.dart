@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
+import 'conquest_map_screen.dart';
 
 /// "สมุดสะสมการเดินทาง" (Passport) — a lifetime record of everywhere the
 /// customer has trekked with us: total trips, distance, elevation climbed, plus
@@ -124,6 +125,12 @@ class _PassportScreenState extends State<PassportScreen> {
         _PassportHero(stats: stats),
         const SizedBox(height: 14),
         _InthanonStrip(highlights: highlights),
+        const SizedBox(height: 14),
+        // ตัวเลขจาก GPS ของผู้ใช้เอง — ซ่อนตัวเองจนกว่าจะมีการบันทึกครั้งแรก
+        _RecordedStrip(
+          recorded: Map<String, dynamic>.from(data['recorded'] ?? const {}),
+        ),
+        _ConquestMapEntry(stats: stats),
         const SizedBox(height: 26),
         Row(
           children: [
@@ -382,6 +389,219 @@ class _HeroDivider extends StatelessWidget {
       height: 44,
       margin: const EdgeInsets.symmetric(horizontal: 12),
       color: Colors.white.withValues(alpha: 0.18),
+    );
+  }
+}
+
+// ─── Recorded (GPS) stats ─────────────────────────────────────────────────────
+
+/// What the traveller's own GPS measured, kept visibly separate from the
+/// published route figures above it — the two answer different questions and
+/// blending them would quietly overstate both.
+class _RecordedStrip extends StatelessWidget {
+  final Map<String, dynamic> recorded;
+
+  const _RecordedStrip({required this.recorded});
+
+  @override
+  Widget build(BuildContext context) {
+    final tracks = int.tryParse('${recorded['tracks_count'] ?? 0}') ?? 0;
+    if (tracks == 0) return const SizedBox.shrink();
+
+    final distance = double.tryParse('${recorded['distance_km'] ?? 0}') ?? 0;
+    final gain = int.tryParse('${recorded['elevation_gain_m'] ?? 0}') ?? 0;
+    final pace = double.tryParse('${recorded['average_pace_kmh'] ?? ''}');
+    final highest = int.tryParse('${recorded['highest_point_m'] ?? ''}');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.subtleSurface(context),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'วัดจาก GPS ของคุณเอง · $tracks ทริป',
+              style: appFont(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 22,
+              runSpacing: 12,
+              children: [
+                _RecordedFigure(
+                  label: 'เดินจริง',
+                  value: distance.toStringAsFixed(1),
+                  unit: 'กม.',
+                ),
+                _RecordedFigure(
+                  label: 'ไต่จริง',
+                  value: '$gain',
+                  unit: 'ม.',
+                ),
+                if (pace != null)
+                  _RecordedFigure(
+                    label: 'ความเร็วเฉลี่ย',
+                    value: pace.toStringAsFixed(1),
+                    unit: 'กม./ชม.',
+                  ),
+                if (highest != null && highest > 0)
+                  _RecordedFigure(
+                    label: 'จุดสูงสุด',
+                    value: '$highest',
+                    unit: 'ม.',
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecordedFigure extends StatelessWidget {
+  final String label;
+  final String value;
+  final String unit;
+
+  const _RecordedFigure({
+    required this.label,
+    required this.value,
+    required this.unit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = AppTheme.mutedText(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: appFont(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: muted,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text.rich(
+          TextSpan(
+            text: value,
+            style: appFont(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.onSurface(context),
+            ),
+            children: [
+              TextSpan(
+                text: ' $unit',
+                style: appFont(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: muted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Conquest map entry ───────────────────────────────────────────────────────
+
+/// Doorway from the passport into the map of everywhere this traveller has been.
+/// Leads with the one number that makes the map worth opening — how much of the
+/// country is still blank.
+class _ConquestMapEntry extends StatelessWidget {
+  final Map<String, dynamic> stats;
+
+  const _ConquestMapEntry({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    final regions = int.tryParse('${stats['regions_count'] ?? 0}') ?? 0;
+    const totalRegions = 7;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ConquestMapScreen()),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.subtleSurface(context),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.map_rounded,
+                  color: Colors.white,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'แผนที่พิชิต',
+                      style: appFont(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      regions > 0
+                          ? 'ปักหมุดแล้ว $regions จาก $totalRegions ภาค'
+                          : 'ยังไม่มีหมุด — เริ่มจากทริปแรกของคุณ',
+                      style: appFont(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.mutedText(context),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

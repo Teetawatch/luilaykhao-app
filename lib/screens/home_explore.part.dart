@@ -2,8 +2,32 @@ part of 'customer_app_screen.dart';
 
 // Shown at most once per app session (resets on restart). Permanent opt-out is
 // stored in SharedPreferences under [_kScarcityDismissedKey].
+//
+// The sheet is deliberately hard to trigger: it only reaches someone who has
+// already opened a few trips (so it reads as "the one you were looking at is
+// filling up", not as an ad), and it stays away for a week afterwards. Same
+// thresholds as the website's UrgentTripsPopup.
 bool _scarcitySheetShownThisSession = false;
 const String _kScarcityDismissedKey = 'scarcity_sheet_dismissed';
+const String _kScarcitySnoozedAtKey = 'scarcity_sheet_snoozed_at';
+const int _kScarcityMinTripsViewed = 3;
+const Duration _kScarcitySnooze = Duration(days: 7);
+const Duration _kScarcityDelay = Duration(seconds: 8);
+
+// Hero used to run to 540px, which pushed every real trip below the fold. The
+// cap comes down, but the floor has to stay high enough to hold the greeting,
+// headline, search field and finder chip with room to breathe — trimming it
+// further is what made the block collide with the card overlapping the bottom.
+const double _kHeroHeightRatio = 0.46;
+const double _kHeroHeightMin = 375.0;
+const double _kHeroHeightMax = 440.0;
+
+/// The section below the hero is drawn over its last [_kHeroOverlap] pixels, so
+/// hero content has to end above that line.
+const double _kHeroOverlap = 64.0;
+
+/// Clear space between the bottom of the hero content and that overlapping card.
+const double _kHeroContentClearance = 48.0;
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -40,11 +64,30 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Future<void> _maybeShowScarcitySheet(AppProvider app) async {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(_kScarcityDismissedKey) == true) return;
-    // small delay so it never interrupts the first glance
-    await Future.delayed(const Duration(seconds: 5));
+
+    final snoozedAt = prefs.getInt(_kScarcitySnoozedAtKey);
+    if (snoozedAt != null) {
+      final since = DateTime.now().difference(
+        DateTime.fromMillisecondsSinceEpoch(snoozedAt),
+      );
+      if (since < _kScarcitySnooze) return;
+    }
+
+    // Only for someone already browsing in earnest — a first-time visitor gets
+    // the app, not a pitch.
+    if (app.recentlyViewedTrips.length < _kScarcityMinTripsViewed) return;
+
+    // Long enough that it never interrupts the first glance.
+    await Future.delayed(_kScarcityDelay);
     if (!mounted || app.almostFullTrips.isEmpty) return;
     final trip = asMap(app.almostFullTrips.first);
     if (tripScarcityLevel(trip) == null) return;
+
+    await prefs.setInt(
+      _kScarcitySnoozedAtKey,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+    if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -55,10 +98,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
-    final heroHeight = (MediaQuery.sizeOf(context).height * 0.50).clamp(
-      420.0,
-      540.0,
-    );
+    final heroHeight = (MediaQuery.sizeOf(context).height * _kHeroHeightRatio)
+        .clamp(_kHeroHeightMin, _kHeroHeightMax);
 
     // Polite one-per-session nudge for an almost-full trip.
     if (!_scarcitySheetShownThisSession && app.almostFullTrips.isNotEmpty) {
@@ -129,7 +170,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     children: [
                       HeroHeader(slides: app.heroSlides),
                       Container(
-                        margin: EdgeInsets.only(top: heroHeight - 64),
+                        margin: EdgeInsets.only(
+                          top: heroHeight - _kHeroOverlap,
+                        ),
                         child: _HomeInspiredTopSection(app: app),
                       ),
                     ],
@@ -146,6 +189,27 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       app.loadPublicData(type: type);
                     },
                   ),
+                  // Photos from people who actually went, before anything we
+                  // are selling — the community is the point, the trips are how
+                  // you join it. Mirrors CommunityFeedStrip on the website.
+                  const _TravelerFeedSection(),
+                  _PopularTripsSection(
+                    trips: showTrips,
+                    activeType: _activeType,
+                  ),
+                  _UpcomingDeparturesSection(app: app),
+                  // Writing from real trips — the clearest "real people" signal
+                  // we have, so it sits with the content, not buried at the end.
+                  const _ArticlesTeaserSection(),
+                  _CustomerReviewsSection(
+                    reviews: app.reviews
+                        .map(asMap)
+                        .where((r) => r.isNotEmpty)
+                        .toList(),
+                  ),
+                  // Price-driven rails live below the browsing and community
+                  // content: still easy to reach for anyone hunting a deal,
+                  // but no longer the first thing the home page says.
                   if (app.flashSaleTrips.isNotEmpty)
                     _FlashSaleRail(
                       trips: app.flashSaleTrips.map(asMap).toList(),
@@ -154,33 +218,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     _AlmostFullRail(
                       trips: app.almostFullTrips.map(asMap).toList(),
                     ),
-                  _PopularTripsSection(
-                    trips: showTrips,
-                    activeType: _activeType,
-                  ),
-                  _UpcomingDeparturesSection(app: app),
-                  // Deals — a strong conversion lever, placed right after the
-                  // core browse rails to catch deal-seekers before softer content.
                   PromotionsSection(
                     promotions: app.promotions
                         .map(asMap)
                         .where((p) => p.isNotEmpty)
                         .toList(),
                   ),
-                  // Social proof backs up the browsing above.
-                  _CustomerReviewsSection(
-                    reviews: app.reviews
-                        .map(asMap)
-                        .where((r) => r.isNotEmpty)
-                        .toList(),
-                  ),
-                  // UGC social proof — รูปจริงจากนักเดินทาง (ฟีดหลังทริป)
-                  const _TravelerFeedSection(),
                   // Secondary features (invite a group / refer a friend).
                   _GroupTripSection(app: app),
                   _ReferralBanner(app: app),
-                  // Inspiration / SEO content sits last, before the nav padding.
-                  const _ArticlesTeaserSection(),
                   const SizedBox(height: 100), // Bottom padding for Nav Bar
                 ],
               ),
@@ -221,10 +267,7 @@ class HeroHeader extends StatefulWidget {
 
 class _HeroHeaderState extends State<HeroHeader> {
   int _index = 0;
-  Timer? _timer;
   final _searchController = TextEditingController();
-
-  static const _interval = Duration(seconds: 5);
 
   List<String> get _images => widget.slides
       .map((s) => ApiConfig.mediaUrl(asMap(s)['image_url']?.toString() ?? ''))
@@ -232,33 +275,17 @@ class _HeroHeaderState extends State<HeroHeader> {
       .toList();
 
   @override
-  void initState() {
-    super.initState();
-    _maybeStartTimer();
-  }
-
-  @override
   void didUpdateWidget(covariant HeroHeader oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Slides arrived (or changed count) after the first build — (re)evaluate.
-    if (widget.slides.length != oldWidget.slides.length) {
-      if (_index >= _images.length) _index = 0;
-      _maybeStartTimer();
+    // Slides arrived (or changed count) after the first build.
+    if (widget.slides.length != oldWidget.slides.length &&
+        _index >= _images.length) {
+      _index = 0;
     }
-  }
-
-  void _maybeStartTimer() {
-    _timer?.cancel();
-    if (_images.length <= 1) return;
-    _timer = Timer.periodic(_interval, (_) {
-      if (!mounted) return;
-      setState(() => _index = (_index + 1) % _images.length);
-    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -292,10 +319,18 @@ class _HeroHeaderState extends State<HeroHeader> {
         ? fallback
         : images[_index.clamp(0, images.length - 1)];
     final size = MediaQuery.of(context).size;
-    final heroHeight = (size.height * 0.50).clamp(420.0, 540.0);
+    final heroHeight = (size.height * _kHeroHeightRatio).clamp(
+      _kHeroHeightMin,
+      _kHeroHeightMax,
+    );
     final compactWidth = size.width < 390;
     final horizontalPadding = compactWidth ? 18.0 : 24.0;
-    final contentBottom = compactWidth ? 128.0 : 138.0;
+    // The greeting/headline/search block is bottom-anchored. It sits a fixed
+    // clearance above the overlapping card rather than at a hand-tuned offset,
+    // so it can never touch it; the hero's own height is what decides how far
+    // down from the top bar the block lands.
+    final contentBottom =
+        _kHeroOverlap + _kHeroContentClearance + (compactWidth ? 0 : 8);
     final titleSize = (size.width * 0.058).clamp(20.0, 26.0).toDouble();
     final greeting = _timeGreeting();
 
@@ -443,7 +478,12 @@ class _HeroHeaderState extends State<HeroHeader> {
           if (images.length > 1)
             Positioned(
               left: horizontalPadding,
-              bottom: contentBottom - 26,
+              // Kept above the overlapping card too, however low the content
+              // block sits.
+              bottom: (contentBottom - 26).clamp(
+                _kHeroOverlap + 6,
+                double.infinity,
+              ),
               child: Row(
                 children: List.generate(images.length, (i) {
                   final active = i == _index;
@@ -917,47 +957,37 @@ class _TrustHub extends StatelessWidget {
         final titleSize = compact ? 14.0 : 15.0;
         final bodySize = compact ? 11.5 : 12.5;
 
-        // Aggregate social-proof stats across all trips for the lower half. The
-        // licence claim lives in the green header, so the old licence fallback
-        // cell is dropped here to avoid repeating the same signal.
-        final trips = app.trips.map(asMap).toList();
-        num ratingSum = 0;
-        var ratingTrips = 0;
-        var reviewCount = 0;
-        var travelers = 0;
-        var bookedPeople = 0;
-        for (final t in trips) {
-          final rc = int.tryParse('${t['review_count'] ?? 0}') ?? 0;
-          final r = num.tryParse('${t['rating'] ?? 0}') ?? 0;
-          if (rc > 0 && r > 0) {
-            ratingSum += r;
-            ratingTrips++;
-            reviewCount += rc;
-          }
-          travelers +=
-              int.tryParse('${t['confirmed_passengers_count'] ?? 0}') ?? 0;
-          bookedPeople +=
-              int.tryParse('${t['booked_passengers_count'] ?? 0}') ?? 0;
-        }
-        final avgRating = ratingTrips > 0 ? ratingSum / ratingTrips : 0;
+        // Real community numbers from GET /stats → `community`, the same block
+        // the website uses. These come from rounds that have actually finished
+        // travelling, so they are checkable — unlike the old cells here, which
+        // summed passenger counts over whatever trips happened to be loaded on
+        // this screen and therefore moved when you changed the filter.
+        final community = asMap(app.stats?['community']);
+        final reviewCount = int.tryParse('${community['reviews_count'] ?? 0}') ?? 0;
+        final avgRating = num.tryParse('${community['avg_rating'] ?? 0}') ?? 0;
+        final travellers =
+            int.tryParse('${community['travellers_count'] ?? 0}') ?? 0;
+        final personKm =
+            num.tryParse('${community['total_distance_km'] ?? 0}') ?? 0;
+
         final statCells = <({IconData icon, String value, String label})>[
-          if (avgRating > 0)
+          if (reviewCount > 0 && avgRating > 0)
             (
               icon: Icons.star_rounded,
               value: avgRating.toStringAsFixed(1),
               label: 'จาก $reviewCount รีวิว',
             ),
-          if (travelers > 0)
+          if (travellers > 0)
             (
               icon: Icons.groups_rounded,
-              value: '${_compactCount(travelers)}+',
-              label: 'นักเดินทาง',
+              value: _compactCount(travellers),
+              label: 'คนเคยไปกับเรา',
             ),
-          if (bookedPeople > 0)
+          if (personKm > 0)
             (
-              icon: Icons.event_available_rounded,
-              value: '${_compactCount(bookedPeople)}+',
-              label: 'คนจองแล้ว',
+              icon: Icons.straighten_rounded,
+              value: _compactCount(personKm.round()),
+              label: 'กม. ที่เดินร่วมกัน',
             ),
         ].take(3).toList();
 
@@ -981,11 +1011,7 @@ class _TrustHub extends StatelessWidget {
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF044C4D), Color(0xFF087C68)],
-                          ),
-                        ),
+                        decoration: const BoxDecoration(color: Color(0xFF044C4D)),
                         child: Row(
                           children: [
                             const Icon(
@@ -1103,13 +1129,7 @@ class _TrustHub extends StatelessWidget {
             child: InkWell(
               onTap: showLicenseDialog,
               child: Ink(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF0B6E5F), Color(0xFF0E8770)],
-                  ),
-                ),
+                decoration: const BoxDecoration(color: Color(0xFF0B6E5F)),
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: compact ? 13 : 15,
@@ -1141,7 +1161,7 @@ class _TrustHub extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'จองมั่นใจ ปลอดภัย',
+                              'ผู้ประกอบการนำเที่ยวจดทะเบียน',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
@@ -1199,19 +1219,37 @@ class _TrustHub extends StatelessWidget {
                       vertical: 13,
                       horizontal: 8,
                     ),
-                    child: Row(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        for (var i = 0; i < statCells.length; i++) ...[
-                          if (i > 0)
-                            Container(
-                              width: 1,
-                              height: 34,
-                              color: const Color(
-                                0xFF0A3D46,
-                              ).withValues(alpha: 0.08),
-                            ),
-                          Expanded(child: _TrustCell(data: statCells[i])),
-                        ],
+                        Row(
+                          children: [
+                            for (var i = 0; i < statCells.length; i++) ...[
+                              if (i > 0)
+                                Container(
+                                  width: 1,
+                                  height: 34,
+                                  color: const Color(
+                                    0xFF0A3D46,
+                                  ).withValues(alpha: 0.08),
+                                ),
+                              Expanded(child: _TrustCell(data: statCells[i])),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 9),
+                        // Say where the numbers come from — a figure you can
+                        // check reassures in a way a rounded-up one cannot.
+                        Text(
+                          'นับจากรอบที่เดินทางจบแล้วจริง',
+                          textAlign: TextAlign.center,
+                          style: appFont(
+                            fontSize: 10.5,
+                            height: 1.0,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF7A9090),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1309,14 +1347,14 @@ class _HomeTopSectionState extends State<HomeTopSection> {
           if (widget.app.almostFullTrips.isNotEmpty) ...[
             Row(
               children: [
-                const Icon(
-                  Icons.local_fire_department_rounded,
-                  color: AppTheme.errorColor,
+                Icon(
+                  Icons.event_seat_rounded,
+                  color: AppTheme.mutedText(context),
                   size: 20,
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'ใกล้เต็มแล้ว · รีบจอง',
+                  'รอบที่ที่นั่งเหลือน้อย',
                   style: appFont(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -1687,15 +1725,15 @@ class _AlmostFullRail extends StatelessWidget {
             padding: const EdgeInsets.only(right: 24),
             child: Row(
               children: [
-                const Icon(
-                  Icons.local_fire_department_rounded,
-                  color: AppTheme.errorColor,
+                Icon(
+                  Icons.event_seat_rounded,
+                  color: AppTheme.mutedText(context),
                   size: 24,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'ใกล้เต็มแล้ว · รีบจองเลย',
+                    'รอบที่ที่นั่งเหลือน้อย',
                     style: appFont(
                       color: const Color(0xFF063F46),
                       fontSize: 25,
@@ -2715,11 +2753,7 @@ class _PromotionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.primaryColor, AppTheme.accentColor],
-        ),
+        color: AppTheme.primaryColor,
         borderRadius: BorderRadius.circular(28),
       ),
       child: Column(
@@ -3232,7 +3266,7 @@ class _ScarcitySheet extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Icons.local_fire_department_rounded,
+                          Icons.event_seat_rounded,
                           color: Colors.white,
                           size: 14,
                         ),
@@ -3278,7 +3312,7 @@ class _ScarcitySheet extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'ทริปนี้กำลังจะเต็ม',
+                    'ทริปที่คุณเปิดดู · ที่นั่งเหลือน้อย',
                     style: appFont(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
@@ -3309,9 +3343,9 @@ class _ScarcitySheet extends StatelessWidget {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.bolt_rounded),
+                      icon: const Icon(Icons.arrow_forward_rounded),
                       label: Text(
-                        'จองเลย',
+                        'ดูรอบเดินทาง',
                         style: appFont(
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
@@ -4037,11 +4071,7 @@ class _GroupPromoCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF3FBF8), Colors.white],
-        ),
+        color: const Color(0xFFF7FCFA),
         border: Border.all(color: const Color(0xFFE3EFEC)),
       ),
       child: Column(
@@ -4405,11 +4435,7 @@ class _ReferralBannerState extends State<_ReferralBanner> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF047857), Color(0xFF10B981)],
-            ),
+            color: const Color(0xFF047857),
           ),
           child: Row(
             children: [

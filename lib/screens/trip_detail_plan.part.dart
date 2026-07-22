@@ -430,9 +430,7 @@ class _PlanStepLabel extends StatelessWidget {
           width: 22,
           height: 22,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF059669), Color(0xFF10B981)],
-            ),
+            color: const Color(0xFF059669),
             borderRadius: BorderRadius.circular(7),
           ),
           child: Center(
@@ -1299,7 +1297,7 @@ class _ScheduleChip extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        seats <= 2 ? 'เหลือ $seats ที่สุดท้าย' : 'ว่าง $seats ที่',
+                        seats <= 2 ? 'เหลือ $seats ที่นั่ง' : 'ว่าง $seats ที่',
                         maxLines: 1,
                         softWrap: false,
                         style: appFont(
@@ -1584,7 +1582,7 @@ class _SheetDateRow extends StatelessWidget {
       statusText = 'เต็มแล้ว';
       statusColor = _appleRed(isDark);
     } else if (seats <= 2) {
-      statusText = 'เหลือ $seats ที่สุดท้าย';
+      statusText = 'เหลือ $seats ที่นั่ง';
       statusColor = _appleOrange(isDark);
     } else {
       statusText = 'ว่าง $seats ที่';

@@ -433,11 +433,7 @@ class TripFinderEntryCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppTheme.primaryColor, AppTheme.accentColor],
-            ),
+            color: AppTheme.primaryColor,
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
           ),
           child: Row(

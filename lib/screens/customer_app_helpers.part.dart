@@ -175,7 +175,9 @@ String? tripScarcityLabel(Map<String, dynamic> trip) {
   final n = tripSeatsLeft(trip);
   final level = tripScarcityLevel(trip);
   if (level == null) return null;
-  return level == 'last' ? 'เหลือ $n ที่นั่งสุดท้าย' : 'ใกล้เต็ม · เหลือ $n ที่';
+  // State the number and stop — "สุดท้าย" adds pressure the seat count already
+  // carries on its own.
+  return 'เหลือ $n ที่นั่ง';
 }
 
 /// Maps a backend category `icon` (a Google Material Symbols name, set freely by

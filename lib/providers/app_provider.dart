@@ -612,6 +612,32 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) ?? const {});
   }
 
+  /// แผนที่พิชิต — ทริปที่เดินจบแล้ววางบนแผนที่ + ความลึกรายภาค.
+  Future<Map<String, dynamic>> fetchConquestMap() async {
+    final response = await api.get('me/passport/map');
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// แทร็ก GPS ที่ผู้ใช้บันทึกไว้เองในรอบนี้ (null เมื่อยังไม่เคยบันทึก).
+  Future<Map<String, dynamic>?> fetchMyTrack(String bookingRef) async {
+    final response = await api.get('bookings/$bookingRef/track');
+    final data = api.data(response);
+    if (data == null) return null;
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// อัปโหลดแทร็กที่บันทึกไว้ — สถิติคำนวณใหม่ฝั่งเซิร์ฟเวอร์เสมอ.
+  Future<Map<String, dynamic>> uploadMyTrack(
+    String bookingRef,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await api.post(
+      'bookings/$bookingRef/track',
+      body: payload,
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
   Future<List<dynamic>> tripReviews(int tripId) async {
     final response = await api.get(
       'reviews',

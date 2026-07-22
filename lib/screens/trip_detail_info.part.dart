@@ -569,13 +569,7 @@ class _VideoThumbCardState extends State<_VideoThumbCard> {
               )
             else
               const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1F2937), Color(0xFF0F172A)],
-                  ),
-                ),
+                decoration: BoxDecoration(color: Color(0xFF1F2937)),
               ),
             // Subtle scrim so the play button and label stay legible.
             const DecoratedBox(

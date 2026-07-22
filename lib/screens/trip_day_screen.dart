@@ -12,6 +12,7 @@ import '../utils/thai_date.dart';
 import '../widgets/rally_card.dart';
 import '../widgets/sos_button.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/trek_recorder_card.dart';
 import '../widgets/trip_progress_card.dart';
 import '../widgets/weather_card.dart';
 import 'chat_screen.dart';
@@ -97,6 +98,14 @@ class TripDayScreen extends StatelessWidget {
           // อ่านจากแคชได้เมื่อไม่มีสัญญาณ ซึ่งเป็นสถานการณ์ปกติบนดอย
           if (textOf(booking['booking_ref']).isNotEmpty) ...[
             TripProgressCard(bookingRef: textOf(booking['booking_ref'])),
+            const SizedBox(height: 16),
+          ],
+
+          // บันทึกเส้นทางที่เดินเองด้วย GPS — เปิดเมื่ออยู่ในช่วงทริปเท่านั้น
+          // เพราะไม่มีเหตุผลให้เปิด GPS ค้างก่อนถึงวันเดินทาง
+          if (_withinTripWindow &&
+              textOf(booking['booking_ref']).isNotEmpty) ...[
+            TrekRecorderCard(bookingRef: textOf(booking['booking_ref'])),
             const SizedBox(height: 16),
           ],
 

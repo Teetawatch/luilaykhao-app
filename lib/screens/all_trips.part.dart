@@ -1467,17 +1467,11 @@ class _PromotionListCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Brand gradient header — discount + copyable code.
+          // Brand header — discount + copyable code.
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppTheme.primaryColor, AppTheme.accentColor],
-              ),
-            ),
+            decoration: const BoxDecoration(color: AppTheme.primaryColor),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
