@@ -89,6 +89,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                 fontWeight: FontWeight.w600,
               ),
             ),
+            _buildExpiryNotice(context, photos),
             const SizedBox(height: 10),
             GridView.builder(
               shrinkWrap: true,
@@ -144,6 +145,56 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
     );
   }
 
+  /// เตือนเส้นตายดาวน์โหลด — เซิร์ฟเวอร์ลบรูปอัตโนมัติเมื่ออัปโหลดครบกำหนด
+  /// (`expires_at` ของรูปที่หมดอายุก่อนใครคือเส้นตายของทั้งชุด)
+  Widget _buildExpiryNotice(
+    BuildContext context,
+    List<Map<String, dynamic>> photos,
+  ) {
+    DateTime? deadline;
+    for (final p in photos) {
+      final at = DateTime.tryParse('${p['expires_at'] ?? ''}')?.toLocal();
+      if (at == null) continue;
+      if (deadline == null || at.isBefore(deadline)) deadline = at;
+    }
+    if (deadline == null) return const SizedBox.shrink();
+
+    final urgent = deadline.difference(DateTime.now()).inHours <= 24;
+    final color = urgent ? const Color(0xFFB3261E) : const Color(0xFFB45309);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.schedule_rounded, size: 16, color: color),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'รูปชุดนี้จะถูกลบอัตโนมัติ ${thaiDateTimeShort(deadline)} น. '
+                'กดดาวน์โหลดเก็บไว้ในเครื่องก่อนถึงเวลานี้นะครับ',
+                style: appFont(
+                  fontSize: 12.5,
+                  height: 1.45,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,7 +242,8 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
               ),
               const SizedBox(height: 4),
               Text(
-                'ทีมงานจะอัปโหลดภาพกิจกรรมให้หลังจบทริป กลับมาเช็กได้ที่นี่ภายหลัง',
+                'ทีมงานจะอัปโหลดภาพกิจกรรมให้หลังจบทริป กลับมาเช็กได้ที่นี่ภายหลัง '
+                'และรีบกดดาวน์โหลดเก็บไว้ เพราะรูปเปิดให้โหลดในเวลาจำกัดนะครับ',
                 textAlign: TextAlign.center,
                 style: appFont(
                   fontSize: 12.5,
