@@ -1,4 +1,5 @@
 import Flutter
+import GoogleMaps
 import UIKit
 import UserNotifications
 
@@ -8,6 +9,14 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // คีย์มาจาก ios/Flutter/Secrets.xcconfig (ไม่เข้า git) ผ่าน Info.plist
+    // ถ้ายังไม่ได้ตั้งคีย์ก็ข้ามไป แอปจะใช้แผนที่ OSM แทนเอง
+    if let key = Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String,
+      !key.isEmpty
+    {
+      GMSServices.provideAPIKey(key)
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

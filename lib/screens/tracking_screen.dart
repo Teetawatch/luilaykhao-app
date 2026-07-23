@@ -9,10 +9,12 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/api_config.dart';
 import '../models/schedule_route.dart';
 import '../models/tracking_model.dart';
 import '../providers/tracking_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/google_vehicle_map.dart';
 import '../widgets/route_map_card.dart';
 
 class TrackingScreen extends StatefulWidget {
@@ -28,9 +30,6 @@ class TrackingMapPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const TrackingScreen();
 }
-
-/// มุมมองกล้อง: เห็นทั้งคู่ / ตามรถ / ตามฉัน / อิสระ (ผู้ใช้ลากแผนที่เอง)
-enum FollowMode { both, vehicle, me, free }
 
 class _TrackingScreenState extends State<TrackingScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
@@ -195,7 +194,9 @@ class _TrackingScreenState extends State<TrackingScreen>
   }
 }
 
-class VehicleMapWidget extends StatefulWidget {
+/// แผนที่ของจอติดตามรถ — ใช้ Google Maps เมื่อมีคีย์ (ได้ชั้นรถติดและชื่อ
+/// สถานที่ไทยครบกว่า) ถ้าไม่มีคีย์ก็ถอยไปใช้แผนที่ OSM เดิมซึ่งไม่ต้องใช้คีย์
+class VehicleMapWidget extends StatelessWidget {
   final VehicleTracking? tracking;
   final BookingInfo? booking;
   final LatLng? customerLocation;
@@ -220,10 +221,62 @@ class VehicleMapWidget extends StatefulWidget {
   });
 
   @override
-  State<VehicleMapWidget> createState() => _VehicleMapWidgetState();
+  Widget build(BuildContext context) {
+    if (ApiConfig.useGoogleMaps) {
+      return GoogleVehicleMap(
+        tracking: tracking,
+        booking: booking,
+        customerLocation: customerLocation,
+        routePoints: routePoints,
+        scheduleRoute: scheduleRoute,
+        phase: phase,
+        mode: mode,
+        onUserGesture: onUserGesture,
+      );
+    }
+
+    return _OsmVehicleMap(
+      tracking: tracking,
+      booking: booking,
+      customerLocation: customerLocation,
+      routePoints: routePoints,
+      scheduleRoute: scheduleRoute,
+      phase: phase,
+      pulse: pulse,
+      mode: mode,
+      onUserGesture: onUserGesture,
+    );
+  }
 }
 
-class _VehicleMapWidgetState extends State<VehicleMapWidget> {
+class _OsmVehicleMap extends StatefulWidget {
+  final VehicleTracking? tracking;
+  final BookingInfo? booking;
+  final LatLng? customerLocation;
+  final List<LatLng> routePoints;
+  final ScheduleRouteData? scheduleRoute;
+  final TrackingPhase phase;
+  final Animation<double> pulse;
+  final FollowMode mode;
+  final VoidCallback onUserGesture;
+
+  const _OsmVehicleMap({
+    required this.tracking,
+    required this.booking,
+    required this.customerLocation,
+    required this.routePoints,
+    required this.scheduleRoute,
+    required this.phase,
+    required this.pulse,
+    required this.mode,
+    required this.onUserGesture,
+  });
+
+  @override
+  State<_OsmVehicleMap> createState() => _OsmVehicleMapState();
+}
+
+class _OsmVehicleMapState extends State<_OsmVehicleMap> {
   final MapController _mapController = MapController();
   bool _isMapReady = false;
   LatLng? _lastVehicleLocation;
@@ -235,7 +288,7 @@ class _VehicleMapWidgetState extends State<VehicleMapWidget> {
   }
 
   @override
-  void didUpdateWidget(covariant VehicleMapWidget old) {
+  void didUpdateWidget(covariant _OsmVehicleMap old) {
     super.didUpdateWidget(old);
     if (!_isMapReady || widget.mode == FollowMode.free) return;
 

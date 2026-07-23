@@ -42,3 +42,5 @@ app.*.map.json
 # Firebase
 **/google-services.json
 **/GoogleService-Info.plist
+# Google Maps API key (ไม่เข้า git) — ดู README/คำสั่ง build
+ios/Flutter/Secrets.xcconfig

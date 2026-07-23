@@ -24,6 +24,18 @@ class ApiConfig {
     defaultValue: 'wss',
   );
 
+  /// คีย์ Maps SDK ของฝั่งแอป — ตัวเดียวกับที่ใส่ไว้ใน AndroidManifest / Info.plist
+  /// (ฝั่ง native ต้องมีคีย์เองอยู่ดี ตรงนี้ใช้เป็นสวิตช์ว่าจะวาดแผนที่ด้วย
+  /// Google Maps หรือถอยไปใช้ OSM เหมือนเดิม)
+  static const String googleMapsApiKey = String.fromEnvironment(
+    'GOOGLE_MAPS_API_KEY',
+    defaultValue: '',
+  );
+
+  /// จอติดตามรถใช้ Google Maps เมื่อมีคีย์เท่านั้น — ถ้าลืมใส่คีย์ให้ถอยไปใช้
+  /// แผนที่ OSM เดิม ดีกว่าปล่อยให้ลูกค้าที่กำลังรอรถเจอจอเทาว่างเปล่า
+  static bool get useGoogleMaps => googleMapsApiKey.isNotEmpty;
+
   static String get siteUrl {
     final uri = Uri.parse(baseUrl);
     return '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
