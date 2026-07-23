@@ -14,6 +14,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
+import '../services/notification_navigator.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/active_seat_lock_overlay.dart';
@@ -23,6 +24,7 @@ import 'booking_flow_screen.dart';
 part 'payment_status.part.dart';
 part 'payment_sections.part.dart';
 part 'payment_completed.part.dart';
+part 'payment_submitted.part.dart';
 part 'payment_widgets.part.dart';
 part 'payment_helpers.part.dart';
 
@@ -231,8 +233,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final transferTimeStr =
           '${_transferTime!.hour.toString().padLeft(2, '0')}:${_transferTime!.minute.toString().padLeft(2, '0')}';
       final num amount;
+      final PaymentSubmissionKind kind;
       if (payingShare) {
         amount = _asNum(_splitShare?['amount']);
+        kind = PaymentSubmissionKind.share;
         await context.read<AppProvider>().paySplitShare(
           bookingRef: widget.bookingRef,
           shareId: widget.splitShareId!,
@@ -243,6 +247,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         );
       } else if (payingBalance) {
         amount = _balanceAmount(booking);
+        kind = PaymentSubmissionKind.balance;
         await context.read<AppProvider>().chargeBalance(
           bookingRef: widget.bookingRef,
           paymentMethod: _paymentMethod,
@@ -252,6 +257,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         );
       } else if (payingInstallment) {
         amount = _asNum(_installmentRecord(booking, installmentNo)['amount']);
+        kind = PaymentSubmissionKind.installment;
         await context.read<AppProvider>().chargeInstallment(
           bookingRef: widget.bookingRef,
           installmentNo: installmentNo,
@@ -263,6 +269,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       } else {
         final paymentType = _normalizePaymentType(booking, _paymentType);
         amount = _amountDue(booking, paymentType);
+        kind = paymentType == 'deposit'
+            ? PaymentSubmissionKind.deposit
+            : PaymentSubmissionKind.initial;
         await context.read<AppProvider>().confirmPayment(
           bookingRef: widget.bookingRef,
           amount: amount,
@@ -275,10 +284,28 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
       if (!mounted) return;
       HapticFeedback.heavyImpact();
-      await showDialog<void>(
-        context: context,
-        builder: (_) => _SuccessDialog(amount: amount),
+      final transferredAt = DateTime(
+        _transferDate!.year,
+        _transferDate!.month,
+        _transferDate!.day,
+        _transferTime!.hour,
+        _transferTime!.minute,
       );
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => PaymentSubmittedScreen(
+            bookingRef: widget.bookingRef,
+            amount: amount,
+            kind: kind,
+            paymentMethod: _paymentMethod,
+            transferredAt: transferredAt,
+            slipPath: _slipImage?.path,
+            installmentNo: installmentNo,
+          ),
+        ),
+      );
+      // ปุ่ม "ดูการจองของฉัน" เด้งออกจาก stack นี้ไปแล้ว — หน้านี้ถูกถอดทิ้ง
+      if (!mounted) return;
       // Reset form fields between submissions so a follow-up balance payment
       // does not reuse the previous slip.
       setState(() {
