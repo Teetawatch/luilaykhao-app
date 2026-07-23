@@ -427,25 +427,31 @@ class _PromoField extends StatelessWidget {
   }
 }
 
+/// Optional add-ons picker. Each item has its own quantity stepper because a
+/// group rarely wants the same thing: 4 people can travel together but only 2
+/// of them rent a mat.
 class AddonSelectionSection extends StatelessWidget {
+  static const Color _accent = Color(0xFFF59E0B);
+
   final List<_AddonOption> addons;
-  final Set<int> selectedIndexes;
+  final Map<int, int> quantities;
   final int travelerCount;
-  final void Function(int index, bool selected) onChanged;
+  final void Function(int index, int quantity) onChanged;
 
   const AddonSelectionSection({
     super.key,
     required this.addons,
-    required this.selectedIndexes,
+    required this.quantities,
     required this.travelerCount,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final selectedTotal = addons
-        .where((addon) => selectedIndexes.contains(addon.index))
-        .fold<num>(0, (sum, addon) => sum + addon.totalFor(travelerCount));
+    final selectedTotal = addons.fold<num>(
+      0,
+      (sum, addon) => sum + addon.price * (quantities[addon.index] ?? 0),
+    );
 
     return _SectionShell(
       title: 'ตัวเลือกเสริม',
@@ -453,6 +459,17 @@ class AddonSelectionSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'เลือกจำนวนได้ตามต้องการ ไม่ต้องเท่าจำนวนผู้เดินทาง',
+              style: appFont(
+                color: AppTheme.mutedText(context),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
           if (selectedTotal > 0) ...[
             _PriceRow(
               label: 'รายการเสริมที่เลือก',
@@ -462,119 +479,117 @@ class AddonSelectionSection extends StatelessWidget {
             const SizedBox(height: 12),
           ],
           ...addons.map((addon) {
-            final selected = selectedIndexes.contains(addon.index);
+            final qty = quantities[addon.index] ?? 0;
+            final selected = qty > 0;
+            final maxQty = addon.maxQuantityFor(travelerCount);
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () => onChanged(addon.index, !selected),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? const Color(0xFFFFFBEB)
-                        : AppTheme.fieldSurface(context),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: selected
-                          ? const Color(0xFFF59E0B)
-                          : AppTheme.border(context),
-                      width: selected ? 1.4 : 1,
-                    ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFFFFFBEB)
+                      : AppTheme.fieldSurface(context),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: selected ? _accent : AppTheme.border(context),
+                    width: selected ? 1.4 : 1,
                   ),
-                  child: Row(
-                    children: [
-                      // Image (tap to zoom) or amber placeholder
-                      GestureDetector(
-                        onTap: addon.hasImage
-                            ? () => _openAddonImage(context, addon.imageUrl)
-                            : null,
-                        child: Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: addon.hasImage
-                                  ? CachedNetworkImage(
-                                      imageUrl: addon.imageUrl,
+                ),
+                child: Row(
+                  children: [
+                    // Image (tap to zoom) or amber placeholder
+                    GestureDetector(
+                      onTap: addon.hasImage
+                          ? () => _openAddonImage(context, addon.imageUrl)
+                          : null,
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: addon.hasImage
+                                ? CachedNetworkImage(
+                                    imageUrl: addon.imageUrl,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, _) => Container(
                                       width: 60,
                                       height: 60,
-                                      fit: BoxFit.cover,
-                                      placeholder: (_, _) => Container(
-                                        width: 60,
-                                        height: 60,
-                                        color: const Color(0xFFFEF3C7),
-                                      ),
-                                      errorWidget: (_, _, _) => Container(
-                                        width: 60,
-                                        height: 60,
-                                        color: const Color(0xFFFEF3C7),
-                                        child: const Icon(
-                                          Icons.broken_image_rounded,
-                                          size: 22,
-                                          color: Color(0xFFD97706),
-                                        ),
-                                      ),
-                                    )
-                                  : Container(
+                                      color: const Color(0xFFFEF3C7),
+                                    ),
+                                    errorWidget: (_, _, _) => Container(
                                       width: 60,
                                       height: 60,
                                       color: const Color(0xFFFEF3C7),
                                       child: const Icon(
-                                        Icons.add_task_rounded,
-                                        size: 24,
+                                        Icons.broken_image_rounded,
+                                        size: 22,
                                         color: Color(0xFFD97706),
                                       ),
                                     ),
-                            ),
-                            if (addon.hasImage)
-                              Positioned(
-                                right: 2,
-                                bottom: 2,
-                                child: Container(
-                                  padding: const EdgeInsets.all(1.5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.5),
-                                    borderRadius: BorderRadius.circular(5),
+                                  )
+                                : Container(
+                                    width: 60,
+                                    height: 60,
+                                    color: const Color(0xFFFEF3C7),
+                                    child: const Icon(
+                                      Icons.add_task_rounded,
+                                      size: 24,
+                                      color: Color(0xFFD97706),
+                                    ),
                                   ),
-                                  child: const Icon(
-                                    Icons.zoom_in_rounded,
-                                    size: 11,
-                                    color: Colors.white,
-                                  ),
+                          ),
+                          if (addon.hasImage)
+                            Positioned(
+                              right: 2,
+                              bottom: 2,
+                              child: Container(
+                                padding: const EdgeInsets.all(1.5),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: const Icon(
+                                  Icons.zoom_in_rounded,
+                                  size: 11,
+                                  color: Colors.white,
                                 ),
                               ),
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              addon.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: appFont(
-                                color: AppTheme.onSurface(context),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.1,
-                              ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            addon.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: appFont(
+                              color: AppTheme.onSurface(context),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.1,
                             ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${money(addon.price)} ${addon.priceTypeLabel}',
+                            style: appFont(
+                              color: AppTheme.mutedText(context),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (selected) ...[
                             const SizedBox(height: 3),
                             Text(
-                              '${money(addon.price)} ${addon.priceTypeLabel}',
-                              style: appFont(
-                                color: AppTheme.mutedText(context),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              '+${money(addon.totalFor(travelerCount))}',
+                              '+${money(addon.price * qty)}',
                               style: appFont(
                                 color: const Color(0xFFB45309),
                                 fontWeight: FontWeight.w800,
@@ -582,35 +597,22 @@ class AddonSelectionSection extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      // Selection indicator
-                      Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? const Color(0xFFF59E0B)
-                              : Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: selected
-                                ? const Color(0xFFF59E0B)
-                                : AppTheme.border(context),
-                            width: 2,
-                          ),
-                        ),
-                        child: selected
-                            ? const Icon(
-                                Icons.check_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              )
-                            : null,
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Quantity stepper
+                    _QuantityStepper(
+                      quantity: qty,
+                      accent: _accent,
+                      onDecrement: qty > 0
+                          ? () => onChanged(addon.index, qty - 1)
+                          : null,
+                      onIncrement: qty < maxQty
+                          ? () => onChanged(addon.index, qty + 1)
+                          : null,
+                    ),
+                  ],
                 ),
               ),
             );

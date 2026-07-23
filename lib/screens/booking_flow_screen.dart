@@ -143,7 +143,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   Timer? _seatRefreshTimer;
   final Set<String> _selectedSeatIds = <String>{};
   final Set<String> _lockedSeatIds = <String>{};
-  final Set<int> _selectedAddonIndexes = <int>{};
+  // Optional add-ons keyed by option index → chosen quantity (>= 1).
+  final Map<int, int> _addonQuantities = <int, int>{};
   // Equipment rentals keyed by option index → chosen quantity (>= 1).
   final Map<int, int> _rentalQuantities = <int, int>{};
 
@@ -176,7 +177,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     schedule: _selectedSchedule,
     isJoinTrip: _isJoinTrip,
     pickupPoints: _pickupPoints,
-    selectedAddons: _selectedAddonOptions,
+    selectedAddons: _selectedAddons,
     selectedRentals: _selectedRentals,
     appliedPromo: _appliedPromo,
   );
@@ -239,9 +240,40 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   List<_AddonOption> get _addonOptions => _addonOptionsFrom(widget.trip);
 
-  List<_AddonOption> get _selectedAddonOptions => _addonOptions
-      .where((option) => _selectedAddonIndexes.contains(option.index))
-      .toList(growable: false);
+  _AddonOption? _addonOptionAt(int? index) {
+    if (index == null) return null;
+    for (final option in _addonOptions) {
+      if (option.index == index) return option;
+    }
+    return null;
+  }
+
+  /// จำนวนที่เลือกไว้ หักไม่ให้เกินเพดานของรายการนั้น — ถ้าลูกค้าเลือกของ
+  /// "ต่อคน" ไว้ 4 ชิ้นแล้วลบผู้เดินทางออกทีหลัง จำนวนต้องลดตามเอง
+  Map<int, int> get _clampedAddonQuantities {
+    final travelerCount = _passengers.length;
+    final result = <int, int>{};
+    for (final option in _addonOptions) {
+      final quantity = _addonQuantities[option.index] ?? 0;
+      if (quantity <= 0) continue;
+      final max = option.maxQuantityFor(travelerCount);
+      result[option.index] = quantity > max ? max : quantity;
+    }
+    return result;
+  }
+
+  List<_AddonSelection> get _selectedAddons {
+    final quantities = _clampedAddonQuantities;
+    return _addonOptions
+        .where((option) => (quantities[option.index] ?? 0) > 0)
+        .map(
+          (option) => _AddonSelection(
+            option: option,
+            quantity: quantities[option.index]!,
+          ),
+        )
+        .toList(growable: false);
+  }
 
   List<_RentalOption> get _rentalOptions => _rentalOptionsFrom(widget.trip);
 
@@ -388,14 +420,28 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         _pickupPointId = pickupId;
       }
 
-      _selectedAddonIndexes
-        ..clear()
-        ..addAll(
-          (draft['addons'] as List? ?? const [])
-              .map((e) => int.tryParse('$e'))
-              .whereType<int>()
-              .where((i) => i >= 0 && i < _addonOptions.length),
-        );
+      _addonQuantities.clear();
+      final addons = draft['addons'];
+      if (addons is Map) {
+        addons.forEach((key, value) {
+          final option = _addonOptionAt(int.tryParse('$key'));
+          final qty = int.tryParse('$value') ?? 0;
+          if (option != null && qty > 0) {
+            _addonQuantities[option.index] = qty;
+          }
+        });
+      } else if (addons is List) {
+        // ร่างเก่าเก็บเป็นรายการ index เปล่า ๆ (ยังไม่มีจำนวน) — คิดจำนวน
+        // แบบเดิม: ต่อคน = ทุกคนในกลุ่ม, ต่อชิ้น = 1
+        for (final entry in addons) {
+          final option = _addonOptionAt(int.tryParse('$entry'));
+          if (option != null) {
+            _addonQuantities[option.index] = option.isPerPerson
+                ? _passengers.length
+                : 1;
+          }
+        }
+      }
 
       _rentalQuantities.clear();
       final rentals = draft['rentals'];
@@ -431,7 +477,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         'pickup_point_id': _pickupPointId,
         'group_notes': _groupNotes.text,
         'passengers': [for (final p in _passengers) p.payload()],
-        'addons': _selectedAddonIndexes.toList(),
+        'addons': _addonQuantities.map((k, v) => MapEntry('$k', v)),
         'rentals': _rentalQuantities.map((k, v) => MapEntry('$k', v)),
       },
     );
@@ -1099,14 +1145,14 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         if (_addonOptions.isNotEmpty) ...[
           AddonSelectionSection(
             addons: _addonOptions,
-            selectedIndexes: _selectedAddonIndexes,
+            quantities: _clampedAddonQuantities,
             travelerCount: _passengers.length,
-            onChanged: (index, selected) {
+            onChanged: (index, quantity) {
               setState(() {
-                if (selected) {
-                  _selectedAddonIndexes.add(index);
+                if (quantity > 0) {
+                  _addonQuantities[index] = quantity;
                 } else {
-                  _selectedAddonIndexes.remove(index);
+                  _addonQuantities.remove(index);
                 }
               });
             },
@@ -1335,8 +1381,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             : null,
         'seat_ids': _hasSeatMap ? _selectedSeatList : <String>[],
         'is_join_trip': _isJoinTrip,
-        if (_selectedAddonIndexes.isNotEmpty)
-          'selected_addons': (_selectedAddonIndexes.toList()..sort()),
+        if (_selectedAddons.isNotEmpty)
+          'selected_addons': _selectedAddons
+              .map((a) => {'index': a.option.index, 'quantity': a.quantity})
+              .toList(),
         if (_selectedRentals.isNotEmpty)
           'selected_rentals': _selectedRentals
               .map((r) => {'index': r.option.index, 'quantity': r.quantity})

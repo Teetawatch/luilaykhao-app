@@ -49,7 +49,7 @@ class _PricingQuote {
     required Map<String, dynamic> schedule,
     required bool isJoinTrip,
     required List<dynamic> pickupPoints,
-    List<_AddonOption> selectedAddons = const [],
+    List<_AddonSelection> selectedAddons = const [],
     List<_RentalSelection> selectedRentals = const [],
     Map<String, dynamic>? appliedPromo,
   }) {
@@ -87,7 +87,7 @@ class _PricingQuote {
     final count = passengers.length;
     final addonsTotalValue = selectedAddons.fold<num>(
       0,
-      (sum, addon) => sum + addon.totalFor(count),
+      (sum, addon) => sum + addon.total,
     );
     final rentalsTotalValue = selectedRentals.fold<num>(
       0,
@@ -140,9 +140,22 @@ class _AddonOption {
 
   bool get isPerPerson => priceType == 'per_person';
 
-  String get priceTypeLabel => isPerPerson ? 'ต่อคน' : 'ครั้งเดียว';
+  String get priceTypeLabel => isPerPerson ? 'ต่อคน' : 'ต่อชิ้น';
 
-  num totalFor(int travelerCount) => price * (isPerPerson ? travelerCount : 1);
+  /// รายการแบบ "ต่อคน" เลือกได้ไม่เกินจำนวนผู้เดินทาง — ไม่ใช่ทุกคนในกลุ่ม
+  /// ที่อยากได้เหมือนกัน ส่วนแบบต่อชิ้นเลือกได้ถึง 20 เหมือนอุปกรณ์เช่า
+  int maxQuantityFor(int travelerCount) =>
+      isPerPerson ? (travelerCount < 1 ? 1 : travelerCount) : 20;
+}
+
+/// An add-on plus how many the customer picked (>= 1).
+class _AddonSelection {
+  final _AddonOption option;
+  final int quantity;
+
+  const _AddonSelection({required this.option, required this.quantity});
+
+  num get total => option.price * quantity;
 }
 
 /// One rentable equipment item defined on the trip (`trip.rental_items`),
