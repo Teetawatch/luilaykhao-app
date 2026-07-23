@@ -16,6 +16,30 @@ void main() {
     test('empty string decodes to empty list', () {
       expect(decodeGooglePolyline(''), isEmpty);
     });
+
+    // สตริงเพี้ยนถอดออกมาได้พิกัดหลุดโลก ซึ่งทำให้ flutter_map พังทั้งจอ
+    test('drops points that fall outside the world', () {
+      for (final point in decodeGooglePolyline('_p~iF~ps|U_ulLnnqC_}~~~~~O')) {
+        expect(point.latitude.abs(), lessThanOrEqualTo(90));
+        expect(point.longitude.abs(), lessThanOrEqualTo(180));
+      }
+    });
+  });
+
+  group('mapSafePoint', () {
+    test('keeps a normal coordinate', () {
+      expect(mapSafePoint(13.7563, 100.5018), const LatLng(13.7563, 100.5018));
+    });
+
+    test('rejects missing, out of range and non-finite values', () {
+      expect(mapSafePoint(null, 100.5), isNull);
+      expect(mapSafePoint(13.7, null), isNull);
+      expect(mapSafePoint(91, 100.5), isNull);
+      expect(mapSafePoint(-90.5, 100.5), isNull);
+      expect(mapSafePoint(13.7, 181), isNull);
+      expect(mapSafePoint(double.nan, 100.5), isNull);
+      expect(mapSafePoint(13.7, double.infinity), isNull);
+    });
   });
 
   group('ScheduleRouteData.fromJson', () {
@@ -67,6 +91,31 @@ void main() {
       expect(data.polyline, hasLength(2));
       expect(data.distanceMeters, 530000);
       expect(data.durationSeconds, 23400);
+    });
+
+    test('a stop with a broken coordinate keeps its row but loses its pin', () {
+      final data = ScheduleRouteData.fromJson({
+        'stops': [
+          {
+            'type': 'pickup',
+            'id': 21,
+            'name': 'จุดพิกัดเพี้ยน',
+            'latitude': 1300.7563,
+            'longitude': 100.5018,
+          },
+          {
+            'type': 'destination',
+            'id': null,
+            'name': 'เชียงราย',
+            'latitude': 19.839,
+            'longitude': 100.443,
+          },
+        ],
+      });
+
+      expect(data.stops, hasLength(2));
+      expect(data.stops[0].point, isNull);
+      expect(data.stopPoints, hasLength(1));
     });
 
     test('missing fields fall back safely', () {

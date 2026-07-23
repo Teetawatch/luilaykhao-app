@@ -1,5 +1,16 @@
 import 'package:latlong2/latlong.dart';
 
+/// พิกัดที่วาดบนแผนที่ได้จริงเท่านั้น — flutter_map assert ว่าขอบเขตต้องอยู่ใน
+/// ±90/±180 ถ้าหลุดกรอบ (หรือเป็น NaN/Infinity) ทั้งเลเยอร์จะพังทั้งจอ
+/// ตอนเปิดแผนที่ จึงตัดพิกัดเสียทิ้งตั้งแต่ตอนอ่านข้อมูล
+LatLng? mapSafePoint(double? latitude, double? longitude) {
+  if (latitude == null || longitude == null) return null;
+  if (!latitude.isFinite || !longitude.isFinite) return null;
+  if (latitude.abs() > 90 || longitude.abs() > 180) return null;
+
+  return LatLng(latitude, longitude);
+}
+
 /// จุดจอดหนึ่งจุดบนเส้นทางเดินรถของรอบ (จุดรับ หรือปลายทางทริป)
 class RouteStop {
   final String type; // pickup | destination
@@ -31,7 +42,7 @@ class RouteStop {
       name: json['name']?.toString() ?? '',
       regionLabel: json['region_label']?.toString() ?? '',
       pickupTime: json['pickup_time']?.toString() ?? '',
-      point: (lat != null && lng != null) ? LatLng(lat, lng) : null,
+      point: mapSafePoint(lat, lng),
       completed: json['completed'] == true,
     );
   }
@@ -72,30 +83,37 @@ class ScheduleRouteData {
 }
 
 /// ถอดรหัส Google encoded polyline → รายการพิกัด
+///
+/// ทนสตริงเพี้ยน: ถ้าถูกตัดกลางคัน (หรือไม่ใช่ polyline เลย) จะคืนเท่าที่อ่านได้
+/// แทนที่จะโยน error และไม่ปล่อยพิกัดหลุดโลกออกไปให้แผนที่วาด
 List<LatLng> decodeGooglePolyline(String encoded) {
   if (encoded.isEmpty) return const [];
   final points = <LatLng>[];
   int index = 0, lat = 0, lng = 0;
 
-  while (index < encoded.length) {
+  /// อ่านค่าถัดไปหนึ่งตัว — คืน null เมื่อสตริงหมดกลางคัน
+  int? readValue() {
     int shift = 0, result = 0, b;
     do {
+      if (index >= encoded.length) return null;
       b = encoded.codeUnitAt(index++) - 63;
       result |= (b & 0x1f) << shift;
       shift += 5;
     } while (b >= 0x20);
-    lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
 
-    shift = 0;
-    result = 0;
-    do {
-      b = encoded.codeUnitAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-    lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+    return (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+  }
 
-    points.add(LatLng(lat / 1e5, lng / 1e5));
+  while (index < encoded.length) {
+    final dLat = readValue();
+    final dLng = readValue();
+    if (dLat == null || dLng == null) break;
+    lat += dLat;
+    lng += dLng;
+
+    final point = mapSafePoint(lat / 1e5, lng / 1e5);
+    if (point == null) break; // หลุดโลกแล้ว จุดที่เหลือก็เชื่อไม่ได้
+    points.add(point);
   }
   return points;
 }
