@@ -99,6 +99,15 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 20),
 
+                // สรุปการเดินทาง — ตอบ 4 คำถามที่ลูกค้าถามซ้ำที่สุด (ขึ้นรถกี่โมง /
+                // รอที่ไหน / รถทะเบียนอะไร / เบอร์ใคร) ไว้บนสุดตั้งแต่วันจอง
+                // ไม่ใช่รอให้ใกล้เดินทางแล้วค่อยโผล่
+                if (textOf(booking['status']) == 'confirmed' &&
+                    !_isTripFinished(schedule)) ...[
+                  _TripSummaryCard(booking: booking, schedule: schedule),
+                  const SizedBox(height: 20),
+                ],
+
                 // Trip Day hub — a single gateway to ETA, today's itinerary,
                 // chat, checklist, weather, staff & SOS once the trip is near
                 // (from 3 days before through the return date).
@@ -2899,6 +2908,382 @@ bool _isWithinTripWindow(Map<String, dynamic> schedule) {
 
 /// Prominent gateway to the consolidated "วันเดินทาง" hub, shown atop the
 /// booking sheet once the trip is near.
+/// สรุปการเดินทาง — การ์ดเดียวที่ตอบคำถามยอดฮิตทั้ง 4 ข้อ
+/// (ขึ้นรถกี่โมง · รอที่ไหน · รถทะเบียนอะไร · เบอร์คนขับ/สตาฟ)
+///
+/// อยู่บนสุดของใบจองตั้งแต่วันจอง ไม่ใช่รอ 3 วันก่อนเดินทางเหมือนหน้า "วันเดินทาง"
+/// และ **ไม่ซ่อนแถวที่ยังไม่รู้** — แถวที่ข้อมูลยังไม่มาแสดงว่าทีมงานจะยืนยันเมื่อไร
+/// เพราะ "ยังไม่ถึงเวลา" ก็เป็นคำตอบที่หยุดคำถามได้เหมือนกัน
+class _TripSummaryCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final Map<String, dynamic> schedule;
+
+  const _TripSummaryCard({required this.booking, required this.schedule});
+
+  /// จุดรับของการจองนี้: จุดที่ปักหมุดเอง (อนุมัติแล้ว) → จุดที่จองไว้ →
+  /// จุดของรอบที่ตรงภูมิภาคเดียวกัน (การจองเก่าที่เก็บแค่ภูมิภาค)
+  ({String where, String? time, String? mapUrl, bool custom})? _pickup() {
+    final custom = asMap(booking['custom_pickup']);
+    if (textOf(custom['status']) == 'approved' &&
+        textOf(custom['label']).isNotEmpty) {
+      final lat = textOf(custom['lat']);
+      final lng = textOf(custom['lng']);
+      return (
+        where: textOf(custom['label']),
+        time: null,
+        mapUrl: (lat.isNotEmpty && lng.isNotEmpty)
+            ? 'https://www.google.com/maps/search/?api=1&query=$lat,$lng'
+            : null,
+        custom: true,
+      );
+    }
+
+    var point = asMap(booking['pickup_point']);
+    final schedulePoints = asList(schedule['pickup_points']).map(asMap).toList();
+    if (point.isEmpty) {
+      final region = textOf(booking['pickup_region']);
+      if (region.isNotEmpty) {
+        point = schedulePoints.firstWhere(
+          (p) => textOf(p['region']) == region,
+          orElse: () => <String, dynamic>{},
+        );
+      }
+    }
+    if (point.isEmpty) return null;
+
+    // เวลาขึ้นรถบางทีมากับจุดของรอบเท่านั้น (การจองเก่า) — เทียบด้วย id
+    var time = textOf(point['pickup_time']);
+    if (time.isEmpty) {
+      final match = schedulePoints.firstWhere(
+        (p) => textOf(p['id']) == textOf(point['id']),
+        orElse: () => <String, dynamic>{},
+      );
+      time = textOf(match['pickup_time']);
+    }
+
+    final label = textOf(point['region_label']);
+    final location = textOf(point['pickup_location']);
+
+    return (
+      where: label.isNotEmpty && label != location
+          ? '$label · $location'
+          : (location.isNotEmpty ? location : label),
+      time: time.isEmpty ? null : time,
+      mapUrl: textOf(point['map_url']).isEmpty ? null : textOf(point['map_url']),
+      custom: false,
+    );
+  }
+
+  String? _countdownLabel() {
+    final travelDate = bookingTravelDate(booking);
+    if (travelDate == null) return null;
+    final now = DateTime.now();
+    final days = travelDate
+        .difference(DateTime(now.year, now.month, now.day))
+        .inDays;
+    return switch (days) {
+      < 0 => 'กำลังเดินทาง',
+      0 => 'วันนี้',
+      1 => 'พรุ่งนี้',
+      _ => 'อีก $days วัน',
+    };
+  }
+
+  Future<void> _open(BuildContext context, Uri uri) async {
+    HapticFeedback.selectionClick();
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (context.mounted) {
+      showSnack(context, 'เปิดลิงก์ไม่ได้');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pickup = _pickup();
+    final vehicle = asMap(schedule['vehicle']);
+    final plate = textOf(vehicle['license_plate']).trim();
+    final color = textOf(vehicle['color']).trim();
+    final vehicleName = textOf(
+      vehicle['name'],
+      textOf(vehicle['type']),
+    ).trim();
+    final driverName = textOf(vehicle['driver_name']).trim();
+    final driverPhone = textOf(vehicle['driver_phone']).trim();
+    final staffList = asList(booking['assigned_staff']).map(asMap).toList();
+    final countdown = _countdownLabel();
+
+    final departTime = textOf(schedule['departs_at']).isNotEmpty
+        ? DateTime.tryParse(textOf(schedule['departs_at']))
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.confirmation_number_rounded,
+                size: 18,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'สรุปการเดินทางของคุณ',
+                  style: appFont(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.onSurface(context),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              if (countdown != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    countdown,
+                    style: appFont(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // 1) ขึ้นรถกี่โมง + รอที่ไหน
+          _SummaryRow(
+            icon: Icons.schedule_rounded,
+            label: 'ขึ้นรถ',
+            value: pickup == null
+                ? null
+                : [
+                    if (pickup.time != null) '${pickup.time} น.',
+                    pickup.where,
+                  ].join(' · '),
+            pendingText: 'ทีมงานจะยืนยันจุดรับและเวลาให้ก่อนเดินทาง',
+            hint: pickup == null && departTime != null
+                ? 'รถออกเวลา ${_hhmm(departTime)} น.'
+                : (pickup?.custom == true ? 'จุดรับที่คุณปักหมุดไว้' : null),
+            actionIcon: pickup?.mapUrl == null ? null : Icons.map_rounded,
+            actionLabel: 'แผนที่',
+            onAction: pickup?.mapUrl == null
+                ? null
+                : () {
+                    final uri = Uri.tryParse(pickup!.mapUrl!);
+                    if (uri != null) _open(context, uri);
+                  },
+          ),
+
+          // 2) รถคันไหน ทะเบียนอะไร
+          _SummaryRow(
+            icon: Icons.airport_shuttle_rounded,
+            label: 'รถ',
+            value: plate.isEmpty && vehicleName.isEmpty
+                ? null
+                : [
+                    if (plate.isNotEmpty) 'ทะเบียน $plate',
+                    if (vehicleName.isNotEmpty) vehicleName,
+                    if (color.isNotEmpty) 'สี$color',
+                  ].join(' · '),
+            pendingText: 'ทีมงานจะยืนยันรถและทะเบียนให้ก่อนเดินทาง 1 วัน',
+          ),
+
+          // 3) เบอร์คนขับ
+          _SummaryRow(
+            icon: Icons.person_rounded,
+            label: 'คนขับ',
+            value: driverName.isEmpty && driverPhone.isEmpty
+                ? null
+                : [
+                    if (driverName.isNotEmpty) driverName,
+                    if (driverPhone.isNotEmpty) driverPhone,
+                  ].join(' · '),
+            pendingText: 'ทีมงานจะแจ้งชื่อและเบอร์คนขับให้ก่อนเดินทาง 1 วัน',
+            actionIcon: driverPhone.isEmpty ? null : Icons.phone_rounded,
+            actionLabel: 'โทร',
+            onAction: driverPhone.isEmpty
+                ? null
+                : () => _open(context, Uri(scheme: 'tel', path: driverPhone)),
+          ),
+
+          // 4) เบอร์สตาฟ
+          if (staffList.isEmpty)
+            const _SummaryRow(
+              icon: Icons.badge_rounded,
+              label: 'สตาฟ',
+              value: null,
+              pendingText: 'ทีมงานจะแจ้งสตาฟประจำรอบให้ก่อนเดินทาง',
+            )
+          else
+            for (final staff in staffList.take(2))
+              _SummaryRow(
+                icon: Icons.badge_rounded,
+                label: 'สตาฟ',
+                value: [
+                  textOf(staff['nickname']).isNotEmpty
+                      ? textOf(staff['nickname'])
+                      : textOf(staff['name']),
+                  if (textOf(staff['phone']).isNotEmpty) textOf(staff['phone']),
+                ].join(' · '),
+                actionIcon: textOf(staff['phone']).isEmpty
+                    ? null
+                    : Icons.phone_rounded,
+                actionLabel: 'โทร',
+                onAction: textOf(staff['phone']).isEmpty
+                    ? null
+                    : () => _open(
+                        context,
+                        Uri(scheme: 'tel', path: textOf(staff['phone'])),
+                      ),
+              ),
+        ],
+      ),
+    );
+  }
+
+  static String _hhmm(DateTime dt) =>
+      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+}
+
+/// หนึ่งบรรทัดของการ์ดสรุป — มีค่าแล้วแสดงค่า ยังไม่มีก็บอกว่าจะได้เมื่อไร
+class _SummaryRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? value;
+  final String pendingText;
+  final String? hint;
+  final IconData? actionIcon;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _SummaryRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.pendingText = '',
+    this.hint,
+    this.actionIcon,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final known = value != null && value!.trim().isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(
+              icon,
+              size: 17,
+              color: known
+                  ? AppTheme.primaryColor
+                  : AppTheme.mutedText(context).withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: appFont(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  known ? value! : pendingText,
+                  style: appFont(
+                    fontSize: known ? 13.5 : 12.5,
+                    fontWeight: known ? FontWeight.w800 : FontWeight.w600,
+                    color: known
+                        ? AppTheme.onSurface(context)
+                        : AppTheme.mutedText(context),
+                    height: 1.35,
+                  ),
+                ),
+                if (hint != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    hint!,
+                    style: appFont(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (onAction != null && actionIcon != null) ...[
+            const SizedBox(width: 8),
+            Material(
+              color: AppTheme.primaryColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(999),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: onAction,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 7,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(actionIcon, size: 14, color: AppTheme.primaryColor),
+                      if (actionLabel != null) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          actionLabel!,
+                          style: appFont(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _TripDayEntryCard extends StatelessWidget {
   final Map<String, dynamic> booking;
 
