@@ -19,6 +19,10 @@ class PaymentSubmittedScreen extends StatefulWidget {
   /// เลขงวด — ใช้เฉพาะ [PaymentSubmissionKind.installment]
   final int? installmentNo;
 
+  /// สลิปผ่านการตรวจแล้วตั้งแต่ตอนยิง API (ไม่ถูกกันไว้ให้แอดมินตรวจยอด) —
+  /// ขั้นตอน "ทีมงานตรวจสอบสลิป" จึงขึ้นว่าสำเร็จได้เลย ไม่ต้องบอกให้รอ
+  final bool slipVerified;
+
   const PaymentSubmittedScreen({
     super.key,
     required this.bookingRef,
@@ -28,6 +32,7 @@ class PaymentSubmittedScreen extends StatefulWidget {
     required this.transferredAt,
     this.slipPath,
     this.installmentNo,
+    this.slipVerified = false,
   });
 
   @override
@@ -82,14 +87,25 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
     PaymentSubmissionKind.share => 'บันทึกส่วนของคุณ',
   };
 
-  String get _finalStepSubtitle => switch (widget.kind) {
-    PaymentSubmissionKind.initial ||
-    PaymentSubmissionKind.deposit =>
-      'ที่นั่งของคุณจะถูกยืนยัน และได้รับ QR สำหรับเช็คอิน',
-    PaymentSubmissionKind.balance => 'ใบจองจะขึ้นว่าชำระครบแล้ว',
-    PaymentSubmissionKind.installment => 'ยอดคงเหลือจะลดลงตามงวดที่จ่าย',
-    PaymentSubmissionKind.share => 'เพื่อนในกลุ่มจะเห็นว่าคุณจ่ายแล้ว',
-  };
+  /// สลิปผ่านแล้ว = ขั้นสุดท้ายเกิดขึ้นแล้วจริง ๆ (BE ยืนยันการจอง/บันทึกยอดให้
+  /// ตั้งแต่ตอนยิง API) คำอธิบายจึงต้องเป็นอดีต ไม่ใช่ "จะ..." เหมือนตอนรอตรวจ
+  String get _finalStepSubtitle => widget.slipVerified
+      ? switch (widget.kind) {
+          PaymentSubmissionKind.initial ||
+          PaymentSubmissionKind.deposit =>
+            'ที่นั่งของคุณได้รับการยืนยันแล้ว ดู QR เช็คอินได้ในใบจอง',
+          PaymentSubmissionKind.balance => 'ใบจองขึ้นว่าชำระครบแล้ว',
+          PaymentSubmissionKind.installment => 'ยอดคงเหลือลดลงตามงวดที่จ่ายแล้ว',
+          PaymentSubmissionKind.share => 'เพื่อนในกลุ่มเห็นแล้วว่าคุณจ่ายแล้ว',
+        }
+      : switch (widget.kind) {
+          PaymentSubmissionKind.initial ||
+          PaymentSubmissionKind.deposit =>
+            'ที่นั่งของคุณจะถูกยืนยัน และได้รับ QR สำหรับเช็คอิน',
+          PaymentSubmissionKind.balance => 'ใบจองจะขึ้นว่าชำระครบแล้ว',
+          PaymentSubmissionKind.installment => 'ยอดคงเหลือจะลดลงตามงวดที่จ่าย',
+          PaymentSubmissionKind.share => 'เพื่อนในกลุ่มจะเห็นว่าคุณจ่ายแล้ว',
+        };
 
   String get _methodLabel =>
       widget.paymentMethod == 'promptpay' ? 'QR PromptPay' : 'โอนผ่านธนาคาร';
@@ -154,9 +170,10 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
                           _NextStepsCard(
                             finalStepTitle: _finalStepTitle,
                             finalStepSubtitle: _finalStepSubtitle,
+                            slipVerified: widget.slipVerified,
                           ),
                           const SizedBox(height: 14),
-                          const _NotifyNote(),
+                          _NotifyNote(slipVerified: widget.slipVerified),
                         ],
                       ),
                     ),
@@ -457,10 +474,12 @@ class _SlipThumb extends StatelessWidget {
 class _NextStepsCard extends StatelessWidget {
   final String finalStepTitle;
   final String finalStepSubtitle;
+  final bool slipVerified;
 
   const _NextStepsCard({
     required this.finalStepTitle,
     required this.finalStepSubtitle,
+    this.slipVerified = false,
   });
 
   @override
@@ -471,12 +490,24 @@ class _NextStepsCard extends StatelessWidget {
         subtitle: 'ส่งเมื่อ ${thaiDateTimeShort(DateTime.now())}',
         done: true,
       ),
-      const _SubmittedStep(
-        title: 'ทีมงานตรวจสอบสลิป',
-        subtitle: 'ปกติไม่เกิน 1 ชั่วโมงในเวลาทำการ (09:00–20:00)',
-        active: true,
+      slipVerified
+          ? const _SubmittedStep(
+              title: 'ทีมงานตรวจสอบสลิป',
+              subtitle: 'ตรวจสอบยอดโอนเรียบร้อยแล้ว',
+              done: true,
+              badgeLabel: 'ดำเนินการสำเร็จ',
+            )
+          : const _SubmittedStep(
+              title: 'ทีมงานตรวจสอบสลิป',
+              subtitle: 'ปกติไม่เกิน 1 ชั่วโมงในเวลาทำการ (09:00–20:00)',
+              active: true,
+              badgeLabel: 'กำลังดำเนินการ',
+            ),
+      _SubmittedStep(
+        title: finalStepTitle,
+        subtitle: finalStepSubtitle,
+        done: slipVerified,
       ),
-      _SubmittedStep(title: finalStepTitle, subtitle: finalStepSubtitle),
     ];
 
     return _SectionCard(
@@ -502,11 +533,15 @@ class _SubmittedStep {
   final bool done;
   final bool active;
 
+  /// ป้ายสถานะข้างหัวข้อ — สีตามสถานะของขั้นตอน (เขียว = สำเร็จ, ส้ม = กำลังทำ)
+  final String? badgeLabel;
+
   const _SubmittedStep({
     required this.title,
     required this.subtitle,
     this.done = false,
     this.active = false,
+    this.badgeLabel,
   });
 }
 
@@ -577,11 +612,8 @@ class _SubmittedStepRow extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      if (step.active)
-                        const _StatusBadge(
-                          label: 'กำลังดำเนินการ',
-                          color: Color(0xFFD97706),
-                        ),
+                      if (step.badgeLabel != null)
+                        _StatusBadge(label: step.badgeLabel!, color: color),
                     ],
                   ),
                   const SizedBox(height: 2),
@@ -605,8 +637,11 @@ class _SubmittedStepRow extends StatelessWidget {
 }
 
 /// บอกว่าไม่ต้องรอหน้านี้ — เดี๋ยวมีแจ้งเตือนตามไป
+/// (ถ้าสลิปผ่านแล้วก็ไม่มีอะไรให้รอ เปลี่ยนเป็นบอกว่าส่งอีเมลยืนยันไปแล้ว)
 class _NotifyNote extends StatelessWidget {
-  const _NotifyNote();
+  final bool slipVerified;
+
+  const _NotifyNote({this.slipVerified = false});
 
   @override
   Widget build(BuildContext context) {
@@ -638,7 +673,7 @@ class _NotifyNote extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'เราจะแจ้งให้ทราบเอง',
+                  slipVerified ? 'เรียบร้อยแล้ว' : 'เราจะแจ้งให้ทราบเอง',
                   style: appFont(
                     color: AppTheme.onSurface(context),
                     fontSize: 14,
@@ -647,8 +682,11 @@ class _NotifyNote extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'เมื่อตรวจสอบเสร็จ คุณจะได้รับการแจ้งเตือนในแอปและอีเมล '
-                  'ปิดแอปไปทำอย่างอื่นได้เลย',
+                  slipVerified
+                      ? 'เราส่งการแจ้งเตือนและอีเมลยืนยันให้แล้ว '
+                            'ดูรายละเอียดได้ที่การจองของฉัน'
+                      : 'เมื่อตรวจสอบเสร็จ คุณจะได้รับการแจ้งเตือนในแอปและอีเมล '
+                            'ปิดแอปไปทำอย่างอื่นได้เลย',
                   style: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: 12.5,

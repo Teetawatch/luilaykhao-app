@@ -234,10 +234,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
           '${_transferTime!.hour.toString().padLeft(2, '0')}:${_transferTime!.minute.toString().padLeft(2, '0')}';
       final num amount;
       final PaymentSubmissionKind kind;
+      final Map<String, dynamic> result;
       if (payingShare) {
         amount = _asNum(_splitShare?['amount']);
         kind = PaymentSubmissionKind.share;
-        await context.read<AppProvider>().paySplitShare(
+        result = await context.read<AppProvider>().paySplitShare(
           bookingRef: widget.bookingRef,
           shareId: widget.splitShareId!,
           paymentMethod: _paymentMethod,
@@ -248,7 +249,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       } else if (payingBalance) {
         amount = _balanceAmount(booking);
         kind = PaymentSubmissionKind.balance;
-        await context.read<AppProvider>().chargeBalance(
+        result = await context.read<AppProvider>().chargeBalance(
           bookingRef: widget.bookingRef,
           paymentMethod: _paymentMethod,
           transferDate: transferDateStr,
@@ -258,7 +259,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       } else if (payingInstallment) {
         amount = _asNum(_installmentRecord(booking, installmentNo)['amount']);
         kind = PaymentSubmissionKind.installment;
-        await context.read<AppProvider>().chargeInstallment(
+        result = await context.read<AppProvider>().chargeInstallment(
           bookingRef: widget.bookingRef,
           installmentNo: installmentNo,
           paymentMethod: _paymentMethod,
@@ -272,7 +273,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         kind = paymentType == 'deposit'
             ? PaymentSubmissionKind.deposit
             : PaymentSubmissionKind.initial;
-        await context.read<AppProvider>().confirmPayment(
+        result = await context.read<AppProvider>().confirmPayment(
           bookingRef: widget.bookingRef,
           amount: amount,
           paymentType: paymentType,
@@ -291,6 +292,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         _transferTime!.hour,
         _transferTime!.minute,
       );
+      // สลิปถูกตรวจตอนยิง API แล้ว — ค้างรอแอดมินเฉพาะตอนยอดไม่ตรง (pending_review)
+      // ที่เหลือถือว่าผ่าน ให้หน้าถัดไปขึ้น "ดำเนินการสำเร็จ" ได้ทันที
+      final slipVerified = textOf(result['status']) != 'pending_review';
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (_) => PaymentSubmittedScreen(
@@ -301,6 +305,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             transferredAt: transferredAt,
             slipPath: _slipImage?.path,
             installmentNo: installmentNo,
+            slipVerified: slipVerified,
           ),
         ),
       );
