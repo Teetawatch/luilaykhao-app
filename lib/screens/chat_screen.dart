@@ -119,12 +119,28 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   VoidCallback? _signalsDisposer;
 
+  /// กำลังพิมพ์อยู่ไหม — ใช้ซ่อน/แสดงแถบคำถามด่วนเหนือช่องพิมพ์
+  bool _isComposing = false;
+
+  /// ข้อมูลการเดินทางของฉัน (โหลดครั้งแรกที่กดถาม แล้วแคชไว้ในหน้านี้)
+  Map<String, dynamic>? _tripInfo;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scroll.addListener(_onScroll);
+    _input.addListener(_watchComposing);
     _init();
+  }
+
+  /// พอเริ่มพิมพ์ให้ซ่อนแถบคำถามด่วน — คนที่พิมพ์เองอยู่แล้วไม่ต้องการทางลัด
+  /// และแชทควรได้พื้นที่คืน (setState เฉพาะตอนสถานะพลิก ไม่ใช่ทุกตัวอักษร)
+  void _watchComposing() {
+    final composing = _input.text.trim().isNotEmpty;
+    if (composing != _isComposing && mounted) {
+      setState(() => _isComposing = composing);
+    }
   }
 
   @override
@@ -136,6 +152,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _highlightTimer?.cancel();
     _disposer?.call();
     _signalsDisposer?.call();
+    _input.removeListener(_watchComposing);
     _input.dispose();
     _inputFocus.dispose();
     _scroll.removeListener(_onScroll);
@@ -172,6 +189,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       onReaction: _onReactionSignal,
       onPinned: _onPinnedSignal,
       onUpdated: _onMessageUpdated,
+      onPoll: _onPollSignal,
     );
     // Let the rest of the room know we've entered, so they see a brief notice.
     app.sendChatJoin(widget.scheduleId);
@@ -703,6 +721,27 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 _shareLocation();
               },
             ),
+            ListTile(
+              leading: const Icon(
+                Icons.bar_chart_rounded,
+                color: AppTheme.primaryColor,
+              ),
+              title: Text(
+                'สร้างโพล',
+                style: appFont(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                'ให้เพื่อนร่วมทริปโหวตเลือกด้วยกัน',
+                style: appFont(
+                  fontSize: 12,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _createPoll();
+              },
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -1005,6 +1044,153 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         );
       }
     }
+  }
+
+  // ── คำถามด่วน "ข้อมูลการเดินทางของฉัน" ───────────────────────────────────
+
+  /// เปิดคำตอบของคำถามที่กด — โหลดข้อมูลครั้งแรกครั้งเดียวแล้วแคชไว้
+  Future<void> _openTripInfo(_QuickAsk ask) async {
+    HapticFeedback.selectionClick();
+
+    if (_tripInfo == null) {
+      try {
+        final info = await context.read<AppProvider>().chatTripInfo(
+          widget.scheduleId,
+        );
+        if (!mounted) return;
+        setState(() => _tripInfo = info);
+      } catch (e) {
+        _snack(e.toString());
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _TripInfoSheet(info: _tripInfo!, focus: ask),
+    );
+  }
+
+  /// สตาฟกดส่งสรุปการเดินทางเข้าห้อง — ตอบทุกคนพร้อมกันด้วยปุ่มเดียว
+  Future<void> _sendTripSummary() async {
+    HapticFeedback.mediumImpact();
+    try {
+      final message = await context.read<AppProvider>().postChatTripSummary(
+        widget.scheduleId,
+      );
+      if (!mounted) return;
+      setState(() => _messages.add(message));
+      _scrollToBottom();
+      _markRead();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  // ── โพลในห้อง ────────────────────────────────────────────────────────────
+
+  /// เปิดชีตสร้างโพล แล้วส่งขึ้นห้องเมื่อกรอกครบ
+  Future<void> _createPoll() async {
+    if (_sending) return;
+    final draft = await showModalBottomSheet<_PollDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _CreatePollSheet(),
+    );
+    if (draft == null || !mounted) return;
+
+    try {
+      final message = await context.read<AppProvider>().createChatPoll(
+        widget.scheduleId,
+        question: draft.question,
+        options: draft.options,
+        allowMultiple: draft.allowMultiple,
+        durationHours: draft.durationHours,
+      );
+      if (!mounted) return;
+      setState(() => _messages.add(message));
+      _scrollToBottom();
+      _markRead();
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  /// ลงคะแนน — อัปเดตการ์ดในห้องด้วย payload ที่เซิร์ฟเวอร์ตอบกลับ
+  Future<void> _votePoll(int messageId, int pollId, List<int> optionIds) async {
+    HapticFeedback.selectionClick();
+    try {
+      final result = await context.read<AppProvider>().voteChatPoll(
+        widget.scheduleId,
+        pollId,
+        optionIds,
+      );
+      if (!mounted) return;
+      _applyPoll(messageId, result['poll']);
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  Future<void> _closePoll(int messageId, int pollId) async {
+    try {
+      final result = await context
+          .read<AppProvider>()
+          .closeChatPoll(widget.scheduleId, pollId);
+      if (!mounted) return;
+      _applyPoll(messageId, result['poll']);
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  /// Realtime: มีคนโหวต/ปิดโพล — ทับข้อมูลโพลบนการ์ดนั้น แต่คง "ข้อที่ฉันเลือก"
+  /// ไว้ตามที่เครื่องนี้รู้ เพราะ payload ที่ broadcast มาไม่ผูกกับผู้ใช้คนไหน
+  void _onPollSignal(Map<String, dynamic> data) {
+    final messageId = int.tryParse('${data['message_id']}');
+    if (messageId == null || data['poll'] is! Map) return;
+    _applyPoll(messageId, data['poll'], fromBroadcast: true);
+  }
+
+  void _applyPoll(int messageId, dynamic poll, {bool fromBroadcast = false}) {
+    if (poll is! Map || !mounted) return;
+    final idx = _messages.indexWhere(
+      (m) => int.tryParse('${m['id']}') == messageId,
+    );
+    if (idx < 0) return;
+
+    final next = Map<String, dynamic>.from(poll);
+    if (fromBroadcast) {
+      // เติมมุมมองของผู้ใช้คนนี้กลับเข้าไปจาก voter_ids ที่แนบมากับแต่ละข้อ
+      final mine = <int>[];
+      final options = <Map<String, dynamic>>[];
+      for (final o in (next['options'] as List? ?? [])) {
+        final option = Map<String, dynamic>.from(o as Map);
+        final votedByMe =
+            _myUserId != null &&
+            (option['voter_ids'] as List? ?? [])
+                .map((v) => int.tryParse('$v'))
+                .contains(_myUserId);
+        option['voted_by_me'] = votedByMe;
+        if (votedByMe) mine.add(int.tryParse('${option['id']}') ?? 0);
+        options.add(option);
+      }
+      next['options'] = options;
+      next['my_option_ids'] = mine;
+    }
+
+    setState(() => _messages[idx] = {..._messages[idx], 'poll': next});
   }
 
   void _startReply(Map<String, dynamic> message) {
@@ -1341,6 +1527,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           roleLabel: role == 'admin' ? 'ทีมงาน' : 'สตาฟประจำรอบ',
           phone: phone,
           avatarUrl: ApiConfig.mediaUrl(m['avatar_url']),
+          kind: _ContactKind.staff,
         ),
       );
     }
@@ -1354,6 +1541,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           roleLabel: _vehicleName.isEmpty ? 'คนขับ' : 'คนขับ · $_vehicleName',
           phone: driverPhone,
           avatarUrl: ApiConfig.mediaUrl(_vehicle?['driver_photo']),
+          kind: _ContactKind.driver,
         ),
       );
     }
@@ -1510,6 +1698,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ),
           ),
           if (_typingLabel() != null) _TypingIndicator(label: _typingLabel()!),
+          // ปุ่มคำถามด่วน — คำถามที่ถูกถามซ้ำที่สุดในห้อง กดแล้วได้คำตอบทันที
+          // (ตอบเฉพาะคนกด ไม่โพสต์ลงห้อง) ซ่อนตอนกำลังพิมพ์เพื่อไม่กินพื้นที่
+          if (!_loading && _error == null && !_isComposing)
+            _QuickAskBar(
+              canModerate: _canModerate,
+              onAsk: _openTripInfo,
+              onSendSummary: _sendTripSummary,
+            ),
           _buildInput(),
         ],
       ),
@@ -1717,6 +1913,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         onSwipeReply: () => _startReply(m),
         onReplyTap: _scrollToMessage,
         onReactionTap: (emoji) => _toggleReaction(mId, emoji),
+        canModerate: _canModerate,
+        onVote: (pollId, optionIds) => _votePoll(mId, pollId, optionIds),
+        onClosePoll: (pollId) => _closePoll(mId, pollId),
       );
 
       // Keyed so jumps can anchor exactly on this bubble (see _scrollToMessage).
@@ -2091,7 +2290,11 @@ class _DateSeparator extends StatelessWidget {
   }
 }
 
-/// Centered notice (role == system) — e.g. "เจ้าหน้าที่เข้าร่วมแชท".
+/// ข้อความจากระบบ (role == system)
+///
+/// ประกาศสั้น ๆ ("เจ้าหน้าที่เข้าร่วมแชท") ยังเป็นป้ายกลางจอเหมือนเดิม ส่วน
+/// ข้อความอัตโนมัติตามไทม์ไลน์ทริป (สรุปจุดรับ/เตรียมของ/อากาศ) เป็นข้อความยาว
+/// หลายบรรทัด จึงเรนเดอร์เป็นการ์ดชิดซ้ายให้อ่านเป็นย่อหน้าได้จริง
 class _SystemMessage extends StatelessWidget {
   final Map<String, dynamic> message;
 
@@ -2101,25 +2304,1209 @@ class _SystemMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     final body = message['body']?.toString() ?? '';
     if (body.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            body,
-            textAlign: TextAlign.center,
-            style: appFont(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.primaryColor,
-              letterSpacing: -0.1,
+
+    final isNotice = !body.contains('\n') && body.characters.length <= 90;
+
+    if (isNotice) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              body,
+              textAlign: TextAlign.center,
+              style: appFont(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.primaryColor,
+                letterSpacing: -0.1,
+              ),
             ),
           ),
+        ),
+      );
+    }
+
+    // แยกหัวเรื่อง (บรรทัดแรก) ออกจากรายละเอียด — สแกนหาข้อมูลได้เร็วกว่าก้อนเดียว
+    final lines = body.split('\n');
+    final heading = lines.first.trim();
+    final rest = lines.skip(1).join('\n').trim();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 6),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withValues(
+            alpha: AppTheme.isDark(context) ? 0.12 : 0.06,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryColor.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'ข้อความจากทีมงาน',
+                  style: appFont(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  _systemTime(message),
+                  style: appFont(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              heading,
+              style: appFont(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.onSurface(context),
+                letterSpacing: -0.1,
+                height: 1.35,
+              ),
+            ),
+            if (rest.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Text(
+                rest,
+                style: appFont(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.onSurface(context).withValues(alpha: 0.86),
+                  height: 1.55,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _systemTime(Map<String, dynamic> message) {
+    final dt = _parseTime(message['created_at']);
+    if (dt == null) return '';
+    return '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+/// คำถามที่ลูกค้าถามซ้ำที่สุดในห้องแชท — ใช้เป็นทั้งป้ายปุ่มและหัวข้อคำตอบ
+enum _QuickAsk {
+  time('ขึ้นรถกี่โมง', Icons.schedule_rounded),
+  place('จุดรับที่ไหน', Icons.pin_drop_rounded),
+  vehicle('ทะเบียนรถ', Icons.airport_shuttle_rounded),
+  contact('เบอร์ติดต่อ', Icons.phone_rounded);
+
+  final String label;
+  final IconData icon;
+
+  const _QuickAsk(this.label, this.icon);
+}
+
+/// แถบปุ่มคำถามด่วนเหนือช่องพิมพ์ — ทางลัดที่เร็วกว่าพิมพ์ถามสตาฟ
+///
+/// สตาฟ/ทีมงานจะเห็นปุ่มเพิ่มอีกหนึ่งปุ่มสำหรับโพสต์สรุปให้ทั้งห้องรวดเดียว
+class _QuickAskBar extends StatelessWidget {
+  final bool canModerate;
+  final ValueChanged<_QuickAsk> onAsk;
+  final Future<void> Function() onSendSummary;
+
+  const _QuickAskBar({
+    required this.canModerate,
+    required this.onAsk,
+    required this.onSendSummary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        border: Border(top: BorderSide(color: AppTheme.border(context))),
+      ),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        children: [
+          for (final ask in _QuickAsk.values) ...[
+            _QuickAskChip(
+              icon: ask.icon,
+              label: ask.label,
+              onTap: () => onAsk(ask),
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (canModerate)
+            _QuickAskChip(
+              icon: Icons.campaign_rounded,
+              label: 'ส่งสรุปให้ทุกคน',
+              filled: true,
+              onTap: onSendSummary,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickAskChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+
+  const _QuickAskChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = filled ? Colors.white : AppTheme.onSurface(context);
+
+    return Material(
+      color: filled
+          ? AppTheme.primaryColor
+          : AppTheme.subtleSurface(context),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: filled
+                ? null
+                : Border.all(color: AppTheme.border(context)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: filled ? Colors.white : AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: appFont(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: fg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// คำตอบของคำถามด่วน — ตอบครบทั้ง 4 ข้อในชีตเดียว โดยไฮไลต์ข้อที่กดถามมา
+/// (ตอบเฉพาะคนกด ไม่โพสต์ลงห้อง จะได้ไม่รบกวนเพื่อนร่วมทริป)
+class _TripInfoSheet extends StatelessWidget {
+  final Map<String, dynamic> info;
+  final _QuickAsk focus;
+
+  const _TripInfoSheet({required this.info, required this.focus});
+
+  Map<String, dynamic>? _map(dynamic value) =>
+      value is Map ? Map<String, dynamic>.from(value) : null;
+
+  String? _text(dynamic value) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? null : text;
+  }
+
+  Future<void> _launch(BuildContext context, Uri uri) async {
+    HapticFeedback.selectionClick();
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('เปิดลิงก์ไม่ได้')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pickup = _map(info['pickup']);
+    final vehicle = _map(info['vehicle']);
+    final driver = _map(info['driver']);
+    final staff = (info['staff'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+
+    final pickupTime = _text(pickup?['time']);
+    final pickupWhere = _text(pickup?['location']) ?? _text(pickup?['label']);
+    final mapUrl = _text(pickup?['map_url']);
+    final plate = _text(vehicle?['license_plate']);
+    final vehicleName = _text(vehicle?['name']);
+    final vehicleColor = _text(vehicle?['color']);
+
+    return SafeArea(
+      top: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.mutedText(context).withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_rounded,
+                      size: 20, color: AppTheme.primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'ข้อมูลการเดินทางของคุณ',
+                      style: appFont(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_text(info['departure_label']) != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'ออกเดินทาง ${_text(info['departure_label'])}',
+                    style: appFont(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ),
+              ),
+            Flexible(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                children: [
+                  _TripInfoBlock(
+                    ask: _QuickAsk.time,
+                    highlight: focus == _QuickAsk.time,
+                    answer: pickupTime != null
+                        ? '$pickupTime น.'
+                        : (_text(info['departs_at']) != null
+                              ? 'รถออกตามเวลาในใบจอง'
+                              : null),
+                    pending: 'ทีมงานจะยืนยันเวลาขึ้นรถให้ก่อนเดินทางครับ',
+                    detail: pickupWhere == null ? null : 'ที่ $pickupWhere',
+                  ),
+                  _TripInfoBlock(
+                    ask: _QuickAsk.place,
+                    highlight: focus == _QuickAsk.place,
+                    answer: pickupWhere,
+                    pending: 'ทีมงานจะยืนยันจุดรับให้ก่อนเดินทางครับ',
+                    detail: _text(pickup?['notes']),
+                    actionIcon: Icons.map_rounded,
+                    actionLabel: mapUrl == null ? null : 'เปิดแผนที่',
+                    onAction: mapUrl == null
+                        ? null
+                        : () {
+                            final uri = Uri.tryParse(mapUrl);
+                            if (uri != null) _launch(context, uri);
+                          },
+                  ),
+                  _TripInfoBlock(
+                    ask: _QuickAsk.vehicle,
+                    highlight: focus == _QuickAsk.vehicle,
+                    answer: plate == null ? null : 'ทะเบียน $plate',
+                    pending: 'ทีมงานจะยืนยันรถและทะเบียนให้ก่อนเดินทาง 1 วันครับ',
+                    detail: [
+                      ?vehicleName,
+                      if (vehicleColor != null) 'สี$vehicleColor',
+                    ].join(' · ').trim().isEmpty
+                        ? null
+                        : [
+                            ?vehicleName,
+                            if (vehicleColor != null) 'สี$vehicleColor',
+                          ].join(' · '),
+                  ),
+                  _TripInfoBlock(
+                    ask: _QuickAsk.contact,
+                    highlight: focus == _QuickAsk.contact,
+                    answer: null,
+                    pending:
+                        'ทีมงานจะแจ้งเบอร์คนขับและสตาฟประจำรอบให้ก่อนเดินทางครับ',
+                    children: [
+                      if (driver != null)
+                        _TripInfoContactRow(
+                          role: 'คนขับ',
+                          name: _text(driver['name']) ?? 'คนขับ',
+                          phone: _text(driver['phone']),
+                          onCall: _text(driver['phone']) == null
+                              ? null
+                              : () => _launch(
+                                  context,
+                                  Uri(
+                                    scheme: 'tel',
+                                    path: _text(driver['phone']),
+                                  ),
+                                ),
+                        ),
+                      for (final member in staff)
+                        _TripInfoContactRow(
+                          role: 'สตาฟประจำรอบ',
+                          name: _text(member['name']) ?? 'สตาฟ',
+                          phone: _text(member['phone']),
+                          onCall: _text(member['phone']) == null
+                              ? null
+                              : () => _launch(
+                                  context,
+                                  Uri(
+                                    scheme: 'tel',
+                                    path: _text(member['phone']),
+                                  ),
+                                ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// หนึ่งคำถาม-คำตอบในชีต — ข้อที่ถูกกดถามจะถูกไฮไลต์ไว้
+class _TripInfoBlock extends StatelessWidget {
+  final _QuickAsk ask;
+  final bool highlight;
+  final String? answer;
+  final String pending;
+  final String? detail;
+  final IconData? actionIcon;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final List<Widget> children;
+
+  const _TripInfoBlock({
+    required this.ask,
+    required this.highlight,
+    required this.answer,
+    required this.pending,
+    this.detail,
+    this.actionIcon,
+    this.actionLabel,
+    this.onAction,
+    this.children = const [],
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // มีรายชื่อให้โทร (คนขับ/สตาฟ) ก็ถือว่าตอบได้แล้ว แม้จะไม่มีข้อความคำตอบ
+    final hasAnswerText = answer != null && answer!.trim().isNotEmpty;
+    final known = hasAnswerText || children.isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: highlight
+            ? AppTheme.primaryColor.withValues(alpha: 0.06)
+            : AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: highlight
+              ? AppTheme.primaryColor.withValues(alpha: 0.35)
+              : AppTheme.border(context),
+          width: highlight ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(ask.icon, size: 15, color: AppTheme.primaryColor),
+              const SizedBox(width: 6),
+              Text(
+                ask.label,
+                style: appFont(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          if (hasAnswerText)
+            Text(
+              answer!,
+              style: appFont(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.onSurface(context),
+                height: 1.3,
+              ),
+            ),
+          if (!known)
+            Text(
+              pending,
+              style: appFont(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mutedText(context),
+                height: 1.4,
+              ),
+            ),
+          if (hasAnswerText && detail != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              detail!,
+              style: appFont(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mutedText(context),
+                height: 1.4,
+              ),
+            ),
+          ],
+          for (final child in children) child,
+          if (onAction != null && actionLabel != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Material(
+                color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(999),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: onAction,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          actionIcon,
+                          size: 14,
+                          color: AppTheme.primaryColor,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          actionLabel!,
+                          style: appFont(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// แถวคนที่โทรหาได้ในชีตคำตอบ (คนขับ / สตาฟ)
+class _TripInfoContactRow extends StatelessWidget {
+  final String role;
+  final String name;
+  final String? phone;
+  final VoidCallback? onCall;
+
+  const _TripInfoContactRow({
+    required this.role,
+    required this.name,
+    required this.phone,
+    required this.onCall,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+                Text(
+                  phone == null ? role : '$role · $phone',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onCall != null)
+            Material(
+              color: AppTheme.primaryColor,
+              shape: const CircleBorder(),
+              child: InkWell(
+                onTap: onCall,
+                customBorder: const CircleBorder(),
+                child: const SizedBox(
+                  width: 38,
+                  height: 38,
+                  child: Icon(
+                    Icons.phone_rounded,
+                    size: 17,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// การ์ดโพลในห้องแชท — คำถาม ตัวเลือกพร้อมแถบผลโหวต และปุ่มปิดโหวต
+///
+/// แตะที่ตัวเลือกเพื่อโหวต/ถอนโหวต (โพลเลือกข้อเดียวจะย้ายคะแนนให้เอง) ผลโหวต
+/// เปิดให้ทุกคนเห็นตลอด เพราะทริปกลุ่มต้องเห็นภาพรวมถึงจะนัดกันได้
+class _PollCard extends StatelessWidget {
+  final Map<String, dynamic> poll;
+  final int? myUserId;
+  final bool canClose;
+  final void Function(int pollId, List<int> optionIds) onVote;
+  final ValueChanged<int> onClose;
+
+  const _PollCard({
+    required this.poll,
+    required this.myUserId,
+    required this.canClose,
+    required this.onVote,
+    required this.onClose,
+  });
+
+  int get _pollId => int.tryParse('${poll['id']}') ?? 0;
+
+  bool get _isClosed => poll['is_closed'] == true;
+
+  bool get _allowMultiple => poll['allow_multiple'] == true;
+
+  List<int> get _myOptionIds => (poll['my_option_ids'] as List? ?? const [])
+      .map((e) => int.tryParse('$e'))
+      .whereType<int>()
+      .toList();
+
+  List<Map<String, dynamic>> get _options => (poll['options'] as List? ?? const [])
+      .whereType<Map>()
+      .map((e) => Map<String, dynamic>.from(e))
+      .toList();
+
+  /// "ปิดใน 2 ชม." / "ปิดใน 15 นาที" — บอกจังหวะให้คนที่ยังไม่โหวตรู้ว่าเหลือเวลาเท่าไร
+  String? _closesInLabel() {
+    if (_isClosed) return null;
+    final raw = poll['closes_at']?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    final at = DateTime.tryParse(raw)?.toLocal();
+    if (at == null) return null;
+    final left = at.difference(DateTime.now());
+    if (left.isNegative) return null;
+    if (left.inHours >= 24) return 'ปิดใน ${left.inDays + 1} วัน';
+    if (left.inHours >= 1) return 'ปิดใน ${left.inHours} ชม.';
+    return 'ปิดใน ${left.inMinutes + 1} นาที';
+  }
+
+  void _tap(Map<String, dynamic> option) {
+    if (_isClosed) return;
+    final id = int.tryParse('${option['id']}');
+    if (id == null || _pollId == 0) return;
+
+    final current = _myOptionIds;
+    final List<int> next;
+    if (_allowMultiple) {
+      next = current.contains(id)
+          ? (current.where((e) => e != id).toList())
+          : ([...current, id]);
+    } else {
+      // เลือกข้อเดิมซ้ำ = ถอนโหวต, เลือกข้ออื่น = ย้ายคะแนน
+      next = current.contains(id) ? <int>[] : [id];
+    }
+    onVote(_pollId, next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final options = _options;
+    final voterCount = int.tryParse('${poll['voter_count']}') ?? 0;
+    final closesIn = _closesInLabel();
+
+    final meta = <String>[
+      if (_allowMultiple) 'เลือกได้หลายข้อ',
+      voterCount > 0 ? 'โหวตแล้ว $voterCount คน' : 'ยังไม่มีใครโหวต',
+      if (_isClosed) 'ปิดโหวตแล้ว' else ?closesIn,
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              _isClosed ? Icons.how_to_vote_rounded : Icons.bar_chart_rounded,
+              size: 17,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                poll['question']?.toString() ?? '',
+                style: appFont(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.onSurface(context),
+                  letterSpacing: -0.1,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          meta.join(' · '),
+          style: appFont(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.mutedText(context),
+          ),
+        ),
+        const SizedBox(height: 10),
+        for (final option in options) ...[
+          _PollOptionRow(
+            option: option,
+            voterCount: voterCount,
+            closed: _isClosed,
+            onTap: () => _tap(option),
+          ),
+          const SizedBox(height: 6),
+        ],
+        if (canClose && !_isClosed) ...[
+          const SizedBox(height: 2),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              if (_pollId != 0) onClose(_pollId);
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: 13,
+                  color: AppTheme.mutedText(context),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'ปิดโหวต',
+                  style: appFont(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// หนึ่งตัวเลือกในโพล — แถบพื้นหลังยาวตามสัดส่วนคะแนน อ่านผลได้โดยไม่ต้องคิดเลข
+class _PollOptionRow extends StatelessWidget {
+  final Map<String, dynamic> option;
+  final int voterCount;
+  final bool closed;
+  final VoidCallback onTap;
+
+  const _PollOptionRow({
+    required this.option,
+    required this.voterCount,
+    required this.closed,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final votes = int.tryParse('${option['vote_count']}') ?? 0;
+    final mine = option['voted_by_me'] == true;
+    final ratio = voterCount == 0 ? 0.0 : (votes / voterCount).clamp(0.0, 1.0);
+    final percent = (ratio * 100).round();
+
+    final border = mine
+        ? AppTheme.primaryColor.withValues(alpha: 0.55)
+        : AppTheme.border(context);
+
+    return Material(
+      color: AppTheme.surface(context),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: closed ? null : onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: border, width: mine ? 1.5 : 1),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              // แถบผลโหวตอยู่หลังข้อความ
+              Positioned.fill(
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: ratio == 0 ? 0.0001 : ratio,
+                  child: Container(
+                    color: AppTheme.primaryColor.withValues(
+                      alpha: mine ? 0.20 : 0.10,
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    if (mine) ...[
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 15,
+                        color: AppTheme.primaryColor,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        option['label']?.toString() ?? '',
+                        style: appFont(
+                          fontSize: 13.5,
+                          fontWeight: mine ? FontWeight.w800 : FontWeight.w600,
+                          color: AppTheme.onSurface(context),
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      votes == 0 ? '—' : '$votes · $percent%',
+                      style: appFont(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ผลลัพธ์จากชีตสร้างโพล
+class _PollDraft {
+  final String question;
+  final List<String> options;
+  final bool allowMultiple;
+  final int? durationHours;
+
+  const _PollDraft({
+    required this.question,
+    required this.options,
+    required this.allowMultiple,
+    required this.durationHours,
+  });
+}
+
+/// ชีตสร้างโพล — คำถาม + ตัวเลือก 2–6 ข้อ + เลือกได้หลายข้อ + เวลาปิดโหวต
+class _CreatePollSheet extends StatefulWidget {
+  const _CreatePollSheet();
+
+  @override
+  State<_CreatePollSheet> createState() => _CreatePollSheetState();
+}
+
+class _CreatePollSheetState extends State<_CreatePollSheet> {
+  static const _maxOptions = 6;
+
+  final _question = TextEditingController();
+  final _options = <TextEditingController>[
+    TextEditingController(),
+    TextEditingController(),
+  ];
+  bool _allowMultiple = false;
+  int? _durationHours;
+
+  @override
+  void dispose() {
+    _question.dispose();
+    for (final c in _options) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  bool get _canSubmit {
+    if (_question.text.trim().isEmpty) return false;
+    final filled = _options
+        .map((c) => c.text.trim())
+        .where((t) => t.isNotEmpty)
+        .toSet();
+    return filled.length >= 2;
+  }
+
+  void _addOption() {
+    if (_options.length >= _maxOptions) return;
+    setState(() => _options.add(TextEditingController()));
+  }
+
+  void _removeOption(int index) {
+    if (_options.length <= 2) return;
+    setState(() => _options.removeAt(index).dispose());
+  }
+
+  void _submit() {
+    final options = _options
+        .map((c) => c.text.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    HapticFeedback.selectionClick();
+    Navigator.pop(
+      context,
+      _PollDraft(
+        question: _question.text.trim(),
+        options: options,
+        allowMultiple: _allowMultiple,
+        durationHours: _durationHours,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.mutedText(context).withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.bar_chart_rounded,
+                        size: 20, color: AppTheme.primaryColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      'สร้างโพล',
+                      style: appFont(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  children: [
+                    TextField(
+                      controller: _question,
+                      autofocus: true,
+                      maxLength: 200,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) => setState(() {}),
+                      style: appFont(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.onSurface(context),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'คำถาม เช่น แวะกินข้าวเย็นที่ไหนดี',
+                        hintStyle: appFont(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.mutedText(context),
+                        ),
+                        filled: true,
+                        fillColor: AppTheme.subtleSurface(context),
+                        counterText: '',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppTheme.border(context)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppTheme.border(context)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const _PollSheetLabel(label: 'ตัวเลือก'),
+                    for (var i = 0; i < _options.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _options[i],
+                                maxLength: 100,
+                                textInputAction: TextInputAction.next,
+                                onChanged: (_) => setState(() {}),
+                                style: appFont(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.onSurface(context),
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'ตัวเลือกที่ ${i + 1}',
+                                  hintStyle: appFont(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.mutedText(context),
+                                  ),
+                                  isDense: true,
+                                  filled: true,
+                                  fillColor: AppTheme.subtleSurface(context),
+                                  counterText: '',
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: AppTheme.border(context),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: AppTheme.border(context),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (_options.length > 2)
+                              IconButton(
+                                tooltip: 'ลบตัวเลือกนี้',
+                                onPressed: () => _removeOption(i),
+                                icon: Icon(
+                                  Icons.remove_circle_outline_rounded,
+                                  size: 20,
+                                  color: AppTheme.mutedText(context),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    if (_options.length < _maxOptions)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: _addOption,
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: Text(
+                            'เพิ่มตัวเลือก',
+                            style: appFont(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: _allowMultiple,
+                      onChanged: (v) => setState(() => _allowMultiple = v),
+                      title: Text(
+                        'เลือกได้หลายข้อ',
+                        style: appFont(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                    ),
+                    const _PollSheetLabel(label: 'ปิดโหวตอัตโนมัติ'),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        for (final option in const [
+                          (null, 'ไม่กำหนด'),
+                          (3, '3 ชม.'),
+                          (12, '12 ชม.'),
+                          (24, '1 วัน'),
+                        ])
+                          ChoiceChip(
+                            label: Text(
+                              option.$2,
+                              style: appFont(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            selected: _durationHours == option.$1,
+                            onSelected: (_) =>
+                                setState(() => _durationHours = option.$1),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _canSubmit ? _submit : null,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'ส่งโพลเข้าห้อง',
+                      style: appFont(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PollSheetLabel extends StatelessWidget {
+  final String label;
+
+  const _PollSheetLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 4),
+      child: Text(
+        label,
+        style: appFont(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.mutedText(context),
         ),
       ),
     );
@@ -2294,6 +3681,9 @@ class _MessageBubble extends StatelessWidget {
   final VoidCallback onSwipeReply;
   final ValueChanged<int> onReplyTap;
   final ValueChanged<String> onReactionTap;
+  final bool canModerate;
+  final void Function(int pollId, List<int> optionIds) onVote;
+  final ValueChanged<int> onClosePoll;
 
   const _MessageBubble({
     required this.message,
@@ -2314,6 +3704,9 @@ class _MessageBubble extends StatelessWidget {
     required this.onSwipeReply,
     required this.onReplyTap,
     required this.onReactionTap,
+    required this.canModerate,
+    required this.onVote,
+    required this.onClosePoll,
   });
 
   static const _roleLabels = {
@@ -2346,13 +3739,18 @@ class _MessageBubble extends StatelessWidget {
 
     final isDeleted = message['is_deleted'] == true;
     final isEdited = message['edited_at'] != null;
+    // การ์ดโพลใช้พื้นที่มากกว่าข้อความ และต้องอ่านแถบผลโหวตออกทั้งฝั่งเราและฝั่งเขา
+    // จึงกว้างกว่าบับเบิลปกติและใช้พื้นหลังกลาง ๆ แทนสีของผู้ส่ง
+    final poll = (!isDeleted && message['poll'] is Map)
+        ? Map<String, dynamic>.from(message['poll'] as Map)
+        : null;
     final body = message['body']?.toString() ?? '';
     final imageUrl = isDeleted ? '' : ApiConfig.mediaUrl(message['image_url']);
     // A locally-picked image shown while an optimistic send is in flight (before
     // the server returns its hosted URL).
     final localImagePath =
         isDeleted ? '' : (message['_local_image_path']?.toString() ?? '');
-    final hasText = !isDeleted && body.isNotEmpty;
+    final hasText = !isDeleted && poll == null && body.isNotEmpty;
     final hasImage = imageUrl.isNotEmpty;
     final hasLocalImage = imageUrl.isEmpty && localImagePath.isNotEmpty;
 
@@ -2365,12 +3763,13 @@ class _MessageBubble extends StatelessWidget {
         .toList();
 
     final isDark = AppTheme.isDark(context);
-    final bg = isMine
-        ? AppTheme.primaryColor
-        : (isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : const Color(0xFFF1F3F4));
-    final fg = isMine ? Colors.white : AppTheme.onSurface(context);
+    final neutralBg = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : const Color(0xFFF1F3F4);
+    final bg = (isMine && poll == null) ? AppTheme.primaryColor : neutralBg;
+    final fg = (isMine && poll == null)
+        ? Colors.white
+        : AppTheme.onSurface(context);
 
     // iMessage-style asymmetric corners: the "tail" corner (bottom on the
     // sender's side) tightens on the last bubble of a group so the cluster
@@ -2409,7 +3808,8 @@ class _MessageBubble extends StatelessWidget {
           if (!isMine) const SizedBox(width: 8),
           ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.74,
+              maxWidth:
+                  MediaQuery.sizeOf(context).width * (poll != null ? 0.86 : 0.74),
             ),
             child: Column(
               crossAxisAlignment:
@@ -2504,6 +3904,18 @@ class _MessageBubble extends StatelessWidget {
                                 ),
                               ),
                             ],
+                          )
+                        else if (poll != null)
+                          _PollCard(
+                            poll: poll,
+                            myUserId: myUserId,
+                            canClose:
+                                canModerate ||
+                                (myUserId != null &&
+                                    myUserId ==
+                                        int.tryParse('${poll['created_by_id']}')),
+                            onVote: onVote,
+                            onClose: onClosePoll,
                           )
                         else if (hasText)
                           _MessageText(
@@ -4148,46 +5560,75 @@ class _UnreadDivider extends StatelessWidget {
   }
 }
 
+/// สตาฟ/ทีมงาน กับ คนขับ แยกกลุ่มกันในชีตรายชื่อ เพราะเป็นคนละหน้าที่
+enum _ContactKind { staff, driver }
+
 /// คนที่กดโทรได้จากแถบด้านบนแชท (สตาฟ / ทีมงาน / คนขับ)
 class _ChatContact {
   final String name;
   final String roleLabel;
   final String phone;
   final String avatarUrl;
+  final _ContactKind kind;
 
   const _ChatContact({
     required this.name,
     required this.roleLabel,
     required this.phone,
     required this.avatarUrl,
+    required this.kind,
   });
 }
 
-/// แถบติดต่อที่ปักอยู่ใต้ AppBar ตลอดเวลา — ชื่อ รูป เบอร์ และปุ่มโทร
+/// โทรหาผู้ติดต่อ — ใช้ร่วมกันระหว่างแถบด้านบนและชีตรายชื่อ
+Future<void> _callContact(BuildContext context, _ChatContact contact) async {
+  HapticFeedback.selectionClick();
+  final uri = Uri.parse('tel:${contact.phone}');
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri);
+  } else if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('โทรออกไม่ได้ เบอร์ ${contact.phone}')),
+    );
+  }
+}
+
+/// แถบติดต่อที่ปักอยู่ใต้ AppBar ตลอดเวลา
 ///
-/// คนเดียวจะกางเต็มความกว้าง หลายคนจะเลื่อนแนวนอนโดยให้การ์ดถัดไปโผล่ขอบมา
-/// เล็กน้อย เป็นสัญญาณว่ายังมีคนให้เลื่อนดูต่อ
+/// คนเดียว = การ์ดเต็มความกว้าง กดโทรได้จากตรงนั้นเลย
+/// หลายคน = แถวสรุปแถวเดียว (รูปซ้อนกัน + จำนวนสตาฟ/คนขับ) แตะแล้วเปิดชีตรายชื่อ
+/// ทั้งหมด — ไม่ใช้เลื่อนแนวนอน เพราะคนที่ต้องโทรหาอาจซ่อนอยู่นอกจอโดยไม่รู้ตัว
 class _ContactBar extends StatelessWidget {
   final List<_ChatContact> contacts;
 
   const _ContactBar({required this.contacts});
 
-  Future<void> _call(BuildContext context, _ChatContact contact) async {
+  void _openSheet(BuildContext context) {
     HapticFeedback.selectionClick();
-    final uri = Uri.parse('tel:${contact.phone}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('โทรออกไม่ได้ เบอร์ ${contact.phone}')),
-      );
-    }
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.surface(context),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ContactSheet(contacts: contacts),
+    );
+  }
+
+  /// "สตาฟ 2 คน · คนขับ 1 คน" — บอกองค์ประกอบทีมให้ครบตั้งแต่ยังไม่เปิดชีต
+  String _summary() {
+    final staff = contacts.where((c) => c.kind == _ContactKind.staff).length;
+    final drivers = contacts.length - staff;
+    final parts = <String>[
+      if (staff > 0) 'สตาฟ $staff คน',
+      if (drivers > 0) 'คนขับ $drivers คน',
+    ];
+    return parts.join(' · ');
   }
 
   @override
   Widget build(BuildContext context) {
-    final single = contacts.length == 1;
-
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
@@ -4195,32 +5636,386 @@ class _ContactBar extends StatelessWidget {
           bottom: BorderSide(color: AppTheme.border(context), width: 1),
         ),
       ),
-      padding: EdgeInsets.symmetric(vertical: 10, horizontal: single ? 14 : 0),
-      child: single
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+      child: contacts.length == 1
           ? _ContactCard(
               contact: contacts.first,
-              onCall: () => _call(context, contacts.first),
+              onCall: () => _callContact(context, contacts.first),
             )
-          : SizedBox(
-              height: 52,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                itemCount: contacts.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (context, i) => SizedBox(
-                  // ให้การ์ดถัดไปโผล่ขอบมาบอกว่ายังเลื่อนได้
-                  width: (MediaQuery.of(context).size.width * 0.72).clamp(
-                    240.0,
-                    320.0,
-                  ),
-                  child: _ContactCard(
-                    contact: contacts[i],
-                    onCall: () => _call(context, contacts[i]),
+          : Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _openSheet(context),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      _ContactAvatarStack(contacts: contacts),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'ติดต่อทีมงานประจำรอบ',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.onSurface(context),
+                                letterSpacing: -0.1,
+                              ),
+                            ),
+                            Text(
+                              _summary(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.mutedText(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.phone_rounded,
+                              size: 15,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'ดูเบอร์',
+                              style: appFont(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
+    );
+  }
+}
+
+/// รูปสตาฟ/คนขับซ้อนกันแบบทีม — เกิน 3 คนตัดเป็น "+N" ไม่ให้แถวยืด
+class _ContactAvatarStack extends StatelessWidget {
+  final List<_ChatContact> contacts;
+
+  const _ContactAvatarStack({required this.contacts});
+
+  static const double _size = 32;
+  static const double _overlap = 21;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = contacts.take(3).toList();
+    final extra = contacts.length - shown.length;
+    final slots = shown.length + (extra > 0 ? 1 : 0);
+
+    return SizedBox(
+      width: _overlap * (slots - 1) + _size,
+      height: _size,
+      child: Stack(
+        children: [
+          for (var i = 0; i < shown.length; i++)
+            Positioned(
+              left: i * _overlap,
+              child: _StackedAvatar(contact: shown[i]),
+            ),
+          if (extra > 0)
+            Positioned(
+              left: shown.length * _overlap,
+              child: Container(
+                width: _size,
+                height: _size,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.surface(context), width: 2),
+                ),
+                child: Text(
+                  '+$extra',
+                  style: appFont(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// รูปเดี่ยวในกองซ้อน — ขอบสีพื้นหลังคั่นให้เห็นว่าเป็นคนละคน
+class _StackedAvatar extends StatelessWidget {
+  final _ChatContact contact;
+
+  const _StackedAvatar({required this.contact});
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = contact.name.trim().isEmpty
+        ? '?'
+        : contact.name.trim()[0].toUpperCase();
+    final fallback = Container(
+      alignment: Alignment.center,
+      color: AppTheme.primaryColor.withValues(alpha: 0.12),
+      child: Text(
+        initial,
+        style: appFont(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.primaryColor,
+        ),
+      ),
+    );
+
+    return Container(
+      width: _ContactAvatarStack._size,
+      height: _ContactAvatarStack._size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppTheme.surface(context), width: 2),
+      ),
+      child: ClipOval(
+        child: contact.avatarUrl.isEmpty
+            ? fallback
+            : CachedNetworkImage(
+                imageUrl: contact.avatarUrl,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => fallback,
+                errorWidget: (_, _, _) => fallback,
+              ),
+      ),
+    );
+  }
+}
+
+/// ชีตรายชื่อคนที่โทรหาได้ — แยกหัวข้อสตาฟ/คนขับ เห็นครบทุกคนในหน้าเดียว
+class _ContactSheet extends StatelessWidget {
+  final List<_ChatContact> contacts;
+
+  const _ContactSheet({required this.contacts});
+
+  @override
+  Widget build(BuildContext context) {
+    final staff = contacts
+        .where((c) => c.kind == _ContactKind.staff)
+        .toList();
+    final drivers = contacts
+        .where((c) => c.kind == _ContactKind.driver)
+        .toList();
+
+    return SafeArea(
+      top: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.mutedText(context).withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.support_agent_rounded,
+                      size: 20, color: AppTheme.primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'เบอร์ติดต่อในทริป',
+                    style: appFont(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.onSurface(context),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${contacts.length} คน',
+                    style: appFont(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                children: [
+                  if (staff.isNotEmpty) ...[
+                    const _ContactGroupLabel(label: 'สตาฟและทีมงาน'),
+                    for (final c in staff) _ContactSheetTile(contact: c),
+                  ],
+                  if (drivers.isNotEmpty) ...[
+                    if (staff.isNotEmpty) const SizedBox(height: 14),
+                    const _ContactGroupLabel(label: 'คนขับรถ'),
+                    for (final c in drivers) _ContactSheetTile(contact: c),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContactGroupLabel extends StatelessWidget {
+  final String label;
+
+  const _ContactGroupLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      child: Text(
+        label,
+        style: appFont(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.mutedText(context),
+        ),
+      ),
+    );
+  }
+}
+
+/// หนึ่งคนในชีต — แตะที่แถวหรือปุ่มก็โทรออกเหมือนกัน
+class _ContactSheetTile extends StatelessWidget {
+  final _ChatContact contact;
+
+  const _ContactSheetTile({required this.contact});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => _callContact(context, contact),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.border(context)),
+            ),
+            child: Row(
+              children: [
+                _StackedAvatar(contact: contact),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        contact.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        contact.roleLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        contact.phone,
+                        maxLines: 1,
+                        style: appFont(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Material(
+                  color: AppTheme.primaryColor,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    onTap: () => _callContact(context, contact),
+                    customBorder: const CircleBorder(),
+                    child: Tooltip(
+                      message: 'โทรหา${contact.name}',
+                      child: const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Icon(
+                          Icons.phone_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

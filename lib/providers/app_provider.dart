@@ -2006,6 +2006,60 @@ class AppProvider extends ChangeNotifier {
     );
   }
 
+  /// "ข้อมูลการเดินทางของฉัน" สำหรับปุ่มคำถามด่วนในห้องแชท
+  /// (ขึ้นรถกี่โมง / รอที่ไหน / ทะเบียนรถ / เบอร์คนขับ-สตาฟ)
+  Future<Map<String, dynamic>> chatTripInfo(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.chatTripInfo(scheduleId));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// สตาฟกดส่งสรุปการเดินทางเข้าห้อง — คืนข้อความระบบที่เพิ่งโพสต์
+  Future<Map<String, dynamic>> postChatTripSummary(int scheduleId) async {
+    final response = await api.post(ApiEndpoints.chatTripSummary(scheduleId));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// สร้างโพลในห้องแชท — คืนข้อความ (การ์ดโพล) ที่เพิ่งถูกสร้าง
+  Future<Map<String, dynamic>> createChatPoll(
+    int scheduleId, {
+    required String question,
+    required List<String> options,
+    bool allowMultiple = false,
+    int? durationHours,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.chatPolls(scheduleId),
+      body: {
+        'question': question,
+        'options': options,
+        'allow_multiple': allowMultiple,
+        'duration_hours': ?durationHours,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ลงคะแนนโพล — ส่งลิสต์ว่างเพื่อถอนโหวตของตัวเอง คืน payload โพลล่าสุด
+  Future<Map<String, dynamic>> voteChatPoll(
+    int scheduleId,
+    int pollId,
+    List<int> optionIds,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.chatPollVote(scheduleId, pollId),
+      body: {'option_ids': optionIds},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ปิดโหวต (ผู้สร้างโพลหรือทีมงานเท่านั้น)
+  Future<Map<String, dynamic>> closeChatPoll(int scheduleId, int pollId) async {
+    final response = await api.post(
+      ApiEndpoints.chatPollClose(scheduleId, pollId),
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   /// Subscribe to the auxiliary chat signals (read receipts, typing, reactions,
   /// pinned changes) on the same channel. Returns a single combined disposer.
   Future<VoidCallback> subscribeChatSignals(
@@ -2016,6 +2070,7 @@ class AppProvider extends ChangeNotifier {
     RealtimeEventHandler? onReaction,
     RealtimeEventHandler? onPinned,
     RealtimeEventHandler? onUpdated,
+    RealtimeEventHandler? onPoll,
   }) async {
     final channel = 'private-chat.schedule.$scheduleId';
     final disposers = <VoidCallback>[];
@@ -2033,6 +2088,7 @@ class AppProvider extends ChangeNotifier {
     await bind('chat.reaction', onReaction);
     await bind('chat.pinned', onPinned);
     await bind('chat.message.updated', onUpdated);
+    await bind('chat.poll', onPoll);
 
     return () {
       for (final d in disposers) {
