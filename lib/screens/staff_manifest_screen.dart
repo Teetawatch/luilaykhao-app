@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -35,6 +36,9 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
   bool _loading = true;
   final Set<int> _completingPoints = {};
 
+  /// booking_ref ที่กำลังเช็คอินอยู่ — กันกดซ้ำระหว่างรอ API
+  final Set<String> _checkingIn = {};
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +64,89 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// เช็คอินจากรายชื่อโดยไม่ต้องสแกน QR — ลูกค้าแบตหมด/เปิดแอปไม่ได้ก็ผ่านได้
+  ///
+  /// เช็คอินเป็นราย "ใบจอง" ไม่ใช่รายคน จึงถามยืนยันพร้อมบอกจำนวนคนในใบจองนั้น
+  /// ก่อนเสมอ เพื่อไม่ให้เผลอเช็คอินยกกลุ่มโดยไม่ตั้งใจ
+  Future<void> _checkInFromManifest(Map<String, dynamic> passenger) async {
+    final ref = textOf(passenger['booking_ref']);
+    if (ref.isEmpty || _checkingIn.contains(ref)) return;
+
+    final name = textOf(passenger['full_name'], textOf(passenger['name'], '-'));
+    final groupSize = asList(_data?['pickup_groups'])
+        .map(asMap)
+        .expand((g) => asList(g['passengers']).map(asMap))
+        .where((p) => textOf(p['booking_ref']) == ref)
+        .length;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'เช็คอินให้ $name',
+          style: appFont(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          groupSize > 1
+              ? 'ใบจอง $ref มีผู้เดินทาง $groupSize คน การเช็คอินจะนับครบทั้งใบจอง'
+              : 'ยืนยันเช็คอินใบจอง $ref',
+          style: appFont(fontSize: 13.5, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'ยกเลิก',
+              style: appFont(fontWeight: FontWeight.w700),
+            ),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'เช็คอิน',
+              style: appFont(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _checkingIn.add(ref));
+    try {
+      final result = await context.read<AppProvider>().confirmStaffCheckIn(
+        ref,
+        scheduleId: widget.scheduleId,
+      );
+      if (!mounted) return;
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.primaryColor,
+          content: Text(
+            result.message,
+            style: appFont(color: Colors.white),
+          ),
+        ),
+      );
+      await _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      HapticFeedback.vibrate();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _checkingIn.remove(ref));
     }
   }
 
@@ -226,9 +313,13 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
     final vehicle = asMap(schedule['vehicle']);
     final groups = asList(_data?['pickup_groups']).map(asMap).toList();
     final seatMap = asMap(_data?['seat_map']);
-    final addonBookings = asList(
-      _data?['bookings'],
-    ).map(asMap).where((b) => asList(b['selected_addons']).isNotEmpty).toList();
+    // ของเสริมที่ลูกค้าขอ + อุปกรณ์ที่เช่า — สตาฟต้องเตรียม/แจกทั้งสองอย่าง
+    final addonBookings = asList(_data?['bookings'])
+        .map(asMap)
+        .where((b) =>
+            asList(b['selected_addons']).isNotEmpty ||
+            asList(b['selected_rentals']).isNotEmpty)
+        .toList();
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -278,6 +369,8 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
           for (final group in groups) ...[
             _PickupGroupCard(
               group: group,
+              checkingIn: _checkingIn,
+              onCheckIn: _checkInFromManifest,
               busy: _completingPoints.contains(group['id']),
               onToggleComplete: (group['id'] is int)
                   ? (complete) => _togglePickupComplete(group, complete)
@@ -559,8 +652,14 @@ class _PickupGroupCard extends StatelessWidget {
   /// id (e.g. the "ไม่ระบุจุดรับ" group), in which case no action is shown.
   final void Function(bool completed)? onToggleComplete;
 
+  /// booking_ref ที่กำลังเช็คอินอยู่ + ตัวจัดการกดเช็คอินจากรายชื่อ
+  final Set<String> checkingIn;
+  final void Function(Map<String, dynamic> passenger) onCheckIn;
+
   const _PickupGroupCard({
     required this.group,
+    required this.checkingIn,
+    required this.onCheckIn,
     this.busy = false,
     this.onToggleComplete,
   });
@@ -754,7 +853,12 @@ class _PickupGroupCard extends StatelessWidget {
             child: Column(
               children: [
                 for (var i = 0; i < passengers.length; i++) ...[
-                  _ManifestPassengerRow(passenger: passengers[i], index: i + 1),
+                  _ManifestPassengerRow(
+                    passenger: passengers[i],
+                    index: i + 1,
+                    busy: checkingIn.contains(textOf(passengers[i]['booking_ref'])),
+                    onCheckIn: () => onCheckIn(passengers[i]),
+                  ),
                   if (i < passengers.length - 1)
                     Divider(
                       height: 1,
@@ -863,8 +967,15 @@ class _PickupCompleteFooter extends StatelessWidget {
 class _ManifestPassengerRow extends StatelessWidget {
   final Map<String, dynamic> passenger;
   final int index;
+  final bool busy;
+  final VoidCallback? onCheckIn;
 
-  const _ManifestPassengerRow({required this.passenger, required this.index});
+  const _ManifestPassengerRow({
+    required this.passenger,
+    required this.index,
+    this.busy = false,
+    this.onCheckIn,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -939,38 +1050,64 @@ class _ManifestPassengerRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          _CheckInPill(checkedIn: checkedIn),
+          _CheckInPill(
+            checkedIn: checkedIn,
+            busy: busy,
+            onTap: checkedIn ? null : onCheckIn,
+          ),
         ],
       ),
     );
   }
 }
 
+/// สถานะเช็คอินของผู้โดยสาร — ถ้ายังไม่เช็คอินและสตาฟมีสิทธิ์ ป้ายนี้กดเช็คอินได้เลย
+/// (ไม่ต้องเปิดกล้องสแกน QR ซึ่งใช้ไม่ได้ตอนลูกค้าแบตหมดหรือเปิดแอปไม่ได้)
 class _CheckInPill extends StatelessWidget {
   final bool checkedIn;
+  final bool busy;
+  final VoidCallback? onTap;
 
-  const _CheckInPill({required this.checkedIn});
+  const _CheckInPill({
+    required this.checkedIn,
+    this.busy = false,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final color = checkedIn ? AppTheme.primaryColor : AppTheme.warningColor;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+    final tappable = !checkedIn && onTap != null;
+
+    final content = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
+        border: tappable
+            ? Border.all(color: color.withValues(alpha: 0.45))
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            checkedIn ? Icons.check_circle_rounded : Icons.schedule_rounded,
-            size: 13,
-            color: color,
-          ),
+          if (busy)
+            SizedBox(
+              width: 13,
+              height: 13,
+              child: CircularProgressIndicator(strokeWidth: 2, color: color),
+            )
+          else
+            Icon(
+              checkedIn
+                  ? Icons.check_circle_rounded
+                  : Icons.touch_app_rounded,
+              size: 13,
+              color: color,
+            ),
           const SizedBox(width: 4),
           Text(
-            checkedIn ? 'เช็คอินแล้ว' : 'ยังไม่เช็คอิน',
+            checkedIn ? 'เช็คอินแล้ว' : 'กดเพื่อเช็คอิน',
             style: appFont(
               fontSize: 11,
               fontWeight: FontWeight.w800,
@@ -978,6 +1115,17 @@ class _CheckInPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+
+    if (!tappable) return content;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: busy ? null : onTap,
+        child: content,
       ),
     );
   }
@@ -1119,7 +1267,7 @@ class _AddonRequestsCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'รายการเสริมที่ลูกค้าขอเพิ่ม',
+                'ของเสริม / อุปกรณ์ที่เช่า',
                 style: appFont(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -1154,6 +1302,7 @@ class _AddonRequestRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final addons = asList(booking['selected_addons']).map(asMap).toList();
+    final rentals = asList(booking['selected_rentals']).map(asMap).toList();
     final groupName = textOf(booking['group_name']);
     final contactName = textOf(booking['contact_name']);
     final bookingRef = textOf(booking['booking_ref']);
@@ -1199,6 +1348,14 @@ class _AddonRequestRow extends StatelessWidget {
                 name: textOf(addon['name']),
                 quantity: int.tryParse(textOf(addon['quantity'], '1')) ?? 1,
               ),
+            // อุปกรณ์เช่าใช้สีม่วงให้แยกออกจากของเสริม เพราะต้องแจกและรับคืน
+            for (final rental in rentals)
+              _AddonChip(
+                name: textOf(rental['name']),
+                quantity: int.tryParse(textOf(rental['quantity'], '1')) ?? 1,
+                color: const Color(0xFF7C3AED),
+                icon: Icons.backpack_rounded,
+              ),
           ],
         ),
       ],
@@ -1209,25 +1366,43 @@ class _AddonRequestRow extends StatelessWidget {
 class _AddonChip extends StatelessWidget {
   final String name;
   final int quantity;
+  final Color? color;
+  final IconData? icon;
 
-  const _AddonChip({required this.name, required this.quantity});
+  const _AddonChip({
+    required this.name,
+    required this.quantity,
+    this.color,
+    this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
     final label = quantity > 1 ? '$name ×$quantity' : name;
+    final tone = color ?? AppTheme.primaryColor;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withValues(alpha: 0.10),
+        color: tone.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        style: appFont(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: AppTheme.primaryColor,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: tone),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: appFont(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: tone,
+            ),
+          ),
+        ],
       ),
     );
   }

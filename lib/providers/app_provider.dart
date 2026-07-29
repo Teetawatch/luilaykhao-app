@@ -1252,10 +1252,12 @@ class AppProvider extends ChangeNotifier {
   Future<
     ({Map<String, dynamic> booking, Map<String, dynamic> meta, String message})
   >
-  confirmStaffCheckIn(String qrCode) async {
+  confirmStaffCheckIn(String qrCode, {int? scheduleId}) async {
     final response = await api.post(
       'staff/check-in/confirm',
-      body: {'qr_code': qrCode},
+      // ส่ง schedule_id เมื่อรู้รอบแน่ชัด (เช่น กดเช็คอินจากรายชื่อ) เพื่อกัน
+      // การเช็คอินข้ามรอบจากรหัสที่พิมพ์ผิด
+      body: {'qr_code': qrCode, 'schedule_id': ?scheduleId},
     );
     final envelope = Map<String, dynamic>.from(response as Map);
     return (
@@ -1327,6 +1329,35 @@ class AppProvider extends ChangeNotifier {
     final data = api.data(response);
     if (data is! Map) return const {'count': 0, 'total_due': 0, 'items': []};
     return Map<String, dynamic>.from(data);
+  }
+
+  /// ใบแจกอุปกรณ์เช่าของรอบ — คืน `{summary, items, bookings}`
+  /// items = ยอดรวมต่อชิ้นของทั้งรอบ, bookings = รายการจองพร้อมสถานะแจก/รับคืน
+  Future<Map<String, dynamic>> loadStaffRentals(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.staffRentals(scheduleId));
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    return Map<String, dynamic>.from(data);
+  }
+
+  /// ติ๊กแจก/รับคืนอุปกรณ์หนึ่งชิ้น — คืนใบแจกชุดใหม่ทั้งก้อน (ไม่ต้องโหลดซ้ำ)
+  Future<Map<String, dynamic>> markStaffRental(
+    int scheduleId, {
+    required String bookingRef,
+    required String itemName,
+    required String action, // handout | return
+    required bool done,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.staffRentalMark(scheduleId),
+      body: {
+        'booking_ref': bookingRef,
+        'item_name': itemName,
+        'action': action,
+        'done': done,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
   /// ส่งลิงก์ชำระเงินซ้ำให้ลูกค้าที่ค้างชำระ (email / sms)

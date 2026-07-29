@@ -194,4 +194,8 @@ class ApiEndpoints {
 
   static String staffOutstandingSendLink(int scheduleId, String ref) =>
       'staff/schedules/$scheduleId/outstanding/$ref/send-link';
+  static String staffRentals(int scheduleId) =>
+      'staff/schedules/$scheduleId/rentals';
+  static String staffRentalMark(int scheduleId) =>
+      'staff/schedules/$scheduleId/rentals/mark';
 }

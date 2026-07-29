@@ -456,75 +456,88 @@ class _StaffToolbar extends StatelessWidget {
     final trip = _toMap(schedule['trip']);
     final tripTitle = _cleanText(trip['title'], fallback: 'ทริป');
 
+    // เครื่องมือของสตาฟมี 7 อย่าง — เรียงแถวเดียวป้ายจะโดนตัดจนอ่านไม่ออก
+    // จึงตัด 4 ช่องต่อแถวแล้วให้ล้นลงแถวถัดไปเอง
+    final tools = <Widget>[
+      _StaffToolTile(
+        icon: Icons.event_note_outlined,
+        label: 'กำหนดการ',
+        color: const Color(0xFF0D9488),
+        onTap: () => _pushPremium(
+          context,
+          ScheduleItineraryScreen(scheduleId: scheduleId, tripTitle: tripTitle),
+        ),
+      ),
+      _StaffToolTile(
+        icon: Icons.groups_outlined,
+        label: 'รายชื่อ',
+        color: const Color(0xFF2563EB),
+        onTap: () => _pushPremium(
+          context,
+          StaffManifestScreen(scheduleId: scheduleId, title: tripTitle),
+        ),
+      ),
+      _StaffToolTile(
+        icon: Icons.qr_code_2_rounded,
+        label: 'ค้างชำระ',
+        color: const Color(0xFFD97706),
+        onTap: () => _pushPremium(
+          context,
+          StaffOutstandingScreen(scheduleId: scheduleId, title: tripTitle),
+        ),
+      ),
+      _StaffToolTile(
+        icon: Icons.backpack_outlined,
+        label: 'อุปกรณ์',
+        color: const Color(0xFF7C3AED),
+        onTap: () => _pushPremium(
+          context,
+          StaffRentalsScreen(scheduleId: scheduleId, title: tripTitle),
+        ),
+      ),
+      _StaffToolTile(
+        icon: Icons.forum_outlined,
+        label: 'แชทกลุ่ม',
+        color: AppTheme.primaryColor,
+        onTap: () => _pushPremium(
+          context,
+          ChatScreen(scheduleId: scheduleId, title: tripTitle),
+        ),
+      ),
+      _StaffToolTile(
+        icon: Icons.report_gmailerrorred_outlined,
+        label: 'แจ้งเหตุ',
+        color: const Color(0xFFDC2626),
+        onTap: () => _pushPremium(
+          context,
+          ReportIncidentScreen(
+            scheduleId: scheduleId,
+            scheduleTitle: tripTitle,
+          ),
+        ),
+      ),
+      _StaffToolTile(
+        icon: Icons.history_rounded,
+        label: 'ประวัติเหตุ',
+        color: const Color(0xFF6366F1),
+        onTap: () => _pushPremium(
+          context,
+          IncidentListScreen(scheduleId: scheduleId, title: tripTitle),
+        ),
+      ),
+    ];
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: _sectionDecoration(context: context, radius: 20),
-      child: Row(
-        children: [
-          _StaffToolTile(
-            icon: Icons.event_note_outlined,
-            label: 'กำหนดการ',
-            color: const Color(0xFF0D9488),
-            onTap: () => _pushPremium(
-              context,
-              ScheduleItineraryScreen(
-                scheduleId: scheduleId,
-                tripTitle: tripTitle,
-              ),
-            ),
-          ),
-          _StaffToolTile(
-            icon: Icons.groups_outlined,
-            label: 'รายชื่อ',
-            color: const Color(0xFF2563EB),
-            onTap: () => _pushPremium(
-              context,
-              StaffManifestScreen(scheduleId: scheduleId, title: tripTitle),
-            ),
-          ),
-          _StaffToolTile(
-            icon: Icons.qr_code_2_rounded,
-            label: 'ค้างชำระ',
-            color: const Color(0xFFD97706),
-            onTap: () => _pushPremium(
-              context,
-              StaffOutstandingScreen(
-                scheduleId: scheduleId,
-                title: tripTitle,
-              ),
-            ),
-          ),
-          _StaffToolTile(
-            icon: Icons.forum_outlined,
-            label: 'แชทกลุ่ม',
-            color: AppTheme.primaryColor,
-            onTap: () => _pushPremium(
-              context,
-              ChatScreen(scheduleId: scheduleId, title: tripTitle),
-            ),
-          ),
-          _StaffToolTile(
-            icon: Icons.report_gmailerrorred_outlined,
-            label: 'แจ้งเหตุ',
-            color: const Color(0xFFDC2626),
-            onTap: () => _pushPremium(
-              context,
-              ReportIncidentScreen(
-                scheduleId: scheduleId,
-                scheduleTitle: tripTitle,
-              ),
-            ),
-          ),
-          _StaffToolTile(
-            icon: Icons.history_rounded,
-            label: 'ประวัติเหตุ',
-            color: const Color(0xFF6366F1),
-            onTap: () => _pushPremium(
-              context,
-              IncidentListScreen(scheduleId: scheduleId, title: tripTitle),
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) => Wrap(
+          runSpacing: 10,
+          children: [
+            for (final tool in tools)
+              SizedBox(width: constraints.maxWidth / 4, child: tool),
+          ],
+        ),
       ),
     );
   }
@@ -545,7 +558,8 @@ class _StaffToolTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
