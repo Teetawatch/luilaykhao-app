@@ -268,6 +268,11 @@ class HeroHeader extends StatefulWidget {
 class _HeroHeaderState extends State<HeroHeader> {
   int _index = 0;
   final _searchController = TextEditingController();
+  final _pageController = PageController();
+  Timer? _autoAdvance;
+
+  /// จังหวะเลื่อนเอง — ช้าพอให้ดูรูปทัน ไม่ใช่แบนเนอร์โฆษณาที่วิ่งรัว
+  static const _interval = Duration(seconds: 6);
 
   List<String> get _images => widget.slides
       .map((s) => ApiConfig.mediaUrl(asMap(s)['image_url']?.toString() ?? ''))
@@ -275,17 +280,45 @@ class _HeroHeaderState extends State<HeroHeader> {
       .toList();
 
   @override
+  void initState() {
+    super.initState();
+    _restartAutoAdvance();
+  }
+
+  @override
   void didUpdateWidget(covariant HeroHeader oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Slides arrived (or changed count) after the first build.
-    if (widget.slides.length != oldWidget.slides.length &&
-        _index >= _images.length) {
-      _index = 0;
+    if (widget.slides.length != oldWidget.slides.length) {
+      if (_index >= _images.length) {
+        _index = 0;
+        if (_pageController.hasClients) _pageController.jumpToPage(0);
+      }
+      _restartAutoAdvance();
     }
+  }
+
+  /// (เริ่มใหม่) นับเวลาเลื่อนสไลด์ — เรียกซ้ำได้ทุกครั้งที่ผู้ใช้ปัดเอง เพื่อไม่ให้
+  /// สไลด์กระตุกไปอีกใบทันทีหลังปัด; สไลด์เดียวไม่ต้องมี timer
+  void _restartAutoAdvance() {
+    _autoAdvance?.cancel();
+    if (_images.length <= 1) return;
+
+    _autoAdvance = Timer.periodic(_interval, (_) {
+      if (!mounted || !_pageController.hasClients) return;
+      final next = (_index + 1) % _images.length;
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   @override
   void dispose() {
+    _autoAdvance?.cancel();
+    _pageController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -345,57 +378,42 @@ class _HeroHeaderState extends State<HeroHeader> {
               fit: StackFit.expand,
               children: [
                 if (currentImage.isEmpty)
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [AppTheme.primaryColor, AppTheme.accentColor],
-                      ),
-                    ),
-                  )
+                  const _HeroGradientFallback()
+                else if (images.length <= 1)
+                  _HeroSlideImage(url: currentImage)
                 else
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 700),
-                    child: CachedNetworkImage(
-                      // Key by URL so the switcher cross-fades between slides.
-                      key: ValueKey(currentImage),
-                      imageUrl: currentImage,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      placeholder: (context, url) =>
-                          Container(color: const Color(0xFF0A3D46)),
-                      errorWidget: (_, _, _) => Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              AppTheme.primaryColor,
-                              AppTheme.accentColor,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                  // สไลด์จริง — ปัดเปลี่ยนรูปได้เอง และ timer เลื่อนให้อัตโนมัติ
+                  // ปัดเองเมื่อไหร่ก็นับเวลาใหม่ จะได้ไม่โดนดีดต่อทันที
+                  PageView.builder(
+                    controller: _pageController,
+                    itemCount: images.length,
+                    onPageChanged: (i) {
+                      setState(() => _index = i);
+                      _restartAutoAdvance();
+                    },
+                    itemBuilder: (_, i) => _HeroSlideImage(url: images[i]),
                   ),
                 // Two-ended scrim: a light wash up top keeps the nav bar legible
                 // and a strong wash at the bottom anchors the greeting/headline/
                 // search — the middle stays fully clear so the photo reads crisp.
                 // (No full-image blur, which is what made the hero look murky.)
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.30),
-                        Colors.transparent,
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.62),
-                      ],
-                      stops: const [0.0, 0.22, 0.45, 1.0],
+                //
+                // IgnorePointer สำคัญ: DecoratedBox ที่มี BoxDecoration จะกินทัช
+                // ทั้งผืน (hitTestSelf ของมันคืน true) ทำให้ปัดสไลด์ด้านล่างไม่ได้
+                const IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0x4D000000),
+                          Colors.transparent,
+                          Colors.transparent,
+                          Color(0x9E000000),
+                        ],
+                        stops: [0.0, 0.22, 0.45, 1.0],
+                      ),
                     ),
                   ),
                 ),
@@ -487,22 +505,74 @@ class _HeroHeaderState extends State<HeroHeader> {
               child: Row(
                 children: List.generate(images.length, (i) {
                   final active = i == _index;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.only(right: 6),
-                    width: active ? 20 : 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(
-                        alpha: active ? 0.95 : 0.5,
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      _pageController.animateToPage(
+                        i,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    // แตะโดนง่ายขึ้นโดยไม่ต้องขยายจุดให้ใหญ่ผิดสัดส่วน
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.only(right: 6),
+                        width: active ? 20 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(
+                            alpha: active ? 0.95 : 0.5,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(999),
                     ),
                   );
                 }),
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// รูปหนึ่งใบของสไลด์ฮีโร่ (เต็มพื้นที่ ครอปให้เต็มเสมอ)
+class _HeroSlideImage extends StatelessWidget {
+  final String url;
+
+  const _HeroSlideImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      placeholder: (_, _) => Container(color: const Color(0xFF0A3D46)),
+      errorWidget: (_, _, _) => const _HeroGradientFallback(),
+    );
+  }
+}
+
+/// พื้นหลังสำรองตอนไม่มีรูป/โหลดรูปไม่สำเร็จ
+class _HeroGradientFallback extends StatelessWidget {
+  const _HeroGradientFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryColor, AppTheme.accentColor],
+        ),
       ),
     );
   }
