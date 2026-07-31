@@ -401,14 +401,14 @@ class ProfileStatsSection extends StatelessWidget {
     final tier = _cleanText(loyalty['tier'] ?? loyalty['level']);
     final tierLabel = _cleanText(loyalty['tier_label']);
     final points = _numberValue(loyalty['points']);
-    final nextLevelPoints = _numberValue(
-      loyalty['next_level_points'],
-      fallback: 1000,
-    );
-    final progress = nextLevelPoints <= 0
-        ? 0.0
-        : (points / nextLevelPoints).clamp(0.0, 1.0).toDouble();
-    final remaining = (nextLevelPoints - points).clamp(0, nextLevelPoints);
+    // ระดับสมาชิกวัดจากจำนวนทริปที่ไปด้วยกัน — ตัวเลขและเกณฑ์มาจาก API เสมอ
+    final lifetimeTrips = _numberValue(loyalty['lifetime_trips']);
+    final nextTier = asMap(loyalty['next_tier']);
+    final tripsAtNextTier = _numberValue(nextTier['at']);
+    final tripsRemaining = _numberValue(nextTier['trips_needed']);
+    final progress = tripsAtNextTier <= 0
+        ? 1.0
+        : (lifetimeTrips / tripsAtNextTier).clamp(0.0, 1.0).toDouble();
 
     return GestureDetector(
       onTap: () => _pushPremium(context, const RewardsScreen()),
@@ -514,9 +514,9 @@ class ProfileStatsSection extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              remaining == 0
-                  ? 'พร้อมปลดล็อกสิทธิพิเศษถัดไป'
-                  : 'อีก ${_formatCompact(remaining)} แต้ม ถึงระดับถัดไป',
+              nextTier.isEmpty
+                  ? 'คุณอยู่ในระดับสูงสุดแล้ว'
+                  : 'ไปด้วยกันอีก ${_formatCompact(tripsRemaining)} ทริป ถึงระดับ ${_cleanText(nextTier['label'])}',
               style: appFont(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,

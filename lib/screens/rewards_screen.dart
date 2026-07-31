@@ -180,12 +180,13 @@ class _PointsHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final points = int.tryParse('${loyalty['points'] ?? 0}') ?? 0;
-    final lifetime = int.tryParse('${loyalty['lifetime_points'] ?? 0}') ?? 0;
-    final tierLabel = '${loyalty['tier_label'] ?? 'Regular Member'}';
+    // ระดับสมาชิกนับจากจำนวนทริปที่ไปด้วยกัน ไม่ใช่ยอดแต้ม (แต้มไว้แลกของรางวัล)
+    final trips = int.tryParse('${loyalty['lifetime_trips'] ?? 0}') ?? 0;
+    final tierLabel = '${loyalty['tier_label'] ?? 'เพื่อนร่วมทาง'}';
     final next = loyalty['next_tier'] as Map?;
     final at = int.tryParse('${next?['at'] ?? 0}') ?? 0;
-    final needed = int.tryParse('${next?['points_needed'] ?? 0}') ?? 0;
-    final progress = at <= 0 ? 1.0 : (lifetime / at).clamp(0.0, 1.0).toDouble();
+    final needed = int.tryParse('${next?['trips_needed'] ?? 0}') ?? 0;
+    final progress = at <= 0 ? 1.0 : (trips / at).clamp(0.0, 1.0).toDouble();
 
     return Container(
       width: double.infinity,
@@ -283,7 +284,7 @@ class _PointsHero extends StatelessWidget {
           Text(
             next == null
                 ? 'คุณอยู่ในระดับสูงสุดแล้ว 🎉'
-                : 'อีก ${_format(needed)} แต้ม เลื่อนเป็น ${next['tier']}',
+                : 'ไปด้วยกันอีก ${_format(needed)} ทริป เลื่อนเป็น ${next['label']}',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.9),
               fontSize: 12.5,
