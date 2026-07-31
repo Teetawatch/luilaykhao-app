@@ -405,7 +405,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
-        backgroundColor: AppTheme.background(context).withValues(alpha: 0.95),
+        backgroundColor: AppTheme.background(context),
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,

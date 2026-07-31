@@ -140,9 +140,7 @@ class _AllReviewsScreenState extends State<AllReviewsScreen> {
             SliverAppBar(
               pinned: true,
               automaticallyImplyLeading: false,
-              backgroundColor: Theme.of(
-                context,
-              ).scaffoldBackgroundColor.withValues(alpha: 0.85),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               elevation: 0,
               scrolledUnderElevation: 0,
               centerTitle: true,

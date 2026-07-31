@@ -333,9 +333,12 @@ class TravelSliverAppBar extends StatelessWidget {
       // SliverAppBar auto-inject a back button (which would appear on a tab
       // root the moment a detail page is pushed over it on the root navigator).
       automaticallyImplyLeading: false,
+      // Solid, never translucent: there is no backdrop blur behind this bar, so
+      // any alpha lets the content scrolling underneath bleed through and makes
+      // the title read as washed out.
       backgroundColor: isTransparent
           ? Colors.transparent
-          : Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),
+          : Theme.of(context).scaffoldBackgroundColor,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,

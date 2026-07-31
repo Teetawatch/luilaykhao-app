@@ -292,9 +292,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
           slivers: [
             SliverAppBar(
               pinned: true,
-              backgroundColor: AppTheme.background(
-                context,
-              ).withValues(alpha: 0.92),
+              backgroundColor: AppTheme.background(context),
               elevation: 0,
               scrolledUnderElevation: 0,
               centerTitle: true,

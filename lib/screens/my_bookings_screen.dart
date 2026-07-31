@@ -53,9 +53,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
               floating: true,
               elevation: 0,
               scrolledUnderElevation: 0,
-              backgroundColor: AppTheme.background(
-                context,
-              ).withValues(alpha: 0.95),
+              backgroundColor: AppTheme.background(context),
               surfaceTintColor: Colors.transparent,
               title: const Text(
                 'การจองของฉัน',
