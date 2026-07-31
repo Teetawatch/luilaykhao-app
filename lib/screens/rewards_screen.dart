@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/thai_date.dart';
 
 /// "แต้มสะสม" — loyalty hub where customers spend points. Three tabs: redeemable
 /// rewards (defined by admin), the coupons they own, and points history.
@@ -150,22 +151,25 @@ class _RewardsScreenState extends State<RewardsScreen> {
 IconData _rewardIcon(String? type) => switch (type) {
   'discount_percent' => Icons.percent_rounded,
   'discount_fixed' => Icons.savings_rounded,
+  'free_rental' => Icons.backpack_rounded,
   'free_item' => Icons.redeem_rounded,
   _ => Icons.card_giftcard_rounded,
 };
 
+/// คำอธิบายมูลค่ามาจาก API (`value_label`) — ตัวเลข `discount_value` มีความหมาย
+/// ต่างกันตามชนิด (บาท / เปอร์เซ็นต์ / เพดานค่าเช่า) แอปจึงไม่ควรตีความเอง
+/// ค่าสำรองด้านล่างมีไว้เผื่อ response เก่าที่ยังไม่มีฟิลด์นี้เท่านั้น
 String _rewardValue(Map<String, dynamic> r) {
+  final label = '${r['value_label'] ?? ''}'.trim();
+  if (label.isNotEmpty) return label;
+
   final v = num.tryParse('${r['discount_value'] ?? ''}');
-  switch ('${r['type']}') {
-    case 'discount_percent':
-      return v == null ? '-' : 'ลด ${_trim(v)}%';
-    case 'discount_fixed':
-      return v == null ? '-' : 'ลด ฿${_trim(v)}';
-    case 'free_item':
-      return 'ของแถมฟรี';
-    default:
-      return '-';
-  }
+  return switch ('${r['type']}') {
+    'discount_percent' => v == null ? '-' : 'ลด ${_trim(v)}%',
+    'discount_fixed' => v == null ? '-' : 'ลด ฿${_trim(v)}',
+    'free_rental' => 'เช่าอุปกรณ์ฟรี',
+    _ => '-',
+  };
 }
 
 String _trim(num v) => v == v.truncate() ? v.toInt().toString() : v.toString();
@@ -187,6 +191,9 @@ class _PointsHero extends StatelessWidget {
     final at = int.tryParse('${next?['at'] ?? 0}') ?? 0;
     final needed = int.tryParse('${next?['trips_needed'] ?? 0}') ?? 0;
     final progress = at <= 0 ? 1.0 : (trips / at).clamp(0.0, 1.0).toDouble();
+    // แต้มมีอายุ 24 เดือน — เตือนก้อนที่ใกล้หมดอายุตรงที่ลูกค้าเห็นยอดแต้มพอดี
+    final expiringPoints = int.tryParse('${loyalty['expiring_points'] ?? 0}') ?? 0;
+    final expiringAt = DateTime.tryParse('${loyalty['expiring_at'] ?? ''}')?.toLocal();
 
     return Container(
       width: double.infinity,
@@ -270,6 +277,28 @@ class _PointsHero extends StatelessWidget {
               ),
             ],
           ),
+          if (expiringPoints > 0 && expiringAt != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.schedule_rounded,
+                  size: 14,
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${_format(expiringPoints)} แต้มหมดอายุ ${thaiDateShort(expiringAt)}',
+                  style: appFont(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 18),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
