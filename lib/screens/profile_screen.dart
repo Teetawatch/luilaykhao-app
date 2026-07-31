@@ -15,6 +15,7 @@ import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../widgets/support_shortcuts.dart';
 import '../widgets/travel_widgets.dart';
+import 'assistant_screen.dart' show AssistantScreen;
 import 'booking_lookup_screen.dart';
 import 'customer_app_screen.dart' show BookingDetailSheet;
 import 'document_wallet_screen.dart';
@@ -1117,6 +1118,12 @@ class SupportMenu extends StatelessWidget {
     return MenuSection(
       title: 'ช่วยเหลือ',
       items: [
+        // อยู่บนสุดเพราะตอบได้ทันทีตลอดเวลา — คำถามส่วนใหญ่จบตรงนี้โดยไม่ต้องรอทีมงาน
+        _MenuItem(
+          icon: Icons.auto_awesome_outlined,
+          label: 'ผู้ช่วยส่วนตัว',
+          onTap: () => _pushPremium(context, const AssistantScreen()),
+        ),
         _MenuItem(
           icon: Icons.help_outline,
           label: 'ศูนย์ช่วยเหลือ',

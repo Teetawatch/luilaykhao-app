@@ -1116,6 +1116,33 @@ class AppProvider extends ChangeNotifier {
     return const [];
   }
 
+  /// ผู้ช่วยส่วนตัว — ถามเป็นภาษาคนเรื่องการจองของตัวเอง ("รถออกกี่โมง",
+  /// "ยอดคงเหลือเท่าไหร่") คำตอบอ้างอิงข้อมูลการจองจริงฝั่งเซิร์ฟเวอร์
+  ///
+  /// คืน `{reply, actions}` โดย actions = ปุ่มลัดที่ผู้ช่วยเสนอ ชนิดของปุ่มถูก
+  /// จำกัดไว้ฝั่ง backend แล้ว แอปจึงแมปเป็นหน้าจอได้โดยไม่ต้องเดาจากข้อความ
+  Future<Map<String, dynamic>> askAssistant(
+    String message, {
+    List<Map<String, String>> history = const [],
+  }) async {
+    final response = await api.post(
+      'me/assistant',
+      body: {'message': message, if (history.isNotEmpty) 'history': history},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// คำถามตัวอย่างของผู้ช่วย — เปลี่ยนตามว่ามีทริปที่กำลังจะถึงหรือไม่
+  Future<List<String>> assistantSuggestions() async {
+    final response = await api.get('me/assistant/suggestions');
+    final data = api.data(response);
+    final list = data is Map ? data['suggestions'] : null;
+    if (list is List) {
+      return list.map((e) => e.toString()).toList();
+    }
+    return const [];
+  }
+
   /// Trip Recap — สถิติสรุปทริปแบบ story หลังจบทริป (สายเดินป่า Wrapped รายทริป).
   Future<Map<String, dynamic>> bookingRecap(String ref) async {
     final response = await api.get('bookings/$ref/recap');
