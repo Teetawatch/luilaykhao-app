@@ -124,6 +124,17 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     !_isTripFinished(schedule))
                   _FlexiOfferCard(bookingRef: widget.bookingRef),
 
+                // ช่วยกันเปิดรอบ — ชวนเพื่อนมาเติมที่นั่งที่ยังขาด ต้องอยู่บนใบจอง
+                // ไม่ใช่แค่หน้าวันเดินทาง เพราะกว่าจะถึงวันนั้นก็สายเกินจะหาคนเพิ่ม
+                // การ์ดซ่อนตัวเอง (พร้อมระยะห่าง) เมื่อรอบครบแล้ว/ยังไกล/เต็มแล้ว
+                if (textOf(booking['status']) == 'confirmed' &&
+                    !_isTripFinished(schedule) &&
+                    (int.tryParse(textOf(schedule['id'])) ?? 0) > 0)
+                  RallyCard(
+                    scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
+                    bottomSpacing: 20,
+                  ),
+
                 // Check-in card (confirmed only)
                 if (textOf(booking['status']) == 'confirmed') ...[
                   _BookingCheckInCard(booking: booking),

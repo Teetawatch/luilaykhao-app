@@ -98,10 +98,7 @@ class TripDayScreen extends StatelessWidget {
 
           // ชวนเพื่อนเติมรอบที่ยังไม่การันตีออกเดินทาง — ซ่อนตัวเองเมื่อรอบ
           // ครบแล้ว/ยังไกล/เต็มแล้ว
-          if (_scheduleId > 0) ...[
-            RallyCard(scheduleId: _scheduleId),
-            const SizedBox(height: 16),
-          ],
+          if (_scheduleId > 0) RallyCard(scheduleId: _scheduleId),
 
           // "ตอนนี้ถึงไหนแล้ว" — ซ่อนตัวเองเมื่อรอบยังไม่มีกำหนดการ
           // อ่านจากแคชได้เมื่อไม่มีสัญญาณ ซึ่งเป็นสถานการณ์ปกติบนดอย

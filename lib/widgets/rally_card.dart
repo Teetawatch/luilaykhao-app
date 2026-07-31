@@ -14,7 +14,15 @@ import 'travel_widgets.dart' show textOf;
 class RallyCard extends StatefulWidget {
   final int scheduleId;
 
-  const RallyCard({super.key, required this.scheduleId});
+  /// ระยะห่างด้านล่าง ใส่ให้เฉพาะตอนการ์ดแสดงจริง — การ์ดนี้ซ่อนตัวเองบ่อย
+  /// ถ้าให้หน้าเรียกใส่ SizedBox เองจะเหลือช่องว่างลอยเมื่อการ์ดไม่ขึ้น
+  final double bottomSpacing;
+
+  const RallyCard({
+    super.key,
+    required this.scheduleId,
+    this.bottomSpacing = 16,
+  });
 
   @override
   State<RallyCard> createState() => _RallyCardState();
@@ -78,6 +86,7 @@ class _RallyCardState extends State<RallyCard> {
     final daysLeft = int.tryParse(textOf(data['days_left'])) ?? 0;
 
     return Container(
+      margin: EdgeInsets.only(bottom: widget.bottomSpacing),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
