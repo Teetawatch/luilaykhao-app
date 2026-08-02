@@ -59,7 +59,12 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
-        title: Text(widget.title.isEmpty ? 'รายการแจ้งเหตุ' : widget.title),
+        // งานสตาฟชิดซ้ายทุกหน้า (ธีมรวมตั้ง centerTitle: true ไว้)
+        centerTitle: false,
+        title: Text(
+          widget.title.isEmpty ? 'รายการแจ้งเหตุ' : widget.title,
+          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _load,

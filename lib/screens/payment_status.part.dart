@@ -73,7 +73,7 @@ class _PaymentEmptyState extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: _accent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               icon: const Icon(Icons.refresh_rounded),

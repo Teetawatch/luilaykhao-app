@@ -120,7 +120,11 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
+      // bottom: false — the action bar below paints its own home-indicator
+      // inset, so it stays flush with the screen edge instead of floating
+      // with a strip of page background showing underneath it.
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             Expanded(
@@ -712,7 +716,12 @@ class _SubmittedActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        12,
+        20,
+        16 + MediaQuery.paddingOf(context).bottom,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
         border: Border(top: BorderSide(color: AppTheme.border(context))),
@@ -728,7 +737,7 @@ class _SubmittedActions extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: _accent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               icon: const Icon(Icons.confirmation_number_rounded, size: 20),

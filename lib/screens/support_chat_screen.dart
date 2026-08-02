@@ -263,7 +263,9 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
           ],
         ),
       ),
-      body: SafeArea(child: _buildBody()),
+      // bottom: false — the composer pads the home-indicator inset itself so
+      // its surface stays flush with the screen edge.
+      body: SafeArea(bottom: false, child: _buildBody()),
     );
   }
 
@@ -476,7 +478,12 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      padding: EdgeInsets.fromLTRB(
+        8,
+        8,
+        8,
+        8 + MediaQuery.paddingOf(context).bottom,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
         border: Border(top: BorderSide(color: AppTheme.border(context))),

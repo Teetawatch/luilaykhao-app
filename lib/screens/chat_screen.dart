@@ -2100,18 +2100,21 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildInput() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.surface(context),
-          border: Border(
-            top: BorderSide(
-              color: AppTheme.border(context).withValues(alpha: 0.55),
-              width: 0.5,
-            ),
+    // Decoration sits on the outer box and the home-indicator inset is padded
+    // inside it — wrapping the whole composer in a SafeArea would lift it off
+    // the screen edge and leave page background showing underneath.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        border: Border(
+          top: BorderSide(
+            color: AppTheme.border(context).withValues(alpha: 0.55),
+            width: 0.5,
           ),
         ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

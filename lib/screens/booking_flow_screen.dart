@@ -1223,11 +1223,14 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
                         : 20.0;
 
                     return Padding(
+                      // The checkout bar is a bottomNavigationBar, so it already
+                      // reserves its own space below the scroll viewport — the
+                      // padding here is just breathing room, not clearance.
                       padding: EdgeInsets.fromLTRB(
                         horizontalPadding,
                         16,
                         horizontalPadding,
-                        isKeyboardOpen ? 32 : 132,
+                        isKeyboardOpen ? 32 : 28,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,

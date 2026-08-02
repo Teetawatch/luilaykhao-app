@@ -151,7 +151,14 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
     if (!app.canUseStaffCheckIn) {
       return Scaffold(
         backgroundColor: AppTheme.background(context),
-        appBar: AppBar(title: const Text('Staff Check-in')),
+        appBar: AppBar(
+          // งานสตาฟชิดซ้ายทุกหน้า (ธีมรวมตั้ง centerTitle: true ไว้)
+          centerTitle: false,
+          title: Text(
+            'Staff Check-in',
+            style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
@@ -200,7 +207,12 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
-        title: const Text('เช็คอินลูกค้า'),
+        // งานสตาฟชิดซ้ายทุกหน้า (ธีมรวมตั้ง centerTitle: true ไว้)
+        centerTitle: false,
+        title: Text(
+          'เช็คอินลูกค้า',
+          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
         actions: [
           if (booking != null)
             IconButton(

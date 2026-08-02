@@ -880,7 +880,7 @@ class _PromptPayPanel extends StatelessWidget {
                 foregroundColor: _accent,
                 side: BorderSide(color: _accent.withValues(alpha: 0.30)),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               icon: downloadingQr

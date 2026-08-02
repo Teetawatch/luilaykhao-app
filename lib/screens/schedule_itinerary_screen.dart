@@ -104,6 +104,8 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
+        // งานสตาฟชิดซ้ายทุกหน้า (ธีมรวมตั้ง centerTitle: true ไว้)
+        centerTitle: false,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

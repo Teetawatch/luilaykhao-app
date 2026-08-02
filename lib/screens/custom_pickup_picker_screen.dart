@@ -226,67 +226,71 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
   }
 
   Widget _buildForm() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        decoration: BoxDecoration(
-          color: AppTheme.surface(context),
-          border: Border(top: BorderSide(color: AppTheme.border(context))),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ปักหมุดจุดรับที่สะดวก แล้วจองต่อได้ทันที '
-              'ราคาคิดเท่าจุดรับที่ใกล้หมุดที่สุด (ไม่ต่ำกว่าราคารอบเดินทาง)',
-              style: appFont(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.mutedText(context),
-                height: 1.4,
+    // Inset padded inside the panel so its surface reaches the screen edge —
+    // wrapping it in a SafeArea would leave a strip of map showing under it.
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        14,
+        16,
+        14 + MediaQuery.paddingOf(context).bottom,
+      ),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        border: Border(top: BorderSide(color: AppTheme.border(context))),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'ปักหมุดจุดรับที่สะดวก แล้วจองต่อได้ทันที '
+            'ราคาคิดเท่าจุดรับที่ใกล้หมุดที่สุด (ไม่ต่ำกว่าราคารอบเดินทาง)',
+            style: appFont(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.mutedText(context),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _label,
+            maxLength: 255,
+            onChanged: (_) => setState(() {}),
+            style: appFont(fontSize: 14.5, fontWeight: FontWeight.w600),
+            decoration: _decoration('ชื่อจุดรับ / จุดสังเกต *',
+                'เช่น ปั๊ม ปตท. ทางเข้าเขาใหญ่'),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _note,
+            maxLength: 1000,
+            maxLines: 2,
+            minLines: 1,
+            style: appFont(fontSize: 14, fontWeight: FontWeight.w500),
+            decoration: _decoration('รายละเอียดเพิ่มเติม (ถ้ามี)',
+                'เช่น รอตรงร้านกาแฟหน้าปั๊ม'),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _canConfirm ? _confirm : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                'ใช้จุดนี้',
+                style: appFont(fontSize: 15, fontWeight: FontWeight.w800),
               ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _label,
-              maxLength: 255,
-              onChanged: (_) => setState(() {}),
-              style: appFont(fontSize: 14.5, fontWeight: FontWeight.w600),
-              decoration: _decoration('ชื่อจุดรับ / จุดสังเกต *',
-                  'เช่น ปั๊ม ปตท. ทางเข้าเขาใหญ่'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _note,
-              maxLength: 1000,
-              maxLines: 2,
-              minLines: 1,
-              style: appFont(fontSize: 14, fontWeight: FontWeight.w500),
-              decoration: _decoration('รายละเอียดเพิ่มเติม (ถ้ามี)',
-                  'เช่น รอตรงร้านกาแฟหน้าปั๊ม'),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _canConfirm ? _confirm : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Text(
-                  'ใช้จุดนี้',
-                  style: appFont(fontSize: 15, fontWeight: FontWeight.w800),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

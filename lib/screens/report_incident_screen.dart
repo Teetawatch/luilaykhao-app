@@ -191,7 +191,14 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
-      appBar: AppBar(title: const Text('แจ้งเหตุฉุกเฉิน')),
+      appBar: AppBar(
+        // งานสตาฟชิดซ้ายทุกหน้า (ธีมรวมตั้ง centerTitle: true ไว้)
+        centerTitle: false,
+        title: Text(
+          'แจ้งเหตุฉุกเฉิน',
+          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+      ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           16,

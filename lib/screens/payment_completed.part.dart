@@ -190,7 +190,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                   foregroundColor: _accent,
                   side: BorderSide(color: _accent.withValues(alpha: 0.30)),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 icon: _downloadingQr
@@ -277,7 +277,7 @@ class _SubmitButton extends StatelessWidget {
               ? '$label ${money(amount)}'
               : 'ยืนยันการชำระ ${money(amount)}');
     return SizedBox(
-      height: 58,
+      height: 54,
       child: FilledButton.icon(
         onPressed: paying ? null : onPressed,
         style: FilledButton.styleFrom(
@@ -286,10 +286,8 @@ class _SubmitButton extends StatelessWidget {
           disabledBackgroundColor: _accent.withValues(alpha: 0.40),
           disabledForegroundColor: Colors.white.withValues(alpha: 0.70),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(16),
           ),
-          elevation: paying ? 0 : 2,
-          shadowColor: _accent.withValues(alpha: 0.40),
         ),
         icon: paying
             ? const SizedBox(
@@ -328,7 +326,7 @@ class _HomeButton extends StatelessWidget {
           foregroundColor: _accent,
           side: BorderSide(color: _accent.withValues(alpha: 0.32)),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         icon: const Icon(Icons.home_rounded),

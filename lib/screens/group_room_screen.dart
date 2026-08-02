@@ -626,15 +626,21 @@ class _FooterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: BoxDecoration(
-          color: AppTheme.surface(context),
-          border: Border(top: BorderSide(color: AppTheme.border(context))),
-        ),
-        child: SizedBox(width: double.infinity, height: 52, child: Center(child: child)),
+    // The home-indicator inset is padded inside the bar, not wrapped around it
+    // — a SafeArea here would lift the bar off the screen edge and show page
+    // background underneath.
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        12 + MediaQuery.paddingOf(context).bottom,
       ),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        border: Border(top: BorderSide(color: AppTheme.border(context))),
+      ),
+      child: SizedBox(width: double.infinity, height: 52, child: Center(child: child)),
     );
   }
 }

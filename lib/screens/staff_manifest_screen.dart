@@ -233,7 +233,12 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
-        title: Text(widget.title.isEmpty ? 'รายชื่อผู้โดยสาร' : widget.title),
+        // งานสตาฟชิดซ้ายทุกหน้า (ธีมรวมตั้ง centerTitle: true ไว้)
+        centerTitle: false,
+        title: Text(
+          widget.title.isEmpty ? 'รายชื่อผู้โดยสาร' : widget.title,
+          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
         actions: [
           IconButton(
             tooltip: 'รายการแจ้งเหตุ',

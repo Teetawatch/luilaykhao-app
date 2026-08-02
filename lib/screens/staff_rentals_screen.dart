@@ -115,6 +115,8 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
+        // งานสตาฟชิดซ้ายทุกหน้า (ธีมรวมตั้ง centerTitle: true ไว้)
+        centerTitle: false,
         title: Text(
           'อุปกรณ์ที่ต้องแจก',
           style: appFont(fontSize: 18, fontWeight: FontWeight.w800),

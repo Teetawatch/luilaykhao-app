@@ -696,7 +696,7 @@ class _RegisterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 58,
+      height: 54,
       child: FilledButton.icon(
         onPressed: loading ? null : onPressed,
         style: FilledButton.styleFrom(
@@ -707,10 +707,8 @@ class _RegisterButton extends StatelessWidget {
           ),
           disabledForegroundColor: Colors.white.withValues(alpha: 0.70),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(16),
           ),
-          elevation: loading ? 0 : 2,
-          shadowColor: AppTheme.primaryColor.withValues(alpha: 0.40),
         ),
         icon: loading
             ? const SizedBox(

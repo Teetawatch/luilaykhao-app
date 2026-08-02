@@ -939,132 +939,145 @@ class StickyCheckoutBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 360;
-          final vPad = isNarrow ? 8.0 : 10.0;
-          final hPad = isNarrow ? 12.0 : 14.0;
-          final btnHeight = isNarrow ? 42.0 : 46.0;
-          final backSize = isNarrow ? 38.0 : 42.0;
-          final priceFontSize = isNarrow ? 15.0 : 17.0;
-          final labelFontSize = isNarrow ? 10.0 : 11.0;
-          final btnFontSize = isNarrow ? 12.0 : 13.0;
-          final iconSize = isNarrow ? 15.0 : 16.0;
+    // The home-indicator inset is padded *inside* the bar rather than wrapping
+    // it in a SafeArea — a SafeArea would lift the whole bar off the screen
+    // edge and leave a strip of page background showing underneath it, which
+    // reads as a floating panel instead of a grounded checkout bar.
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
 
-          return Container(
-            padding: EdgeInsets.fromLTRB(hPad, vPad, hPad, vPad),
-            decoration: BoxDecoration(
-              color: AppTheme.surface(context),
-              border: Border(top: BorderSide(color: AppTheme.border(context))),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'รวมทั้งหมด',
-                        style: appFont(
-                          color: _mutedTextColor(context),
-                          fontSize: labelFontSize,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        money(total),
-                        style: appFont(
-                          color: _premiumText(context),
-                          fontSize: priceFontSize,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                if (canGoBack) ...[
-                  SizedBox(
-                    width: backSize,
-                    height: backSize,
-                    child: IconButton(
-                      onPressed: isSubmitting ? null : onBack,
-                      padding: EdgeInsets.zero,
-                      style: IconButton.styleFrom(
-                        backgroundColor: _fieldBackground(context),
-                        foregroundColor: _premiumText(context),
-                        disabledForegroundColor:
-                            _mutedTextColor(context).withValues(alpha: 0.4),
-                        shape: const CircleBorder(),
-                      ),
-                      icon: Icon(Icons.arrow_back_rounded, size: iconSize + 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 360;
+        final vPad = isNarrow ? 10.0 : 12.0;
+        final hPad = isNarrow ? 14.0 : 16.0;
+        // Match the app's primary CTA language (54h / radius 16) rather than
+        // the smaller pill this bar used to draw.
+        final btnHeight = isNarrow ? 48.0 : 52.0;
+        final priceFontSize = isNarrow ? 17.0 : 19.0;
+        final labelFontSize = isNarrow ? 11.0 : 12.0;
+        final btnFontSize = isNarrow ? 14.0 : 15.0;
+        final iconSize = isNarrow ? 17.0 : 18.0;
+
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+            hPad,
+            vPad,
+            hPad,
+            vPad + (safeBottom > 0 ? safeBottom : vPad),
+          ),
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context),
+            border: Border(top: BorderSide(color: AppTheme.border(context))),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Total reads as its own line so the CTA below can run full
+              // width — long Thai step labels no longer get ellipsised.
+              Row(
+                children: [
+                  Text(
+                    'รวมทั้งหมด',
+                    style: appFont(
+                      color: _mutedTextColor(context),
+                      fontSize: labelFontSize,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const Spacer(),
+                  Text(
+                    money(total),
+                    style: appFont(
+                      color: _premiumText(context),
+                      fontSize: priceFontSize,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
                 ],
-                Flexible(
-                  flex: 2,
-                  child: SizedBox(
-                    height: btnHeight,
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: onPressed,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _softAccent,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFFC8D5D1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(btnHeight / 2),
+              ),
+              SizedBox(height: isNarrow ? 8 : 10),
+              Row(
+                children: [
+                  if (canGoBack) ...[
+                    SizedBox(
+                      width: btnHeight,
+                      height: btnHeight,
+                      child: IconButton(
+                        onPressed: isSubmitting ? null : onBack,
+                        padding: EdgeInsets.zero,
+                        style: IconButton.styleFrom(
+                          backgroundColor: _fieldBackground(context),
+                          foregroundColor: _premiumText(context),
+                          disabledForegroundColor:
+                              _mutedTextColor(context).withValues(alpha: 0.4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isNarrow ? 12 : 16,
-                        ),
+                        icon: Icon(Icons.arrow_back_rounded, size: iconSize + 2),
                       ),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 160),
-                        child: isSubmitting
-                            ? const SizedBox(
-                                key: ValueKey('loading'),
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Row(
-                                key: ValueKey(primaryLabel),
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(primaryIcon, size: iconSize),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      primaryLabel,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: appFont(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: btnFontSize,
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: SizedBox(
+                      height: btnHeight,
+                      child: FilledButton(
+                        onPressed: onPressed,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _softAccent,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(0xFFC8D5D1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isNarrow ? 12 : 16,
+                          ),
+                        ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 160),
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  key: ValueKey('loading'),
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Row(
+                                  key: ValueKey(primaryLabel),
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(primaryIcon, size: iconSize),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        primaryLabel,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: appFont(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: btnFontSize,
+                                          letterSpacing: -0.2,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

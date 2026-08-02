@@ -86,6 +86,8 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
+        // งานสตาฟชิดซ้ายทุกหน้า (ธีมรวมตั้ง centerTitle: true ไว้)
+        centerTitle: false,
         title: Text(
           widget.title.isEmpty ? 'ยอดค้างชำระ' : widget.title,
           style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
