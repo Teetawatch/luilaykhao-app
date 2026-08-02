@@ -691,6 +691,7 @@ String _notificationTypeLabel(String type) {
     'trip_post_liked' || 'trip_post_comment' => 'ฟีดนักเดินทาง',
     'seat_alert' => 'ที่นั่งใกล้เต็ม',
     'sos_alert' => 'SOS ฉุกเฉิน',
+    'sos_resolved' => 'ปิดเคส SOS',
     'promo' => 'โปรโมชัน',
     'system' => 'ระบบ',
     'loyalty' => 'คะแนนสะสม',
@@ -705,6 +706,7 @@ IconData _notificationIcon(String type) {
   return switch (type) {
     'seat_alert' => Icons.local_fire_department_rounded,
     'sos_alert' => Icons.sos_rounded,
+    'sos_resolved' => Icons.check_circle_rounded,
     'booking_reminder' || 'trip_reminder' => Icons.calendar_month_rounded,
     'promo' => Icons.card_giftcard_rounded,
     'system' => Icons.info_outline_rounded,
@@ -734,6 +736,7 @@ Color _notificationColor(String type) {
   return switch (type) {
     'seat_alert' => AppTheme.errorColor,
     'sos_alert' => const Color(0xFFE11D48),
+    'sos_resolved' => AppTheme.primaryColor,
     'booking_reminder' || 'trip_reminder' => const Color(0xFF2563EB),
     'promo' => AppTheme.warningColor,
     'system' => AppTheme.textSecondary,

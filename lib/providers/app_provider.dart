@@ -311,6 +311,10 @@ class AppProvider extends ChangeNotifier {
         handler: (data) => NotificationNavigator.handle('sos_alert', data),
       ),
     );
+
+    // A session that starts mid-emergency (fresh launch, re-login) has missed
+    // every push and broadcast that already went out.
+    unawaited(recoverMissedSosAlerts());
   }
 
   Future<void> _unbindUserChannel() async {
@@ -1248,6 +1252,35 @@ class AppProvider extends ChangeNotifier {
     return list
         .map((e) => SosAlert.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
+  }
+
+  /// Alerts already surfaced this session, so returning to the app repeatedly
+  /// doesn't reopen the same emergency screen after the user dismissed it.
+  final Set<int> _seenSosIds = {};
+
+  /// Pulls any SOS still open in the user's trips and surfaces the newest one.
+  ///
+  /// Push and the websocket both only reach a phone that is on and connected —
+  /// the phone in a pack with no signal, or one that was flat, learns about the
+  /// emergency only when it comes back. That's exactly when the group needs it
+  /// to know, so re-check on resume rather than trusting delivery.
+  Future<void> recoverMissedSosAlerts() async {
+    if (!isLoggedIn) return;
+
+    try {
+      final alerts = await activeSosAlerts();
+      final incoming = alerts
+          .where((a) => !a.isMine && a.isActive && !_seenSosIds.contains(a.id))
+          .toList();
+
+      if (incoming.isEmpty) return;
+
+      final latest = incoming.first;
+      _seenSosIds.add(latest.id);
+      NotificationNavigator.openSosAlert(latest);
+    } catch (_) {
+      // Offline or the endpoint is unreachable — nothing to recover right now.
+    }
   }
 
   Future<void> resolveSos(int id) async {

@@ -77,6 +77,8 @@ class NotificationNavigator {
         _openTripFromData(data);
       case 'sos_alert':
         _openSosAlert(data);
+      case 'sos_resolved':
+        _handleSosResolved(data);
       case 'chat_message':
         _openChat(data);
       case 'support_message':
@@ -211,18 +213,46 @@ class NotificationNavigator {
     );
   }
 
-  static void _openSosAlert(Map<String, dynamic> data) {
-    final alert = SosAlert.fromNotificationData(data);
-    SosAlarmService.instance.start(senderName: alert.userName);
+  /// SOS whose screen is currently on top. The same alert reaches the app twice
+  /// on purpose — once over FCM (so it rings even with the socket down) and once
+  /// over Reverb (so it opens instantly when the socket is up) — and without
+  /// this guard the second one stacks a duplicate screen on the first.
+  static int? _openSosId;
+
+  static void _openSosAlert(Map<String, dynamic> data) =>
+      openSosAlert(SosAlert.fromNotificationData(data), data: data);
+
+  /// Raises the emergency screen + siren for [alert]. Public so the missed-alert
+  /// recovery sweep (`AppProvider.recoverMissedSosAlerts`) can reuse the exact
+  /// same path a push takes.
+  static void openSosAlert(SosAlert alert, {Map<String, dynamic>? data}) {
+    if (_openSosId != null && _openSosId == alert.id && alert.id != 0) {
+      SosAlarmService.instance.start(senderName: alert.userName, data: data);
+      return;
+    }
+
+    SosAlarmService.instance.start(senderName: alert.userName, data: data);
     _withNav(
-      (nav) => nav
-          .push(
-            MaterialPageRoute(
-              builder: (_) => SosAlertScreen(alert: alert),
-            ),
-          )
-          .then((_) => SosAlarmService.instance.stop()),
+      (nav) {
+        _openSosId = alert.id;
+        nav
+            .push(
+              MaterialPageRoute(
+                builder: (_) => SosAlertScreen(alert: alert),
+              ),
+            )
+            .then((_) {
+              _openSosId = null;
+              SosAlarmService.instance.stop();
+            });
+      },
     );
+  }
+
+  /// เคสถูกปิดแล้ว — หยุดไซเรนบนเครื่องที่ยังดังอยู่เพราะเจ้าของยังไม่ได้เปิด
+  /// หน้า SOS (เดิมเสียงหยุดต่อเมื่อมีคนเปิดแล้วปิดหน้านั้นเท่านั้น)
+  static void _handleSosResolved(Map<String, dynamic> data) {
+    SosAlarmService.instance.stop();
   }
 
   static void _openNotifications() {

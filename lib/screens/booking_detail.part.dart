@@ -2903,17 +2903,21 @@ bool _isTripFinished(Map<String, dynamic> schedule) {
 }
 
 /// True when today falls within the SOS window: from one day before the
-/// schedule's departure through the return date (inclusive). The SOS button is
-/// shown a day early so travellers can reach help while heading to the pickup.
+/// schedule's real departure through one day after the return date. The button
+/// opens a day early so travellers can reach help while heading to the pickup,
+/// and closes a day late because a van running past midnight on the way home is
+/// exactly when SOS matters most.
+///
+/// Must stay in step with `SosController::isWithinTripWindow` — when the two
+/// drifted apart, the button appeared on a day the API answered 422.
 bool _isWithinTripWindow(Map<String, dynamic> schedule) {
   final dep = _realDepartureDate(schedule);
   if (dep == null) return false;
   final ret = DateTime.tryParse(textOf(schedule['return_date'])) ?? dep;
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
-  // เปิด SOS ตั้งแต่ 1 วันก่อนวันออกรถจริง
   final start = dep.subtract(const Duration(days: 1));
-  final end = DateTime(ret.year, ret.month, ret.day);
+  final end = DateTime(ret.year, ret.month, ret.day).add(const Duration(days: 1));
   return !today.isBefore(start) && !today.isAfter(end);
 }
 

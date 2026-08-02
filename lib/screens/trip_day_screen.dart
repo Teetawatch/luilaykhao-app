@@ -45,8 +45,8 @@ class TripDayScreen extends StatelessWidget {
     return raw.isEmpty ? _departure : DateTime.tryParse(raw);
   }
 
-  /// True from one day before departure through the return date — the window in
-  /// which the emergency SOS is meaningful (mirrors the booking detail rule).
+  /// True from one day before departure through the return date — gates the
+  /// day-of cards (what to do now, GPS trek recording).
   bool get _withinTripWindow {
     final dep = _departure;
     if (dep == null) return false;
@@ -56,6 +56,28 @@ class TripDayScreen extends StatelessWidget {
     final start = DateTime(dep.year, dep.month, dep.day)
         .subtract(const Duration(days: 1));
     final end = DateTime(ret.year, ret.month, ret.day);
+    return !today.isBefore(start) && !today.isAfter(end);
+  }
+
+  /// SOS runs on a slightly wider window than the rest of the day-of cards: it
+  /// counts from `departs_at` (rounds whose van leaves the night before) and
+  /// stays open a day past the return date, because a delayed van still on the
+  /// road after midnight is when help is hardest to reach. Mirrors
+  /// `SosController::isWithinTripWindow` — if the two drift, the button shows on
+  /// a day the API rejects.
+  bool get _withinSosWindow {
+    final dep = scheduleDepartsAt(_schedule) ?? _departure;
+    if (dep == null) return false;
+    final ret = _return ?? dep;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime(dep.year, dep.month, dep.day)
+        .subtract(const Duration(days: 1));
+    final end = DateTime(
+      ret.year,
+      ret.month,
+      ret.day,
+    ).add(const Duration(days: 1));
     return !today.isBefore(start) && !today.isAfter(end);
   }
 
@@ -91,7 +113,7 @@ class TripDayScreen extends StatelessWidget {
 
           // SOS first while on/near the trip — it's the one action that must be
           // immediate rather than tucked behind a tile.
-          if (_withinTripWindow && _scheduleId > 0) ...[
+          if (_withinSosWindow && _scheduleId > 0) ...[
             SosButton(scheduleId: _scheduleId),
             const SizedBox(height: 16),
           ],

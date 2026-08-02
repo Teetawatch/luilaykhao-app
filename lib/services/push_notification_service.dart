@@ -31,6 +31,15 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     // screen even when the app is killed. A system-displayed FCM notification
     // can't set fullScreenIntent/category=alarm and so posts silently, which is
     // why Android SOS was inaudible until tapped.
+    // เคสถูกปิดแล้ว — เก็บแจ้งเตือน SOS ที่ค้างอยู่ในถาดออก ไม่ให้ค้างเป็น
+    // ongoing notification ที่ปัดทิ้งไม่ได้หลังเหตุการณ์จบไปแล้ว
+    if (message.data['type'] == 'sos_resolved') {
+      try {
+        await FlutterLocalNotificationsPlugin().cancel(id: 9911);
+      } catch (_) {}
+      return;
+    }
+
     if (message.data['type'] == 'sos_alert' &&
         message.notification == null &&
         defaultTargetPlatform == TargetPlatform.android) {
@@ -185,10 +194,26 @@ class PushNotificationService {
         // SOS arrives data-only on Android (and as an apns alert on iOS), so it
         // has no `notification` block to drive _showForegroundNotification.
         // Handle it up front so the looping siren fires regardless of platform.
-        if (message.data['type']?.toString() == 'sos_alert') {
+        final type = message.data['type']?.toString();
+        if (type == 'sos_alert') {
           final senderName =
               message.data['sos_user_name']?.toString() ?? 'เพื่อนร่วมทริป';
-          SosAlarmService.instance.start(senderName: senderName);
+          SosAlarmService.instance.start(
+            senderName: senderName,
+            data: message.data,
+          );
+          // Route to the SOS screen from here too. Opening it used to depend
+          // solely on the Reverb socket, so with the socket down the phone just
+          // wailed with nothing on screen saying who needed help or where.
+          // NotificationNavigator de-dupes if both paths deliver.
+          _handleNotificationTap(message.data);
+          _onRefreshRequested?.call();
+          return;
+        }
+        if (type == 'sos_resolved') {
+          // หยุดไซเรนทันทีเมื่อมีคนรับเรื่องแล้ว โดยไม่ต้องรอให้ผู้ใช้เปิดหน้า SOS
+          _handleNotificationTap(message.data);
+          _showForegroundNotification(message);
           _onRefreshRequested?.call();
           return;
         }
@@ -321,6 +346,16 @@ class PushNotificationService {
       body: {'token': token, 'platform': defaultTargetPlatform.name},
     );
   }
+
+  /// Makes sure the local-notification plugin is initialised **by this class**.
+  ///
+  /// [FlutterLocalNotificationsPlugin] is a singleton, and `initialize()`
+  /// overwrites its tap callback unconditionally. So any other class calling
+  /// `initialize()` — as [SosAlarmService] used to — silently wipes the handler
+  /// registered here, and from that moment tapping *any* notification stops
+  /// navigating anywhere. Exactly one owner initialises; everyone else awaits
+  /// this.
+  Future<void> ensureLocalNotificationsReady() => _initializeLocalNotifications();
 
   Future<void> _initializeLocalNotifications() async {
     if (_localReady) return;

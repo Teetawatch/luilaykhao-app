@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -25,6 +27,82 @@ class SosButton extends StatefulWidget {
 class _SosButtonState extends State<SosButton> {
   static const _sosRed = Color(0xFFE11D48);
   bool _sending = false;
+
+  /// This traveller's own alert on this trip that is still open. Kept in view so
+  /// a false alarm — or a situation that resolved itself — can be closed by the
+  /// person who raised it, instead of leaving the whole round on edge.
+  SosAlert? _myOpenAlert;
+  bool _closing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshMyOpenAlert();
+  }
+
+  Future<void> _refreshMyOpenAlert() async {
+    if (widget.scheduleId == 0) return;
+    try {
+      final alerts = await context.read<AppProvider>().activeSosAlerts();
+      if (!mounted) return;
+      setState(() {
+        _myOpenAlert = alerts
+            .where(
+              (a) =>
+                  a.isMine && a.isActive && a.scheduleId == widget.scheduleId,
+            )
+            .firstOrNull;
+      });
+    } catch (_) {
+      // Offline — the SOS button itself still works, which is what matters.
+    }
+  }
+
+  Future<void> _closeMyAlert() async {
+    final alert = _myOpenAlert;
+    if (alert == null || _closing) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'ปิดเคส SOS?',
+          style: appFont(fontWeight: FontWeight.w900),
+        ),
+        content: Text(
+          'ยืนยันว่าคุณปลอดภัยแล้ว ระบบจะแจ้งสตาฟและเพื่อนร่วมทริปว่าเคสนี้ปิดแล้ว',
+          style: appFont(fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('ยังไม่ปิด', style: appFont()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('ฉันปลอดภัยแล้ว'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _closing = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<AppProvider>().resolveSos(alert.id);
+      if (!mounted) return;
+      setState(() => _myOpenAlert = null);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('ปิดเคส SOS แล้ว')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('ปิดเคสไม่สำเร็จ: $e')));
+    } finally {
+      if (mounted) setState(() => _closing = false);
+    }
+  }
 
   Future<void> _onPressed() async {
     if (_sending || widget.scheduleId == 0) return;
@@ -61,6 +139,7 @@ class _SosButtonState extends State<SosButton> {
       if (!mounted) return;
       HapticFeedback.heavyImpact();
       await SystemSound.play(SystemSoundType.alert);
+      unawaited(_refreshMyOpenAlert());
       await _successDialog(hasLocation: lat != null);
     } catch (e) {
       // triggerSos already retried with backoff; offer a manual retry too.
@@ -122,6 +201,11 @@ class _SosButtonState extends State<SosButton> {
     );
   }
 
+  /// How long we're willing to wait for a GPS fix before sending the SOS
+  /// without one. On a ridge or in a valley a cold fix can take minutes —
+  /// getting the alert out matters far more than getting it out with a pin.
+  static const _gpsTimeout = Duration(seconds: 8);
+
   Future<Position?> _currentPosition() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return null;
@@ -135,13 +219,44 @@ class _SosButtonState extends State<SosButton> {
       return null;
     }
 
-    return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: _gpsTimeout,
+        ),
+      ).timeout(_gpsTimeout);
+    } catch (_) {
+      // No fresh fix in time — a slightly stale position still puts responders
+      // in the right valley, which beats sending nothing.
+      try {
+        return await Geolocator.getLastKnownPosition();
+      } catch (_) {
+        return null;
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_myOpenAlert != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _button(context),
+          const SizedBox(height: 10),
+          _OpenCaseBanner(
+            closing: _closing,
+            onClose: _closeMyAlert,
+          ),
+        ],
+      );
+    }
+
+    return _button(context);
+  }
+
+  Widget _button(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -211,6 +326,91 @@ class _SosButtonState extends State<SosButton> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// แถบสถานะเมื่อผู้ใช้มีเคส SOS ที่ยังเปิดอยู่ในรอบนี้ — บอกว่าทีมงานเห็นแล้ว
+/// และให้ปิดเคสเองได้เมื่อปลอดภัย
+class _OpenCaseBanner extends StatelessWidget {
+  final bool closing;
+  final VoidCallback onClose;
+
+  const _OpenCaseBanner({required this.closing, required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE11D48).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.record_voice_over_rounded,
+                size: 18,
+                color: Color(0xFFE11D48),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'เคส SOS ของคุณยังเปิดอยู่',
+                  style: appFont(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'สตาฟและทีมงานได้รับแจ้งแล้ว ถ้าปลอดภัยแล้วช่วยกดปิดเคสเพื่อให้ทุกคนรู้',
+            style: appFont(
+              fontSize: 12,
+              height: 1.5,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: closing ? null : onClose,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primaryColor,
+                side: BorderSide(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.5),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: closing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check_circle_outline_rounded, size: 18),
+              label: Text(
+                closing ? 'กำลังปิดเคส...' : 'ฉันปลอดภัยแล้ว — ปิดเคส',
+                style: appFont(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

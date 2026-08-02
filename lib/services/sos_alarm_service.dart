@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
+
+import 'push_notification_service.dart';
 
 /// Fires a loud, continuously looping siren when an SOS is received.
 ///
@@ -47,24 +50,24 @@ class SosAlarmService {
     iOS: AudioContextIOS(category: AVAudioSessionCategory.playback),
   );
 
+  /// Longest the siren may run unattended before it stops on its own.
+  static const _maxDuration = Duration(minutes: 3);
+
   final _localNotifications = FlutterLocalNotificationsPlugin();
   final _player = AudioPlayer(playerId: 'sos_siren');
   bool _initialized = false;
   bool _playing = false;
   Timer? _repeatTimer;
+  Timer? _autoStopTimer;
 
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
 
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const ios = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
-    await _localNotifications.initialize(
-      settings: const InitializationSettings(android: android, iOS: ios),
-    );
+    // Deliberately does NOT call _localNotifications.initialize() itself: the
+    // plugin is a singleton and initialize() overwrites the tap callback, so
+    // doing it here used to wipe PushNotificationService's handler and break
+    // notification taps app-wide for the rest of the session.
+    await PushNotificationService.instance.ensureLocalNotificationsReady();
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
@@ -78,7 +81,14 @@ class SosAlarmService {
     _initialized = true;
   }
 
-  Future<void> start({required String senderName}) async {
+  /// [data] is the FCM/Reverb payload of the alert. It rides along on the
+  /// notification so tapping it opens the SOS detail screen — without it the
+  /// user hears a siren they can neither identify nor silence, since the siren
+  /// only stops when that screen is closed.
+  Future<void> start({
+    required String senderName,
+    Map<String, dynamic>? data,
+  }) async {
     await _ensureInitialized();
 
     HapticFeedback.heavyImpact();
@@ -122,6 +132,7 @@ class SosAlarmService {
           interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),
+      payload: jsonEncode({...?data, 'type': 'sos_alert'}),
     );
 
     _triggerVibration();
@@ -132,11 +143,19 @@ class SosAlarmService {
       _triggerVibration();
       HapticFeedback.heavyImpact();
     });
+
+    // Safety net: a phone left in a pack with nobody to open the screen would
+    // otherwise siren until the battery dies — the battery is what the group
+    // needs for the rest of the rescue.
+    _autoStopTimer?.cancel();
+    _autoStopTimer = Timer(_maxDuration, stop);
   }
 
   Future<void> stop() async {
     _repeatTimer?.cancel();
     _repeatTimer = null;
+    _autoStopTimer?.cancel();
+    _autoStopTimer = null;
     Vibration.cancel();
     _playing = false;
     try {

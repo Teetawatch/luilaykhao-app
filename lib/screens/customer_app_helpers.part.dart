@@ -496,6 +496,7 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
       'booking_reminder' || 'trip_reminder' => Icons.calendar_month_rounded,
       'seat_alert' => Icons.local_fire_department_rounded,
       'sos_alert' => Icons.sos_rounded,
+      'sos_resolved' => Icons.check_circle_rounded,
       'promo' => Icons.card_giftcard_rounded,
       'loyalty' => Icons.star_rounded,
       _ => Icons.notifications_rounded,

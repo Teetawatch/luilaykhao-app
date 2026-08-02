@@ -9,6 +9,10 @@ class SosAlert {
   final double? latitude;
   final double? longitude;
   final String status;
+
+  /// True when the signed-in user is the one who raised this alert — they get
+  /// a "close my case" action instead of a siren.
+  final bool isMine;
   final DateTime? createdAt;
 
   const SosAlert({
@@ -21,6 +25,7 @@ class SosAlert {
     this.latitude,
     this.longitude,
     this.status = 'active',
+    this.isMine = false,
     this.createdAt,
   });
 
@@ -39,6 +44,7 @@ class SosAlert {
       latitude: double.tryParse(json['latitude']?.toString() ?? ''),
       longitude: double.tryParse(json['longitude']?.toString() ?? ''),
       status: json['status']?.toString() ?? 'active',
+      isMine: json['is_mine'] == true,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
     );
   }

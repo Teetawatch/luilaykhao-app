@@ -127,6 +127,9 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
       final app = context.read<AppProvider>();
       if (app.isLoggedIn) {
         unawaited(app.loadNotifications());
+        // An SOS raised while this phone was off, flat, or out of signal never
+        // arrived — catch up on it the moment the phone is usable again.
+        unawaited(app.recoverMissedSosAlerts());
       } else {
         unawaited(PushNotificationService.instance.clearBadge());
       }
