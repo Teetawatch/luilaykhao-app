@@ -70,6 +70,7 @@ class TravelSliverAppBar extends StatelessWidget {
         padding: const EdgeInsets.only(left: 14),
         child: FloatingActionIconButton(
           icon: Icons.arrow_back_ios_new_rounded,
+          tooltip: 'ย้อนกลับ',
           isCollapsed: isCollapsed,
           onPressed: () => Navigator.maybePop(context),
         ),
@@ -77,6 +78,7 @@ class TravelSliverAppBar extends StatelessWidget {
       actions: [
         FloatingActionIconButton(
           icon: Icons.ios_share_rounded,
+          tooltip: 'แชร์ทริปนี้',
           isCollapsed: isCollapsed,
           onPressed: onSharePressed,
         ),
@@ -85,6 +87,7 @@ class TravelSliverAppBar extends StatelessWidget {
           icon: isAlertOn
               ? Icons.notifications_active_rounded
               : Icons.notifications_none_rounded,
+          tooltip: isAlertOn ? 'ปิดแจ้งเตือนทริปนี้' : 'เปิดแจ้งเตือนทริปนี้',
           isCollapsed: isCollapsed,
           foregroundColor: isAlertOn ? const Color(0xFFF59E0B) : null,
           onPressed: onAlertPressed,
@@ -94,6 +97,7 @@ class TravelSliverAppBar extends StatelessWidget {
           icon: isFavorite
               ? Icons.favorite_rounded
               : Icons.favorite_border_rounded,
+          tooltip: isFavorite ? 'นำออกจากทริปที่ชอบ' : 'บันทึกเป็นทริปที่ชอบ',
           isCollapsed: isCollapsed,
           foregroundColor: isFavorite ? const Color(0xFFE11D48) : null,
           onPressed: onFavoritePressed,
@@ -179,6 +183,9 @@ class _GalleryImageFallback extends StatelessWidget {
 
 class FloatingActionIconButton extends StatefulWidget {
   final IconData icon;
+  /// Spoken by TalkBack/VoiceOver and shown on long-press. These buttons are
+  /// icon-only over a photo, so without it they announce as just "button".
+  final String tooltip;
   final bool isCollapsed;
   final Color? foregroundColor;
   final VoidCallback onPressed;
@@ -186,6 +193,7 @@ class FloatingActionIconButton extends StatefulWidget {
   const FloatingActionIconButton({
     super.key,
     required this.icon,
+    required this.tooltip,
     required this.isCollapsed,
     this.foregroundColor,
     required this.onPressed,
@@ -209,33 +217,36 @@ class _FloatingActionIconButtonState extends State<FloatingActionIconButton> {
         widget.foregroundColor ??
         (overImage ? const Color(0xFF1F2937) : AppTheme.onSurface(context));
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTapUp: (_) => setState(() => _isPressed = false),
-      child: AnimatedScale(
-        scale: _isPressed ? 0.9 : 1,
-        duration: const Duration(milliseconds: 110),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: overImage
-              ? const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                )
-              : null,
-          child: Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                widget.onPressed();
-              },
-              child: Center(
-                child: Icon(widget.icon, size: 20, color: foreground),
+    return Tooltip(
+      message: widget.tooltip,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        child: AnimatedScale(
+          scale: _isPressed ? 0.9 : 1,
+          duration: const Duration(milliseconds: 110),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: overImage
+                ? const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                  )
+                : null,
+            child: Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  widget.onPressed();
+                },
+                child: Center(
+                  child: Icon(widget.icon, size: 20, color: foreground),
+                ),
               ),
             ),
           ),

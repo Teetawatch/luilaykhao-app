@@ -367,6 +367,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                     onPressed: _submitting
                         ? null
                         : () => setState(() => _rating = value),
+                    tooltip: 'ให้ $value ดาว',
                     icon: Icon(
                       filled
                           ? Icons.star_rounded

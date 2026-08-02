@@ -617,7 +617,7 @@ class _StaffEmptyState extends StatelessWidget {
               color: AppTheme.primaryColor.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.work_history_outlined,
               size: 32,
               color: AppTheme.primaryColor,

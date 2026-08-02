@@ -401,6 +401,7 @@ class _BookingPhotoViewerState extends State<_BookingPhotoViewer> {
               child: Row(
                 children: [
                   IconButton(
+                    tooltip: 'ปิด',
                     icon: const Icon(
                       Icons.close_rounded,
                       color: Colors.white,
@@ -409,6 +410,7 @@ class _BookingPhotoViewerState extends State<_BookingPhotoViewer> {
                   ),
                   const Spacer(),
                   IconButton(
+                    tooltip: 'แชร์รูปนี้',
                     onPressed: _saving ? null : _saveCurrent,
                     icon: _saving
                         ? const SizedBox(

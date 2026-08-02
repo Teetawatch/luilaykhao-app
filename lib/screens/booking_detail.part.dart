@@ -2056,7 +2056,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.map_outlined,
                                   size: 14,
                                   color: AppTheme.primaryColor,
@@ -2131,7 +2131,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (phone.isNotEmpty) ...[
-                                  Icon(
+                                  const Icon(
                                     Icons.call_rounded,
                                     size: 13,
                                     color: AppTheme.primaryColor,
@@ -4184,6 +4184,7 @@ class _StaffPhotoView extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: IconButton(
+                  tooltip: 'ปิด',
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close_rounded, color: Colors.white),
                   style: IconButton.styleFrom(

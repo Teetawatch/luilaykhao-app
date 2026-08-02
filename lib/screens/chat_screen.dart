@@ -4580,7 +4580,7 @@ class _PickupPointsSheet extends StatelessWidget {
 
   String _t(dynamic v) => v?.toString().trim() ?? '';
 
-  Future<void> _openMap(Map<String, dynamic> p) async {
+  Future<void> _openMap(BuildContext context, Map<String, dynamic> p) async {
     final mapUrl = _t(p['map_url']);
     final lat = p['latitude'];
     final lng = p['longitude'];
@@ -4594,10 +4594,22 @@ class _PickupPointsSheet extends StatelessWidget {
     } else {
       uri = null;
     }
-    if (uri == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    // A dead tap on "จุดรับ" the morning of the trip is the worst time to leave
+    // someone guessing whether the app heard them.
+    void fail() => messenger.showSnackBar(
+      const SnackBar(content: Text('เปิดแผนที่ไม่ได้ กรุณาลองใหม่')),
+    );
+    if (uri == null) {
+      fail();
+      return;
+    }
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened) fail();
+    } catch (_) {
+      fail();
+    }
   }
 
   @override
@@ -4732,7 +4744,7 @@ class _PickupPointsSheet extends StatelessWidget {
                         if (hasMap) ...[
                           const SizedBox(height: 10),
                           InkWell(
-                            onTap: () => _openMap(p),
+                            onTap: () => _openMap(context, p),
                             borderRadius: BorderRadius.circular(999),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,

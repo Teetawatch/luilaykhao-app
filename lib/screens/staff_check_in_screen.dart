@@ -440,6 +440,7 @@ class _ScannerPanel extends StatelessWidget {
                       size: 20,
                     ),
                     suffixIcon: IconButton(
+                      tooltip: 'ค้นหา',
                       onPressed: loading ? null : onLookup,
                       icon: Icon(
                         Icons.search_rounded,
@@ -866,7 +867,7 @@ class _BookingHeaderCard extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.phone_rounded,
                                     size: 12,
                                     color: AppTheme.primaryColor,
@@ -1425,7 +1426,7 @@ class _PassengerTile extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.phone_rounded,
                           size: 12,
                           color: AppTheme.primaryColor,

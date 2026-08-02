@@ -302,6 +302,7 @@ class _ProfileTextFieldState extends State<_ProfileTextField> {
         prefixIcon: Icon(widget.icon, size: 20),
         suffixIcon: widget.obscureText
             ? IconButton(
+                tooltip: _visible ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน',
                 icon: Icon(
                   _visible
                       ? Icons.visibility_off_outlined
@@ -643,7 +644,6 @@ class _MenuItem {
   final String? subtitle;
   final String? trailing;
   final Widget? trailingWidget;
-  final bool showChevron;
   final VoidCallback onTap;
 
   const _MenuItem({
@@ -652,7 +652,6 @@ class _MenuItem {
     this.subtitle,
     this.trailing,
     this.trailingWidget,
-    this.showChevron = true,
     required this.onTap,
   });
 }
@@ -892,13 +891,6 @@ class _ProfileDateField extends StatelessWidget {
 int _numberValue(dynamic value, {int fallback = 0}) {
   final number = num.tryParse(value?.toString() ?? '');
   return number?.round() ?? fallback;
-}
-
-bool _boolValue(dynamic value) {
-  if (value is bool) return value;
-  if (value is num) return value != 0;
-  final text = _cleanText(value).toLowerCase();
-  return text == 'true' || text == '1' || text == 'yes';
 }
 
 String _formatCompact(int value) {

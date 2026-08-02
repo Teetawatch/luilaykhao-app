@@ -683,6 +683,7 @@ class _FullscreenVideoPlayerState extends State<_FullscreenVideoPlayer> {
                 top: 8,
                 right: 8,
                 child: IconButton(
+                  tooltip: 'ปิด',
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close_rounded, color: Colors.white),
                 ),

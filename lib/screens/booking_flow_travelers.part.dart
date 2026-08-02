@@ -27,6 +27,7 @@ class TravelerCounter extends StatelessWidget {
         children: [
           _CounterButton(
             icon: Icons.remove_rounded,
+            tooltip: 'ลดจำนวนผู้เดินทาง',
             onPressed: count == 1 ? null : onRemove,
           ),
           AnimatedSwitcher(
@@ -51,6 +52,7 @@ class TravelerCounter extends StatelessWidget {
           ),
           _CounterButton(
             icon: Icons.add_rounded,
+            tooltip: 'เพิ่มจำนวนผู้เดินทาง',
             onPressed: onAdd,
             isPrimary: true,
           ),
@@ -1005,6 +1007,7 @@ class StickyCheckoutBar extends StatelessWidget {
                       height: btnHeight,
                       child: IconButton(
                         onPressed: isSubmitting ? null : onBack,
+                        tooltip: 'ย้อนกลับ',
                         padding: EdgeInsets.zero,
                         style: IconButton.styleFrom(
                           backgroundColor: _fieldBackground(context),

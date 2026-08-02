@@ -241,7 +241,11 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
       final data = await _app.fetchGroupPlan(_code);
       if (mounted) setState(() => _plan = GroupPlan.fromJson(data));
       await _loadSeatMap();
-    } catch (_) {}
+    } catch (e) {
+      // User-initiated pull-to-refresh — silence here reads as "nothing
+      // happened" and invites them to keep pulling.
+      _toast(e is ApiException ? e.message : 'รีเฟรชไม่สำเร็จ กรุณาลองใหม่');
+    }
   }
 
   void _toast(String message) {
@@ -980,6 +984,7 @@ class _InviteCard extends StatelessWidget {
                 ),
               ),
               IconButton(
+                tooltip: 'คัดลอกรหัสห้อง',
                 icon: const Icon(Icons.copy_rounded, size: 20),
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: plan.inviteCode));

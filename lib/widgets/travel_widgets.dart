@@ -358,6 +358,7 @@ class TravelSliverAppBar extends StatelessWidget {
                     ? Colors.black26
                     : Colors.transparent,
                 child: IconButton(
+                  tooltip: 'ย้อนกลับ',
                   icon: Icon(
                     Icons.arrow_back_ios_new_rounded,
                     color: isTransparent

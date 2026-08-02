@@ -1431,6 +1431,7 @@ class _ScheduleDateSheet extends StatelessWidget {
                       ),
                     ),
                     IconButton(
+                      tooltip: 'ปิด',
                       onPressed: () => Navigator.of(context).pop(),
                       icon: Icon(
                         Icons.close_rounded,

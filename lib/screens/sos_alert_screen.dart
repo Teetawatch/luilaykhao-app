@@ -87,6 +87,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
             top: MediaQuery.paddingOf(ctx).top + 8,
             right: 8,
             child: IconButton(
+              tooltip: 'ปิด',
               icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
               onPressed: () => Navigator.pop(ctx),
             ),

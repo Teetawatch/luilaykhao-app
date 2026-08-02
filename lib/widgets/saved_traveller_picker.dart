@@ -291,7 +291,7 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
                                 ),
                                 child: Text(
                                   label,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.primaryColor,

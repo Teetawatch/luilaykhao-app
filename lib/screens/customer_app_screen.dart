@@ -40,7 +40,6 @@ import 'payment_screen.dart';
 import 'profile_screen.dart'
     show ProfileScreen, ContactUsScreen, NotificationsScreen, StaffWorkScreen;
 import 'guest_booking_lookup_screen.dart';
-import 'chat_screen.dart';
 import 'chat_list_screen.dart';
 import 'join_booking_screen.dart';
 import 'pre_trip_checklist_screen.dart';

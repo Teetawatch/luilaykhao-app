@@ -483,6 +483,7 @@ class _PhotoTile extends StatelessWidget {
               ),
             ),
             IconButton(
+              tooltip: 'ปิด',
               onPressed: onRemove,
               icon: const Icon(Icons.close_rounded),
             ),

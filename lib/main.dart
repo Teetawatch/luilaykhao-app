@@ -27,6 +27,7 @@ import 'widgets/biometric_lock_gate.dart';
 import 'widgets/force_update_screen.dart';
 import 'widgets/maintenance_screen.dart';
 import 'widgets/offline_banner.dart';
+import 'widgets/text_scale_guard.dart';
 import 'widgets/update_available_dialog.dart';
 
 final appNavigatorKey = GlobalKey<NavigatorState>();
@@ -172,9 +173,11 @@ class LuilaykhaoApp extends StatelessWidget {
                         ),
                       ),
                     );
-              return AnnotatedRegion<SystemUiOverlayStyle>(
-                value: overlayStyle,
-                child: OfflineBanner(child: body),
+              return TextScaleGuard(
+                child: AnnotatedRegion<SystemUiOverlayStyle>(
+                  value: overlayStyle,
+                  child: OfflineBanner(child: body),
+                ),
               );
             },
             home: const _OnboardingGate(),

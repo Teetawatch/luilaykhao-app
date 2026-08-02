@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -10,7 +11,17 @@ class ApiException implements Exception {
   final int? statusCode;
   final Object? errors;
 
-  const ApiException(this.message, {this.statusCode, this.errors});
+  /// True when the request never reached the server (no signal, DNS failure,
+  /// TLS handshake failure, connection dropped mid-flight, or timeout). The UI
+  /// can use this to offer "ลองใหม่" instead of treating it as a server refusal.
+  final bool isNetworkError;
+
+  const ApiException(
+    this.message, {
+    this.statusCode,
+    this.errors,
+    this.isNetworkError = false,
+  });
 
   @override
   String toString() => message;
@@ -21,6 +32,21 @@ class ApiClient {
   /// hangs the future forever — which on the trip detail page surfaced as a
   /// half-loaded screen (trip header shown, schedules/reviews never arriving).
   static const Duration _timeout = Duration(seconds: 20);
+
+  /// Uploads carry a photo (payment slips, SOS photos, review images) over
+  /// whatever signal the user has on a mountain road, so they get a longer
+  /// leash than a plain JSON call — but still a finite one. Before this,
+  /// `postMultipart` had no timeout at all and a stalled upload hung forever
+  /// with the payment button spinning.
+  static const Duration _uploadTimeout = Duration(seconds: 60);
+
+  /// Transport failures are retried for GET only. A retried POST could file a
+  /// second payment slip or a second booking, so writes always fail fast and
+  /// let the user decide — see [_send].
+  static const List<Duration> _retryBackoff = [
+    Duration(milliseconds: 400),
+    Duration(milliseconds: 1200),
+  ];
 
   String? token;
 
@@ -80,8 +106,11 @@ class ApiClient {
       );
     }
 
-    final streamed = await request.send();
-    final response = await http.Response.fromStream(streamed);
+    // An upload is a write — never retried, only guarded and bounded.
+    final response = await _withTransportGuard(() async {
+      final streamed = await request.send().timeout(_uploadTimeout);
+      return http.Response.fromStream(streamed).timeout(_uploadTimeout);
+    });
     return _handleResponse(response);
   }
 
@@ -101,36 +130,83 @@ class ApiClient {
   }) async {
     final uri = _uri(path, query);
     final encoded = body == null ? null : jsonEncode(body);
-    late http.Response response;
 
-    try {
+    Future<http.Response> attempt() {
       switch (method) {
         case 'GET':
-          response = await http.get(uri, headers: _headers()).timeout(_timeout);
-          break;
+          return http.get(uri, headers: _headers()).timeout(_timeout);
         case 'POST':
-          response = await http
+          return http
               .post(uri, headers: _headers(), body: encoded)
               .timeout(_timeout);
-          break;
         case 'PUT':
-          response = await http
+          return http
               .put(uri, headers: _headers(), body: encoded)
               .timeout(_timeout);
-          break;
         case 'DELETE':
-          response = await http
+          return http
               .delete(uri, headers: _headers(), body: encoded)
               .timeout(_timeout);
-          break;
         default:
           throw ApiException('Unsupported method $method');
       }
-    } on TimeoutException {
-      throw const ApiException('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่');
     }
 
+    // Reads are safe to repeat; writes are not. A retried POST could submit a
+    // second payment slip or a second booking against the same seat lock.
+    final response = await _withTransportGuard(
+      attempt,
+      retries: method == 'GET' ? _retryBackoff.length : 0,
+    );
     return _handleResponse(response);
+  }
+
+  /// Runs [attempt], translating transport-level failures into a Thai
+  /// [ApiException] and optionally retrying with backoff.
+  ///
+  /// Without this, losing signal mid-request threw a raw `ClientException with
+  /// SocketException: Failed host lookup ...` which several screens render
+  /// straight into a snackbar via `e.toString()`.
+  Future<http.Response> _withTransportGuard(
+    Future<http.Response> Function() attempt, {
+    int retries = 0,
+  }) async {
+    for (var i = 0; ; i++) {
+      try {
+        return await attempt();
+      } on ApiException {
+        rethrow;
+      } catch (error) {
+        final failure = _asTransportFailure(error);
+        if (failure == null) rethrow;
+        if (i >= retries) throw failure;
+        await Future.delayed(_retryBackoff[i]);
+      }
+    }
+  }
+
+  /// Maps a transport-level error onto a user-facing message, or returns null
+  /// when the error is something else and should keep bubbling untouched.
+  ApiException? _asTransportFailure(Object error) {
+    if (error is TimeoutException) {
+      return const ApiException(
+        'การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่',
+        isNetworkError: true,
+      );
+    }
+    if (error is SocketException || error is HandshakeException) {
+      return const ApiException(
+        'เชื่อมต่ออินเทอร์เน็ตไม่ได้ กรุณาตรวจสอบสัญญาณแล้วลองใหม่',
+        isNetworkError: true,
+      );
+    }
+    if (error is http.ClientException) {
+      return const ApiException(
+        'การเชื่อมต่อขัดข้อง กรุณาลองใหม่อีกครั้ง',
+        isNetworkError: true,
+      );
+    }
+    return null;
   }
 
   dynamic _handleResponse(http.Response response) {

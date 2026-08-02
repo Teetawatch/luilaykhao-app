@@ -235,6 +235,7 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
               ),
               leading: !widget.embedded && Navigator.canPop(context)
                   ? IconButton(
+                      tooltip: 'ย้อนกลับ',
                       icon: const Icon(Icons.arrow_back_ios_new_rounded),
                       onPressed: () => Navigator.pop(context),
                     )
@@ -564,6 +565,7 @@ class BookingCodeField extends StatelessWidget {
               suffixIcon: controller.text.isEmpty
                   ? null
                   : IconButton(
+                      tooltip: 'ปิด',
                       icon: const Icon(Icons.close_rounded),
                       onPressed: controller.clear,
                     ),

@@ -722,6 +722,7 @@ class _HeroTopBar extends StatelessWidget {
                               alpha: 0.22 + (0.50 * backgroundProgress),
                             ),
                             child: IconButton(
+                              tooltip: 'การแจ้งเตือน',
                               padding: EdgeInsets.zero,
                               onPressed: onNotificationsTap,
                               icon: Icon(
@@ -1101,6 +1102,7 @@ class _TrustHub extends StatelessWidget {
                               ),
                             ),
                             IconButton(
+                              tooltip: 'ปิด',
                               onPressed: () => Navigator.pop(dialogContext),
                               icon: const Icon(
                                 Icons.close_rounded,
@@ -3592,9 +3594,7 @@ class _OutstandingPaymentBanner extends StatelessWidget {
     final amount = _outstanding(booking);
     final ref = textOf(booking['booking_ref']);
     final dueAt = DateTime.tryParse(textOf(booking['balance_due_at']));
-    final daysLeft = dueAt == null
-        ? null
-        : dueAt.difference(DateTime.now()).inDays;
+    final daysLeft = dueAt?.difference(DateTime.now()).inDays;
     final overdue = daysLeft != null && daysLeft < 0;
 
     final tone = overdue ? AppTheme.errorColor : AppTheme.warningColor;

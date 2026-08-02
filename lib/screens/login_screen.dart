@@ -972,6 +972,7 @@ class _ToggleVisibilityButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: onTap,
+      tooltip: isVisible ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน',
       icon: Icon(
         isVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
         size: 20,

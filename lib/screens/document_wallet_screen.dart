@@ -212,7 +212,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
         surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
-            icon: Icon(Icons.delete_outline_rounded,
+            icon: const Icon(Icons.delete_outline_rounded,
                 color: AppTheme.errorColor),
             tooltip: 'ล้างข้อมูล',
             onPressed: _confirmClear,
@@ -264,7 +264,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                   const SizedBox(height: 24),
 
                   // ── ข้อมูลส่วนตัว ──────────────────────────────────────
-                  _WalletSectionHeader(
+                  const _WalletSectionHeader(
                     icon: Icons.person_rounded,
                     title: 'ข้อมูลส่วนตัว',
                   ),
@@ -328,7 +328,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
 
                   const SizedBox(height: 24),
                   // ── ข้อมูลติดต่อ ────────────────────────────────────────
-                  _WalletSectionHeader(
+                  const _WalletSectionHeader(
                     icon: Icons.phone_rounded,
                     title: 'ข้อมูลติดต่อ',
                   ),
@@ -346,7 +346,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
 
                   const SizedBox(height: 24),
                   // ── ผู้ติดต่อฉุกเฉิน ────────────────────────────────────
-                  _WalletSectionHeader(
+                  const _WalletSectionHeader(
                     icon: Icons.emergency_rounded,
                     title: 'ผู้ติดต่อฉุกเฉิน',
                     accentColor: AppTheme.errorColor,
@@ -371,10 +371,10 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
 
                   const SizedBox(height: 24),
                   // ── ข้อมูลสุขภาพ ────────────────────────────────────────
-                  _WalletSectionHeader(
+                  const _WalletSectionHeader(
                     icon: Icons.health_and_safety_rounded,
                     title: 'ข้อมูลสุขภาพ',
-                    accentColor: const Color(0xFF0891B2),
+                    accentColor: Color(0xFF0891B2),
                   ),
                   const SizedBox(height: 12),
                   _WalletField(
@@ -413,7 +413,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                         ),
                       ),
                       value: _halalFood,
-                      activeColor: AppTheme.primaryColor,
+                      activeThumbColor: AppTheme.primaryColor,
                       onChanged: (v) => setState(() => _halalFood = v),
                     ),
                   ),

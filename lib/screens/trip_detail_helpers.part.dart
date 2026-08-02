@@ -613,40 +613,6 @@ bool _scheduleHasPickupRegion(Map<String, dynamic> schedule, String regionKey) {
   ).map(asMap).any((point) => _pickupRegionKey(point) == regionKey);
 }
 
-String _regionSummary(Map<String, dynamic> schedule, {String? regionKey}) {
-  final regions = asList(schedule['pickup_points'])
-      .map(asMap)
-      .where(
-        (point) =>
-            regionKey == null ||
-            regionKey.isEmpty ||
-            _pickupRegionKey(point) == regionKey,
-      )
-      .map(
-        (point) => textOf(
-          point['region_label'],
-          textOf(point['region'], 'ไม่ระบุภูมิภาค'),
-        ),
-      )
-      .where((region) => region.trim().isNotEmpty)
-      .toSet()
-      .toList();
-
-  if (regions.isEmpty) return '';
-  if (regions.length == 1) return regions.first;
-  return '${regions.length} ภูมิภาค';
-}
-
-String _scheduleTravelDateText(Map<String, dynamic> schedule) {
-  final start = dateText(schedule['departure_date']);
-  if (start == '-') return 'รอระบุวัน';
-
-  final end = dateText(schedule['return_date']);
-  if (end == '-' || end == start) return start;
-
-  return '$start - $end';
-}
-
 String _pickupRegionKey(Map<String, dynamic> point) {
   final region = textOf(point['region']).trim();
   if (region.isNotEmpty) return region;

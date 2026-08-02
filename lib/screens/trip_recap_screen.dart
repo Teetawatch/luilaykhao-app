@@ -348,6 +348,7 @@ class _RecapStoryState extends State<_RecapStory> {
               top: 20,
               right: 12,
               child: IconButton(
+                tooltip: 'ปิด',
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.close_rounded, color: Colors.white),
               ),

@@ -303,11 +303,15 @@ class _PremiumDatePicker extends StatelessWidget {
 
 class _CounterButton extends StatelessWidget {
   final IconData icon;
+  /// What this step does, e.g. "เพิ่มจำนวน" — a bare +/- glyph announces as
+  /// nothing useful, and this stepper sets what the customer pays for.
+  final String tooltip;
   final VoidCallback? onPressed;
   final bool isPrimary;
 
   const _CounterButton({
     required this.icon,
+    required this.tooltip,
     required this.onPressed,
     this.isPrimary = false,
   });
@@ -319,6 +323,7 @@ class _CounterButton extends StatelessWidget {
       height: 40,
       child: IconButton(
         onPressed: onPressed,
+        tooltip: tooltip,
         style: IconButton.styleFrom(
           backgroundColor: isPrimary ? _softAccent : Colors.white,
           disabledBackgroundColor: Colors.white.withValues(alpha: 0.62),

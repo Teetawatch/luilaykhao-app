@@ -307,6 +307,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
               ),
               leading: Navigator.canPop(context)
                   ? IconButton(
+                      tooltip: 'ย้อนกลับ',
                       icon: const Icon(Icons.arrow_back_ios_new_rounded),
                       onPressed: () => Navigator.pop(context),
                     )

@@ -183,6 +183,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               backgroundColor: AppTheme.surface(context),
               elevation: 0,
               leading: IconButton(
+                tooltip: 'ย้อนกลับ',
                 icon: const Icon(Icons.arrow_back_ios_new_rounded),
                 onPressed: () => Navigator.maybePop(context),
               ),

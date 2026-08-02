@@ -156,6 +156,7 @@ class _AllReviewsScreenState extends State<AllReviewsScreen> {
                   ? Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: IconButton(
+                        tooltip: 'ย้อนกลับ',
                         icon: Icon(
                           Icons.arrow_back_ios_new_rounded,
                           color: isDark

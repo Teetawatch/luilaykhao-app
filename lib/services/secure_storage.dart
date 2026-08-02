@@ -37,7 +37,11 @@ class SecureStorage {
   Future<void> deleteToken() async {
     try {
       await _storage.delete(key: _authTokenKey);
-    } catch (_) {}
+    } catch (e) {
+      // Worth a breadcrumb: if this fails on logout the Sanctum token survives
+      // on the device, which is the one failure here with a security cost.
+      debugPrint('SecureStorage.deleteToken error: $e');
+    }
   }
 
   Future<bool> readBiometricEnabled() async {

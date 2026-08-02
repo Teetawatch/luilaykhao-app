@@ -453,6 +453,7 @@ class _TripPostCardState extends State<_TripPostCard> {
                   ),
                 ),
                 IconButton(
+                  tooltip: 'ตัวเลือกเพิ่มเติม',
                   icon: Icon(Icons.more_horiz_rounded,
                       color: AppTheme.mutedText(context)),
                   onPressed: _showMenu,
@@ -768,6 +769,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                   ),
                                   if (c['can_delete'] == true)
                                     IconButton(
+                                      tooltip: 'ปิด',
                                       visualDensity: VisualDensity.compact,
                                       icon: Icon(Icons.close_rounded,
                                           size: 16,

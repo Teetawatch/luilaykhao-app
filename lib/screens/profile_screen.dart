@@ -1286,16 +1286,14 @@ class _MenuTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 item.trailingWidget!,
               ],
-              if (item.showChevron) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.28)
-                      : const Color(0xFFC7C7CC), // iOS tertiary label grey
-                  size: 20,
-                ),
-              ],
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.28)
+                    : const Color(0xFFC7C7CC), // iOS tertiary label grey
+                size: 20,
+              ),
             ],
           ),
         ),
@@ -1527,6 +1525,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                 labelStyle: appFont(),
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
+                  tooltip: _obscure ? 'แสดงรหัสผ่าน' : 'ซ่อนรหัสผ่าน',
                   icon: Icon(
                     _obscure
                         ? Icons.visibility_rounded
