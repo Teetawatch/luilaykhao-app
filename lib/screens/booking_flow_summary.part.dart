@@ -479,6 +479,10 @@ class TravelInfoSection extends StatelessWidget {
             const SizedBox(height: 12),
             _CustomPickupTile(
               customPickup: customPickup,
+              pickupPoints: pickupMaps,
+              basePrice: _asNum(
+                selectedSchedule['effective_price'] ?? selectedSchedule['price'],
+              ),
               onTap: onCustomPickupTap,
               onClear: onCustomPickupClear,
             ),
@@ -496,11 +500,16 @@ class TravelInfoSection extends StatelessWidget {
 /// ปุ่ม/การ์ดสำหรับจุดรับที่ลูกค้าปักหมุดเอง (อยู่ในเส้นทางผ่านที่รับได้)
 class _CustomPickupTile extends StatelessWidget {
   final Map<String, dynamic>? customPickup;
+  // ใช้หาจุดรับที่ใกล้หมุดที่สุด เพื่อบอกราคาที่จะถูกคิดจริง
+  final List<Map<String, dynamic>> pickupPoints;
+  final num basePrice;
   final VoidCallback onTap;
   final VoidCallback onClear;
 
   const _CustomPickupTile({
     required this.customPickup,
+    required this.pickupPoints,
+    required this.basePrice,
     required this.onTap,
     required this.onClear,
   });
@@ -509,6 +518,18 @@ class _CustomPickupTile extends StatelessWidget {
   Widget build(BuildContext context) {
     const amber = Color(0xFFB45309);
     final cp = customPickup;
+    // ราคาที่จะถูกคิดจริง = ราคาจุดรับที่ใกล้หมุดที่สุด (ขั้นต่ำ = ราคารอบ)
+    final nearest = cp == null
+        ? null
+        : _nearestPickupPoint(
+            pickupPoints,
+            double.tryParse('${cp['lat']}') ?? 0,
+            double.tryParse('${cp['lng']}') ?? 0,
+          );
+    final quotedPrice = cp == null
+        ? basePrice
+        : _customPickupPrice(basePrice, pickupPoints, cp);
+    final matchesZone = nearest != null && _asNum(nearest['price']) > basePrice;
 
     if (cp == null) {
       return InkWell(
@@ -607,7 +628,9 @@ class _CustomPickupTile extends StatelessWidget {
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
-                  'จุดรับนี้จะถูกบันทึกในการจอง · ไม่มีค่าบริการเพิ่ม',
+                  matchesZone
+                      ? 'คิดราคาเท่าจุดรับ ${_pickupLocationLabel(nearest)} ที่ใกล้หมุดที่สุด · ${money(quotedPrice)} / คน'
+                      : 'ใช้ราคาเดียวกับรอบเดินทาง · ${money(quotedPrice)} / คน',
                   style: appFont(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,

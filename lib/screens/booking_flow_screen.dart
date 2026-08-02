@@ -177,6 +177,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     schedule: _selectedSchedule,
     isJoinTrip: _isJoinTrip,
     pickupPoints: _pickupPoints,
+    customPickup: _customPickup,
     selectedAddons: _selectedAddons,
     selectedRentals: _selectedRentals,
     appliedPromo: _appliedPromo,

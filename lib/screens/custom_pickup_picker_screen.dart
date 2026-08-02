@@ -239,7 +239,8 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ปักหมุดจุดรับที่สะดวก แล้วจองต่อได้ทันที ไม่มีค่าบริการเพิ่ม',
+              'ปักหมุดจุดรับที่สะดวก แล้วจองต่อได้ทันที '
+              'ราคาคิดเท่าจุดรับที่ใกล้หมุดที่สุด (ไม่ต่ำกว่าราคารอบเดินทาง)',
               style: appFont(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,

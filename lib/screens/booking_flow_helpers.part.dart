@@ -49,6 +49,7 @@ class _PricingQuote {
     required Map<String, dynamic> schedule,
     required bool isJoinTrip,
     required List<dynamic> pickupPoints,
+    Map<String, dynamic>? customPickup,
     List<_AddonSelection> selectedAddons = const [],
     List<_RentalSelection> selectedRentals = const [],
     Map<String, dynamic>? appliedPromo,
@@ -61,12 +62,17 @@ class _PricingQuote {
           : schedule['effective_price'] ?? schedule['price'],
     );
 
+    // ปักหมุดเอง = ไม่มีจุดรับตายตัว จึงคิดราคาเท่าจุดรับที่ใกล้หมุดที่สุด
+    final customPrice = (!isJoinTrip && customPickup != null)
+        ? _customPickupPrice(basePrice, pickupPoints, customPickup)
+        : null;
+
     num passengersTotal = 0;
     num? firstPrice;
     var pricesVary = false;
 
     for (final passenger in passengers) {
-      num passengerPrice = basePrice;
+      num passengerPrice = customPrice ?? basePrice;
       final pickupId = passenger.pickupPointId.value;
       if (!isJoinTrip && pickupId != null && pickupPoints.isNotEmpty) {
         final ppData = pickupPoints.firstWhere(
@@ -698,6 +704,56 @@ String _pickupPriceText(dynamic value) {
   if (price <= 0) return 'ไม่มีค่าใช้จ่ายเพิ่ม';
   return money(price);
 }
+
+/// วัดระยะเส้นตรง — ใช้แค่จัดอันดับว่าจุดรับไหนใกล้หมุดกว่ากัน
+const Distance _pickupDistance = Distance();
+
+/// จุดรับที่ใกล้หมุดที่ลูกค้าปักที่สุด (ข้ามจุดที่ยังไม่มีพิกัด)
+///
+/// คู่กับ `CustomPickupPricing::nearestPoint()` ฝั่ง Laravel ซึ่งเป็นตัวคิดราคา
+/// จริงตอนสร้างการจอง — แก้กติกาที่นั่นแล้วต้องตามมาแก้ที่นี่ให้ตรงกัน
+Map<String, dynamic>? _nearestPickupPoint(
+  List<dynamic> pickupPoints,
+  double lat,
+  double lng,
+) {
+  Map<String, dynamic>? nearest;
+  double? nearestDistance;
+
+  for (final raw in pickupPoints) {
+    final point = asMap(raw);
+    final pointLat = double.tryParse('${point['latitude']}');
+    final pointLng = double.tryParse('${point['longitude']}');
+    if (pointLat == null || pointLng == null) continue;
+
+    final distance = _pickupDistance.distance(
+      LatLng(lat, lng),
+      LatLng(pointLat, pointLng),
+    );
+    if (nearestDistance == null || distance < nearestDistance) {
+      nearest = point;
+      nearestDistance = distance;
+    }
+  }
+
+  return nearest;
+}
+
+/// ราคาต่อคนของจุดที่ปักหมุดเอง = ราคาจุดรับที่ใกล้ที่สุด แต่ไม่ต่ำกว่าราคารอบ
+num _customPickupPrice(
+  num basePrice,
+  List<dynamic> pickupPoints,
+  Map<String, dynamic> customPickup,
+) {
+  final lat = double.tryParse('${customPickup['lat']}');
+  final lng = double.tryParse('${customPickup['lng']}');
+  if (lat == null || lng == null) return basePrice;
+
+  final nearest = _nearestPickupPoint(pickupPoints, lat, lng);
+  final nearestPrice = nearest == null ? 0 : _asNum(nearest['price']);
+  return nearestPrice > basePrice ? nearestPrice : basePrice;
+}
+
 
 List<String> _vehicleImageUrls(Map<String, dynamic> vehicle) {
   final urls = <String>[];
