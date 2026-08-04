@@ -164,7 +164,7 @@ class _RefundStatusHeader extends StatelessWidget {
             color.withValues(alpha: 0.04),
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Column(
@@ -189,7 +189,7 @@ class _RefundStatusHeader extends StatelessWidget {
                       'สถานะการคืนเงิน',
                       style: appFont(
                         color: AppTheme.mutedText(context),
-                        fontSize: 11.5,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -198,7 +198,7 @@ class _RefundStatusHeader extends StatelessWidget {
                       label,
                       style: appFont(
                         color: color,
-                        fontSize: 22,
+                        fontSize: AppText.sizeH1,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -212,7 +212,7 @@ class _RefundStatusHeader extends StatelessWidget {
             hint,
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               height: 1.45,
               fontWeight: FontWeight.w600,
             ),
@@ -222,7 +222,7 @@ class _RefundStatusHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: AppTheme.surface(context),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(color: AppTheme.border(context)),
             ),
             child: Row(
@@ -231,7 +231,7 @@ class _RefundStatusHeader extends StatelessWidget {
                   'ยอดคืน',
                   style: appFont(
                     color: AppTheme.mutedText(context),
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -240,7 +240,7 @@ class _RefundStatusHeader extends StatelessWidget {
                   _money(amount),
                   style: appFont(
                     color: AppTheme.onSurface(context),
-                    fontSize: 18,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -291,7 +291,7 @@ class _RefundTimeline extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -301,7 +301,7 @@ class _RefundTimeline extends StatelessWidget {
             'ไทม์ไลน์',
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -385,7 +385,7 @@ class _TimelineRow extends StatelessWidget {
                     step.title,
                     style: appFont(
                       color: AppTheme.onSurface(context),
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -394,7 +394,7 @@ class _TimelineRow extends StatelessWidget {
                     step.subtitle,
                     style: appFont(
                       color: AppTheme.mutedText(context),
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -422,7 +422,7 @@ class _PolicyCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -440,7 +440,7 @@ class _PolicyCard extends StatelessWidget {
                 'นโยบายการคืนเงิน',
                 style: appFont(
                   color: AppTheme.onSurface(context),
-                  fontSize: 14.5,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -466,7 +466,7 @@ class _PolicyCard extends StatelessWidget {
                       item,
                       style: appFont(
                         color: AppTheme.onSurface(context),
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         height: 1.5,
                         fontWeight: FontWeight.w600,
                       ),
@@ -491,7 +491,7 @@ class _MetaCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -508,7 +508,7 @@ class _MetaCard extends StatelessWidget {
                       rows[i].label,
                       style: appFont(
                         color: AppTheme.mutedText(context),
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -518,7 +518,7 @@ class _MetaCard extends StatelessWidget {
                       rows[i].value,
                       style: appFont(
                         color: AppTheme.onSurface(context),
-                        fontSize: 13.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -576,7 +576,7 @@ class _RefundSlipCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -594,7 +594,7 @@ class _RefundSlipCard extends StatelessWidget {
                 'หลักฐานการโอนคืนเงิน',
                 style: appFont(
                   color: AppTheme.onSurface(context),
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -604,7 +604,7 @@ class _RefundSlipCard extends StatelessWidget {
           GestureDetector(
             onTap: () => _openFull(context),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               child: CachedNetworkImage(
                 imageUrl: url,
                 height: 220,
@@ -631,7 +631,7 @@ class _RefundSlipCard extends StatelessWidget {
             'แตะเพื่อดูภาพเต็ม',
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -664,7 +664,7 @@ class _ErrorState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -673,7 +673,7 @@ class _ErrorState extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
             ),
             onPressed: onRetry,

@@ -156,7 +156,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
           centerTitle: false,
           title: Text(
             'Staff Check-in',
-            style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+            style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
           ),
         ),
         body: Center(
@@ -174,7 +174,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
                 Text(
                   'ไม่มีสิทธิ์เข้าถึง',
                   style: appFont(
-                    fontSize: 20,
+                    fontSize: AppText.sizeH2,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.onSurface(context),
                   ),
@@ -211,7 +211,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
         centerTitle: false,
         title: Text(
           'เช็คอินลูกค้า',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
         actions: [
           if (booking != null)
@@ -349,7 +349,7 @@ class _ScannerPanel extends StatelessWidget {
                   height: 42,
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                   child: const Icon(
                     Icons.qr_code_scanner_rounded,
@@ -365,7 +365,7 @@ class _ScannerPanel extends StatelessWidget {
                       Text(
                         'สแกน QR เช็คอิน',
                         style: appFont(
-                          fontSize: 17,
+                          fontSize: AppText.sizeTitle,
                           fontWeight: FontWeight.w900,
                           color: AppTheme.onSurface(context),
                         ),
@@ -373,7 +373,7 @@ class _ScannerPanel extends StatelessWidget {
                       Text(
                         'สแกน QR หรือกรอกรหัสการจองด้วยตนเอง',
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           color: AppTheme.mutedText(context),
                           fontWeight: FontWeight.w600,
                           height: 1.4,
@@ -397,7 +397,7 @@ class _ScannerPanel extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                   ),
                   icon: const Icon(Icons.camera_alt_rounded),
@@ -415,7 +415,7 @@ class _ScannerPanel extends StatelessWidget {
                       child: Text(
                         'หรือกรอกรหัส',
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           color: AppTheme.mutedText(context),
                           fontWeight: FontWeight.w700,
                         ),
@@ -486,7 +486,7 @@ class _CheckInButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         decoration: BoxDecoration(
           color: AppTheme.primaryColor.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: AppTheme.primaryColor.withValues(alpha: 0.20),
           ),
@@ -503,7 +503,7 @@ class _CheckInButton extends StatelessWidget {
             Text(
               'เช็คอินเรียบร้อยแล้ว',
               style: appFont(
-                fontSize: 16,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.primaryColor,
               ),
@@ -524,7 +524,7 @@ class _CheckInButton extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppTheme.warningColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(
                 color: AppTheme.warningColor.withValues(alpha: 0.22),
               ),
@@ -541,7 +541,7 @@ class _CheckInButton extends StatelessWidget {
                   child: Text(
                     'การจองนี้ยังไม่ได้รับการยืนยัน ไม่สามารถเช็คอินได้',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       color: AppTheme.warningColor,
                       fontWeight: FontWeight.w700,
                       height: 1.4,
@@ -559,7 +559,7 @@ class _CheckInButton extends StatelessWidget {
             onPressed: canConfirm ? onConfirm : null,
             style: ElevatedButton.styleFrom(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
             ),
             child: confirming
@@ -579,7 +579,7 @@ class _CheckInButton extends StatelessWidget {
                         'กำลังเช็คอิน...',
                         style: appFont(
                           fontWeight: FontWeight.w900,
-                          fontSize: 16,
+                          fontSize: AppText.sizeSubtitle,
                         ),
                       ),
                     ],
@@ -593,7 +593,7 @@ class _CheckInButton extends StatelessWidget {
                         'ยืนยันเช็คอิน',
                         style: appFont(
                           fontWeight: FontWeight.w900,
-                          fontSize: 16,
+                          fontSize: AppText.sizeSubtitle,
                         ),
                       ),
                     ],
@@ -815,7 +815,7 @@ class _BookingHeaderCard extends StatelessWidget {
                           Text(
                             'เลขการจอง',
                             style: appFont(
-                              fontSize: 11,
+                              fontSize: AppText.sizeCaption,
                               color: AppTheme.mutedText(context),
                               fontWeight: FontWeight.w700,
                             ),
@@ -823,7 +823,7 @@ class _BookingHeaderCard extends StatelessWidget {
                           Text(
                             textOf(booking['booking_ref'], '-'),
                             style: appFont(
-                              fontSize: 22,
+                              fontSize: AppText.sizeH1,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.onSurface(context),
                               letterSpacing: 0.5,
@@ -854,7 +854,7 @@ class _BookingHeaderCard extends StatelessWidget {
                           Text(
                             textOf(user['name'], '-'),
                             style: appFont(
-                              fontSize: 16,
+                              fontSize: AppText.sizeSubtitle,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.onSurface(context),
                             ),
@@ -876,7 +876,7 @@ class _BookingHeaderCard extends StatelessWidget {
                                   Text(
                                     textOf(user['phone']),
                                     style: appFont(
-                                      fontSize: 13,
+                                      fontSize: AppText.sizeLabel,
                                       color: AppTheme.primaryColor,
                                       fontWeight: FontWeight.w700,
                                       decoration: TextDecoration.underline,
@@ -890,7 +890,7 @@ class _BookingHeaderCard extends StatelessWidget {
                             Text(
                               textOf(user['email']),
                               style: appFont(
-                                fontSize: 12,
+                                fontSize: AppText.sizeCaption,
                                 color: AppTheme.mutedText(context),
                                 fontWeight: FontWeight.w600,
                               ),
@@ -909,7 +909,7 @@ class _BookingHeaderCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -923,7 +923,7 @@ class _BookingHeaderCard extends StatelessWidget {
                         Text(
                           'เช็คอินเมื่อ ${dateTimeText(booking['checked_in_at'])}',
                           style: appFont(
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.w700,
                           ),
@@ -984,7 +984,7 @@ class _UserAvatar extends StatelessWidget {
       child: Text(
         _initials(textOf(user['name'])),
         style: appFont(
-          fontSize: 15,
+          fontSize: AppText.sizeSubtitle,
           fontWeight: FontWeight.w900,
           color: AppTheme.primaryColor,
         ),
@@ -1056,7 +1056,7 @@ class _StaffQrScannerScreenState extends State<_StaffQrScannerScreen> {
                       'สแกน QR เช็คอินลูกค้า',
                       style: appFont(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: AppText.sizeTitle,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1090,7 +1090,7 @@ class _StaffQrScannerScreenState extends State<_StaffQrScannerScreen> {
               style: appFont(
                 color: Colors.white.withValues(alpha: 0.86),
                 fontWeight: FontWeight.w700,
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 height: 1.5,
               ),
             ),
@@ -1247,7 +1247,7 @@ class _GlassButton extends StatelessWidget {
         height: 42,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.20),
           ),
@@ -1291,7 +1291,7 @@ class _SectionCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.onSurface(context),
                   ),
@@ -1305,12 +1305,12 @@ class _SectionCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
                     trailingBadge!,
                     style: appFont(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.primaryColor,
                     ),
@@ -1379,7 +1379,7 @@ class _PassengerTile extends StatelessWidget {
             child: Text(
               _initials(name),
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.primaryColor,
               ),
@@ -1400,7 +1400,7 @@ class _PassengerTile extends StatelessWidget {
                         name,
                         style: appFont(
                           fontWeight: FontWeight.w900,
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           color: AppTheme.onSurface(context),
                         ),
                       ),
@@ -1410,7 +1410,7 @@ class _PassengerTile extends StatelessWidget {
                       Text(
                         '($nickname)',
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.mutedText(context),
                         ),
@@ -1435,7 +1435,7 @@ class _PassengerTile extends StatelessWidget {
                         Text(
                           phone,
                           style: appFont(
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.w700,
                             decoration: TextDecoration.underline,
@@ -1451,7 +1451,7 @@ class _PassengerTile extends StatelessWidget {
                   Text(
                     email,
                     style: appFont(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       color: AppTheme.mutedText(context),
                       fontWeight: FontWeight.w600,
                     ),
@@ -1467,7 +1467,7 @@ class _PassengerTile extends StatelessWidget {
                       Text(
                         'ฉุกเฉิน: $emergencyContact',
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           color: Colors.red.shade400,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1479,7 +1479,7 @@ class _PassengerTile extends StatelessWidget {
                           child: Text(
                             emergencyPhone,
                             style: appFont(
-                              fontSize: 12,
+                              fontSize: AppText.sizeCaption,
                               color: AppTheme.primaryColor,
                               fontWeight: FontWeight.w700,
                               decoration: TextDecoration.underline,
@@ -1520,7 +1520,7 @@ class _NoteChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -1528,7 +1528,7 @@ class _NoteChip extends StatelessWidget {
       child: Text(
         text,
         style: appFont(
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w700,
           color: AppTheme.mutedText(context),
         ),
@@ -1562,7 +1562,7 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               label,
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w700,
               ),
@@ -1572,7 +1572,7 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               value.isEmpty ? '-' : value,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 color: AppTheme.onSurface(context),
                 fontWeight: FontWeight.w800,
               ),
@@ -1596,13 +1596,13 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Text(
         label,
         style: appFont(
-          fontSize: 12,
+          fontSize: AppText.sizeCaption,
           color: color,
           fontWeight: FontWeight.w900,
         ),
@@ -1628,7 +1628,7 @@ class _MessageBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Row(
@@ -1641,7 +1641,7 @@ class _MessageBanner extends StatelessWidget {
               style: appFont(
                 color: color,
                 fontWeight: FontWeight.w800,
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
               ),
             ),
           ),
@@ -1689,7 +1689,7 @@ class _EmptyState extends StatelessWidget {
             height: 80,
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             ),
             child: Icon(
               Icons.qr_code_2_rounded,
@@ -1701,7 +1701,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             'ยังไม่มีข้อมูลการจอง',
             style: appFont(
-              fontSize: 17,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -1711,7 +1711,7 @@ class _EmptyState extends StatelessWidget {
             'สแกน QR หรือกรอกเลขการจอง\nเพื่อดูรายละเอียดก่อนยืนยันเช็คอิน',
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w600,
               height: 1.55,

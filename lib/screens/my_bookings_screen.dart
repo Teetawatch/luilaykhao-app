@@ -312,7 +312,7 @@ class _BookingCheckInCard extends StatelessWidget {
         color: isDark
             ? AppTheme.primaryColor.withValues(alpha: 0.14)
             : AppTheme.primaryColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.16),
         ),
@@ -372,7 +372,7 @@ class _CheckedInCard extends StatelessWidget {
         color: isDark
             ? AppTheme.primaryColor.withValues(alpha: 0.16)
             : AppTheme.primaryColor.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.20),
         ),
@@ -397,7 +397,7 @@ class _CheckedInCard extends StatelessWidget {
             'เช็คอินแล้ว',
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 17,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.1,
             ),
@@ -410,7 +410,7 @@ class _CheckedInCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               height: 1.4,
               fontWeight: FontWeight.w500,
             ),
@@ -451,7 +451,7 @@ class _CheckInTextBlock extends StatelessWidget {
               textAlign: centered ? TextAlign.center : TextAlign.start,
               style: appFont(
                 color: AppTheme.onSurface(context),
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.1,
               ),
@@ -464,7 +464,7 @@ class _CheckInTextBlock extends StatelessWidget {
           textAlign: centered ? TextAlign.center : TextAlign.start,
           style: appFont(
             color: AppTheme.mutedText(context),
-            fontSize: 12,
+            fontSize: AppText.sizeCaption,
             height: 1.4,
             fontWeight: FontWeight.w500,
           ),
@@ -475,7 +475,7 @@ class _CheckInTextBlock extends StatelessWidget {
             bookingRef!,
             style: appFont(
               color: AppTheme.primaryColor,
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.2,
             ),
@@ -505,7 +505,7 @@ class _CheckInQrBox extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: AppTheme.border(context)),
         ),
         child: Icon(
@@ -520,7 +520,7 @@ class _CheckInQrBox extends StatelessWidget {
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.14),
         ),
@@ -548,7 +548,7 @@ class _BookingReferencePanel extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.14),
         ),
@@ -559,7 +559,7 @@ class _BookingReferencePanel extends StatelessWidget {
             'รหัสการจอง',
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.2,
             ),
@@ -570,7 +570,7 @@ class _BookingReferencePanel extends StatelessWidget {
             textAlign: TextAlign.center,
             style: appFont(
               color: AppTheme.primaryColor,
-              fontSize: 20,
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.2,
             ),
@@ -595,7 +595,7 @@ class _BookingsErrorState extends StatelessWidget {
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -605,7 +605,7 @@ class _BookingsErrorState extends StatelessWidget {
             height: 72,
             decoration: BoxDecoration(
               color: AppTheme.errorColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             ),
             child: const Icon(
               Icons.cloud_off_rounded,
@@ -618,7 +618,7 @@ class _BookingsErrorState extends StatelessWidget {
             'โหลดการจองไม่สำเร็จ',
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 18,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -628,7 +628,7 @@ class _BookingsErrorState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w500,
               height: 1.4,
             ),
@@ -642,7 +642,7 @@ class _BookingsErrorState extends StatelessWidget {
             icon: const Icon(Icons.refresh_rounded, size: 18),
             label: Text(
               'ลองอีกครั้ง',
-              style: appFont(fontSize: 14, fontWeight: FontWeight.w800),
+              style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -665,7 +665,7 @@ class _BookingsLoadingSkeleton extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Next-trip hero
-        SkeletonBox(height: 132, borderRadius: BorderRadius.circular(20)),
+        SkeletonBox(height: 132, borderRadius: BorderRadius.circular(AppTheme.radiusLg)),
         const SizedBox(height: 12),
         // Three summary pills
         Row(
@@ -675,7 +675,7 @@ class _BookingsLoadingSkeleton extends StatelessWidget {
               Expanded(
                 child: SkeletonBox(
                   height: 96,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
             ],
@@ -683,7 +683,7 @@ class _BookingsLoadingSkeleton extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         // Segment tabs
-        SkeletonBox(height: 48, borderRadius: BorderRadius.circular(16)),
+        SkeletonBox(height: 48, borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
         const SizedBox(height: 24),
         // Two reservation cards
         for (var i = 0; i < 2; i++) ...[
@@ -703,7 +703,7 @@ class _ReservationCardSkeleton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -713,7 +713,7 @@ class _ReservationCardSkeleton extends StatelessWidget {
         children: [
           const SkeletonBox(
             height: 160,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
@@ -723,18 +723,18 @@ class _ReservationCardSkeleton extends StatelessWidget {
                 SkeletonBox(
                   height: 18,
                   width: 200,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 ),
                 const SizedBox(height: 10),
                 SkeletonBox(
                   height: 12,
                   width: 120,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 ),
                 const SizedBox(height: 16),
-                SkeletonBox(height: 52, borderRadius: BorderRadius.circular(16)),
+                SkeletonBox(height: 52, borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
                 const SizedBox(height: 14),
-                SkeletonBox(height: 46, borderRadius: BorderRadius.circular(14)),
+                SkeletonBox(height: 46, borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
               ],
             ),
           ),

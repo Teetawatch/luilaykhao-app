@@ -71,7 +71,7 @@ class _SosButtonState extends State<SosButton> {
         ),
         content: Text(
           'ยืนยันว่าคุณปลอดภัยแล้ว ระบบจะแจ้งสตาฟและเพื่อนร่วมทริปว่าเคสนี้ปิดแล้ว',
-          style: appFont(fontSize: 13, height: 1.5),
+          style: appFont(fontSize: AppText.sizeLabel, height: 1.5),
         ),
         actions: [
           TextButton(
@@ -189,7 +189,7 @@ class _SosButtonState extends State<SosButton> {
               ? 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนพร้อมตำแหน่งของคุณแล้ว'
               : 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนแล้ว '
                     '(ไม่สามารถระบุตำแหน่ง GPS ได้)',
-          style: appFont(fontSize: 13, height: 1.5),
+          style: appFont(fontSize: AppText.sizeLabel, height: 1.5),
         ),
         actions: [
           FilledButton(
@@ -261,13 +261,13 @@ class _SosButtonState extends State<SosButton> {
       color: Colors.transparent,
       child: InkWell(
         onTap: _sending ? null : _onPressed,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
             color: _sosRed.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             border: Border.all(color: _sosRed.withValues(alpha: 0.4)),
           ),
           child: Row(
@@ -301,7 +301,7 @@ class _SosButtonState extends State<SosButton> {
                     Text(
                       'ขอความช่วยเหลือฉุกเฉิน',
                       style: appFont(
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w900,
                         color: _sosRed,
                       ),
@@ -312,7 +312,7 @@ class _SosButtonState extends State<SosButton> {
                           ? 'กำลังส่งสัญญาณ SOS...'
                           : 'แจ้งเตือนสตาฟและเพื่อนร่วมทริปทันที',
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         color: AppTheme.mutedText(context),
                       ),
                     ),
@@ -345,7 +345,7 @@ class _OpenCaseBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: const Color(0xFFE11D48).withValues(alpha: 0.35),
         ),
@@ -365,7 +365,7 @@ class _OpenCaseBanner extends StatelessWidget {
                 child: Text(
                   'เคส SOS ของคุณยังเปิดอยู่',
                   style: appFont(
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -377,7 +377,7 @@ class _OpenCaseBanner extends StatelessWidget {
           Text(
             'สตาฟและทีมงานได้รับแจ้งแล้ว ถ้าปลอดภัยแล้วช่วยกดปิดเคสเพื่อให้ทุกคนรู้',
             style: appFont(
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               height: 1.5,
               color: AppTheme.mutedText(context),
             ),
@@ -394,7 +394,7 @@ class _OpenCaseBanner extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
               ),
               icon: closing
@@ -406,7 +406,7 @@ class _OpenCaseBanner extends StatelessWidget {
                   : const Icon(Icons.check_circle_outline_rounded, size: 18),
               label: Text(
                 closing ? 'กำลังปิดเคส...' : 'ฉันปลอดภัยแล้ว — ปิดเคส',
-                style: appFont(fontSize: 13, fontWeight: FontWeight.w800),
+                style: appFont(fontSize: AppText.sizeLabel, fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -502,7 +502,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
@@ -551,7 +551,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
       child: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
         ),
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.9,
@@ -569,7 +569,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                 ),
               ),
@@ -583,7 +583,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                   Text(
                     'ขอความช่วยเหลือ SOS',
                     style: appFont(
-                      fontSize: 18,
+                      fontSize: AppText.sizeTitle,
                       fontWeight: FontWeight.w900,
                       color: _sosRed,
                     ),
@@ -594,7 +594,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
               Text(
                 'เลือกข้อความที่ต้องการส่งให้สตาฟและผู้ร่วมทริป',
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   color: Colors.grey.shade600,
                   height: 1.4,
                 ),
@@ -622,7 +622,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                         color: selected
                             ? _sosRed.withValues(alpha: 0.08)
                             : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         border: Border.all(
                           color: selected ? _sosRed : Colors.grey.shade200,
                           width: selected ? 2 : 1,
@@ -634,13 +634,13 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                       ),
                       child: Row(
                         children: [
-                          Text(opt.emoji, style: const TextStyle(fontSize: 18)),
+                          Text(opt.emoji, style: const TextStyle(fontSize: AppText.sizeTitle)),
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
                               opt.label,
                               style: appFont(
-                                fontSize: 13,
+                                fontSize: AppText.sizeLabel,
                                 fontWeight: FontWeight.w700,
                                 color: selected
                                     ? _sosRed
@@ -665,16 +665,16 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                   maxLength: 255,
                   maxLines: 2,
                   onChanged: (_) => setState(() {}),
-                  style: appFont(fontSize: 14),
+                  style: appFont(fontSize: AppText.sizeBody),
                   decoration: InputDecoration(
                     hintText: 'อธิบายสถานการณ์โดยย่อ...',
                     hintStyle: appFont(color: Colors.grey.shade400),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       borderSide: const BorderSide(color: _sosRed, width: 2),
                     ),
                     contentPadding: const EdgeInsets.all(14),
@@ -692,7 +692,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                 ),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -707,7 +707,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                       child: Text(
                         'สตาฟและผู้โดยสารในทริปจะได้รับการแจ้งเตือนพร้อมตำแหน่ง GPS ทันที',
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           color: Colors.grey.shade600,
                           height: 1.4,
                         ),
@@ -727,7 +727,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     side: BorderSide(color: Colors.grey.shade300),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     minimumSize: const Size.fromHeight(0),
                   ),
@@ -745,7 +745,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                   label: Text(
                     'แนบรูปสถานที่ (ไม่บังคับ)',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: Colors.grey.shade700,
                     ),
@@ -753,7 +753,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                 )
               else
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   child: Stack(
                     children: [
                       Image.file(
@@ -798,7 +798,7 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: BorderSide(color: Colors.grey.shade300),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         ),
                       ),
                       child: Text(
@@ -828,14 +828,14 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
                         disabledBackgroundColor: Colors.grey.shade200,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         ),
                       ),
                       icon: const Icon(Icons.sos_rounded, size: 20),
                       label: Text(
                         'ส่งสัญญาณ SOS',
                         style: appFont(
-                          fontSize: 15,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w800,
                         ),
                       ),

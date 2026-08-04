@@ -58,7 +58,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
           'แต้มสะสม',
           style: appFont(
             color: AppTheme.onSurface(context),
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -199,11 +199,11 @@ class _PointsHero extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF065F46), Color(0xFF0F9D77)],
+          colors: [Color(0xFF065F46), Color(0xFF10B981)],
         ),
       ),
       child: Column(
@@ -218,7 +218,7 @@ class _PointsHero extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -233,7 +233,7 @@ class _PointsHero extends StatelessWidget {
                       tierLabel,
                       style: appFont(
                         color: Colors.white,
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -247,7 +247,7 @@ class _PointsHero extends StatelessWidget {
             'แต้มคงเหลือ',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -271,7 +271,7 @@ class _PointsHero extends StatelessWidget {
                 'แต้ม',
                 style: appFont(
                   color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -292,7 +292,7 @@ class _PointsHero extends StatelessWidget {
                   '${_format(expiringPoints)} แต้มหมดอายุ ${thaiDateShort(expiringAt)}',
                   style: appFont(
                     color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -301,7 +301,7 @@ class _PointsHero extends StatelessWidget {
           ],
           const SizedBox(height: 18),
           ClipRRect(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7,
@@ -316,7 +316,7 @@ class _PointsHero extends StatelessWidget {
                 : 'ไปด้วยกันอีก ${_format(needed)} ทริป เลื่อนเป็น ${next['label']}',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -350,7 +350,7 @@ class _Segmented extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       ),
       child: Row(
         children: [
@@ -368,13 +368,13 @@ class _Segmented extends StatelessWidget {
                     color: index == i
                         ? AppTheme.surface(context)
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                   child: Text(
                     labels[i],
                     textAlign: TextAlign.center,
                     style: appFont(
-                      fontSize: 13.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                       color: index == i
                           ? AppTheme.primaryColor
@@ -452,7 +452,7 @@ class _RewardCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -468,7 +468,7 @@ class _RewardCard extends StatelessWidget {
                 height: 46,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: Icon(
                   _rewardIcon('${reward['type']}'),
@@ -484,7 +484,7 @@ class _RewardCard extends StatelessWidget {
                     Text(
                       '${reward['name'] ?? ''}',
                       style: appFont(
-                        fontSize: 15.5,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                       ),
@@ -493,7 +493,7 @@ class _RewardCard extends StatelessWidget {
                     Text(
                       _rewardValue(reward),
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.primaryColor,
                       ),
@@ -508,7 +508,7 @@ class _RewardCard extends StatelessWidget {
             Text(
               desc,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 height: 1.45,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.mutedText(context),
@@ -527,7 +527,7 @@ class _RewardCard extends StatelessWidget {
               Text(
                 '${_PointsHero._format(cost)} แต้ม',
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                 ),
@@ -546,7 +546,7 @@ class _RewardCard extends StatelessWidget {
                     vertical: 9,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                 ),
                 child: Text(
@@ -556,7 +556,7 @@ class _RewardCard extends StatelessWidget {
                       ? 'แลกเลย'
                       : 'แต้มไม่พอ',
                   style: appFont(
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -620,7 +620,7 @@ class _CouponCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.6),
           ),
@@ -632,7 +632,7 @@ class _CouponCard extends StatelessWidget {
               height: 46,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
               child: Icon(
                 _rewardIcon('${coupon['reward_type']}'),
@@ -648,7 +648,7 @@ class _CouponCard extends StatelessWidget {
                   Text(
                     '${coupon['reward_name'] ?? 'คูปอง'}',
                     style: appFont(
-                      fontSize: 14.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
                     ),
@@ -678,7 +678,7 @@ class _CouponCard extends StatelessWidget {
                     child: Text(
                       code,
                       style: GoogleFonts.spaceMono(
-                        fontSize: 17,
+                        fontSize: AppText.sizeTitle,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 2,
                         color: color,
@@ -714,12 +714,12 @@ class _CouponStatus extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         label,
         style: appFont(
-          fontSize: 11.5,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w800,
           color: color,
         ),
@@ -748,7 +748,7 @@ class _HistoryTab extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -796,7 +796,7 @@ class _HistoryRow extends StatelessWidget {
             child: Text(
               '${tx['description'] ?? '-'}',
               style: appFont(
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.onSurface(context),
               ),
@@ -806,7 +806,7 @@ class _HistoryRow extends StatelessWidget {
           Text(
             '${earn ? '+' : ''}${points.abs() * (earn ? 1 : -1)}',
             style: appFont(
-              fontSize: 14.5,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w900,
               color: color,
             ),
@@ -840,7 +840,7 @@ class _ConfirmRedeemSheet extends StatelessWidget {
           Text(
             'ยืนยันการแลก',
             style: appFont(
-              fontSize: 18,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -850,7 +850,7 @@ class _ConfirmRedeemSheet extends StatelessWidget {
             'ใช้ ${_PointsHero._format(cost)} แต้ม แลก "$name" ?',
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               height: 1.45,
               fontWeight: FontWeight.w500,
               color: AppTheme.mutedText(context),
@@ -866,7 +866,7 @@ class _ConfirmRedeemSheet extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     side: BorderSide(color: AppTheme.border(context)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                   ),
                   child: Text(
@@ -886,7 +886,7 @@ class _ConfirmRedeemSheet extends StatelessWidget {
                     backgroundColor: AppTheme.primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                   ),
                   child: Text(
@@ -936,7 +936,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
           Text(
             'แลกสำเร็จ!',
             style: appFont(
-              fontSize: 19,
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -946,7 +946,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
             rewardName,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
             ),
@@ -974,7 +974,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 border: Border.all(
                   color: AppTheme.primaryColor.withValues(alpha: 0.25),
                 ),
@@ -985,7 +985,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
                     code,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.spaceMono(
-                      fontSize: 22,
+                      fontSize: AppText.sizeH1,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 3,
                       color: AppTheme.primaryColor,
@@ -995,7 +995,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
                   Text(
                     'แตะเพื่อคัดลอกโค้ด',
                     style: appFont(
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
                     ),
@@ -1013,7 +1013,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
                 backgroundColor: AppTheme.primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
               child: Text(
@@ -1046,7 +1046,7 @@ class _SheetShell extends StatelessWidget {
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           ),
           child: child,
         ),
@@ -1073,7 +1073,7 @@ class _EmptyHint extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -1089,7 +1089,7 @@ class _EmptyHint extends StatelessWidget {
           Text(
             title,
             style: appFont(
-              fontSize: 15.5,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
             ),
@@ -1099,7 +1099,7 @@ class _EmptyHint extends StatelessWidget {
             body,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.45,
               fontWeight: FontWeight.w500,
               color: AppTheme.mutedText(context),

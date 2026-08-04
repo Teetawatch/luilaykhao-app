@@ -401,7 +401,7 @@ class _TripsFilterPanel extends StatelessWidget {
           const SizedBox(height: 12),
           InkWell(
             onTap: onClear,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
@@ -417,7 +417,7 @@ class _TripsFilterPanel extends StatelessWidget {
                     'ล้างตัวกรองทั้งหมด',
                     style: appFont(
                       color: AppTheme.mutedText(context),
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -453,12 +453,12 @@ class _SearchField extends StatelessWidget {
       textInputAction: TextInputAction.search,
       onSubmitted: (_) => onSubmitted(),
       cursorColor: AppTheme.primaryColor,
-      style: appFont(fontWeight: FontWeight.w600, fontSize: 15),
+      style: appFont(fontWeight: FontWeight.w600, fontSize: AppText.sizeSubtitle),
       decoration: InputDecoration(
         hintText: 'ค้นหาทริป ปลายทาง หรือกิจกรรม',
         hintStyle: appFont(
           color: AppTheme.mutedText(context),
-          fontSize: 14.5,
+          fontSize: AppText.sizeBody,
           fontWeight: FontWeight.w500,
         ),
         prefixIcon: Icon(
@@ -484,19 +484,19 @@ class _SearchField extends StatelessWidget {
         fillColor: AppTheme.subtleSurface(context),
         contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 15),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
             color: AppTheme.border(context).withValues(alpha: 0.6),
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
             color: AppTheme.border(context).withValues(alpha: 0.6),
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: const BorderSide(
             color: AppTheme.primaryColor,
             width: 1.5,
@@ -550,7 +550,7 @@ class _FilterChipButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -559,7 +559,7 @@ class _FilterChipButton extends StatelessWidget {
           color: selected
               ? AppTheme.primaryColor
               : AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           border: Border.all(
             color: selected
                 ? AppTheme.primaryColor
@@ -581,7 +581,7 @@ class _FilterChipButton extends StatelessWidget {
               label,
               style: appFont(
                 color: selected ? Colors.white : AppTheme.textMain,
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.1,
               ),
@@ -629,7 +629,7 @@ class _TripsResultsToolbar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
               color: AppTheme.border(context).withValues(alpha: 0.55),
             ),
@@ -638,11 +638,11 @@ class _TripsResultsToolbar extends StatelessWidget {
             child: DropdownButton<String>(
               value: sortOrder,
               icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               isExpanded: true,
               style: appFont(
                 color: AppTheme.textMain,
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w600,
               ),
               items: const [
@@ -680,7 +680,7 @@ class _InfoPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -691,7 +691,7 @@ class _InfoPill extends StatelessWidget {
             text,
             style: appFont(
               color: AppTheme.primaryColor,
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.1,
             ),
@@ -731,7 +731,7 @@ class _TripCardSkeleton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -743,7 +743,7 @@ class _TripCardSkeleton extends StatelessWidget {
             aspectRatio: 16 / 10,
             child: Padding(
               padding: const EdgeInsets.all(6),
-              child: SkeletonBox(borderRadius: BorderRadius.circular(18)),
+              child: SkeletonBox(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
             ),
           ),
           Padding(
@@ -754,13 +754,13 @@ class _TripCardSkeleton extends StatelessWidget {
                 SkeletonBox(
                   width: double.infinity,
                   height: 16,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 ),
                 const SizedBox(height: 8),
                 SkeletonBox(
                   width: 140,
                   height: 12,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -769,12 +769,12 @@ class _TripCardSkeleton extends StatelessWidget {
                     SkeletonBox(
                       width: 90,
                       height: 22,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                     ),
                     SkeletonBox(
                       width: 120,
                       height: 38,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                   ],
                 ),
@@ -894,7 +894,7 @@ class _TripsErrorCard extends StatelessWidget {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -911,7 +911,7 @@ class _TripsErrorCard extends StatelessWidget {
             'โหลดข้อมูลทริปไม่สำเร็จ',
             style: appFont(
               color: AppTheme.textMain,
-              fontSize: 17,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.2,
             ),
@@ -924,7 +924,7 @@ class _TripsErrorCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: appFont(
               color: AppTheme.textSecondary,
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w500,
               height: 1.4,
             ),
@@ -940,10 +940,10 @@ class _TripsErrorCard extends StatelessWidget {
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               textStyle: appFont(
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -987,12 +987,12 @@ class _AllTripCard extends StatelessWidget {
           : () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => TripDetailScreen(slug: slug)),
             ),
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.55),
           ),
@@ -1126,7 +1126,7 @@ class _AllTripCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: AppTheme.textMain,
-                      fontSize: 17.5,
+                      fontSize: AppText.sizeTitle,
                       height: 1.3,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
@@ -1148,7 +1148,7 @@ class _AllTripCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
                             color: AppTheme.textSecondary,
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1164,7 +1164,7 @@ class _AllTripCard extends StatelessWidget {
                         '$duration วัน',
                         style: appFont(
                           color: AppTheme.textSecondary,
-                          fontSize: 13,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1184,7 +1184,7 @@ class _AllTripCard extends StatelessWidget {
                           '$booked คนจองแล้ว',
                           style: appFont(
                             color: AppTheme.primaryColor,
-                            fontSize: 12.5,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1208,7 +1208,7 @@ class _AllTripCard extends StatelessWidget {
                               'เริ่มต้นเพียง',
                               style: appFont(
                                 color: AppTheme.textSecondary,
-                                fontSize: 11.5,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -1219,7 +1219,7 @@ class _AllTripCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
                                 color: AppTheme.textMain,
-                                fontSize: 19,
+                                fontSize: AppText.sizeH2,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.4,
                               ),
@@ -1235,7 +1235,7 @@ class _AllTripCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor,
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1244,7 +1244,7 @@ class _AllTripCard extends StatelessWidget {
                               'ดูรายละเอียด',
                               style: appFont(
                                 color: Colors.white,
-                                fontSize: 13.5,
+                                fontSize: AppText.sizeBody,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.1,
                               ),
@@ -1304,7 +1304,7 @@ class _TripsPaginationBar extends StatelessWidget {
                   '…',
                   style: appFont(
                     color: AppTheme.textSecondary,
-                    fontSize: 16,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1363,7 +1363,7 @@ class _NumberPageButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: selected ? null : onTap,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       child: Container(
         width: 36,
         height: 36,
@@ -1381,7 +1381,7 @@ class _NumberPageButton extends StatelessWidget {
           page.toString(),
           style: appFont(
             color: selected ? Colors.white : AppTheme.textMain,
-            fontSize: 13.5,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.1,
           ),
@@ -1462,7 +1462,7 @@ class _PromotionListCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -1496,7 +1496,7 @@ class _PromotionListCard extends StatelessWidget {
                             name,
                             style: appFont(
                               color: Colors.white,
-                              fontSize: 17,
+                              fontSize: AppText.sizeTitle,
                               fontWeight: FontWeight.w900,
                               height: 1.3,
                             ),
@@ -1510,13 +1510,13 @@ class _PromotionListCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                           ),
                           child: Text(
                             _discountLabel(),
                             style: appFont(
                               color: AppTheme.primaryColor,
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -1591,7 +1591,7 @@ class _ExpiryChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
       ),
       child: Row(
@@ -1603,7 +1603,7 @@ class _ExpiryChip extends StatelessWidget {
             label,
             style: appFont(
               color: Colors.white,
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1658,7 +1658,7 @@ class _PromotionUsageBar extends StatelessWidget {
             Text(
               'สิทธิ์การใช้งาน',
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textSecondary,
               ),
@@ -1667,7 +1667,7 @@ class _PromotionUsageBar extends StatelessWidget {
             Text(
               'เหลือ $remaining จาก $max สิทธิ์',
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.primaryColor,
               ),
@@ -1676,7 +1676,7 @@ class _PromotionUsageBar extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         ClipRRect(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           child: LinearProgressIndicator(
             value: ratio,
             minHeight: 6,
@@ -1701,7 +1701,7 @@ class _MetaPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
@@ -1713,7 +1713,7 @@ class _MetaPill extends StatelessWidget {
             text,
             style: appFont(
               color: AppTheme.textSecondary,
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
             ),
           ),

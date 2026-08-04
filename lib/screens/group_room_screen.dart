@@ -99,7 +99,7 @@ class _GroupSetupDialogState extends State<_GroupSetupDialog> {
           Text(
             'จองที่นั่งสำหรับกี่คน? (รวมคุณ)',
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
             ),
           ),
@@ -116,7 +116,7 @@ class _GroupSetupDialogState extends State<_GroupSetupDialog> {
                 child: Text(
                   '$_size',
                   style: appFont(
-                    fontSize: 28,
+                    fontSize: AppText.sizeHero,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -436,7 +436,7 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
             _error!,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               color: AppTheme.mutedText(context),
             ),
           ),
@@ -531,7 +531,7 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
       ),
       child: Row(
@@ -665,7 +665,7 @@ class _TripCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       clipBehavior: Clip.antiAlias,
@@ -695,7 +695,7 @@ class _TripCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      fontSize: 15,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -704,7 +704,7 @@ class _TripCard extends StatelessWidget {
                     Text(
                       dateLabel,
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         color: AppTheme.mutedText(context),
                       ),
                     ),
@@ -712,7 +712,7 @@ class _TripCard extends StatelessWidget {
                   Text(
                     _priceLabel(schedule),
                     style: appFont(
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.primaryColor,
                     ),
@@ -731,7 +731,7 @@ class _TripCard extends StatelessWidget {
                           child: Text(
                             '${schedule!.regionKeys.length} ภาค · ${schedule.pickupPoints.length} จุดขึ้นรถ',
                             style: appFont(
-                              fontSize: 12,
+                              fontSize: AppText.sizeCaption,
                               color: AppTheme.mutedText(context),
                             ),
                           ),
@@ -790,7 +790,7 @@ class _PickupSelectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -803,7 +803,7 @@ class _PickupSelectionCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'จุดขึ้นรถของกลุ่ม',
-                style: appFont(fontSize: 15, fontWeight: FontWeight.w800),
+                style: appFont(fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w800),
               ),
             ],
           ),
@@ -811,7 +811,7 @@ class _PickupSelectionCard extends StatelessWidget {
           Text(
             'เลือกภาคและจุดขึ้นรถสำหรับทั้งกลุ่ม ราคาต่อคนจะอิงตามจุดที่เลือก',
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
               height: 1.35,
             ),
@@ -872,14 +872,14 @@ class _PickupSelectionCard extends StatelessWidget {
                       point.locationLabel,
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
-                      style: appFont(fontWeight: FontWeight.w700, fontSize: 14),
+                      style: appFont(fontWeight: FontWeight.w700, fontSize: AppText.sizeBody),
                     ),
                     Text(
                       notes.isEmpty ? priceText : '$notes · $priceText',
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         color: AppTheme.mutedText(context),
                       ),
                     ),
@@ -895,7 +895,7 @@ class _PickupSelectionCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Row(
                 children: [
@@ -907,8 +907,8 @@ class _PickupSelectionCard extends StatelessWidget {
                       'ราคาต่อคนสำหรับจุดนี้ ฿${fmt.format(schedule.priceForPickup(selectedPoint.id))}',
                       style: appFont(
                         fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: const Color(0xFF126B5B),
+                        fontSize: AppText.sizeLabel,
+                        color: const Color(0xFF047857),
                       ),
                     ),
                   ),
@@ -920,7 +920,7 @@ class _PickupSelectionCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppTheme.warningColor.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Row(
                 children: [
@@ -932,7 +932,7 @@ class _PickupSelectionCard extends StatelessWidget {
                       'กรุณาเลือกจุดขึ้นรถก่อนชำระเงิน',
                       style: appFont(
                         fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         color: const Color(0xFF92400E),
                       ),
                     ),
@@ -957,7 +957,7 @@ class _InviteCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.accentColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
       ),
       child: Column(
@@ -966,7 +966,7 @@ class _InviteCard extends StatelessWidget {
           Text(
             'รหัสกลุ่ม',
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
             ),
           ),
@@ -977,7 +977,7 @@ class _InviteCard extends StatelessWidget {
                 child: Text(
                   plan.inviteCode,
                   style: GoogleFonts.robotoMono(
-                    fontSize: 24,
+                    fontSize: AppText.sizeH1,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 3,
                   ),
@@ -1021,13 +1021,13 @@ class _GroupProgress extends StatelessWidget {
       children: [
         Text(
           'สมาชิกในกลุ่ม',
-          style: appFont(fontSize: 16, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w800),
         ),
         const Spacer(),
         Text(
           'เลือกที่นั่งแล้ว $claimed / ${plan.seatCount}',
           style: appFont(
-            fontSize: 13,
+            fontSize: AppText.sizeLabel,
             color: AppTheme.mutedText(context),
           ),
         ),
@@ -1049,7 +1049,7 @@ class _MemberTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
@@ -1090,7 +1090,7 @@ class _MemberTile extends StatelessWidget {
                 Text(
                   ready ? 'พร้อมแล้ว • ที่นั่ง ${member.seatId}' : 'ยังไม่เลือกที่นั่ง',
                   style: appFont(
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     color: ready
                         ? AppTheme.primaryColor
                         : AppTheme.mutedText(context),
@@ -1120,12 +1120,12 @@ class _Badge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
       ),
       child: Text(
         label,
         style: appFont(
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w700,
           color: color,
         ),
@@ -1152,7 +1152,7 @@ class _StatusBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       ),
       child: Text(
         label,
@@ -1184,7 +1184,7 @@ class _ActionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -1197,7 +1197,7 @@ class _ActionCard extends StatelessWidget {
               Text(
                 title,
                 style: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1207,7 +1207,7 @@ class _ActionCard extends StatelessWidget {
           Text(
             subtitle,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
             ),
           ),
@@ -1273,7 +1273,7 @@ class _SeatPickerSheetState extends State<_SeatPickerSheet> {
         return Container(
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
           ),
           child: Column(
             children: [
@@ -1283,7 +1283,7 @@ class _SeatPickerSheetState extends State<_SeatPickerSheet> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: AppTheme.border(context),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
               ),
               Padding(
@@ -1291,7 +1291,7 @@ class _SeatPickerSheetState extends State<_SeatPickerSheet> {
                 child: Text(
                   'เลือกที่นั่ง',
                   style: appFont(
-                    fontSize: 18,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1478,7 +1478,7 @@ class _SeatGridFallback extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: bg,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               border: Border.all(
                 color: isSelected
                     ? AppTheme.accentColor
@@ -1511,7 +1511,7 @@ class GroupCreateTripHint extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: primary.withValues(alpha: 0.20)),
       ),
       child: Row(
@@ -1521,7 +1521,7 @@ class GroupCreateTripHint extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: primary.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
             child: const Icon(Icons.groups_2_rounded, color: primary, size: 22),
           ),
@@ -1533,7 +1533,7 @@ class GroupCreateTripHint extends StatelessWidget {
                 Text(
                   'เริ่มสร้างกลุ่ม',
                   style: appFont(
-                    fontSize: 14.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.2,
                     color: AppTheme.onSurface(context),
@@ -1543,7 +1543,7 @@ class GroupCreateTripHint extends StatelessWidget {
                 Text(
                   "เลือกทริปและวันเดินทาง แล้วกด 'ชวนเพื่อนมาเป็นกลุ่ม'",
                   style: appFont(
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     height: 1.35,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedText(context),

@@ -150,20 +150,20 @@ class _ReviewSectionState extends State<ReviewSection> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(20),
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                     ),
                     child: const Icon(
                       Icons.rate_review_outlined,
                       size: 30,
-                      color: Color(0xFF9CA3AF),
+                      color: Color(0xFF94A3B8),
                     ),
                   ),
                   const SizedBox(height: 14),
                   Text(
                     'ยังไม่มีรีวิว',
                     style: appFont(
-                      fontSize: 15,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w800,
                       color: _premiumText,
                     ),
@@ -172,7 +172,7 @@ class _ReviewSectionState extends State<ReviewSection> {
                   Text(
                     'เป็นคนแรกที่มาสัมผัสและแชร์ประสบการณ์',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       color: _mutedText,
                       height: 1.5,
                     ),
@@ -242,13 +242,13 @@ class _ShowMoreReviewsButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: loading ? null : onPressed,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 13),
           decoration: BoxDecoration(
             color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: const Color(0xFFEEF2F7)),
           ),
           child: Row(
@@ -267,7 +267,7 @@ class _ShowMoreReviewsButton extends StatelessWidget {
                     Text(
                       'กำลังโหลด...',
                       style: appFont(
-                        fontSize: 13.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
                         color: _premiumText,
                       ),
@@ -277,7 +277,7 @@ class _ShowMoreReviewsButton extends StatelessWidget {
                     Text(
                       label,
                       style: appFont(
-                        fontSize: 13.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
                         color: _premiumText,
                       ),
@@ -351,7 +351,7 @@ class _ReviewRatingSummary extends StatelessWidget {
                 Text(
                   '$count รีวิว',
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     color: _mutedText,
                     fontWeight: FontWeight.w700,
                   ),
@@ -373,7 +373,7 @@ class _ReviewRatingSummary extends StatelessWidget {
                         Text(
                           '$star',
                           style: appFont(
-                            fontSize: 11,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w700,
                             color: _mutedText,
                           ),
@@ -387,11 +387,11 @@ class _ReviewRatingSummary extends StatelessWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(3),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             child: LinearProgressIndicator(
                               value: pct,
                               minHeight: 6,
-                              backgroundColor: const Color(0xFFF3F4F6),
+                              backgroundColor: const Color(0xFFF1F5F9),
                               valueColor: const AlwaysStoppedAnimation<Color>(
                                 Color(0xFFE8A117),
                               ),
@@ -404,7 +404,7 @@ class _ReviewRatingSummary extends StatelessWidget {
                           child: Text(
                             '$c',
                             style: appFont(
-                              fontSize: 11,
+                              fontSize: AppText.sizeCaption,
                               color: _mutedText,
                               fontWeight: FontWeight.w700,
                             ),
@@ -464,7 +464,7 @@ class _CategoryAverageTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         border: Border.all(color: const Color(0xFFEEF2F7)),
       ),
       child: Row(
@@ -473,7 +473,7 @@ class _CategoryAverageTile extends StatelessWidget {
           Text(
             label,
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: _mutedText,
             ),
@@ -484,7 +484,7 @@ class _CategoryAverageTile extends StatelessWidget {
           Text(
             numberText(value),
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w800,
               color: _premiumText,
             ),
@@ -542,7 +542,7 @@ class _ReviewCard extends StatelessWidget {
           color: isDark
               ? Colors.white.withValues(alpha: 0.04)
               : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.06)
@@ -583,7 +583,7 @@ class _ReviewCard extends StatelessWidget {
                                 style: appFont(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 17,
+                                  fontSize: AppText.sizeTitle,
                                 ),
                               ),
                             ),
@@ -595,7 +595,7 @@ class _ReviewCard extends StatelessWidget {
                             style: appFont(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
-                              fontSize: 17,
+                              fontSize: AppText.sizeTitle,
                             ),
                           ),
                         ),
@@ -610,7 +610,7 @@ class _ReviewCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w800,
                           color: isDark ? Colors.white : _premiumText,
                         ),
@@ -627,7 +627,7 @@ class _ReviewCard extends StatelessWidget {
                               size: 14,
                               color: i < rating
                                   ? const Color(0xFFF59E0B)
-                                  : const Color(0xFFD1D5DB),
+                                  : const Color(0xFFCBD5E1),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -643,7 +643,7 @@ class _ReviewCard extends StatelessWidget {
                           Text(
                             date,
                             style: appFont(
-                              fontSize: 11.5,
+                              fontSize: AppText.sizeCaption,
                               color: _mutedText,
                               fontWeight: FontWeight.w600,
                             ),
@@ -661,7 +661,7 @@ class _ReviewCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFFBEB),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                     border: Border.all(
                       color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
                     ),
@@ -678,7 +678,7 @@ class _ReviewCard extends StatelessWidget {
                       Text(
                         '$rating.0',
                         style: appFont(
-                          fontSize: 11,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF92400E),
                         ),
@@ -696,7 +696,7 @@ class _ReviewCard extends StatelessWidget {
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.04)
                       : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   border: Border.all(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.06)
@@ -706,10 +706,10 @@ class _ReviewCard extends StatelessWidget {
                 child: Text(
                   comment,
                   style: appFont(
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.75)
-                        : const Color(0xFF374151),
+                        : const Color(0xFF334155),
                     height: 1.65,
                   ),
                 ),
@@ -723,7 +723,7 @@ class _ReviewCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: _softAccent.withValues(alpha: isDark ? 0.16 : 0.08),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -740,7 +740,7 @@ class _ReviewCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w700,
                           color: isDark ? const Color(0xFF6EE7B7) : _premiumText,
                         ),
@@ -808,7 +808,7 @@ class _ReviewCard extends StatelessWidget {
                       ),
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       child: CachedNetworkImage(
                         imageUrl: images[i],
                         width: 76,
@@ -828,7 +828,7 @@ class _ReviewCard extends StatelessWidget {
                           child: const Icon(
                             Icons.broken_image_rounded,
                             size: 22,
-                            color: Color(0xFF9CA3AF),
+                            color: Color(0xFF94A3B8),
                           ),
                         ),
                       ),
@@ -974,7 +974,7 @@ class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
               Text(
                 '${photos.length} รูป',
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w700,
                   color: _mutedText,
                 ),
@@ -999,7 +999,7 @@ class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
                     ),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     child: Stack(
                       children: [
                         CachedNetworkImage(
@@ -1020,7 +1020,7 @@ class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
                             color: const Color(0xFFF1F5F9),
                             child: const Icon(
                               Icons.broken_image_rounded,
-                              color: Color(0xFF9CA3AF),
+                              color: Color(0xFF94A3B8),
                             ),
                           ),
                         ),
@@ -1033,7 +1033,7 @@ class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
                                 '+$extra',
                                 style: appFont(
                                   color: Colors.white,
-                                  fontSize: 20,
+                                  fontSize: AppText.sizeH2,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -1064,7 +1064,7 @@ class _ReviewBreakdownChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
         border: Border.all(
           color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
         ),
@@ -1075,7 +1075,7 @@ class _ReviewBreakdownChip extends StatelessWidget {
           Text(
             label,
             style: appFont(
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF92400E),
             ),
@@ -1086,7 +1086,7 @@ class _ReviewBreakdownChip extends StatelessWidget {
           Text(
             numberText(value),
             style: appFont(
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF92400E),
             ),
@@ -1179,7 +1179,7 @@ class _TripFeedSectionState extends State<TripFeedSection> {
                 Text(
                   '$_total โพสต์',
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
                   ),
@@ -1191,7 +1191,7 @@ class _TripFeedSectionState extends State<TripFeedSection> {
             Text(
               'คุณเคยไปทริปนี้มาแล้ว — แชร์รูปสวย ๆ เป็นคนแรกของฟีดเลย!',
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 height: 1.5,
                 color: AppTheme.mutedText(context),
               ),
@@ -1214,7 +1214,7 @@ class _TripFeedSectionState extends State<TripFeedSection> {
                   return GestureDetector(
                     onTap: _openFeed,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       child: SizedBox(
                         width: 110,
                         height: 110,
@@ -1244,7 +1244,7 @@ class _TripFeedSectionState extends State<TripFeedSection> {
                                   decoration: BoxDecoration(
                                     color:
                                         Colors.black.withValues(alpha: 0.55),
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -1258,7 +1258,7 @@ class _TripFeedSectionState extends State<TripFeedSection> {
                                       Text(
                                         '$likes',
                                         style: appFont(
-                                          fontSize: 10.5,
+                                          fontSize: AppText.sizeMicro,
                                           color: Colors.white,
                                           fontWeight: FontWeight.w800,
                                         ),

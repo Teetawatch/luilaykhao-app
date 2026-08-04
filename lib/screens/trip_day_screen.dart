@@ -90,7 +90,7 @@ class TripDayScreen extends StatelessWidget {
         elevation: 0,
         title: Text(
           'วันเดินทาง',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
       body: ListView(
@@ -265,7 +265,7 @@ class _CountdownHeader extends StatelessWidget {
             AppTheme.primaryColor.withValues(alpha: 0.78),
           ],
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,7 +278,7 @@ class _CountdownHeader extends StatelessWidget {
                 child: Text(
                   cd.label,
                   style: appFont(
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),
@@ -290,7 +290,7 @@ class _CountdownHeader extends StatelessWidget {
           Text(
             tripTitle,
             style: appFont(
-              fontSize: 20,
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
               color: Colors.white,
               height: 1.25,
@@ -309,7 +309,7 @@ class _CountdownHeader extends StatelessWidget {
                 Text(
                   dateLabel,
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w600,
                     color: Colors.white70,
                   ),
@@ -343,7 +343,7 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       text,
       style: appFont(
-        fontSize: 13,
+        fontSize: AppText.sizeLabel,
         fontWeight: FontWeight.w700,
         color: AppTheme.mutedText(context),
       ),
@@ -375,14 +375,14 @@ class _ActionTile extends StatelessWidget {
       opacity: enabled ? 1 : 0.5,
       child: Material(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           onTap: onTap,
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(color: AppTheme.border(context)),
             ),
             child: Row(
@@ -392,7 +392,7 @@ class _ActionTile extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(13),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                   child: Icon(icon, color: color, size: 22),
                 ),
@@ -404,7 +404,7 @@ class _ActionTile extends StatelessWidget {
                       Text(
                         title,
                         style: appFont(
-                          fontSize: 15,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
                         ),
@@ -413,7 +413,7 @@ class _ActionTile extends StatelessWidget {
                       Text(
                         subtitle,
                         style: appFont(
-                          fontSize: 12.5,
+                          fontSize: AppText.sizeLabel,
                           color: AppTheme.mutedText(context),
                         ),
                       ),
@@ -523,7 +523,7 @@ class _StaffContactCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
@@ -544,14 +544,14 @@ class _StaffContactCard extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: appFont(fontSize: 14.5, fontWeight: FontWeight.w800),
+                  style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w800),
                 ),
                 if (role.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     role,
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       color: AppTheme.mutedText(context),
                     ),
                   ),

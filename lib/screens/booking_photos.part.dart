@@ -61,12 +61,12 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.accentColor.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
                     '${urls.length}',
                     style: appFont(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.accentColor,
                     ),
@@ -84,7 +84,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
             Text(
               'แตะเพื่อดูเต็มจอ · กดปุ่มดาวน์โหลดเพื่อบันทึก/แชร์',
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
               ),
@@ -112,15 +112,15 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                   ),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   child: CachedNetworkImage(
                     imageUrl: urls[index],
                     fit: BoxFit.cover,
                     placeholder: (_, _) => Container(
-                      color: const Color(0xFFE7ECEA),
+                      color: const Color(0xFFE2E8F0),
                     ),
                     errorWidget: (_, _, _) => Container(
-                      color: const Color(0xFFE7ECEA),
+                      color: const Color(0xFFE2E8F0),
                       child: const Icon(
                         Icons.image_not_supported_rounded,
                         size: 20,
@@ -160,7 +160,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
     if (deadline == null) return const SizedBox.shrink();
 
     final urgent = deadline.difference(DateTime.now()).inHours <= 24;
-    final color = urgent ? const Color(0xFFB3261E) : const Color(0xFFB45309);
+    final color = urgent ? const Color(0xFFE11D48) : const Color(0xFFB45309);
 
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -169,7 +169,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Row(
@@ -182,7 +182,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                 'รูปชุดนี้จะถูกลบอัตโนมัติ ${thaiDateTimeShort(deadline)} น. '
                 'กดดาวน์โหลดเก็บไว้ในเครื่องก่อนถึงเวลานี้นะครับ',
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   height: 1.45,
                   fontWeight: FontWeight.w700,
                   color: color,
@@ -210,7 +210,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
           decoration: BoxDecoration(
             color: AppTheme.subtleSurface(context),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
               color: AppTheme.border(context).withValues(alpha: 0.6),
             ),
@@ -235,7 +235,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                 'รูปจากทริปจะขึ้นที่นี่หลังทีมงานอัปโหลด',
                 textAlign: TextAlign.center,
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                 ),
@@ -246,7 +246,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                 'และรีบกดดาวน์โหลดเก็บไว้ เพราะรูปเปิดให้โหลดในเวลาจำกัดนะครับ',
                 textAlign: TextAlign.center,
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   height: 1.5,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
@@ -259,7 +259,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                 label: Text(
                   'เช็กอีกครั้ง',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -441,11 +441,11 @@ class _BookingPhotoViewerState extends State<_BookingPhotoViewer> {
                   ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.45),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
                     '${_current + 1} / ${widget.urls.length}',
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: const TextStyle(color: Colors.white, fontSize: AppText.sizeLabel),
                   ),
                 ),
               ),

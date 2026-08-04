@@ -292,7 +292,7 @@ class _ChecklistHeader extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -310,7 +310,7 @@ class _ChecklistHeader extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 17,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                     letterSpacing: -0.3,
@@ -325,7 +325,7 @@ class _ChecklistHeader extends StatelessWidget {
                           ? 'เพิ่มของที่ต้องเตรียมไว้กันลืม'
                           : 'เตรียมแล้ว $done จาก $total รายการ',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w500,
                     color: allDone
                         ? AppTheme.primaryColor
@@ -346,7 +346,7 @@ class _ChecklistHeader extends StatelessWidget {
                       Text(
                         'เดินทาง $dateText',
                         style: appFont(
-                          fontSize: 12.5,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.mutedText(context),
                         ),
@@ -403,7 +403,7 @@ class _ProgressRing extends StatelessWidget {
               : Text(
                   '${(progress * 100).round()}%',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                     letterSpacing: -0.4,
@@ -432,7 +432,7 @@ class _SectionLabel extends StatelessWidget {
           Text(
             label,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context),
               letterSpacing: -0.1,
@@ -443,7 +443,7 @@ class _SectionLabel extends StatelessWidget {
             Text(
               '$count',
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context).withValues(alpha: 0.7),
               ),
@@ -467,7 +467,7 @@ class _ChecklistCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -545,7 +545,7 @@ class _ChecklistRow extends StatelessWidget {
                 child: AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 160),
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w500,
                     height: 1.35,
                     color: checked
@@ -605,7 +605,7 @@ class _AddItemRow extends StatelessWidget {
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => onSubmit(),
               style: appFont(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.onSurface(context),
               ),
@@ -613,7 +613,7 @@ class _AddItemRow extends StatelessWidget {
                 isDense: true,
                 hintText: 'เพิ่มของส่วนตัว...',
                 hintStyle: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
                 ),
@@ -650,7 +650,7 @@ class _ReminderNote extends StatelessWidget {
           child: Text(
             'เราจะส่งการแจ้งเตือนเตือนคุณเตรียมของ 1 วันก่อนเดินทาง',
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w500,
               height: 1.4,
               color: AppTheme.mutedText(context),

@@ -80,7 +80,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'ยังเปิดสรุปทริปไม่ได้ตอนนี้',
-              style: appFont(color: Colors.white70, fontSize: 15),
+              style: appFont(color: Colors.white70, fontSize: AppText.sizeSubtitle),
             ),
             const SizedBox(height: 16),
             TextButton(
@@ -96,7 +96,7 @@ class _ErrorView extends StatelessWidget {
 
 /// Palette แบบพระอาทิตย์ขึ้นบนภูเขา — ไล่โทนอุ่นให้แต่ละสไลด์
 const List<List<Color>> _slideGradients = [
-  [Color(0xFF0F766E), Color(0xFF065F46)], // teal → emerald (intro)
+  [Color(0xFF047857), Color(0xFF065F46)], // teal → emerald (intro)
   [Color(0xFFEA580C), Color(0xFFB45309)], // orange → amber (days)
   [Color(0xFF2563EB), Color(0xFF1E3A8A)], // blue (distance)
   [Color(0xFF9333EA), Color(0xFF6D28D9)], // purple (elevation)
@@ -337,7 +337,7 @@ class _RecapStoryState extends State<_RecapStory> {
                         color: i <= _index
                             ? Colors.white
                             : Colors.white.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                       ),
                     ),
                   );
@@ -380,7 +380,7 @@ class _IntroSlide extends StatelessWidget {
             'สรุปทริปของคุณ',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 18,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -400,7 +400,7 @@ class _IntroSlide extends StatelessWidget {
               date,
               style: appFont(
                 color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -412,7 +412,7 @@ class _IntroSlide extends StatelessWidget {
                 'แตะเพื่อดูต่อ',
                 style: appFont(
                   color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                 ),
               ),
               const SizedBox(width: 6),
@@ -457,7 +457,7 @@ class _StatSlide extends StatelessWidget {
             headline,
             style: appFont(
               color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 18,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -478,7 +478,7 @@ class _StatSlide extends StatelessWidget {
                   text: '  $unit',
                   style: appFont(
                     color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 28,
+                    fontSize: AppText.sizeHero,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -490,7 +490,7 @@ class _StatSlide extends StatelessWidget {
             sub,
             style: appFont(
               color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -525,7 +525,7 @@ class _DifficultySlide extends StatelessWidget {
               'เส้นทาง',
               style: appFont(
                 color: Colors.white.withValues(alpha: 0.85),
-                fontSize: 16,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -545,7 +545,7 @@ class _DifficultySlide extends StatelessWidget {
             'คุณไม่ได้เดินคนเดียว',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 18,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -554,7 +554,7 @@ class _DifficultySlide extends StatelessWidget {
             'ทริปนี้มีเพื่อนร่วมทาง $travelers คน',
             style: appFont(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: AppText.sizeH1,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -564,7 +564,7 @@ class _DifficultySlide extends StatelessWidget {
               'มากับกลุ่มของคุณ $groupSize คน',
               style: appFont(
                 color: Colors.white.withValues(alpha: 0.85),
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -592,7 +592,7 @@ class _PhotosSlide extends StatelessWidget {
             'ภาพแห่งความทรงจำ',
             style: appFont(
               color: Colors.white,
-              fontSize: 24,
+              fontSize: AppText.sizeH1,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -601,7 +601,7 @@ class _PhotosSlide extends StatelessWidget {
             'จากเพื่อนร่วมทริปในฟีด',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
             ),
           ),
           const SizedBox(height: 20),
@@ -613,7 +613,7 @@ class _PhotosSlide extends StatelessWidget {
             crossAxisSpacing: 8,
             children: photos.map((url) {
               return ClipRRect(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 child: Image.network(
                   url,
                   fit: BoxFit.cover,
@@ -687,20 +687,20 @@ class _SummarySlide extends StatelessWidget {
                   end: Alignment.bottomRight,
                   colors: [Color(0xFFEA580C), Color(0xFF7C2D12)],
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Text('🏔️', style: TextStyle(fontSize: 22)),
+                      const Text('🏔️', style: TextStyle(fontSize: AppText.sizeH1)),
                       const SizedBox(width: 8),
                       Text(
                         'ลุยเลเขา',
                         style: appFont(
                           color: Colors.white,
-                          fontSize: 16,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -709,7 +709,7 @@ class _SummarySlide extends StatelessWidget {
                         'TRIP RECAP',
                         style: appFont(
                           color: Colors.white.withValues(alpha: 0.8),
-                          fontSize: 11,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.5,
                         ),
@@ -719,7 +719,7 @@ class _SummarySlide extends StatelessWidget {
                   const SizedBox(height: 18),
                   if (cover.isNotEmpty)
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       child: AspectRatio(
                         aspectRatio: 16 / 9,
                         child: Image.network(
@@ -736,7 +736,7 @@ class _SummarySlide extends StatelessWidget {
                     title,
                     style: appFont(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: AppText.sizeH1,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.5,
                     ),
@@ -747,7 +747,7 @@ class _SummarySlide extends StatelessWidget {
                       date,
                       style: appFont(
                         color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -765,7 +765,7 @@ class _SummarySlide extends StatelessWidget {
                               s[0],
                               style: appFont(
                                 color: Colors.white,
-                                fontSize: 22,
+                                fontSize: AppText.sizeH1,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.5,
                               ),
@@ -774,7 +774,7 @@ class _SummarySlide extends StatelessWidget {
                               s[1],
                               style: appFont(
                                 color: Colors.white.withValues(alpha: 0.85),
-                                fontSize: 12,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -789,13 +789,13 @@ class _SummarySlide extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     child: Text(
                       'luilaykhao.com',
                       style: appFont(
                         color: Colors.white,
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -813,7 +813,7 @@ class _SummarySlide extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 15),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -835,7 +835,7 @@ class _SummarySlide extends StatelessWidget {
                     sharing ? 'กำลังเตรียมรูป...' : 'แชร์สรุปทริป',
                     style: appFont(
                       color: const Color(0xFF7C2D12),
-                      fontSize: 15,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -850,7 +850,7 @@ class _SummarySlide extends StatelessWidget {
                 : 'อย่าลืมรีวิวทริปนี้ให้เพื่อน ๆ ด้วยนะ',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w500,
             ),
           ),

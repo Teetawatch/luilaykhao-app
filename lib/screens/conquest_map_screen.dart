@@ -298,14 +298,14 @@ class _ConquestPin extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.accentColor,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),
                   child: Text(
                     '$visits',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 9,
+                      fontSize: AppText.sizeMicro,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -358,7 +358,7 @@ class _PinSheet extends StatelessWidget {
                   Text(
                     '${pin['title'] ?? ''}',
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: AppText.sizeTitle,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.onSurface(context),
                     ),
@@ -369,7 +369,7 @@ class _PinSheet extends StatelessWidget {
                         ? 'ไปมาแล้ว $visits ครั้ง · ครั้งแรก ${pin['first_visit_label'] ?? ''} · ล่าสุด ${pin['last_visit_label'] ?? ''}'
                         : 'เดินทางเมื่อ ${pin['first_visit_label'] ?? ''}',
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
                     ),
@@ -434,7 +434,7 @@ class _MiniStat extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w700,
                 color: muted,
               ),
@@ -446,7 +446,7 @@ class _MiniStat extends StatelessWidget {
           TextSpan(
             text: value,
             style: TextStyle(
-              fontSize: 19,
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -454,7 +454,7 @@ class _MiniStat extends StatelessWidget {
               TextSpan(
                 text: ' $unit',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   color: muted,
                 ),
@@ -496,7 +496,7 @@ class _ConquestSummary extends StatelessWidget {
           Text(
             'พิชิตแล้ว $visited จาก $total ภาค',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -507,7 +507,7 @@ class _ConquestSummary extends StatelessWidget {
                 ? '$trips เส้นทาง · ออกเดินทาง $departures ครั้ง'
                 : '$trips เส้นทาง',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
             ),
@@ -539,7 +539,7 @@ class _ConquestSummary extends StatelessWidget {
               child: Text(
                 'หนักที่สุดที่เคยเดิน: ${toughest['title']} (${toughest['elevation_gain_m']} ม.)',
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
                 ),
@@ -574,7 +574,7 @@ class _RegionProgress extends StatelessWidget {
           child: Text(
             'รายภาค',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context),
             ),
@@ -603,7 +603,7 @@ class _RegionProgress extends StatelessWidget {
                         : visited
                         ? AppTheme.subtleSurface(context)
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     border: Border.all(
                       color: visited
                           ? Colors.transparent
@@ -619,7 +619,7 @@ class _RegionProgress extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 13.5,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w800,
                           color: isSelected
                               ? Colors.white
@@ -632,7 +632,7 @@ class _RegionProgress extends StatelessWidget {
                         Text(
                           '${region['trips_count']} เส้นทาง\n${region['elevation_gain_m']} ม.',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             height: 1.35,
                             fontWeight: FontWeight.w600,
                             color: isSelected
@@ -644,7 +644,7 @@ class _RegionProgress extends StatelessWidget {
                         Text(
                           'ยังไม่เคยไป',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.mutedText(context),
                           ),
@@ -679,7 +679,7 @@ class _RegionDetail extends StatelessWidget {
           Text(
             'ไปครั้งแรก ${region['first_visit_label'] ?? '-'} · ล่าสุด ${region['last_visit_label'] ?? '-'}',
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
             ),
@@ -702,7 +702,7 @@ class _RegionDetail extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 13.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.onSurface(context),
                       ),
@@ -711,7 +711,7 @@ class _RegionDetail extends StatelessWidget {
                   Text(
                     '${pin['elevation_gain_m']} ม.',
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -746,7 +746,7 @@ class _FrontierNote extends StatelessWidget {
           Text(
             'ภาคที่ยังไม่เคยไป',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context),
             ),
@@ -757,7 +757,7 @@ class _FrontierNote extends StatelessWidget {
                 .map((f) => '${f['label']} (${f['open_trips_count']} เส้นทาง)')
                 .join(' · '),
             style: TextStyle(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.5,
               fontWeight: FontWeight.w600,
               color: AppTheme.onSurface(context),
@@ -777,13 +777,13 @@ class _ConquestSkeleton extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        SkeletonBox(height: 340, borderRadius: BorderRadius.circular(16)),
+        SkeletonBox(height: 340, borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
         const SizedBox(height: 20),
-        SkeletonBox(height: 24, width: 200, borderRadius: BorderRadius.circular(8)),
+        SkeletonBox(height: 24, width: 200, borderRadius: BorderRadius.circular(AppTheme.radiusXs)),
         const SizedBox(height: 12),
-        SkeletonBox(height: 16, width: 140, borderRadius: BorderRadius.circular(8)),
+        SkeletonBox(height: 16, width: 140, borderRadius: BorderRadius.circular(AppTheme.radiusXs)),
         const SizedBox(height: 24),
-        SkeletonBox(height: 96, borderRadius: BorderRadius.circular(14)),
+        SkeletonBox(height: 96, borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
       ],
     );
   }

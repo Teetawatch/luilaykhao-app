@@ -497,7 +497,7 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
                     '$number',
                     style: appFont(
                       color: Colors.white,
-                      fontSize: 10.5,
+                      fontSize: AppText.sizeMicro,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -526,7 +526,7 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
           child: const _MapPin(
             icon: Icons.flag_rounded,
             label: 'ปลายทาง',
-            color: Color(0xFF111111),
+            color: Color(0xFF0F172A),
           ),
         ),
       if (pickup != null)
@@ -607,7 +607,7 @@ class TrackingTopBar extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               decoration: BoxDecoration(
                 color: AppTheme.surface(context).withValues(alpha: 0.96),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
               ),
               child: Row(
                 children: [
@@ -635,7 +635,7 @@ class TrackingTopBar extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
-                            fontSize: 15,
+                            fontSize: AppText.sizeSubtitle,
                             fontWeight: FontWeight.w900,
                             color: AppTheme.onSurface(context),
                           ),
@@ -646,7 +646,7 @@ class TrackingTopBar extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
-                            fontSize: 12,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.mutedText(context),
                           ),
@@ -724,7 +724,7 @@ class TrackingBottomSheet extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
           ),
           child: SafeArea(
             top: false,
@@ -737,8 +737,8 @@ class TrackingBottomSheet extends StatelessWidget {
                     width: 42,
                     height: 5,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE4E7EC),
-                      borderRadius: BorderRadius.circular(999),
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                   ),
                 ),
@@ -774,7 +774,7 @@ class TrackingBottomSheet extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 18,
+                    fontSize: AppText.sizeTitle,
                     height: 1.25,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.textMain,
@@ -843,7 +843,7 @@ class TrackingBottomSheet extends StatelessWidget {
                       Text(
                         'เส้นทางเดินรถ',
                         style: appFont(
-                          fontSize: 13,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
                         ),
@@ -883,7 +883,7 @@ class TrackingStatusBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -899,7 +899,7 @@ class TrackingStatusBanner extends StatelessWidget {
             style: appFont(
               color: Colors.white,
               fontWeight: FontWeight.w900,
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
             ),
           ),
         ],
@@ -987,14 +987,14 @@ class _MapPin extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           ),
           child: Text(
             label,
             style: appFont(
               color: AppTheme.textMain,
               fontWeight: FontWeight.w800,
-              fontSize: 10,
+              fontSize: AppText.sizeMicro,
             ),
           ),
         ),
@@ -1057,14 +1057,14 @@ class _UserMarker extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
             color: blue,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           ),
           child: Text(
             'คุณ',
             style: appFont(
               color: Colors.white,
               fontWeight: FontWeight.w800,
-              fontSize: 10,
+              fontSize: AppText.sizeMicro,
             ),
           ),
         ),
@@ -1090,7 +1090,7 @@ class _LocationPermissionBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
       decoration: BoxDecoration(
         color: AppTheme.surface(context).withValues(alpha: 0.98),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: const Color(0xFF2F80ED).withValues(alpha: 0.35)),
       ),
       child: Row(
@@ -1105,7 +1105,7 @@ class _LocationPermissionBanner extends StatelessWidget {
                 Text(
                   'ยังไม่เห็นตำแหน่งของคุณ',
                   style: appFont(
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.onSurface(context),
                   ),
@@ -1114,7 +1114,7 @@ class _LocationPermissionBanner extends StatelessWidget {
                 Text(
                   message,
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedText(context),
                   ),
@@ -1160,9 +1160,9 @@ class _BannerButton extends StatelessWidget {
     const blue = Color(0xFF2F80ED);
     return Material(
       color: filled ? blue : Colors.transparent,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       child: InkWell(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         onTap: () {
           HapticFeedback.selectionClick();
           onTap();
@@ -1170,13 +1170,13 @@ class _BannerButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             border: filled ? null : Border.all(color: blue.withValues(alpha: 0.5)),
           ),
           child: Text(
             label,
             style: appFont(
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
               color: filled ? Colors.white : blue,
             ),
@@ -1207,7 +1207,7 @@ class _MetricCard extends StatelessWidget {
         color: highlighted
             ? AppTheme.primaryColor.withValues(alpha: 0.08)
             : AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1219,7 +1219,7 @@ class _MetricCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: appFont(
               color: AppTheme.textSecondary,
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1268,7 +1268,7 @@ class _DetailRow extends StatelessWidget {
                   label,
                   style: appFont(
                     color: AppTheme.textSecondary,
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1277,7 +1277,7 @@ class _DetailRow extends StatelessWidget {
                   value.isEmpty ? 'รอข้อมูล' : value,
                   style: appFont(
                     color: AppTheme.textMain,
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     height: 1.35,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1318,7 +1318,7 @@ class _ActionButton extends StatelessWidget {
                 foregroundColor: Colors.white,
                 textStyle: appFont(fontWeight: FontWeight.w900),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                 ),
               ),
             )
@@ -1331,7 +1331,7 @@ class _ActionButton extends StatelessWidget {
                 textStyle: appFont(fontWeight: FontWeight.w900),
                 side: const BorderSide(color: AppTheme.primaryColor),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                 ),
               ),
             ),
@@ -1356,7 +1356,7 @@ class _FollowModeControl extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTheme.surface(context).withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1453,7 +1453,7 @@ class _TrackingLoadingOverlay extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

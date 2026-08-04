@@ -90,7 +90,7 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
         centerTitle: false,
         title: Text(
           widget.title.isEmpty ? 'ยอดค้างชำระ' : widget.title,
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
       body: RefreshIndicator(
@@ -183,7 +183,7 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
             // ต้องบอกให้ชัด ไม่งั้นยอดที่สตาฟเห็นกับที่ลูกค้าค้างจริงจะไม่ตรงกัน
             'นับเฉพาะงวดที่ถึงกำหนดถัดไปของแต่ละคน',
             style: appFont(
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
             ),
@@ -204,7 +204,7 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
             message,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context),
             ),
@@ -263,7 +263,7 @@ class _StatBlock extends StatelessWidget {
         Text(
           label,
           style: appFont(
-            fontSize: 12.5,
+            fontSize: AppText.sizeLabel,
             fontWeight: FontWeight.w700,
             color: AppTheme.mutedText(context),
           ),
@@ -272,7 +272,7 @@ class _StatBlock extends StatelessWidget {
         Text(
           value,
           style: appFont(
-            fontSize: 20,
+            fontSize: AppText.sizeH2,
             fontWeight: FontWeight.w800,
             color: valueColor ?? AppTheme.onSurface(context),
           ),
@@ -349,7 +349,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                           Text(
                             name,
                             style: appFont(
-                              fontSize: 16,
+                              fontSize: AppText.sizeSubtitle,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.onSurface(context),
                             ),
@@ -358,7 +358,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                           Text(
                             bookingRef,
                             style: appFont(
-                              fontSize: 11.5,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.mutedText(context),
                             ),
@@ -390,7 +390,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                             ? AppTheme.errorColor
                             : AppTheme.primaryColor)
                         .withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                   child: Row(
                     children: [
@@ -401,7 +401,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                             Text(
                               'ต้องเก็บตอนนี้ · $label',
                               style: appFont(
-                                fontSize: 12,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.mutedText(context),
                               ),
@@ -410,7 +410,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                             Text(
                               '฿${_money(amountDue)}',
                               style: appFont(
-                                fontSize: 22,
+                                fontSize: AppText.sizeH1,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.onSurface(context),
                               ),
@@ -443,7 +443,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                     Text(
                       'ชำระแล้ว $paidCount/$stepCount งวด',
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.onSurface(context),
                       ),
@@ -452,7 +452,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                     Text(
                       '฿${_money(paidTotal)} / ฿${_money(totalAmount)}',
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -461,7 +461,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                 ),
                 const SizedBox(height: 6),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 6,
@@ -477,7 +477,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                 Text(
                   'ยังค้างทั้งหมด ฿${_money(remainingTotal)}',
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
                   ),
@@ -496,7 +496,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                 title: Text(
                   _expanded ? 'ซ่อนรายละเอียดงวด' : 'ดูรายละเอียดทุกงวด',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
                   ),
@@ -521,7 +521,7 @@ class _OutstandingCardState extends State<_OutstandingCard> {
                 icon: const Icon(Icons.qr_code_2_rounded, size: 18),
                 label: Text(
                   'ให้ลูกค้าสแกนจ่าย',
-                  style: appFont(fontSize: 14, fontWeight: FontWeight.w800),
+                  style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w800),
                 ),
               ),
             ),
@@ -587,7 +587,7 @@ class _InstallmentRow extends StatelessWidget {
                         child: Text(
                           label,
                           style: appFont(
-                            fontSize: 13.5,
+                            fontSize: AppText.sizeBody,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.onSurface(context),
                           ),
@@ -596,7 +596,7 @@ class _InstallmentRow extends StatelessWidget {
                       Text(
                         '฿${_money(amount)}',
                         style: appFont(
-                          fontSize: 13.5,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w800,
                           color: paid
                               ? AppTheme.mutedText(context)
@@ -615,7 +615,7 @@ class _InstallmentRow extends StatelessWidget {
                         'ครบกำหนด $dueDate',
                     ].join(' · '),
                     style: appFont(
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w600,
                       color: color,
                     ),
@@ -642,11 +642,11 @@ class _Pill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         text,
-        style: appFont(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+        style: appFont(fontSize: AppText.sizeCaption, fontWeight: FontWeight.w700, color: color),
       ),
     );
   }
@@ -719,7 +719,7 @@ class _PaySheetState extends State<_PaySheet> {
         builder: (context, controller) => Container(
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
           ),
           child: ListView(
             controller: controller,
@@ -731,7 +731,7 @@ class _PaySheetState extends State<_PaySheet> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: AppTheme.mutedText(context).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                 ),
               ),
@@ -740,7 +740,7 @@ class _PaySheetState extends State<_PaySheet> {
                 child: Text(
                   name,
                   style: appFont(
-                    fontSize: 17,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -751,7 +751,7 @@ class _PaySheetState extends State<_PaySheet> {
                 child: Text(
                   dueDate.isEmpty ? label : '$label · ครบกำหนด $dueDate',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedText(context),
                   ),
@@ -774,7 +774,7 @@ class _PaySheetState extends State<_PaySheet> {
                   child: Text(
                     'ยังค้างทั้งหมด ฿${_money(remainingTotal)}',
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -787,7 +787,7 @@ class _PaySheetState extends State<_PaySheet> {
                   child: Text(
                     'ไม่พบลิงก์ชำระเงินของรายการนี้',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.errorColor,
                     ),
@@ -800,7 +800,7 @@ class _PaySheetState extends State<_PaySheet> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                     child: QrImageView(
                       data: payUrl,
@@ -823,7 +823,7 @@ class _PaySheetState extends State<_PaySheet> {
                   'ให้ลูกค้าเปิดกล้องมือถือสแกน QR นี้\nแล้วจ่ายพร้อมแนบสลิปในเครื่องตัวเองได้เลย',
                   textAlign: TextAlign.center,
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     height: 1.5,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedText(context),
@@ -835,7 +835,7 @@ class _PaySheetState extends State<_PaySheet> {
                 Text(
                   'งวดที่ยังค้าง',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
                   ),
@@ -850,7 +850,7 @@ class _PaySheetState extends State<_PaySheet> {
                   // หน้า /pay รับทีละงวดตามลำดับ กันสตาฟบอกลูกค้าผิดว่าจ่ายรวดเดียวได้
                   'ลูกค้าจ่ายได้ทีละงวดตามลำดับ หากต้องการจ่ายหลายงวด ให้สแกนซ้ำอีกครั้ง',
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     height: 1.5,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedText(context),
@@ -868,7 +868,7 @@ class _PaySheetState extends State<_PaySheet> {
                         label: Text(
                           'โทรหา',
                           style: appFont(
-                            fontSize: 14,
+                            fontSize: AppText.sizeBody,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -889,7 +889,7 @@ class _PaySheetState extends State<_PaySheet> {
                       label: Text(
                         'ส่งลิงก์',
                         style: appFont(
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w800,
                         ),
                       ),

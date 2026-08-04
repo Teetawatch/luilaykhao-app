@@ -134,7 +134,7 @@ class _TripFeedScreenState extends State<TripFeedScreen> {
         elevation: 0,
         title: Text(
           title,
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
           overflow: TextOverflow.ellipsis,
         ),
       ),
@@ -278,7 +278,7 @@ class _TripPostCardState extends State<_TripPostCard> {
       showDragHandle: true,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
       ),
       builder: (_) => _CommentsSheet(
         postId: id,
@@ -298,7 +298,7 @@ class _TripPostCardState extends State<_TripPostCard> {
       showDragHandle: true,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
       ),
       builder: (ctx) => SafeArea(
         child: Column(
@@ -386,7 +386,7 @@ class _TripPostCardState extends State<_TripPostCard> {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -425,7 +425,7 @@ class _TripPostCardState extends State<_TripPostCard> {
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
                                 fontWeight: FontWeight.w800,
-                                fontSize: 13.5,
+                                fontSize: AppText.sizeBody,
                                 color: AppTheme.onSurface(context),
                               ),
                             ),
@@ -442,7 +442,7 @@ class _TripPostCardState extends State<_TripPostCard> {
                             ? '${textOf(trip['title'])} · ${_timeAgo(post['created_at'])}'
                             : _timeAgo(post['created_at']),
                         style: appFont(
-                          fontSize: 11.5,
+                          fontSize: AppText.sizeCaption,
                           color: AppTheme.mutedText(context),
                           fontWeight: FontWeight.w600,
                         ),
@@ -503,7 +503,7 @@ class _TripPostCardState extends State<_TripPostCard> {
                               color: i == _photoIndex
                                   ? Colors.white
                                   : Colors.white.withValues(alpha: 0.55),
-                              borderRadius: BorderRadius.circular(3),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             ),
                           ),
                         ),
@@ -532,7 +532,7 @@ class _TripPostCardState extends State<_TripPostCard> {
                   label: Text(
                     likesCount > 0 ? '$likesCount' : 'ถูกใจ',
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: liked
                           ? const Color(0xFFE11D48)
@@ -547,7 +547,7 @@ class _TripPostCardState extends State<_TripPostCard> {
                   label: Text(
                     commentsCount > 0 ? '$commentsCount' : 'คอมเมนต์',
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -564,7 +564,7 @@ class _TripPostCardState extends State<_TripPostCard> {
               child: Text(
                 caption,
                 style: appFont(
-                  fontSize: 13.5,
+                  fontSize: AppText.sizeBody,
                   height: 1.5,
                   color: AppTheme.onSurface(context),
                 ),
@@ -694,7 +694,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
             Text(
               'คอมเมนต์',
               style: appFont(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.onSurface(context),
               ),
@@ -748,7 +748,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                         Text(
                                           '${textOf(user['name'], 'นักเดินทาง')} · ${_timeAgo(c['created_at'])}',
                                           style: appFont(
-                                            fontSize: 11.5,
+                                            fontSize: AppText.sizeCaption,
                                             fontWeight: FontWeight.w700,
                                             color:
                                                 AppTheme.mutedText(context),
@@ -758,7 +758,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                         Text(
                                           textOf(c['body']),
                                           style: appFont(
-                                            fontSize: 13.5,
+                                            fontSize: AppText.sizeBody,
                                             height: 1.45,
                                             color:
                                                 AppTheme.onSurface(context),
@@ -801,7 +801,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                           filled: true,
                           fillColor: AppTheme.subtleSurface(context),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(22),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                             borderSide: BorderSide.none,
                           ),
                           contentPadding: const EdgeInsets.symmetric(
@@ -931,7 +931,7 @@ class _TripPostComposerScreenState extends State<TripPostComposerScreen> {
         elevation: 0,
         title: Text(
           'แชร์รูปทริป',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
       body: ListView(
@@ -940,7 +940,7 @@ class _TripPostComposerScreenState extends State<TripPostComposerScreen> {
           Text(
             widget.tripTitle,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context),
             ),
@@ -957,7 +957,7 @@ class _TripPostComposerScreenState extends State<TripPostComposerScreen> {
             children: [
               ..._images.map(
                 (image) => ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -988,7 +988,7 @@ class _TripPostComposerScreenState extends State<TripPostComposerScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppTheme.subtleSurface(context),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       border: Border.all(
                         color: AppTheme.border(context),
                       ),
@@ -1002,7 +1002,7 @@ class _TripPostComposerScreenState extends State<TripPostComposerScreen> {
                         Text(
                           'เพิ่มรูป',
                           style: appFont(
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.mutedText(context),
                           ),
@@ -1017,7 +1017,7 @@ class _TripPostComposerScreenState extends State<TripPostComposerScreen> {
           Text(
             'สูงสุด $_maxPhotos รูป',
             style: appFont(
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               color: AppTheme.mutedText(context),
             ),
           ),
@@ -1032,7 +1032,7 @@ class _TripPostComposerScreenState extends State<TripPostComposerScreen> {
               filled: true,
               fillColor: AppTheme.surface(context),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
             ),
           ),
@@ -1055,7 +1055,7 @@ class _TripPostComposerScreenState extends State<TripPostComposerScreen> {
                 : const Icon(Icons.send_rounded, size: 18),
             label: Text(
               _posting ? 'กำลังโพสต์…' : 'โพสต์ขึ้นฟีด',
-              style: appFont(fontWeight: FontWeight.w800, fontSize: 15),
+              style: appFont(fontWeight: FontWeight.w800, fontSize: AppText.sizeSubtitle),
             ),
           ),
           const SizedBox(height: 8),
@@ -1064,7 +1064,7 @@ class _TripPostComposerScreenState extends State<TripPostComposerScreen> {
             'ทีมงานอาจซ่อนโพสต์ที่ไม่เหมาะสมตามการรายงานของผู้ใช้',
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               height: 1.5,
               color: AppTheme.mutedText(context),
             ),

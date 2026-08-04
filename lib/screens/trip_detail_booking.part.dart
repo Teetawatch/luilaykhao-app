@@ -111,7 +111,7 @@ class StickyBookingBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
@@ -119,7 +119,7 @@ class StickyBookingBar extends StatelessWidget {
                 color: isDark
                     ? AppTheme.surfaceDark.withValues(alpha: 0.95)
                     : Colors.white.withValues(alpha: 0.96),
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                 border: Border.all(
                   color: isDark
                       ? AppTheme.outlineDark.withValues(alpha: 0.5)
@@ -157,7 +157,7 @@ class StickyBookingBar extends StatelessWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: appFont(
-                                      fontSize: 11.5,
+                                      fontSize: AppText.sizeCaption,
                                       color: AppTheme.mutedText(context),
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.2,
@@ -176,7 +176,7 @@ class StickyBookingBar extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF7C3AED)
                                       .withValues(alpha: 0.10),
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                                   border: Border.all(
                                     color: const Color(0xFF7C3AED)
                                         .withValues(alpha: 0.28),
@@ -194,7 +194,7 @@ class StickyBookingBar extends StatelessWidget {
                                     Text(
                                       'รอบเหมา',
                                       style: appFont(
-                                        fontSize: 13,
+                                        fontSize: AppText.sizeLabel,
                                         fontWeight: FontWeight.w700,
                                         color: const Color(0xFF7C3AED),
                                       ),
@@ -208,7 +208,7 @@ class StickyBookingBar extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: appFont(
-                                  fontSize: 25,
+                                  fontSize: AppText.sizeH1,
                                   fontWeight: FontWeight.w800,
                                   color: isDark ? Colors.white : _premiumText,
                                   height: 1.1,
@@ -224,7 +224,7 @@ class StickyBookingBar extends StatelessWidget {
                                       Text(
                                         money(flashOriginal),
                                         style: appFont(
-                                          fontSize: 13,
+                                          fontSize: AppText.sizeLabel,
                                           fontWeight: FontWeight.w700,
                                           color: AppTheme.mutedText(context),
                                           decoration: TextDecoration.lineThrough,
@@ -245,14 +245,14 @@ class StickyBookingBar extends StatelessWidget {
                                   ),
                                   decoration: BoxDecoration(
                                     color: _softAccent.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(6),
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                                   ),
                                   child: Text(
                                     'Join Trip ${_priceText(trip, schedule: selectedSchedule, isJoinTrip: true)}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: appFont(
-                                      fontSize: 11,
+                                      fontSize: AppText.sizeCaption,
                                       color: _softAccent,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -290,7 +290,7 @@ class StickyBookingBar extends StatelessWidget {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             color: _softAccent.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                             border: Border.all(
                               color: _softAccent.withValues(alpha: 0.20),
                             ),
@@ -302,7 +302,7 @@ class StickyBookingBar extends StatelessWidget {
                             style: TextButton.styleFrom(
                               foregroundColor: _softAccent,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                               ),
                             ),
                             icon: const Icon(Icons.groups_rounded, size: 19),
@@ -311,7 +311,7 @@ class StickyBookingBar extends StatelessWidget {
                                   ? 'จอยทริป · ${money(joinTripPrice)} / คน'
                                   : 'จอยทริป',
                               style: appFont(
-                                fontSize: 15,
+                                fontSize: AppText.sizeSubtitle,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -0.1,
                               ),
@@ -456,7 +456,7 @@ class _WaitlistButtonState extends State<_WaitlistButton> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -476,7 +476,7 @@ class _WaitlistButtonState extends State<_WaitlistButton> {
             Text(
               label,
               style: appFont(
-                fontSize: 16,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
                 letterSpacing: -0.2,
@@ -528,8 +528,8 @@ class _BookingButtonState extends State<_BookingButton> {
           decoration: BoxDecoration(
             color: widget.enabled
                 ? AppTheme.primaryColor
-                : const Color(0xFFD1D5DB),
-            borderRadius: BorderRadius.circular(16),
+                : const Color(0xFFCBD5E1),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -539,7 +539,7 @@ class _BookingButtonState extends State<_BookingButton> {
               Text(
                 widget.label,
                 style: appFont(
-                  fontSize: 16,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                   letterSpacing: -0.2,

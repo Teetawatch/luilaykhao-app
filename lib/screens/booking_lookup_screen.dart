@@ -230,7 +230,7 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
                 style: appFont(
                   color: AppTheme.onSurface(context),
                   fontWeight: FontWeight.w800,
-                  fontSize: 18,
+                  fontSize: AppText.sizeTitle,
                 ),
               ),
               leading: !widget.embedded && Navigator.canPop(context)
@@ -355,7 +355,7 @@ class HeroTrackingHeader extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,20 +365,20 @@ class HeroTrackingHeader extends StatelessWidget {
           Text(
             'ติดตามรถของคุณแบบเรียลไทม์',
             style: appFont(
-              fontSize: 26,
+              fontSize: AppText.sizeH1,
               height: 1.16,
               fontWeight: FontWeight.w900,
-              color: const Color(0xFF111111),
+              color: const Color(0xFF0F172A),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'ดูตำแหน่งรถและเวลาถึงโดยประมาณ',
             style: appFont(
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               height: 1.45,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF667085),
+              color: const Color(0xFF64748B),
             ),
           ),
         ],
@@ -395,11 +395,11 @@ class _MiniMapPreview extends StatelessWidget {
     return SizedBox(
       height: 136,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Container(color: const Color(0xFFEFF3F1)),
+            Container(color: const Color(0xFFECFDF5)),
             CustomPaint(painter: _MapPreviewPainter()),
             const Positioned(
               left: 26,
@@ -413,7 +413,7 @@ class _MiniMapPreview extends StatelessWidget {
               right: 30,
               top: 24,
               child: _PreviewPin(
-                color: Color(0xFF111111),
+                color: Color(0xFF0F172A),
                 icon: Icons.flag_rounded,
               ),
             ),
@@ -456,7 +456,7 @@ class _MapPreviewPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     final gridPaint = Paint()
-      ..color = const Color(0xFFD9E2DD)
+      ..color = const Color(0xFFCBD5E1)
       ..strokeWidth = 1;
 
     for (var x = -20.0; x < size.width; x += 54) {
@@ -522,7 +522,7 @@ class BookingCodeField extends StatelessWidget {
         Text(
           'รหัสการจอง',
           style: appFont(
-            fontSize: 14,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w800,
             color: AppTheme.textMain,
           ),
@@ -533,7 +533,7 @@ class BookingCodeField extends StatelessWidget {
           height: 56,
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
               color: hasError ? AppTheme.errorColor : AppTheme.border(context),
               width: hasError ? 1.4 : 1,
@@ -547,7 +547,7 @@ class BookingCodeField extends StatelessWidget {
             inputFormatters: [_BookingCodeFormatter()],
             textInputAction: TextInputAction.go,
             style: appFont(
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
               letterSpacing: 0.4,
@@ -555,7 +555,7 @@ class BookingCodeField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'LLK-20250409-0001',
               hintStyle: appFont(
-                color: const Color(0xFF98A2B3),
+                color: const Color(0xFF94A3B8),
                 fontWeight: FontWeight.w600,
               ),
               prefixIcon: const Icon(
@@ -584,7 +584,7 @@ class BookingCodeField extends StatelessWidget {
             error!,
             style: appFont(
               color: AppTheme.errorColor,
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -614,8 +614,8 @@ class PrimaryTrackButton extends StatelessWidget {
       child: Container(
         height: 56,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          color: enabled ? AppTheme.primaryColor : const Color(0xFFD0D5DD),
+          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+          color: enabled ? AppTheme.primaryColor : const Color(0xFFCBD5E1),
         ),
         child: FilledButton(
           onPressed: enabled ? onPressed : null,
@@ -626,7 +626,7 @@ class PrimaryTrackButton extends StatelessWidget {
             disabledForegroundColor: Colors.white.withValues(alpha: 0.82),
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
             ),
           ),
           child: AnimatedSwitcher(
@@ -650,7 +650,7 @@ class PrimaryTrackButton extends StatelessWidget {
                       Text(
                         'ติดตามรถของฉัน',
                         style: appFont(
-                          fontSize: 16,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -722,15 +722,15 @@ class _SmartOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: onTap,
         child: Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: AppTheme.border(context)),
           ),
           child: Row(
@@ -744,7 +744,7 @@ class _SmartOption extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textMain,
                   ),
@@ -784,7 +784,7 @@ class RecentBookingsSection extends StatelessWidget {
         Text(
           'การจองที่สำเร็จ',
           style: appFont(
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             fontWeight: FontWeight.w900,
             color: AppTheme.textMain,
           ),
@@ -826,14 +826,14 @@ class _RecentBookingCard extends StatelessWidget {
 
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         onTap: onTrack,
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             border: Border.all(color: AppTheme.border(context)),
           ),
           child: Row(
@@ -858,7 +858,7 @@ class _RecentBookingCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textMain,
                   ),
@@ -902,7 +902,7 @@ class HelpSection extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -920,7 +920,7 @@ class HelpSection extends StatelessWidget {
                 'หารหัสการจองไม่เจอ?',
                 style: appFont(
                   fontWeight: FontWeight.w900,
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   color: AppTheme.textMain,
                 ),
               ),
@@ -930,7 +930,7 @@ class HelpSection extends StatelessWidget {
           Text(
             'รหัสอยู่ในรายละเอียดการจอง หรืออีเมลยืนยันการจองของคุณ',
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.45,
               fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,
@@ -948,7 +948,7 @@ class HelpSection extends StatelessWidget {
               foregroundColor: AppTheme.primaryColor,
               side: const BorderSide(color: AppTheme.primaryColor),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
             ),
           ),
@@ -997,7 +997,7 @@ class EntryTrackingStatusBanner extends StatelessWidget {
         title: 'ทริปหมดแล้ว',
         body: 'ทริปนี้สิ้นสุดแล้ว คุณยังดูรายละเอียดได้จากการจองของฉัน',
         action: 'ไปที่การจอง',
-        color: const Color(0xFF667085),
+        color: const Color(0xFF64748B),
       ),
     };
 
@@ -1005,7 +1005,7 @@ class EntryTrackingStatusBanner extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: spec.color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: spec.color.withValues(alpha: 0.16)),
       ),
       child: Row(
@@ -1021,7 +1021,7 @@ class EntryTrackingStatusBanner extends StatelessWidget {
                   style: appFont(
                     color: AppTheme.textMain,
                     fontWeight: FontWeight.w900,
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -1030,7 +1030,7 @@ class EntryTrackingStatusBanner extends StatelessWidget {
                   style: appFont(
                     color: AppTheme.textSecondary,
                     fontWeight: FontWeight.w500,
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     height: 1.35,
                   ),
                 ),
@@ -1048,7 +1048,7 @@ class EntryTrackingStatusBanner extends StatelessWidget {
               child: Text(
                 spec.action,
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1107,7 +1107,7 @@ class _QrScanScreenState extends State<_QrScanScreen> {
                       'สแกน QR เพื่อติดตามรถ',
                       style: appFont(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: AppText.sizeTitle,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1121,7 +1121,7 @@ class _QrScanScreenState extends State<_QrScanScreen> {
               width: 248,
               height: 248,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                 border: Border.all(color: Colors.white, width: 3),
               ),
             ),

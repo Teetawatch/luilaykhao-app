@@ -100,7 +100,7 @@ class _RouteMapCardState extends State<RouteMapCard> {
     if (_loading) {
       return const SkeletonBox(
         height: 150,
-        borderRadius: BorderRadius.all(Radius.circular(20)),
+        borderRadius: BorderRadius.all(Radius.circular(AppTheme.radiusLg)),
       );
     }
 
@@ -153,7 +153,7 @@ class _RouteMapCardState extends State<RouteMapCard> {
           height: 36,
           decoration: BoxDecoration(
             color: AppTheme.primaryColor.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
           child: const Icon(
             Icons.route_rounded,
@@ -169,7 +169,7 @@ class _RouteMapCardState extends State<RouteMapCard> {
               Text(
                 'เส้นทางเดินรถ',
                 style: appFont(
-                  fontSize: 14.5,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                 ),
@@ -178,7 +178,7 @@ class _RouteMapCardState extends State<RouteMapCard> {
               Text(
                 parts.join(' • '),
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
                 ),
@@ -210,7 +210,7 @@ class _RouteMapCardState extends State<RouteMapCard> {
         );
       },
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: SizedBox(
           height: 190,
           child: Stack(
@@ -237,7 +237,7 @@ class _RouteMapCardState extends State<RouteMapCard> {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.surface(context).withValues(alpha: 0.94),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     border: Border.all(
                       color: AppTheme.border(context).withValues(alpha: 0.5),
                     ),
@@ -254,7 +254,7 @@ class _RouteMapCardState extends State<RouteMapCard> {
                       Text(
                         'ขยายแผนที่',
                         style: appFont(
-                          fontSize: 11,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
                         ),
@@ -389,7 +389,7 @@ class _RouteMap extends StatelessWidget {
             height: 34,
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF111111),
+                color: const Color(0xFF0F172A),
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 3),
               ),
@@ -455,7 +455,7 @@ class _TimelineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final muted = AppTheme.mutedText(context);
     final Color dotColor = stop.isDestination
-        ? const Color(0xFF111111)
+        ? const Color(0xFF0F172A)
         : stop.completed
             ? const Color(0xFF10B981)
             : highlighted
@@ -500,7 +500,7 @@ class _TimelineRow extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppTheme.border(context)
                             .withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                       ),
                     ),
                   ),
@@ -523,7 +523,7 @@ class _TimelineRow extends StatelessWidget {
                               ? (stop.isDestination ? 'ปลายทาง' : '-')
                               : stop.name,
                           style: appFont(
-                            fontSize: 13.5,
+                            fontSize: AppText.sizeBody,
                             fontWeight: FontWeight.w800,
                             height: 1.3,
                             color: stop.completed
@@ -541,12 +541,12 @@ class _TimelineRow extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: AppTheme.subtleSurface(context),
-                            borderRadius: BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                           ),
                           child: Text(
                             stop.pickupTime,
                             style: appFont(
-                              fontSize: 11,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.onSurface(context),
                             ),
@@ -569,7 +569,7 @@ class _TimelineRow extends StatelessWidget {
                           Text(
                             'ปลายทาง',
                             style: appFont(
-                              fontSize: 11.5,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w700,
                               color: muted,
                             ),
@@ -578,7 +578,7 @@ class _TimelineRow extends StatelessWidget {
                           Text(
                             stop.regionLabel,
                             style: appFont(
-                              fontSize: 11.5,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w600,
                               color: muted,
                             ),
@@ -592,12 +592,12 @@ class _TimelineRow extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppTheme.primaryColor
                                   .withValues(alpha: 0.10),
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             ),
                             child: Text(
                               'จุดของคุณ',
                               style: appFont(
-                                fontSize: 10.5,
+                                fontSize: AppText.sizeMicro,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.primaryColor,
                               ),
@@ -607,7 +607,7 @@ class _TimelineRow extends StatelessWidget {
                           Text(
                             'รับแล้ว',
                             style: appFont(
-                              fontSize: 11,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF10B981),
                             ),
@@ -647,7 +647,7 @@ class _FullScreenRouteMap extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'เส้นทางเดินรถ',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
       body: _RouteMap(

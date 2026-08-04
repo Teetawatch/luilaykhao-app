@@ -53,11 +53,11 @@ enum BookingStatus {
   Color get color => switch (this) {
     pending => const Color(0xFFD97706),
     confirmed => const Color(0xFF059669),
-    cancelled => const Color(0xFF687272),
+    cancelled => const Color(0xFF475569),
     refunded => const Color(0xFF315A9D),
     completed => const Color(0xFF315A9D),
     failed => const Color(0xFFE11D48),
-    unknown => const Color(0xFF9CA3AF),
+    unknown => const Color(0xFF94A3B8),
   };
 
   bool get isTerminal =>

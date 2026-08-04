@@ -165,7 +165,7 @@ class _ConversationTile extends StatelessWidget {
                   ),
                 ),
               ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           child: Row(
@@ -184,7 +184,7 @@ class _ConversationTile extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
-                              fontSize: 15,
+                              fontSize: AppText.sizeSubtitle,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.onSurface(context),
                               letterSpacing: -0.1,
@@ -196,7 +196,7 @@ class _ConversationTile extends StatelessWidget {
                           Text(
                             time,
                             style: appFont(
-                              fontSize: 11.5,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w600,
                               color: unread > 0
                                   ? AppTheme.primaryColor
@@ -215,7 +215,7 @@ class _ConversationTile extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                               fontWeight:
                                   unread > 0 ? FontWeight.w700 : FontWeight.w500,
                               color: unread > 0
@@ -234,13 +234,13 @@ class _ConversationTile extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryColor,
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             ),
                             child: Text(
                               unread > 99 ? '99+' : '$unread',
                               textAlign: TextAlign.center,
                               style: appFont(
-                                fontSize: 11,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                               ),
@@ -262,7 +262,7 @@ class _ConversationTile extends StatelessWidget {
                           Text(
                             vehicle,
                             style: appFont(
-                              fontSize: 11.5,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w500,
                               color: AppTheme.mutedText(context),
                             ),
@@ -289,7 +289,7 @@ class _Thumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: SizedBox(
         width: 54,
         height: 54,
@@ -334,7 +334,7 @@ class _EmptyChats extends StatelessWidget {
             height: 72,
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             ),
             child: Icon(
               error != null
@@ -348,7 +348,7 @@ class _EmptyChats extends StatelessWidget {
           Text(
             error != null ? 'โหลดแชทไม่สำเร็จ' : 'ยังไม่มีแชททริป',
             style: appFont(
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
             ),
@@ -359,7 +359,7 @@ class _EmptyChats extends StatelessWidget {
                 'เมื่อคุณจองทริป ห้องแชทกลุ่มสำหรับพูดคุยกับเพื่อนร่วมทริปและทีมงานจะปรากฏที่นี่',
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               height: 1.5,
               fontWeight: FontWeight.w500,
               color: AppTheme.mutedText(context),

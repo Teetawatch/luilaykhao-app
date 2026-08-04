@@ -114,7 +114,7 @@ class _BookingSummaryCard extends StatelessWidget {
 
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: openDetail,
@@ -166,7 +166,7 @@ class _BookingSummaryCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 17,
+                        fontSize: AppText.sizeTitle,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         letterSpacing: -0.3,
@@ -209,7 +209,7 @@ class _BookingSummaryCard extends StatelessWidget {
                             Text(
                               'ยอดรวม',
                               style: appFont(
-                                fontSize: 11,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w600,
                                 color: AppTheme.textSecondary,
                               ),
@@ -218,7 +218,7 @@ class _BookingSummaryCard extends StatelessWidget {
                             Text(
                               money(booking['total_amount']),
                               style: appFont(
-                                fontSize: 18,
+                                fontSize: AppText.sizeTitle,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.textMain,
                                 letterSpacing: -0.3,
@@ -233,7 +233,7 @@ class _BookingSummaryCard extends StatelessWidget {
                           Text(
                             'ดูรายละเอียด',
                             style: appFont(
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.primaryColor,
                             ),
@@ -307,7 +307,7 @@ class _BookingStatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -321,7 +321,7 @@ class _BookingStatusPill extends StatelessWidget {
           Text(
             _statusLabel(status),
             style: appFont(
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
               color: color,
               letterSpacing: -0.1,

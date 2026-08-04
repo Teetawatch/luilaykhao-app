@@ -116,7 +116,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       showDragHandle: true,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
       ),
       builder: (context) {
         return SafeArea(

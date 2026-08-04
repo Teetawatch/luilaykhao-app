@@ -262,7 +262,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
           ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         ),
@@ -425,7 +425,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
                               side: BorderSide(color: AppTheme.border(context)),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                               ),
                             ),
                           ),
@@ -457,7 +457,7 @@ class _ModeToggle extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       ),
       child: Row(
         children: [
@@ -508,7 +508,7 @@ class _ToggleChip extends StatelessWidget {
           decoration: BoxDecoration(
             // iOS-style white thumb that fills the segment when selected.
             color: selected ? AppTheme.surface(context) : Colors.transparent,
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -526,7 +526,7 @@ class _ToggleChip extends StatelessWidget {
                   label,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.1,
                     color: selected
@@ -562,7 +562,7 @@ class _GuestHeroHeader extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               color: AppTheme.primaryColor,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: const Icon(
               Icons.confirmation_number_rounded,
@@ -574,7 +574,7 @@ class _GuestHeroHeader extends StatelessWidget {
           Text(
             'ดู QR และติดตามรถ\nโดยไม่ต้องสมัครสมาชิก',
             style: appFont(
-              fontSize: 22,
+              fontSize: AppText.sizeH1,
               height: 1.25,
               fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
@@ -585,7 +585,7 @@ class _GuestHeroHeader extends StatelessWidget {
           Text(
             'ค้นหาด้วยรหัสการจอง หรือชื่อ-นามสกุลพร้อมเบอร์โทรที่ให้ไว้',
             style: appFont(
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               height: 1.45,
               fontWeight: FontWeight.w500,
               color: AppTheme.mutedText(context),
@@ -621,7 +621,7 @@ class _RefField extends StatelessWidget {
         Text(
           'รหัสการจอง',
           style: appFont(
-            fontSize: 14,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w800,
             color: AppTheme.textMain,
           ),
@@ -636,7 +636,7 @@ class _RefField extends StatelessWidget {
             inputFormatters: [_BookingRefFormatter()],
             textInputAction: TextInputAction.next,
             style: appFont(
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
               letterSpacing: 0.4,
@@ -644,7 +644,7 @@ class _RefField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'LLK-20250409-0001',
               hintStyle: appFont(
-                color: const Color(0xFF98A2B3),
+                color: const Color(0xFF94A3B8),
                 fontWeight: FontWeight.w600,
               ),
               prefixIcon: const Icon(
@@ -688,7 +688,7 @@ class _NameField extends StatelessWidget {
         Text(
           'ชื่อ-นามสกุลผู้เดินทาง',
           style: appFont(
-            fontSize: 14,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w800,
             color: AppTheme.textMain,
           ),
@@ -701,14 +701,14 @@ class _NameField extends StatelessWidget {
             focusNode: focusNode,
             textInputAction: TextInputAction.next,
             style: appFont(
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w700,
               color: AppTheme.textMain,
             ),
             decoration: InputDecoration(
               hintText: 'ชื่อ-นามสกุล ตามที่ให้ไว้กับเจ้าหน้าที่',
               hintStyle: appFont(
-                color: const Color(0xFF98A2B3),
+                color: const Color(0xFF94A3B8),
                 fontWeight: FontWeight.w500,
               ),
               prefixIcon: const Icon(
@@ -760,7 +760,7 @@ class _PhoneField extends StatelessWidget {
         Text(
           hint,
           style: appFont(
-            fontSize: 14,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w800,
             color: AppTheme.textMain,
           ),
@@ -782,7 +782,7 @@ class _PhoneField extends StatelessWidget {
                 LengthLimitingTextInputFormatter(maxLength!),
             ],
             style: appFont(
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
               letterSpacing: 0.4,
@@ -790,7 +790,7 @@ class _PhoneField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: hintPlaceholder,
               hintStyle: appFont(
-                color: const Color(0xFF98A2B3),
+                color: const Color(0xFF94A3B8),
                 fontWeight: FontWeight.w600,
               ),
               prefixIcon: const Icon(
@@ -825,7 +825,7 @@ class _InputBox extends StatelessWidget {
       height: 54,
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: hasError
               ? AppTheme.errorColor
@@ -850,7 +850,7 @@ class _ErrorText extends StatelessWidget {
         text,
         style: appFont(
           color: AppTheme.errorColor,
-          fontSize: 12,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -879,8 +879,8 @@ class _LookupButton extends StatelessWidget {
       child: Container(
         height: 54,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: enabled ? AppTheme.primaryColor : const Color(0xFFD0D5DD),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          color: enabled ? AppTheme.primaryColor : const Color(0xFFCBD5E1),
         ),
         child: FilledButton(
           onPressed: enabled ? onPressed : null,
@@ -891,7 +891,7 @@ class _LookupButton extends StatelessWidget {
             disabledForegroundColor: Colors.white.withValues(alpha: 0.82),
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
           ),
           child: AnimatedSwitcher(
@@ -915,7 +915,7 @@ class _LookupButton extends StatelessWidget {
                       Text(
                         'ค้นหาการจอง',
                         style: appFont(
-                          fontSize: 16,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.2,
                         ),
@@ -997,7 +997,7 @@ class _GuestBookingResultCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             border: Border.all(
               color: AppTheme.border(context).withValues(alpha: 0.55),
             ),
@@ -1011,7 +1011,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                     child: Text(
                       tripTitle,
                       style: appFont(
-                        fontSize: 18,
+                        fontSize: AppText.sizeTitle,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor,
                         height: 1.25,
@@ -1028,7 +1028,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                 Text(
                   ref,
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
                   ),
@@ -1047,7 +1047,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                     Text(
                       'เดินทาง $formattedDate',
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -1073,7 +1073,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                           licensePlate,
                       ].join(' • '),
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -1095,7 +1095,7 @@ class _GuestBookingResultCard extends StatelessWidget {
               color: isDark
                   ? AppTheme.primaryColor.withValues(alpha: 0.14)
                   : AppTheme.primaryColor.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
               border: Border.all(
                 color: AppTheme.primaryColor.withValues(alpha: 0.16),
               ),
@@ -1129,7 +1129,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                       'พร้อมสำหรับเช็คอิน',
                       style: appFont(
                         color: AppTheme.onSurface(context),
-                        fontSize: 16,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.2,
                       ),
@@ -1142,7 +1142,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: appFont(
                     color: AppTheme.mutedText(context),
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     height: 1.4,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1152,7 +1152,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     border: Border.all(
                       color: AppTheme.primaryColor.withValues(alpha: 0.14),
                     ),
@@ -1170,7 +1170,7 @@ class _GuestBookingResultCard extends StatelessWidget {
                   ref,
                   style: appFont(
                     color: AppTheme.primaryColor,
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.3,
                   ),
@@ -1186,7 +1186,7 @@ class _GuestBookingResultCard extends StatelessWidget {
           Container(
             height: 54,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               color: AppTheme.primaryColor,
             ),
             child: FilledButton.icon(
@@ -1195,14 +1195,14 @@ class _GuestBookingResultCard extends StatelessWidget {
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
               icon: const Icon(Icons.near_me_rounded, size: 19),
               label: Text(
                 'ติดตามรถของฉัน',
                 style: appFont(
-                  fontSize: 16,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
                 ),
@@ -1238,7 +1238,7 @@ class _GuestBookingResultCard extends StatelessWidget {
               side: const BorderSide(color: AppTheme.primaryColor),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
               ),
             ),
           ),
@@ -1258,7 +1258,7 @@ class _GuestBookingResultCard extends StatelessWidget {
               side: BorderSide(color: AppTheme.border(context)),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
               ),
             ),
           ),
@@ -1280,7 +1280,7 @@ class _EmptyNameResult extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             border: Border.all(
               color: AppTheme.border(context).withValues(alpha: 0.55),
             ),
@@ -1296,7 +1296,7 @@ class _EmptyNameResult extends StatelessWidget {
               Text(
                 'ไม่พบข้อมูลการจอง',
                 style: appFont(
-                  fontSize: 16,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                   letterSpacing: -0.2,
@@ -1307,7 +1307,7 @@ class _EmptyNameResult extends StatelessWidget {
                 'ลองตรวจสอบชื่อ-นามสกุลและเบอร์โทรอีกครั้ง\nหรือติดต่อเจ้าหน้าที่',
                 textAlign: TextAlign.center,
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   height: 1.5,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
@@ -1331,7 +1331,7 @@ class _EmptyNameResult extends StatelessWidget {
             ),
             padding: const EdgeInsets.symmetric(vertical: 13),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
           ),
         ),
@@ -1360,12 +1360,12 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         label,
         style: appFont(
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w700,
           color: color,
           letterSpacing: -0.1,
@@ -1384,7 +1384,7 @@ class _GuestHelpCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -1404,7 +1404,7 @@ class _GuestHelpCard extends StatelessWidget {
                 'หาข้อมูลไม่เจอ?',
                 style: appFont(
                   fontWeight: FontWeight.w800,
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   color: AppTheme.textMain,
                   letterSpacing: -0.2,
                 ),
@@ -1439,7 +1439,7 @@ class _GuestHelpCard extends StatelessWidget {
             'ต้องการความช่วยเหลือ?',
             style: appFont(
               fontWeight: FontWeight.w700,
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               color: AppTheme.textMain,
               letterSpacing: -0.1,
             ),
@@ -1498,7 +1498,7 @@ class _ContactButton extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Row(
@@ -1510,7 +1510,7 @@ class _ContactButton extends StatelessWidget {
               label,
               style: appFont(
                 fontWeight: FontWeight.w800,
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 color: color,
               ),
             ),
@@ -1538,7 +1538,7 @@ class _HelpItem extends StatelessWidget {
           child: Text(
             text,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.45,
               fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,

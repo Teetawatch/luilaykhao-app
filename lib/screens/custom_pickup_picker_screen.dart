@@ -110,7 +110,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
       appBar: AppBar(
         title: Text(
           'ปักหมุดจุดรับ',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
       body: Column(
@@ -164,7 +164,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: AppTheme.surface(context),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     child: Row(
                       children: [
@@ -175,7 +175,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                           child: Text(
                             'เลื่อนแผนที่ให้หมุดอยู่ตรงจุดที่ต้องการ',
                             style: appFont(
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.onSurface(context),
                             ),
@@ -247,7 +247,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
             'ปักหมุดจุดรับที่สะดวก แล้วจองต่อได้ทันที '
             'ราคาคิดเท่าจุดรับที่ใกล้หมุดที่สุด (ไม่ต่ำกว่าราคารอบเดินทาง)',
             style: appFont(
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w500,
               color: AppTheme.mutedText(context),
               height: 1.4,
@@ -258,7 +258,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
             controller: _label,
             maxLength: 255,
             onChanged: (_) => setState(() {}),
-            style: appFont(fontSize: 14.5, fontWeight: FontWeight.w600),
+            style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w600),
             decoration: _decoration('ชื่อจุดรับ / จุดสังเกต *',
                 'เช่น ปั๊ม ปตท. ทางเข้าเขาใหญ่'),
           ),
@@ -268,7 +268,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
             maxLength: 1000,
             maxLines: 2,
             minLines: 1,
-            style: appFont(fontSize: 14, fontWeight: FontWeight.w500),
+            style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w500),
             decoration: _decoration('รายละเอียดเพิ่มเติม (ถ้ามี)',
                 'เช่น รอตรงร้านกาแฟหน้าปั๊ม'),
           ),
@@ -281,12 +281,12 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                 backgroundColor: AppTheme.primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
               child: Text(
                 'ใช้จุดนี้',
-                style: appFont(fontSize: 15, fontWeight: FontWeight.w800),
+                style: appFont(fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -301,12 +301,12 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
       hintText: hint,
       counterText: '',
       labelStyle: appFont(
-        fontSize: 13,
+        fontSize: AppText.sizeLabel,
         fontWeight: FontWeight.w700,
         color: AppTheme.mutedText(context),
       ),
       hintStyle: appFont(
-        fontSize: 13.5,
+        fontSize: AppText.sizeBody,
         fontWeight: FontWeight.w500,
         color: AppTheme.mutedText(context),
       ),
@@ -315,7 +315,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         borderSide: BorderSide.none,
       ),
     );

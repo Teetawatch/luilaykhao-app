@@ -48,7 +48,7 @@ class EmptyStateView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: appFont(
                 color: AppTheme.onSurface(context),
-                fontSize: 16,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -59,7 +59,7 @@ class EmptyStateView extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: appFont(
                   color: AppTheme.mutedText(context),
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   height: 1.55,
                   fontWeight: FontWeight.w600,
                 ),
@@ -75,7 +75,7 @@ class EmptyStateView extends StatelessWidget {
                     vertical: 12,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                 ),
                 onPressed: onAction,

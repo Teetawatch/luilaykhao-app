@@ -31,7 +31,7 @@ class SkeletonBox extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: borderRadius ?? BorderRadius.circular(12),
+          borderRadius: borderRadius ?? BorderRadius.circular(AppTheme.radiusSm),
         ),
       ),
     );
@@ -48,7 +48,7 @@ class TripCardSkeleton extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       padding: const EdgeInsets.all(12),
@@ -57,7 +57,7 @@ class TripCardSkeleton extends StatelessWidget {
           SkeletonBox(
             width: 88,
             height: 88,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           const SizedBox(width: 12),
           const Expanded(

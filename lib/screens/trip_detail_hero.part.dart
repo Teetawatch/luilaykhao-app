@@ -131,7 +131,7 @@ class HeroCoverImage extends StatelessWidget {
       children: [
         // ── cover image only ───────────────────────────────────────
         Container(
-          color: const Color(0xFFE7ECEA),
+          color: const Color(0xFFE2E8F0),
           child: isLoading
               ? const Skeleton(radius: 0)
               : imageUrl.isNotEmpty
@@ -169,7 +169,7 @@ class _GalleryImageFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ColoredBox(
-      color: Color(0xFFE7ECEA),
+      color: Color(0xFFE2E8F0),
       child: Center(
         child: Icon(Icons.landscape_rounded, color: _softAccent, size: 64),
       ),
@@ -211,7 +211,7 @@ class _FloatingActionIconButtonState extends State<FloatingActionIconButton> {
     final overImage = !widget.isCollapsed;
     final foreground =
         widget.foregroundColor ??
-        (overImage ? const Color(0xFF1F2937) : AppTheme.onSurface(context));
+        (overImage ? const Color(0xFF1E293B) : AppTheme.onSurface(context));
 
     return Tooltip(
       message: widget.tooltip,

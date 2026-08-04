@@ -49,7 +49,7 @@ class _SectionHeader extends StatelessWidget {
           height: 36,
           decoration: BoxDecoration(
             color: _softAccent.withValues(alpha: isDark ? 0.18 : 0.10),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
           child: Icon(icon, size: 19, color: _softAccent),
         ),
@@ -63,7 +63,7 @@ class _SectionHeader extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 17,
+                  fontSize: AppText.sizeTitle,
                   fontWeight: FontWeight.w800,
                   color: isDark ? Colors.white : _premiumText,
                   height: 1.2,
@@ -75,7 +75,7 @@ class _SectionHeader extends StatelessWidget {
                 Text(
                   subtitle!,
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     color: _mutedText,
                     fontWeight: FontWeight.w500,
                   ),
@@ -121,7 +121,7 @@ class _FeatureRow extends StatelessWidget {
               color: isDark
                   ? iconColor.withValues(alpha: 0.15)
                   : iconBackground,
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
             child: Icon(icon, color: iconColor, size: 18),
           ),
@@ -135,7 +135,7 @@ class _FeatureRow extends StatelessWidget {
                   Text(
                     title,
                     style: appFont(
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w700,
                       color: isDark ? Colors.white.withValues(alpha: 0.9) : _premiumText,
                       height: 1.4,
@@ -146,7 +146,7 @@ class _FeatureRow extends StatelessWidget {
                     Text(
                       description!,
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         color: _mutedText,
                         height: 1.6,
                       ),
@@ -177,7 +177,7 @@ class _InfoChip extends StatelessWidget {
         color: isDark
             ? _softAccent.withValues(alpha: 0.15)
             : const Color(0xFFECFDF5),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(
           color: _softAccent.withValues(alpha: isDark ? 0.25 : 0.2),
         ),
@@ -193,7 +193,7 @@ class _InfoChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 color: isDark ? _softAccent : const Color(0xFF047857),
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.1,
@@ -219,7 +219,7 @@ class _EmptySelectionNotice extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -233,7 +233,7 @@ class _EmptySelectionNotice extends StatelessWidget {
               text,
               style: appFont(
                 color: AppTheme.mutedText(context),
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -260,7 +260,7 @@ class _RatingSummary extends StatelessWidget {
         'ยังไม่มีรีวิว',
         style: appFont(
           color: _mutedText,
-          fontSize: 13,
+          fontSize: AppText.sizeLabel,
           fontWeight: FontWeight.w700,
         ),
       );
@@ -285,7 +285,7 @@ class _RatingPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppTheme.warningTint(context),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(
           color: const Color(0xFFE8A117).withValues(alpha: 0.18),
         ),
@@ -299,7 +299,7 @@ class _RatingPill extends StatelessWidget {
             numberText(rating, fallback: '0'),
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.1,
             ),
@@ -309,7 +309,7 @@ class _RatingPill extends StatelessWidget {
             '$count รีวิว',
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w500,
             ),
           ),

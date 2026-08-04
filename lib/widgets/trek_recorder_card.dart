@@ -136,7 +136,7 @@ class _TrekRecorderCardState extends State<TrekRecorderCard> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -158,7 +158,7 @@ class _TrekRecorderCardState extends State<TrekRecorderCard> {
                 child: Text(
                   recording ? 'กำลังบันทึกการเดิน' : 'บันทึกการเดินของฉัน',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -173,7 +173,7 @@ class _TrekRecorderCardState extends State<TrekRecorderCard> {
                 : 'เปิดไว้ระหว่างเดิน แล้วสถิติในสมุดสะสมจะเป็นระยะที่คุณเดินจริง '
                       '(ใช้แบตเพิ่มขึ้น เปิด–ปิดได้ตลอด)',
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               height: 1.5,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
@@ -254,7 +254,7 @@ class _TrekRecorderCardState extends State<TrekRecorderCard> {
                 child: Text(
                   'ลบเส้นทางนี้',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
                   ),
@@ -293,7 +293,7 @@ class _LiveStat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 11.5,
+            fontSize: AppText.sizeCaption,
             fontWeight: FontWeight.w700,
             color: muted,
           ),
@@ -303,7 +303,7 @@ class _LiveStat extends StatelessWidget {
           TextSpan(
             text: value,
             style: TextStyle(
-              fontSize: 17,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -312,7 +312,7 @@ class _LiveStat extends StatelessWidget {
                 TextSpan(
                   text: ' $unit',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: muted,
                   ),
@@ -346,7 +346,7 @@ class _SavedSummary extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -363,7 +363,7 @@ class _SavedSummary extends StatelessWidget {
               Text(
                 'การเดินของคุณในรอบนี้',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                 ),
@@ -403,7 +403,7 @@ class _SavedSummary extends StatelessWidget {
             Text(
               'เดินได้ไกลเป็นอันดับ $rank จาก $peers คนที่บันทึกในรอบนี้',
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
               ),

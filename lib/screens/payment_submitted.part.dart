@@ -145,7 +145,7 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
                             textAlign: TextAlign.center,
                             style: appFont(
                               color: AppTheme.onSurface(context),
-                              fontSize: 24,
+                              fontSize: AppText.sizeH1,
                               fontWeight: FontWeight.w900,
                               letterSpacing: -0.4,
                             ),
@@ -156,7 +156,7 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
                             textAlign: TextAlign.center,
                             style: appFont(
                               color: AppTheme.mutedText(context),
-                              fontSize: 14,
+                              fontSize: AppText.sizeBody,
                               fontWeight: FontWeight.w600,
                               height: 1.55,
                             ),
@@ -249,7 +249,7 @@ class _SubmittedSummaryCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -315,7 +315,7 @@ class _KindPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: AppTheme.fieldSurface(context),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
@@ -333,7 +333,7 @@ class _KindPill extends StatelessWidget {
               textAlign: TextAlign.center,
               style: appFont(
                 color: AppTheme.mutedText(context),
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -382,7 +382,7 @@ class _SubmittedRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -396,7 +396,7 @@ class _SubmittedRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -432,13 +432,13 @@ class _SlipThumb extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             child: Image.file(
               File(path),
               width: 46,
@@ -462,7 +462,7 @@ class _SlipThumb extends StatelessWidget {
               'แนบสลิปเรียบร้อย',
               style: appFont(
                 color: AppTheme.onSurface(context),
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -612,7 +612,7 @@ class _SubmittedStepRow extends StatelessWidget {
                           color: step.done || step.active
                               ? AppTheme.onSurface(context)
                               : AppTheme.mutedText(context),
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -625,7 +625,7 @@ class _SubmittedStepRow extends StatelessWidget {
                     step.subtitle,
                     style: appFont(
                       color: AppTheme.mutedText(context),
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w600,
                       height: 1.4,
                     ),
@@ -653,7 +653,7 @@ class _NotifyNote extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _accent.withValues(alpha: AppTheme.isDark(context) ? 0.14 : 0.07),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: _accent.withValues(alpha: 0.22)),
       ),
       child: Row(
@@ -680,7 +680,7 @@ class _NotifyNote extends StatelessWidget {
                   slipVerified ? 'เรียบร้อยแล้ว' : 'เราจะแจ้งให้ทราบเอง',
                   style: appFont(
                     color: AppTheme.onSurface(context),
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -693,7 +693,7 @@ class _NotifyNote extends StatelessWidget {
                             'ปิดแอปไปทำอย่างอื่นได้เลย',
                   style: appFont(
                     color: AppTheme.mutedText(context),
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w600,
                     height: 1.5,
                   ),
@@ -737,13 +737,13 @@ class _SubmittedActions extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: _accent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
               icon: const Icon(Icons.confirmation_number_rounded, size: 20),
               label: Text(
                 'ดูการจองของฉัน',
-                style: appFont(fontWeight: FontWeight.w900, fontSize: 16),
+                style: appFont(fontWeight: FontWeight.w900, fontSize: AppText.sizeSubtitle),
               ),
             ),
           ),
@@ -758,7 +758,7 @@ class _SubmittedActions extends StatelessWidget {
               ),
               child: Text(
                 'กลับไปหน้าชำระเงิน',
-                style: appFont(fontWeight: FontWeight.w800, fontSize: 14),
+                style: appFont(fontWeight: FontWeight.w800, fontSize: AppText.sizeBody),
               ),
             ),
           ),

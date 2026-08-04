@@ -93,7 +93,7 @@ class _BiometricLockGateState extends State<BiometricLockGate> {
                         'ปลดล็อกแอป',
                         style: appFont(
                           color: AppTheme.onSurface(context),
-                          fontSize: 22,
+                          fontSize: AppText.sizeH1,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -103,7 +103,7 @@ class _BiometricLockGateState extends State<BiometricLockGate> {
                         textAlign: TextAlign.center,
                         style: appFont(
                           color: AppTheme.mutedText(context),
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -116,7 +116,7 @@ class _BiometricLockGateState extends State<BiometricLockGate> {
                             vertical: 14,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                           ),
                         ),
                         onPressed: _authenticating ? null : _prompt,

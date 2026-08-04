@@ -17,7 +17,7 @@ class ScarcityBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -26,7 +26,7 @@ class ScarcityBadge extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+            style: const TextStyle(color: Colors.white, fontSize: AppText.sizeMicro, fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -57,19 +57,19 @@ class PopularTripCardLegacy extends StatelessWidget {
           : () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => TripDetailScreen(slug: slug)),
             ),
-      borderRadius: BorderRadius.circular(32),
+      borderRadius: BorderRadius.circular(AppTheme.radiusXl),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -131,7 +131,7 @@ class PopularTripCardLegacy extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: AppTheme.textMain,
-                      fontSize: 18,
+                      fontSize: AppText.sizeTitle,
                       height: 1.1,
                       fontWeight: FontWeight.w900,
                     ),
@@ -152,7 +152,7 @@ class PopularTripCardLegacy extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
                             color: AppTheme.textSecondary,
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -164,7 +164,7 @@ class PopularTripCardLegacy extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.warningTint(context),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                         ),
                         child: Row(
                           children: [
@@ -178,7 +178,7 @@ class PopularTripCardLegacy extends StatelessWidget {
                               numberText(trip['rating'], fallback: '5.0'),
                               style: appFont(
                                 color: const Color(0xFF92400E),
-                                fontSize: 12,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -222,7 +222,7 @@ class _ParticipantRow extends StatelessWidget {
           '$joined คน ร่วมเดินทางแล้ว',
           style: appFont(
             color: AppTheme.textSecondary,
-            fontSize: 12,
+            fontSize: AppText.sizeCaption,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -270,23 +270,23 @@ class _ReferenceTripCard extends StatelessWidget {
         : '';
 
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       onTap: slug.isEmpty
           ? null
           : () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => TripDetailScreen(slug: slug)),
             ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         child: Stack(
           fit: StackFit.expand,
           children: [
             if (image.isEmpty)
               Container(
-                color: const Color(0xFFE5F0EE),
+                color: const Color(0xFFECFDF5),
                 child: const Icon(
                   Icons.landscape_rounded,
-                  color: Color(0xFF0F766E),
+                  color: Color(0xFF047857),
                   size: 42,
                 ),
               )
@@ -295,12 +295,12 @@ class _ReferenceTripCard extends StatelessWidget {
                 imageUrl: image,
                 fit: BoxFit.cover,
                 placeholder: (context, url) =>
-                    Container(color: const Color(0xFFE5F0EE)),
+                    Container(color: const Color(0xFFECFDF5)),
                 errorWidget: (_, _, _) => Container(
-                  color: const Color(0xFFE5F0EE),
+                  color: const Color(0xFFECFDF5),
                   child: const Icon(
                     Icons.landscape_rounded,
-                    color: Color(0xFF0F766E),
+                    color: Color(0xFF047857),
                     size: 42,
                   ),
                 ),
@@ -329,13 +329,13 @@ class _ReferenceTripCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.90),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Text(
                   _tripTypeLabel(type),
                   style: appFont(
-                    color: const Color(0xFF087C68),
-                    fontSize: 12,
+                    color: const Color(0xFF059669),
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -352,7 +352,7 @@ class _ReferenceTripCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.errorColor,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -367,7 +367,7 @@ class _ReferenceTripCard extends StatelessWidget {
                         'เหลือ $seatsLeft ที่',
                         style: appFont(
                           color: Colors.white,
-                          fontSize: 11.5,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -386,7 +386,7 @@ class _ReferenceTripCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEA580C),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -397,7 +397,7 @@ class _ReferenceTripCard extends StatelessWidget {
                         'Flash Sale',
                         style: appFont(
                           color: Colors.white,
-                          fontSize: 11.5,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -418,7 +418,7 @@ class _ReferenceTripCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: AppText.sizeSubtitle,
                       height: 1.15,
                       fontWeight: FontWeight.w900,
                     ),
@@ -430,7 +430,7 @@ class _ReferenceTripCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: Colors.white,
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -450,7 +450,7 @@ class _ReferenceTripCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
                             color: const Color(0xFFFFD9A8),
-                            fontSize: 12.5,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -486,7 +486,7 @@ class _ReferenceTripCard extends StatelessWidget {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: appFont(fontSize: 14),
+                          style: appFont(fontSize: AppText.sizeBody),
                         ),
                       ),
                       const Icon(
@@ -499,7 +499,7 @@ class _ReferenceTripCard extends StatelessWidget {
                         '${numberText(trip['rating'], fallback: '4.9')} ($reviewCount รีวิว)',
                         style: appFont(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -531,14 +531,14 @@ class _OverlayPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -551,7 +551,7 @@ class _OverlayPill extends StatelessWidget {
                 text,
                 style: TextStyle(
                   color: foregroundColor,
-                  fontSize: 11,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -579,9 +579,9 @@ class FeaturedTripCard extends StatelessWidget {
           builder: (_) => TripDetailScreen(slug: trip['slug'].toString()),
         ),
       ),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -637,7 +637,7 @@ class FeaturedTripCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
                             color: Colors.white70,
-                            fontSize: 12,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -651,7 +651,7 @@ class FeaturedTripCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: AppText.sizeH1,
                       height: 1.1,
                       fontWeight: FontWeight.w800,
                     ),
@@ -664,7 +664,7 @@ class FeaturedTripCard extends StatelessWidget {
                           money(trip['price_per_person']),
                           style: appFont(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: AppText.sizeTitle,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -712,11 +712,11 @@ class TripCard extends StatelessWidget {
           builder: (_) => TripDetailScreen(slug: trip['slug'].toString()),
         ),
       ),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.3),
           ),
@@ -726,7 +726,7 @@ class TripCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
+                top: Radius.circular(AppTheme.radiusLg),
               ),
               child: SizedBox(
                 height: 192,
@@ -758,12 +758,12 @@ class TripCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.92),
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                         ),
                         child: Text(
                           _tripTypeLabel(textOf(trip['type'], 'ประสบการณ์')),
                           style: const TextStyle(
-                            fontSize: 10,
+                            fontSize: AppText.sizeMicro,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.4,
                           ),
@@ -794,7 +794,7 @@ class TripCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppTheme.primaryColor,
-                            fontSize: 24,
+                            fontSize: AppText.sizeH1,
                             height: 1.2,
                             fontWeight: FontWeight.w900,
                           ),
@@ -808,7 +808,7 @@ class TripCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.subtleSurface(context),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -822,7 +822,7 @@ class TripCard extends StatelessWidget {
                             Text(
                               numberText(trip['rating'], fallback: '4.8'),
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.textSecondary,
                               ),
@@ -848,7 +848,7 @@ class TripCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppTheme.textSecondary,
-                            fontSize: 14,
+                            fontSize: AppText.sizeBody,
                           ),
                         ),
                       ),
@@ -865,14 +865,14 @@ class TripCard extends StatelessWidget {
                             text: 'เริ่มต้น ',
                             style: const TextStyle(
                               color: AppTheme.textSecondary,
-                              fontSize: 14,
+                              fontSize: AppText.sizeBody,
                             ),
                             children: [
                               TextSpan(
                                 text: money(trip['price_per_person']),
                                 style: const TextStyle(
                                   color: AppTheme.primaryColor,
-                                  fontSize: 16,
+                                  fontSize: AppText.sizeSubtitle,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),

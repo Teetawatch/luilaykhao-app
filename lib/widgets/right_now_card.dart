@@ -186,7 +186,7 @@ class _RightNowCardState extends State<RightNowCard> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: tone.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: tone.withValues(alpha: 0.35)),
       ),
       child: Column(
@@ -204,7 +204,7 @@ class _RightNowCardState extends State<RightNowCard> {
                   child: Text(
                     headline,
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: AppText.sizeTitle,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.onSurface(context),
                     ),
@@ -217,7 +217,7 @@ class _RightNowCardState extends State<RightNowCard> {
           Text(
             detail,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.45,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),

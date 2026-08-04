@@ -85,7 +85,7 @@ class AppText {
 
   /// Display / Hero — large price figures, the booking-success screen. 28–32sp.
   static TextStyle displayHero({Color? color}) => appFont(
-    fontSize: 30,
+    fontSize: sizeHero,
     fontWeight: FontWeight.w700,
     height: 1.2,
     letterSpacing: -0.5,
@@ -94,7 +94,7 @@ class AppText {
 
   /// Heading 1 — large trip titles ("ทริปดำน้ำเกาะเต่า 3 วัน 2 คืน"). 22–24sp.
   static TextStyle h1({Color? color}) => appFont(
-    fontSize: 24,
+    fontSize: sizeH1,
     fontWeight: FontWeight.w700,
     height: 1.25,
     letterSpacing: -0.3,
@@ -103,7 +103,7 @@ class AppText {
 
   /// Heading 2 — section headers ("ไฮไลท์ของทริป", "ตารางเดินทาง"). 18–20sp.
   static TextStyle h2({Color? color}) => appFont(
-    fontSize: 19,
+    fontSize: sizeH2,
     fontWeight: FontWeight.w600,
     height: 1.3,
     color: color,
@@ -112,7 +112,7 @@ class AppText {
   /// Subtitle / Body Large — form field labels, primary menus, sub-package
   /// names. 16sp. Pass [strong] for the SemiBold + accent-colour emphasis case.
   static TextStyle subtitle({Color? color, bool strong = false}) => appFont(
-    fontSize: 16,
+    fontSize: sizeSubtitle,
     fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
     height: 1.4,
     color: color,
@@ -121,7 +121,7 @@ class AppText {
   /// Body — trip details and long-form copy. 14sp is the most comfortable read
   /// on mobile; height 1.5 gives Thai text room to breathe.
   static TextStyle body({Color? color, bool strong = false}) => appFont(
-    fontSize: 14,
+    fontSize: sizeBody,
     fontWeight: strong ? FontWeight.w600 : FontWeight.w400,
     height: 1.5,
     color: color,
@@ -130,7 +130,7 @@ class AppText {
   /// Caption / Label — dates, seats-left, short tags ("เหลือ 2 ที่สุดท้าย").
   /// 11–12sp.
   static TextStyle caption({Color? color, bool strong = false}) => appFont(
-    fontSize: 12,
+    fontSize: sizeCaption,
     fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
     height: 1.35,
     color: color,
@@ -139,11 +139,50 @@ class AppText {
   /// Primary CTA label ("จองทริปนี้", "ชำระเงิน") — 16sp Bold for buttons
   /// sized ~48–56dp tall.
   static TextStyle button({Color? color}) => appFont(
-    fontSize: 16,
+    fontSize: sizeSubtitle,
     fontWeight: FontWeight.w700,
     letterSpacing: 0.3,
     color: color,
   );
+
+  /// Micro — badge/pill text, seat numbers, tiny overlay labels. 10sp is the
+  /// floor; anything smaller is unreadable in Thai once diacritics stack.
+  static TextStyle micro({Color? color, bool strong = false}) => appFont(
+    fontSize: sizeMicro,
+    fontWeight: strong ? FontWeight.w700 : FontWeight.w600,
+    height: 1.3,
+    color: color,
+  );
+
+  /// Label — the app's workhorse for dense rows, chips and metadata lines.
+  /// Sits between [caption] and [body]. 13sp.
+  static TextStyle label({Color? color, bool strong = false}) => appFont(
+    fontSize: sizeLabel,
+    fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
+    height: 1.4,
+    color: color,
+  );
+
+  /// Title — card headers and sheet titles that sit below a section [h2].
+  /// 18sp, matching [AppTheme.appBarTitleSize].
+  static TextStyle title({Color? color}) => appFont(
+    fontSize: sizeTitle,
+    fontWeight: FontWeight.w700,
+    height: 1.3,
+    color: color,
+  );
+
+  /// The canonical type ramp. Every `fontSize:` in the app resolves to one of
+  /// these — no half-points, no in-between sizes. Ordered smallest to largest.
+  static const double sizeMicro = 10;
+  static const double sizeCaption = 12;
+  static const double sizeLabel = 13;
+  static const double sizeBody = 14;
+  static const double sizeSubtitle = 16;
+  static const double sizeTitle = 18;
+  static const double sizeH2 = 20;
+  static const double sizeH1 = 24;
+  static const double sizeHero = 30;
 }
 
 class AppTheme {
@@ -176,6 +215,79 @@ class AppTheme {
   static const double radiusSmall = 16;
   static const double radiusMedium = 24;
   static const double radiusLarge = 32;
+
+  /// Corner-radius ramp. Every `BorderRadius.circular(...)` in the app resolves
+  /// to one of these six — the app previously carried 27 distinct values, which
+  /// reads as hand-tuning rather than a system.
+  ///
+  /// | Token        | Value | Use                                          |
+  /// |--------------|-------|----------------------------------------------|
+  /// | [radiusXs]   | 8     | swatches, tiny thumbnails, inline tags       |
+  /// | [radiusSm]   | 12    | dense list rows, compact controls            |
+  /// | [radiusMd]   | 16    | the default — cards, buttons, fields, sheets |
+  /// | [radiusLg]   | 24    | large surfaces, hero cards, modal sheets     |
+  /// | [radiusXl]   | 32    | full-bleed panels, onboarding art            |
+  /// | [radiusPill] | 999   | chips, badges, thin progress bars            |
+  static const double radiusXs = 8;
+  static const double radiusSm = 12;
+  static const double radiusMd = 16;
+  static const double radiusLg = 24;
+  static const double radiusXl = 32;
+  static const double radiusPill = 999;
+
+  // ---------------------------------------------------------------------------
+  // Semantic palette
+  //
+  // One family per meaning. The app previously mixed Tailwind *slate* and
+  // *gray* greys plus a bespoke set, and both *emerald* and *teal* greens —
+  // two neutrals and two brand hues reading as accidental drift. Everything
+  // now resolves to the emerald brand ramp + a single slate neutral ramp.
+  // ---------------------------------------------------------------------------
+
+  /// Brand emerald ramp — the only green family in the app.
+  static const Color brandDark = Color(0xFF065F46); // Emerald 800
+  static const Color brandDeep = Color(0xFF047857); // Emerald 700
+  static const Color brandMid = Color(0xFF10B981); // Emerald 500
+  static const Color brandSoft = Color(0xFF6EE7B7); // Emerald 300
+  static const Color brandTint = Color(0xFFECFDF5); // Emerald 50
+
+  /// Semantic hues. Each pairs with a theme-aware `*Tint` / `*OnTint` helper so
+  /// callers never hand-roll a background/foreground pair.
+  static const Color successColor = Color(0xFF16A34A); // Green 600
+  static const Color infoColor = Color(0xFF2563EB); // Blue 600
+  static const Color dangerColor = errorColor; // Rose 600 — alias
+
+  /// Neutral slate ramp — the app's single grey family.
+  static const Color slate900 = Color(0xFF0F172A);
+  static const Color slate700 = Color(0xFF334155);
+  static const Color slate600 = Color(0xFF475569);
+  static const Color slate400 = Color(0xFF94A3B8);
+  static const Color slate200 = Color(0xFFE2E8F0);
+  static const Color slate100 = Color(0xFFF1F5F9);
+  static const Color slate50 = Color(0xFFF8FAFC);
+
+  /// LINE brand green — a third-party mark, deliberately outside the ramp.
+  static const Color lineBrandColor = Color(0xFF06C755);
+
+  /// Tinted background for a semantic hue, weighted for the active theme.
+  /// Dark mode needs more alpha for the tint to register against a dark
+  /// surface, and the hue itself stays the foreground.
+  static Color tintOf(BuildContext context, Color hue) {
+    return hue.withValues(alpha: isDark(context) ? 0.18 : 0.10);
+  }
+
+  /// Readable foreground for [tintOf]. In light mode the saturated hue reads
+  /// fine on its own tint; in dark mode it is lifted so it clears the surface.
+  static Color onTintOf(BuildContext context, Color hue) {
+    return isDark(context)
+        ? Color.lerp(hue, Colors.white, 0.35)!
+        : Color.lerp(hue, Colors.black, 0.15)!;
+  }
+
+  static Color successTint(BuildContext context) =>
+      tintOf(context, successColor);
+  static Color dangerTint(BuildContext context) => tintOf(context, dangerColor);
+  static Color infoTint(BuildContext context) => tintOf(context, infoColor);
 
   /// ขนาดหัวข้อ AppBar มาตรฐานของทั้งแอป ใช้ที่เดียวคือ [appBarTheme]
   /// หน้าจอทั่วไปไม่ต้องกำหนดขนาดเอง ปล่อยให้รับจากธีม
@@ -282,7 +394,7 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
           return appFont(
-            fontSize: 12,
+            fontSize: AppText.sizeCaption,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
             color: isSelected ? primaryColor : textSecondary,
           );
@@ -329,7 +441,7 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
           textStyle: appFont(
             fontWeight: FontWeight.w800,
-            fontSize: 16,
+            fontSize: AppText.sizeSubtitle,
             letterSpacing: 0.5,
           ),
         ),
@@ -379,7 +491,7 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
           return appFont(
-            fontSize: 12,
+            fontSize: AppText.sizeCaption,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
             color: isSelected ? accentColor : darkTextSecondary,
           );
@@ -426,7 +538,7 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
           textStyle: appFont(
             fontWeight: FontWeight.w800,
-            fontSize: 16,
+            fontSize: AppText.sizeSubtitle,
             letterSpacing: 0.5,
           ),
         ),

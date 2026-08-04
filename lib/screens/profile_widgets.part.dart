@@ -17,7 +17,7 @@ class _IdentityPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: color.withValues(alpha: 0.14)),
       ),
       child: Row(
@@ -28,7 +28,7 @@ class _IdentityPill extends StatelessWidget {
           Text(
             label,
             style: appFont(
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
               color: AppTheme.textMain,
             ),
@@ -53,7 +53,7 @@ class _SectionHeading extends StatelessWidget {
       child: Text(
         title,
         style: appFont(
-          fontSize: 13,
+          fontSize: AppText.sizeLabel,
           fontWeight: FontWeight.w700,
           color: AppTheme.mutedText(context),
           letterSpacing: -0.1,
@@ -81,7 +81,7 @@ class _FormCard extends StatelessWidget {
           Text(
             title,
             style: appFont(
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.textMain,
             ),
@@ -91,7 +91,7 @@ class _FormCard extends StatelessWidget {
             Text(
               subtitle!,
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textSecondary,
               ),
@@ -231,10 +231,10 @@ class _AvatarSourceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.fieldSurface(context),
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
@@ -245,7 +245,7 @@ class _AvatarSourceTile extends StatelessWidget {
                 child: Text(
                   title,
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -315,12 +315,12 @@ class _ProfileTextFieldState extends State<_ProfileTextField> {
         filled: true,
         fillColor: AppTheme.fieldSurface(context),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide.none,
         ),
       ),
       style: appFont(
-        fontSize: 14,
+        fontSize: AppText.sizeBody,
         fontWeight: FontWeight.w700,
         color: AppTheme.textMain,
       ),
@@ -352,7 +352,7 @@ class _EmptyProfileState extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: Icon(icon, size: 26, color: AppTheme.primaryColor),
           ),
@@ -361,7 +361,7 @@ class _EmptyProfileState extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 17,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
               letterSpacing: -0.2,
@@ -372,7 +372,7 @@ class _EmptyProfileState extends StatelessWidget {
             body,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.45,
               fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,
@@ -401,7 +401,7 @@ class _InfoLine extends StatelessWidget {
           child: Text(
             text,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.35,
               fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,
@@ -438,7 +438,7 @@ class _SmallActionButton extends StatelessWidget {
       ),
       backgroundColor: effectiveColor.withValues(alpha: 0.08),
       side: BorderSide(color: effectiveColor.withValues(alpha: 0.14)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
     );
   }
 }
@@ -463,7 +463,7 @@ class _ReviewCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: appFont(
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.textMain,
             ),
@@ -485,7 +485,7 @@ class _ReviewCard extends StatelessWidget {
               Text(
                 dateText(review['created_at']),
                 style: appFont(
-                  fontSize: 11,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textSecondary,
                 ),
@@ -497,7 +497,7 @@ class _ReviewCard extends StatelessWidget {
             Text(
               _cleanText(review['comment']),
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 height: 1.45,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textSecondary,
@@ -538,7 +538,7 @@ class _PaymentMethodCard extends StatelessWidget {
                 Text(
                   title,
                   style: appFont(
-                    fontSize: 16,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.textMain,
                   ),
@@ -547,7 +547,7 @@ class _PaymentMethodCard extends StatelessWidget {
                 Text(
                   body,
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     height: 1.45,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textSecondary,
@@ -579,10 +579,10 @@ class _HelpTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: _sectionDecoration(context: context, radius: 22),
@@ -597,7 +597,7 @@ class _HelpTile extends StatelessWidget {
                     Text(
                       title,
                       style: appFont(
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.textMain,
                       ),
@@ -606,7 +606,7 @@ class _HelpTile extends StatelessWidget {
                     Text(
                       body,
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         height: 1.4,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.textSecondary,
@@ -846,7 +846,7 @@ class _ProfileDateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       onTap: () async {
         final now = DateTime.now();
         final picked = await showDatePicker(
@@ -869,7 +869,7 @@ class _ProfileDateField extends StatelessWidget {
           filled: true,
           fillColor: AppTheme.fieldSurface(context),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             borderSide: BorderSide.none,
           ),
         ),
@@ -878,7 +878,7 @@ class _ProfileDateField extends StatelessWidget {
             : Text(
                 _profileBirthDateLabel(value!),
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textMain,
                 ),
@@ -1095,7 +1095,7 @@ Future<void> _showLanguagePicker(BuildContext context) async {
   final selected = await showModalBottomSheet<String>(
     context: context,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
     ),
     builder: (sheetContext) {
       return SafeArea(
@@ -1107,7 +1107,7 @@ Future<void> _showLanguagePicker(BuildContext context) async {
               child: Text(
                 'เลือกภาษา',
                 style: appFont(
-                  fontSize: 16,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1148,7 +1148,7 @@ void _showSuccess(BuildContext context, String message) {
           style: appFont(fontWeight: FontWeight.w600),
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
     );
@@ -1169,7 +1169,7 @@ void _showError(BuildContext context, Object error) {
         ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppTheme.errorColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
     );

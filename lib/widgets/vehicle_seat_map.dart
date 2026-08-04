@@ -67,7 +67,7 @@ class VehicleSeatMap extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.fieldSurface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: LayoutBuilder(
@@ -98,7 +98,7 @@ class VehicleSeatMap extends StatelessWidget {
                   padding: EdgeInsets.symmetric(vertical: 16),
                   child: SizedBox(
                     width: 292,
-                    child: Divider(height: 1, color: Color(0xFFD8DEDB)),
+                    child: Divider(height: 1, color: Color(0xFFE2E8F0)),
                   ),
                 ),
                 ...rows.map(
@@ -154,8 +154,8 @@ class VehicleSeatMap extends StatelessWidget {
                     width: 2,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD8DEDB),
-                      borderRadius: BorderRadius.circular(2),
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                   )
                 : null,
@@ -193,7 +193,7 @@ class VehicleSeatMap extends StatelessWidget {
 
     return InkWell(
       onTap: selectable && seat != null ? () => onSeatTap(seat, id) : null,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: SizedBox(
         width: 52,
         height: spotlight ? 66 : 62,
@@ -207,7 +207,7 @@ class VehicleSeatMap extends StatelessWidget {
               height: 42,
               decoration: BoxDecoration(
                 color: visual.fill,
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 border: Border.all(
                   color: spotlight
                       ? Colors.white
@@ -268,7 +268,7 @@ class VehicleSeatMap extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: appFont(
                 color: visual.labelColor(context),
-                fontSize: 10.5,
+                fontSize: AppText.sizeMicro,
                 fontWeight: spotlight ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
@@ -321,7 +321,7 @@ class VehicleSeatLegend extends StatelessWidget {
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: visual.fill,
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
               ),
               child: _SeatGlyph(color: visual.glyph),
@@ -331,7 +331,7 @@ class VehicleSeatLegend extends StatelessWidget {
               _labels[tone] ?? '',
               style: appFont(
                 color: AppTheme.mutedText(context),
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -395,9 +395,9 @@ _SeatVisual _visualFor(SeatTone tone) {
       );
     case SeatTone.booked:
       return _SeatVisual(
-        fill: const Color(0xFFEFEFF1),
-        glyph: const Color(0xFFC4C8CF),
-        badge: const Color(0xFF9CA3AF),
+        fill: const Color(0xFFF1F5F9),
+        glyph: const Color(0xFFCBD5E1),
+        badge: const Color(0xFF94A3B8),
         badgeIconColor: Colors.white,
         badgeIcon: Icons.lock_rounded,
         labelColor: (context) =>
@@ -405,7 +405,7 @@ _SeatVisual _visualFor(SeatTone tone) {
       );
     case SeatTone.available:
       return _SeatVisual(
-        fill: const Color(0xFFE7F6EE),
+        fill: const Color(0xFFECFDF5),
         glyph: _accent,
         badge: _accent,
         badgeIconColor: Colors.white,
@@ -501,8 +501,8 @@ class _DriverBlock extends StatelessWidget {
             width: 44,
             height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFEFF1),
-              borderRadius: BorderRadius.circular(15),
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
             ),
             child: Icon(
@@ -516,7 +516,7 @@ class _DriverBlock extends StatelessWidget {
             'คนขับ',
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 10,
+              fontSize: AppText.sizeMicro,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -538,7 +538,7 @@ class _VehicleLabel extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: muted ? AppTheme.surface(context) : _accent.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(
           color: muted ? AppTheme.border(context) : Colors.transparent,
         ),
@@ -547,7 +547,7 @@ class _VehicleLabel extends StatelessWidget {
         text,
         style: appFont(
           color: muted ? AppTheme.mutedText(context) : _accent,
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w700,
         ),
       ),

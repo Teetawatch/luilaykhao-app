@@ -37,7 +37,7 @@ class _BookingSummaryCard extends StatelessWidget {
         children: [
           // Trip hero image
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
             child: AspectRatio(
               aspectRatio: 16 / 8,
               child: image.isEmpty
@@ -66,13 +66,13 @@ class _BookingSummaryCard extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: statusColor.withValues(alpha: 0.90),
-                                borderRadius: BorderRadius.circular(999),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                               ),
                               child: Text(
                                 statusText,
                                 style: appFont(
                                   color: Colors.white,
-                                  fontSize: 11,
+                                  fontSize: AppText.sizeCaption,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -101,7 +101,7 @@ class _BookingSummaryCard extends StatelessWidget {
                   textOf(trip['title'], 'รายละเอียดการจอง'),
                   style: appFont(
                     color: AppTheme.onSurface(context),
-                    fontSize: 18,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w900,
                     height: 1.25,
                   ),
@@ -187,7 +187,7 @@ class _BookingSummaryCard extends StatelessWidget {
                     color: _accent.withValues(
                       alpha: AppTheme.isDark(context) ? 0.15 : 0.07,
                     ),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     border: Border.all(
                       color: _accent.withValues(alpha: 0.20),
                     ),
@@ -205,7 +205,7 @@ class _BookingSummaryCard extends StatelessWidget {
                         style: appFont(
                           color: AppTheme.mutedText(context),
                           fontWeight: FontWeight.w700,
-                          fontSize: 13,
+                          fontSize: AppText.sizeLabel,
                         ),
                       ),
                       const Spacer(),
@@ -213,7 +213,7 @@ class _BookingSummaryCard extends StatelessWidget {
                         money(booking['total_amount']),
                         style: appFont(
                           color: _accent,
-                          fontSize: 18,
+                          fontSize: AppText.sizeTitle,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -350,7 +350,7 @@ class _DisabledInstallmentTile extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
@@ -365,7 +365,7 @@ class _DisabledInstallmentTile extends StatelessWidget {
                   height: 40,
                   decoration: BoxDecoration(
                     color: const Color(0xFFE2E8F0),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                   child: const Icon(
                     Icons.calendar_month_rounded,
@@ -383,7 +383,7 @@ class _DisabledInstallmentTile extends StatelessWidget {
                           const Text(
                             'ผ่อนชำระ',
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: AppText.sizeSubtitle,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF94A3B8),
                             ),
@@ -394,12 +394,12 @@ class _DisabledInstallmentTile extends StatelessWidget {
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                             ),
                             child: const Text(
                               'ไม่พร้อมใช้',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF92400E),
                               ),
@@ -411,7 +411,7 @@ class _DisabledInstallmentTile extends StatelessWidget {
                       const Text(
                         'ระยะเวลาไม่เพียงพอสำหรับการผ่อน',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           color: Color(0xFFCBD5E1),
                         ),
                       ),
@@ -426,7 +426,7 @@ class _DisabledInstallmentTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: const Color(0xFFFFFBEB),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               border: Border.all(color: const Color(0xFFFDE68A)),
             ),
             child: Row(
@@ -442,7 +442,7 @@ class _DisabledInstallmentTile extends StatelessWidget {
                   child: Text(
                     'ทริปจะเริ่มในอีก $days วัน ต้องมีอย่างน้อย ${interval + 1} วันขึ้นไปจึงจะผ่อนได้ขั้นต่ำ 2 งวด',
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       color: Color(0xFF92400E),
                       height: 1.4,
                     ),
@@ -477,7 +477,7 @@ class _DepositBreakdown extends StatelessWidget {
         color: _accent.withValues(
           alpha: AppTheme.isDark(context) ? 0.14 : 0.06,
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: _accent.withValues(alpha: 0.22)),
       ),
       child: Column(
@@ -510,7 +510,7 @@ class _DepositBreakdown extends StatelessWidget {
               'ลดมัดจำให้แล้ว $tierDiscount% ตามระดับสมาชิกของคุณ',
               style: const TextStyle(
                 fontFamily: 'anuphan',
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w600,
                 color: _accent,
               ),
@@ -541,7 +541,7 @@ class _SplitBreakdown extends StatelessWidget {
         color: _accent.withValues(
           alpha: AppTheme.isDark(context) ? 0.14 : 0.06,
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: _accent.withValues(alpha: 0.22)),
       ),
       child: Column(
@@ -606,7 +606,7 @@ class _DepositBreakdownRow extends StatelessWidget {
             step,
             style: appFont(
               color: highlight ? Colors.white : accent,
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -617,7 +617,7 @@ class _DepositBreakdownRow extends StatelessWidget {
             label,
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -652,7 +652,7 @@ class _DepositCancellationClause extends StatelessWidget {
         color: danger.withValues(
           alpha: AppTheme.isDark(context) ? 0.18 : 0.06,
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: danger.withValues(alpha: 0.24)),
       ),
       child: Row(
@@ -663,7 +663,7 @@ class _DepositCancellationClause extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: danger,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
             child: const Icon(Icons.gavel_rounded, color: Colors.white, size: 20),
           ),
@@ -676,7 +676,7 @@ class _DepositCancellationClause extends StatelessWidget {
                   'เงื่อนไขสำคัญ · กรุณาอ่าน',
                   style: appFont(
                     color: danger,
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -686,7 +686,7 @@ class _DepositCancellationClause extends StatelessWidget {
                   'เนื่องจากมีการนำไปสำรองจ่ายค่าอุทยานและยานพาหนะล่วงหน้า',
                   style: appFont(
                     color: AppTheme.onSurface(context),
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w600,
                     height: 1.5,
                   ),
@@ -696,7 +696,7 @@ class _DepositCancellationClause extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppTheme.surface(context),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     border: Border.all(color: danger.withValues(alpha: 0.18)),
                   ),
                   child: Row(
@@ -708,7 +708,7 @@ class _DepositCancellationClause extends StatelessWidget {
                           'ต้องชำระยอดส่วนที่เหลือก่อนเดินทาง 15 วัน (ภายใน $dueText)',
                           style: appFont(
                             color: AppTheme.onSurface(context),
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -850,7 +850,7 @@ class _PromptPayPanel extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                 border: Border.all(
                   color: _accent.withValues(alpha: 0.18),
                 ),
@@ -869,7 +869,7 @@ class _PromptPayPanel extends StatelessWidget {
             'พร้อมเพย์ / e-Wallet',
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -878,7 +878,7 @@ class _PromptPayPanel extends StatelessWidget {
             _displayPromptPayId,
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.5,
             ),
@@ -893,7 +893,7 @@ class _PromptPayPanel extends StatelessWidget {
                 foregroundColor: _accent,
                 side: BorderSide(color: _accent.withValues(alpha: 0.30)),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
               icon: downloadingQr
@@ -909,7 +909,7 @@ class _PromptPayPanel extends StatelessWidget {
               label: Text(
                 downloadingQr ? 'กำลังดาวน์โหลด' : 'ดาวน์โหลด QR CODE',
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -996,7 +996,7 @@ class _TransferTimeSection extends StatelessWidget {
             'กรอกวันและเวลาตามสลิปโอนเงิน เพื่อให้ทีมงานตรวจสอบได้รวดเร็ว',
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
               height: 1.4,
             ),
@@ -1042,7 +1042,7 @@ class _SlipUploadSection extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           InkWell(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             onTap: onPick,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
@@ -1050,7 +1050,7 @@ class _SlipUploadSection extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: hasImage ? Colors.black : AppTheme.fieldSurface(context),
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                 border: Border.all(
                   color: hasImage
                       ? _accent
@@ -1063,7 +1063,7 @@ class _SlipUploadSection extends StatelessWidget {
                       fit: StackFit.expand,
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(21),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                           child: Image.file(
                             File(image!.path),
                             fit: BoxFit.contain,
@@ -1091,7 +1091,7 @@ class _SlipUploadSection extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: _accent,
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1106,7 +1106,7 @@ class _SlipUploadSection extends StatelessWidget {
                                   'พร้อมส่งตรวจสอบ',
                                   style: appFont(
                                     color: Colors.white,
-                                    fontSize: 12,
+                                    fontSize: AppText.sizeCaption,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
@@ -1124,7 +1124,7 @@ class _SlipUploadSection extends StatelessWidget {
                           height: 56,
                           decoration: BoxDecoration(
                             color: _accent.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                             border: Border.all(
                               color: _accent.withValues(alpha: 0.20),
                             ),
@@ -1140,7 +1140,7 @@ class _SlipUploadSection extends StatelessWidget {
                           'แตะเพื่อแนบรูปภาพสลิป',
                           style: appFont(
                             color: AppTheme.onSurface(context),
-                            fontSize: 14,
+                            fontSize: AppText.sizeBody,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -1149,7 +1149,7 @@ class _SlipUploadSection extends StatelessWidget {
                           'ต้องแนบทุกครั้งก่อนยืนยันการชำระเงิน',
                           style: appFont(
                             color: AppTheme.mutedText(context),
-                            fontSize: 12,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

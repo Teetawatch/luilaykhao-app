@@ -138,7 +138,7 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                         const SizedBox(height: 18),
                         const _StaffGroupLabel(
                           label: 'วันนี้ / กำลังเดินทาง',
-                          color: Color(0xFFDC2626),
+                          color: Color(0xFFE11D48),
                         ),
                         const SizedBox(height: 8),
                         for (final s in activeForList) ...[
@@ -162,7 +162,7 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                         const SizedBox(height: 18),
                         const _StaffGroupLabel(
                           label: 'ผ่านมาแล้ว',
-                          color: Color(0xFF6B7280),
+                          color: Color(0xFF64748B),
                         ),
                         const SizedBox(height: 8),
                         for (final s in pastSchedules.take(5)) ...[
@@ -207,15 +207,15 @@ class _StaffCheckInCta extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF0D9488), Color(0xFF0F766E)],
+              colors: [Color(0xFF059669), Color(0xFF047857)],
             ),
           ),
           child: Row(
@@ -225,7 +225,7 @@ class _StaffCheckInCta extends StatelessWidget {
                 height: 46,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: const Icon(
                   Icons.qr_code_scanner_rounded,
@@ -241,7 +241,7 @@ class _StaffCheckInCta extends StatelessWidget {
                     Text(
                       'เช็คอินลูกค้า',
                       style: appFont(
-                        fontSize: 16,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                       ),
@@ -250,7 +250,7 @@ class _StaffCheckInCta extends StatelessWidget {
                     Text(
                       'สแกน QR หรือกรอกเลขการจองเพื่อเช็คอิน',
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w500,
                         color: Colors.white.withValues(alpha: 0.88),
                       ),
@@ -296,11 +296,11 @@ class _StaffTodayHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0F766E), Color(0xFF064E45)],
+          colors: [Color(0xFF047857), Color(0xFF065F46)],
         ),
       ),
       child: Column(
@@ -311,8 +311,8 @@ class _StaffTodayHero extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626),
-                  borderRadius: BorderRadius.circular(999),
+                  color: const Color(0xFFE11D48),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -322,7 +322,7 @@ class _StaffTodayHero extends StatelessWidget {
                     Text(
                       'งานวันนี้',
                       style: appFont(
-                        fontSize: 11,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         letterSpacing: 0.2,
@@ -335,7 +335,7 @@ class _StaffTodayHero extends StatelessWidget {
               Text(
                 dateText,
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   color: Colors.white.withValues(alpha: 0.85),
                 ),
@@ -348,7 +348,7 @@ class _StaffTodayHero extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: appFont(
-              fontSize: 19,
+              fontSize: AppText.sizeH2,
               height: 1.2,
               fontWeight: FontWeight.w800,
               color: Colors.white,
@@ -371,7 +371,7 @@ class _StaffTodayHero extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w500,
                       color: Colors.white.withValues(alpha: 0.85),
                     ),
@@ -387,7 +387,7 @@ class _StaffTodayHero extends StatelessWidget {
               Text(
                 'เช็คอินแล้ว',
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w600,
                   color: Colors.white.withValues(alpha: 0.85),
                 ),
@@ -396,7 +396,7 @@ class _StaffTodayHero extends StatelessWidget {
               Text(
                 '$checkedIn / $total คน',
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                   letterSpacing: -0.2,
@@ -406,7 +406,7 @@ class _StaffTodayHero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7,
@@ -425,13 +425,13 @@ class _StaffTodayHero extends StatelessWidget {
               icon: const Icon(Icons.qr_code_scanner_rounded, size: 19),
               label: Text(
                 allIn ? 'เช็คอินครบแล้ว · เปิดสแกน' : 'เปิด QR เช็คอิน',
-                style: appFont(fontSize: 15, fontWeight: FontWeight.w800),
+                style: appFont(fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w800),
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF064E45),
+                foregroundColor: const Color(0xFF065F46),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
             ),
@@ -462,7 +462,7 @@ class _StaffToolbar extends StatelessWidget {
       _StaffToolTile(
         icon: Icons.event_note_outlined,
         label: 'กำหนดการ',
-        color: const Color(0xFF0D9488),
+        color: const Color(0xFF059669),
         onTap: () => _pushPremium(
           context,
           ScheduleItineraryScreen(scheduleId: scheduleId, tripTitle: tripTitle),
@@ -507,7 +507,7 @@ class _StaffToolbar extends StatelessWidget {
       _StaffToolTile(
         icon: Icons.report_gmailerrorred_outlined,
         label: 'แจ้งเหตุ',
-        color: const Color(0xFFDC2626),
+        color: const Color(0xFFE11D48),
         onTap: () => _pushPremium(
           context,
           ReportIncidentScreen(
@@ -562,7 +562,7 @@ class _StaffToolTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
@@ -572,7 +572,7 @@ class _StaffToolTile extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: Icon(icon, size: 21, color: color),
               ),
@@ -582,7 +582,7 @@ class _StaffToolTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.onSurface(context),
                   letterSpacing: -0.1,
@@ -615,7 +615,7 @@ class _StaffEmptyState extends StatelessWidget {
             height: 64,
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             ),
             child: const Icon(
               Icons.work_history_outlined,
@@ -627,7 +627,7 @@ class _StaffEmptyState extends StatelessWidget {
           Text(
             'ยังไม่มีงานที่ได้รับมอบหมาย',
             style: appFont(
-              fontSize: 15.5,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
               color: AppTheme.textMain,
               letterSpacing: -0.1,
@@ -639,7 +639,7 @@ class _StaffEmptyState extends StatelessWidget {
             'ผู้โดยสารและ QR เช็คอิน · ลองดึงเพื่อรีเฟรชอีกครั้ง',
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.5,
               fontWeight: FontWeight.w500,
               color: AppTheme.textSecondary,
@@ -654,7 +654,7 @@ class _StaffEmptyState extends StatelessWidget {
                   icon: const Icon(Icons.forum_outlined, size: 18),
                   label: Text(
                     'ติดต่อทีม',
-                    style: appFont(fontSize: 14, fontWeight: FontWeight.w700),
+                    style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.onSurface(context),
@@ -663,7 +663,7 @@ class _StaffEmptyState extends StatelessWidget {
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                   ),
                 ),
@@ -675,14 +675,14 @@ class _StaffEmptyState extends StatelessWidget {
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: Text(
                     'รีเฟรชงาน',
-                    style: appFont(fontSize: 14, fontWeight: FontWeight.w800),
+                    style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w800),
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                   ),
                 ),
@@ -731,7 +731,7 @@ class _StaffSummaryRow extends StatelessWidget {
             icon: Icons.calendar_today_outlined,
             value: totalSchedules.toString(),
             label: 'งานทั้งหมด',
-            color: const Color(0xFF0D9488),
+            color: const Color(0xFF059669),
           ),
         ),
         const SizedBox(width: 10),
@@ -776,7 +776,7 @@ class _StaffStatBox extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: color.withValues(alpha: 0.14)),
       ),
       child: Column(
@@ -787,7 +787,7 @@ class _StaffStatBox extends StatelessWidget {
           Text(
             value,
             style: appFont(
-              fontSize: 20,
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
               letterSpacing: -0.4,
@@ -799,7 +799,7 @@ class _StaffStatBox extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: appFont(
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
             ),
@@ -831,7 +831,7 @@ class _StaffGroupLabel extends StatelessWidget {
           Text(
             label,
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: color,
               letterSpacing: -0.1,
@@ -881,15 +881,15 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
     final dateText = _staffDateRange(departureDate, returnDate);
     final vehicleName = vehicle != null ? _cleanText(vehicle['name']) : '';
 
-    final accentColor = widget.isToday ? const Color(0xFFDC2626) : const Color(0xFF0D9488);
+    final accentColor = widget.isToday ? const Color(0xFFE11D48) : const Color(0xFF059669);
 
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: widget.isToday
-              ? const Color(0xFFDC2626).withValues(alpha: 0.22)
+              ? const Color(0xFFE11D48).withValues(alpha: 0.22)
               : AppTheme.border(context).withValues(alpha: 0.55),
         ),
       ),
@@ -914,15 +914,15 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                               margin: const EdgeInsets.only(bottom: 6),
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDC2626).withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(999),
+                                color: const Color(0xFFE11D48).withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                               ),
                               child: Text(
                                 'กำลังเดินทาง',
                                 style: appFont(
-                                  fontSize: 10.5,
+                                  fontSize: AppText.sizeMicro,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFFDC2626),
+                                  color: const Color(0xFFE11D48),
                                   letterSpacing: -0.1,
                                 ),
                               ),
@@ -932,7 +932,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
-                              fontSize: 16,
+                              fontSize: AppText.sizeSubtitle,
                               fontWeight: FontWeight.w800,
                               height: 1.25,
                               color: AppTheme.onSurface(context),
@@ -952,7 +952,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: appFont(
-                                      fontSize: 12,
+                                      fontSize: AppText.sizeCaption,
                                       fontWeight: FontWeight.w500,
                                       color: AppTheme.textSecondary,
                                     ),
@@ -1009,7 +1009,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                         Text(
                           'QR Check-in',
                           style: appFont(
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.textMain,
                             letterSpacing: -0.1,
@@ -1021,7 +1021,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                               ? 'ยังไม่มีผู้โดยสาร'
                               : '$checkedIn / $totalConfirmed คน',
                           style: appFont(
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w800,
                             color: accentColor,
                             letterSpacing: -0.1,
@@ -1032,7 +1032,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                     if (totalConfirmed > 0) ...[
                       const SizedBox(height: 6),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                         child: LinearProgressIndicator(
                           minHeight: 6,
                           value: checkinProgress,
@@ -1048,7 +1048,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                             ? 'เช็คอินครบแล้ว'
                             : 'เหลือ ${totalConfirmed - checkedIn} คน ยังไม่เช็คอิน',
                         style: appFont(
-                          fontSize: 11.5,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.textSecondary,
                         ),
@@ -1070,7 +1070,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                         Text(
                           'จุดรับผู้โดยสาร',
                           style: appFont(
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.textMain,
                             letterSpacing: -0.1,
@@ -1093,7 +1093,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppTheme.subtleSurface(context),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       ),
                       child: Column(
                         children: [
@@ -1153,7 +1153,7 @@ class _PickupPointRow extends StatefulWidget {
 class _PickupPointRowState extends State<_PickupPointRow> {
   bool _expanded = false;
 
-  static const Color _teal = Color(0xFF0D9488);
+  static const Color _teal = Color(0xFF059669);
 
   List<Map<String, dynamic>> get _passengers =>
       (widget.point['passengers'] as List? ?? []).map(_toMap).toList();
@@ -1207,7 +1207,7 @@ class _PickupPointRowState extends State<_PickupPointRow> {
                     Text(
                       label,
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w600,
                         color: widget.isDefault
                             ? AppTheme.textSecondary
@@ -1219,7 +1219,7 @@ class _PickupPointRowState extends State<_PickupPointRow> {
                       Text(
                         regionLabel,
                         style: appFont(
-                          fontSize: 11.5,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.textSecondary,
                         ),
@@ -1232,12 +1232,12 @@ class _PickupPointRowState extends State<_PickupPointRow> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: _teal.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Text(
                   '$count คน',
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: _teal,
                     letterSpacing: -0.1,
@@ -1300,7 +1300,7 @@ class _PickupPassengerRow extends StatelessWidget {
                 : Icons.radio_button_unchecked_rounded,
             size: 15,
             color: checkedIn
-                ? const Color(0xFF0D9488)
+                ? const Color(0xFF059669)
                 : AppTheme.mutedText(context),
           ),
           const SizedBox(width: 8),
@@ -1308,7 +1308,7 @@ class _PickupPassengerRow extends StatelessWidget {
             child: Text(
               name,
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textMain,
               ),
@@ -1328,7 +1328,7 @@ class _PickupPassengerRow extends StatelessWidget {
                     Text(
                       phone,
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF2563EB),
                       ),
@@ -1377,7 +1377,7 @@ class _StaffScheduleAction extends StatelessWidget {
             _StaffActionRow(
               icon: Icons.event_note_outlined,
               label: 'ดูกำหนดการเดินทาง',
-              color: const Color(0xFF0D9488),
+              color: const Color(0xFF059669),
               onTap: () => _pushPremium(
                 context,
                 ScheduleItineraryScreen(
@@ -1436,7 +1436,7 @@ class _StaffScheduleAction extends StatelessWidget {
             _StaffActionRow(
               icon: Icons.qr_code_scanner,
               label: 'เปิดหน้า QR Check-in',
-              color: const Color(0xFF0D9488),
+              color: const Color(0xFF059669),
               roundedBottom: true,
               onTap: () => _pushPremium(context, const StaffCheckInScreen()),
             ),
@@ -1467,7 +1467,7 @@ class _StaffActionRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: roundedBottom
-          ? const BorderRadius.vertical(bottom: Radius.circular(18))
+          ? const BorderRadius.vertical(bottom: Radius.circular(AppTheme.radiusMd))
           : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
@@ -1478,7 +1478,7 @@ class _StaffActionRow extends StatelessWidget {
             Text(
               label,
               style: appFont(
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w600,
                 color: color,
                 letterSpacing: -0.1,
@@ -1505,10 +1505,10 @@ class _StaffScheduleStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      'active' => ('กำลังดำเนินการ', const Color(0xFF0D9488)),
+      'active' => ('กำลังดำเนินการ', const Color(0xFF059669)),
       'confirmed' => ('ยืนยันแล้ว', const Color(0xFF2563EB)),
-      'completed' => ('จบแล้ว', const Color(0xFF6B7280)),
-      'cancelled' => ('ยกเลิก', const Color(0xFFDC2626)),
+      'completed' => ('จบแล้ว', const Color(0xFF64748B)),
+      'cancelled' => ('ยกเลิก', const Color(0xFFE11D48)),
       _ => ('รอยืนยัน', const Color(0xFFD97706)),
     };
 
@@ -1516,12 +1516,12 @@ class _StaffScheduleStatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         label,
         style: appFont(
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w700,
           color: color,
           letterSpacing: -0.1,
@@ -1548,7 +1548,7 @@ class _StaffInfoChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -1561,7 +1561,7 @@ class _StaffInfoChip extends StatelessWidget {
           Text(
             label,
             style: appFont(
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
               color: AppTheme.textMain,
               letterSpacing: -0.1,

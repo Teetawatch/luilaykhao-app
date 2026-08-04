@@ -83,7 +83,7 @@ class _TripProgressCardState extends State<TripProgressCard> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -101,7 +101,7 @@ class _TripProgressCardState extends State<TripProgressCard> {
                 child: Text(
                   'ตอนนี้ถึงไหนแล้ว',
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -110,7 +110,7 @@ class _TripProgressCardState extends State<TripProgressCard> {
               Text(
                 '$reached/$total',
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.primaryColor,
                 ),
@@ -119,7 +119,7 @@ class _TripProgressCardState extends State<TripProgressCard> {
           ),
           const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(AppTheme.radiusXs),
             child: LinearProgressIndicator(
               value: percent / 100,
               minHeight: 7,
@@ -144,7 +144,7 @@ class _TripProgressCardState extends State<TripProgressCard> {
                   child: Text(
                     'ข้อมูลออฟไลน์ • อัปเดตล่าสุด ${_relativeTime(_fetchedAt!)}',
                     style: appFont(
-                      fontSize: 11,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
                     ),
@@ -221,7 +221,7 @@ class _MilestoneRow extends StatelessWidget {
                   Text(
                     textOf(item['title']),
                     style: appFont(
-                      fontSize: 13.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
                       color: reached || isCurrent
                           ? AppTheme.onSurface(context)
@@ -233,7 +233,7 @@ class _MilestoneRow extends StatelessWidget {
                     Text(
                       isCurrent ? '$time • อยู่ที่นี่' : time,
                       style: appFont(
-                        fontSize: 11.5,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: isCurrent
                             ? AppTheme.primaryColor

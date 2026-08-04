@@ -271,7 +271,7 @@ void _openAddonImage(BuildContext context, String url) {
                         ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.62),
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                           border: Border.all(
                             color: Colors.white.withValues(alpha: 0.25),
                           ),
@@ -289,7 +289,7 @@ void _openAddonImage(BuildContext context, String url) {
                               'ปิด',
                               style: appFont(
                                 color: Colors.white,
-                                fontSize: 14,
+                                fontSize: AppText.sizeBody,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -441,28 +441,28 @@ InputDecoration _fieldDecoration({
     prefixIcon: Icon(icon, size: 19, color: AppTheme.mutedText(context)),
     prefixIconConstraints: const BoxConstraints(minWidth: 44),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       borderSide: BorderSide(color: _cardBorder(context)),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       borderSide: BorderSide(color: _cardBorder(context)),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       borderSide: const BorderSide(color: _softAccent, width: 1.4),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       borderSide: const BorderSide(color: AppTheme.errorColor),
     ),
     focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       borderSide: const BorderSide(color: AppTheme.errorColor, width: 1.4),
     ),
     hintStyle: appFont(
       color: _mutedTextColor(context).withValues(alpha: 0.62),
-      fontSize: 14,
+      fontSize: AppText.sizeBody,
       fontWeight: FontWeight.w500,
     ),
   );
@@ -471,7 +471,7 @@ InputDecoration _fieldDecoration({
 TextStyle _labelStyle(BuildContext context) {
   return appFont(
     color: _mutedTextColor(context),
-    fontSize: 12,
+    fontSize: AppText.sizeCaption,
     fontWeight: FontWeight.w800,
     height: 1.2,
   );
@@ -878,9 +878,9 @@ _SeatVisual _seatVisual({required String status, required bool selected}) {
   switch (status) {
     case 'booked':
       return const _SeatVisual(
-        fill: Color(0xFFEFEFF1),
-        glyph: Color(0xFFC4C8CF),
-        badge: Color(0xFF9CA3AF),
+        fill: Color(0xFFF1F5F9),
+        glyph: Color(0xFFCBD5E1),
+        badge: Color(0xFF94A3B8),
       );
     case 'locked':
       return const _SeatVisual(
@@ -890,7 +890,7 @@ _SeatVisual _seatVisual({required String status, required bool selected}) {
       );
     default: // available
       return const _SeatVisual(
-        fill: Color(0xFFE7F6EE),
+        fill: Color(0xFFECFDF5),
         glyph: _softAccent,
         badge: _softAccent,
       );

@@ -40,7 +40,7 @@ class _FriendlyErrorScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: appFont(
                   color: AppTheme.onSurface(context),
-                  fontSize: 18,
+                  fontSize: AppText.sizeTitle,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -50,7 +50,7 @@ class _FriendlyErrorScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: appFont(
                   color: AppTheme.mutedText(context),
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   height: 1.5,
                   fontWeight: FontWeight.w600,
                 ),

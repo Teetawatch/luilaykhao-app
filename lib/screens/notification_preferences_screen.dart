@@ -93,7 +93,7 @@ class _PreferenceTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: SwitchListTile.adaptive(
@@ -114,7 +114,7 @@ class _PreferenceTile extends StatelessWidget {
           label,
           style: appFont(
             color: AppTheme.onSurface(context),
-            fontSize: 14.5,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -122,7 +122,7 @@ class _PreferenceTile extends StatelessWidget {
           subtitle,
           style: appFont(
             color: AppTheme.mutedText(context),
-            fontSize: 12.5,
+            fontSize: AppText.sizeLabel,
             fontWeight: FontWeight.w600,
           ),
         ),

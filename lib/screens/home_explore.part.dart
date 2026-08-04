@@ -435,7 +435,7 @@ class _HeroHeaderState extends State<HeroHeader> {
                   '${greeting.text} ${greeting.emoji}',
                   style: appFont(
                     color: Colors.white.withValues(alpha: 0.92),
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w600,
                     shadows: const [
                       Shadow(color: Color(0x4D000000), blurRadius: 6),
@@ -527,7 +527,7 @@ class _HeroHeaderState extends State<HeroHeader> {
                           color: Colors.white.withValues(
                             alpha: active ? 0.95 : 0.5,
                           ),
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                         ),
                       ),
                     ),
@@ -554,7 +554,7 @@ class _HeroSlideImage extends StatelessWidget {
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
-      placeholder: (_, _) => Container(color: const Color(0xFF0A3D46)),
+      placeholder: (_, _) => Container(color: const Color(0xFF065F46)),
       errorWidget: (_, _, _) => const _HeroGradientFallback(),
     );
   }
@@ -613,7 +613,7 @@ class _HeroTopBar extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
-        bottom: Radius.circular(20 * backgroundProgress),
+        bottom: Radius.circular(AppTheme.radiusLg * backgroundProgress),
       ),
       child: BackdropFilter(
         filter: ImageFilter.blur(
@@ -678,7 +678,7 @@ class _HeroTopBar extends StatelessWidget {
                               'สวัสดี, $firstName',
                               style: appFont(
                                 color: textColor,
-                                fontSize: 17,
+                                fontSize: AppText.sizeTitle,
                                 height: 1.1,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.2,
@@ -695,7 +695,7 @@ class _HeroTopBar extends StatelessWidget {
                                   AppTheme.textSecondary,
                                   backgroundProgress,
                                 ),
-                                fontSize: 13,
+                                fontSize: AppText.sizeLabel,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -750,7 +750,7 @@ class _HeroTopBar extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: AppTheme.errorColor,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                               border: Border.all(color: Colors.white, width: 2),
                             ),
                             child: Text(
@@ -760,7 +760,7 @@ class _HeroTopBar extends StatelessWidget {
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 10,
+                                fontSize: AppText.sizeMicro,
                                 fontWeight: FontWeight.w900,
                                 height: 1.1,
                               ),
@@ -791,7 +791,7 @@ class _HomeInspiredTopSection extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       child: Column(
         children: [
@@ -853,9 +853,9 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
       curve: Curves.easeOut,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
-          color: _focused ? const Color(0xFF0B8A6E) : const Color(0xFFE5EBEB),
+          color: _focused ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
           width: _focused ? 1.5 : 1,
         ),
       ),
@@ -871,8 +871,8 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                   Icons.search_rounded,
                   key: ValueKey(_focused),
                   color: _focused
-                      ? const Color(0xFF0B8A6E)
-                      : const Color(0xFF8A9FA0),
+                      ? const Color(0xFF059669)
+                      : const Color(0xFF94A3B8),
                   size: 18,
                 ),
               ),
@@ -885,18 +885,18 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
               focusNode: _focusNode,
               onSubmitted: widget.onSubmitted,
               textInputAction: TextInputAction.search,
-              cursorColor: const Color(0xFF0B8A6E),
+              cursorColor: const Color(0xFF059669),
               style: appFont(
-                color: const Color(0xFF111313),
-                fontSize: 14.5,
+                color: const Color(0xFF0F172A),
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w600,
               ),
               decoration: InputDecoration(
                 isDense: true,
                 hintText: 'ค้นหาทริป ปลายทาง หรือกิจกรรม',
                 hintStyle: appFont(
-                  color: const Color(0xFF111313).withValues(alpha: 0.42),
-                  fontSize: 13.5,
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.42),
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w500,
                 ),
                 border: InputBorder.none,
@@ -916,7 +916,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111313).withValues(alpha: 0.18),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -937,12 +937,12 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: const Color(0xFF0B8A6E).withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFF059669).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: const Icon(
                 Icons.tune_rounded,
-                color: Color(0xFF0B6E5A),
+                color: Color(0xFF047857),
                 size: 18,
               ),
             ),
@@ -966,14 +966,14 @@ class _HeroFinderChip extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Material(
         color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         child: InkWell(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           onTap: onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.35),
                 width: 1,
@@ -992,7 +992,7 @@ class _HeroFinderChip extends StatelessWidget {
                   'ผู้ช่วยหาทริป',
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1072,7 +1072,7 @@ class _TrustHub extends StatelessWidget {
                 vertical: 40,
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                 child: Container(
                   color: Colors.white,
                   child: Column(
@@ -1082,7 +1082,7 @@ class _TrustHub extends StatelessWidget {
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
-                        decoration: const BoxDecoration(color: Color(0xFF044C4D)),
+                        decoration: const BoxDecoration(color: Color(0xFF065F46)),
                         child: Row(
                           children: [
                             const Icon(
@@ -1096,7 +1096,7 @@ class _TrustHub extends StatelessWidget {
                                 'ใบอนุญาตประกอบธุรกิจนำเที่ยว',
                                 style: appFont(
                                   color: Colors.white,
-                                  fontSize: 16,
+                                  fontSize: AppText.sizeSubtitle,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -1137,7 +1137,7 @@ class _TrustHub extends StatelessWidget {
                                         ? progress.cumulativeBytesLoaded /
                                               progress.expectedTotalBytes!
                                         : null,
-                                    color: const Color(0xFF087C68),
+                                    color: const Color(0xFF059669),
                                   ),
                                 ),
                               );
@@ -1151,13 +1151,13 @@ class _TrustHub extends StatelessWidget {
                                     const Icon(
                                       Icons.broken_image_outlined,
                                       size: 48,
-                                      color: Color(0xFFB0BFBF),
+                                      color: Color(0xFF94A3B8),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'ไม่สามารถโหลดรูปได้',
                                       style: appFont(
-                                        color: const Color(0xFF8A9FA0),
+                                        color: const Color(0xFF94A3B8),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1174,9 +1174,9 @@ class _TrustHub extends StatelessWidget {
                         child: Text(
                           'เลขที่ใบอนุญาต 12/03773',
                           style: appFont(
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF6B8080),
+                            color: const Color(0xFF475569),
                           ),
                         ),
                       ),
@@ -1201,7 +1201,7 @@ class _TrustHub extends StatelessWidget {
             child: InkWell(
               onTap: showLicenseDialog,
               child: Ink(
-                decoration: const BoxDecoration(color: Color(0xFF0B6E5F)),
+                decoration: const BoxDecoration(color: Color(0xFF047857)),
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: compact ? 13 : 15,
@@ -1214,7 +1214,7 @@ class _TrustHub extends StatelessWidget {
                         height: 36,
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(11),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                           border: Border.all(
                             color: Colors.white.withValues(alpha: 0.24),
                             width: 1,
@@ -1275,10 +1275,10 @@ class _TrustHub extends StatelessWidget {
         // share the same corners; the shadow rides on the outer container.
         return Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1286,7 +1286,7 @@ class _TrustHub extends StatelessWidget {
                 if (statCells.isNotEmpty)
                   Container(
                     width: double.infinity,
-                    color: const Color(0xFFF4F8F8),
+                    color: const Color(0xFFF8FAFC),
                     padding: const EdgeInsets.symmetric(
                       vertical: 13,
                       horizontal: 8,
@@ -1302,7 +1302,7 @@ class _TrustHub extends StatelessWidget {
                                   width: 1,
                                   height: 34,
                                   color: const Color(
-                                    0xFF0A3D46,
+                                    0xFF065F46,
                                   ).withValues(alpha: 0.08),
                                 ),
                               Expanded(child: _TrustCell(data: statCells[i])),
@@ -1316,10 +1316,10 @@ class _TrustHub extends StatelessWidget {
                           'นับจากรอบที่เดินทางจบแล้วจริง',
                           textAlign: TextAlign.center,
                           style: appFont(
-                            fontSize: 10.5,
+                            fontSize: AppText.sizeMicro,
                             height: 1.0,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF7A9090),
+                            color: const Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -1404,7 +1404,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -1428,7 +1428,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
                 Text(
                   'รอบที่ที่นั่งเหลือน้อย',
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -1457,7 +1457,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
             'ทริปที่กำลังเปิดรับสมัคร',
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1473,7 +1473,7 @@ class _HomeTopSectionState extends State<HomeTopSection> {
               'เลือกภาคที่จะขึ้นและวันเดินทาง',
               style: appFont(
                 color: AppTheme.onSurface(context),
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1537,7 +1537,7 @@ class HomeHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
                   color: AppTheme.textMain,
-                  fontSize: 22,
+                  fontSize: AppText.sizeH1,
                   height: 1.16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1547,7 +1547,7 @@ class HomeHeader extends StatelessWidget {
                 'วันนี้อยากออกเดินทางแบบไหนดี?',
                 style: appFont(
                   color: AppTheme.textSecondary,
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   height: 1.4,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1561,7 +1561,7 @@ class HomeHeader extends StatelessWidget {
           height: 44,
           decoration: BoxDecoration(
             color: AppTheme.primaryColor.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           child: const Icon(
             Icons.travel_explore_rounded,
@@ -1612,8 +1612,8 @@ class _CategoryChipsSection extends StatelessWidget {
           Text(
             'หมวดหมู่',
             style: appFont(
-              color: const Color(0xFF063F46),
-              fontSize: 13,
+              color: const Color(0xFF065F46),
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
             ),
@@ -1663,7 +1663,7 @@ class _CategoryChip extends StatelessWidget {
     // Apple-style capsule filter chip (App Store / News / Maps language):
     // icon + label inline, flat fill, tint to signal selection — no drop
     // shadow, full 44pt-tall tap target.
-    const accent = Color(0xFF044C4D);
+    const accent = Color(0xFF065F46);
 
     return GestureDetector(
       onTap: () {
@@ -1676,12 +1676,12 @@ class _CategoryChip extends StatelessWidget {
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? accent : const Color(0xFFF1F4F4),
-          borderRadius: BorderRadius.circular(22),
+          color: isSelected ? accent : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: isSelected
                 ? accent
-                : const Color(0xFF0A3D46).withValues(alpha: 0.07),
+                : const Color(0xFF065F46).withValues(alpha: 0.07),
             width: 1,
           ),
         ),
@@ -1695,10 +1695,10 @@ class _CategoryChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 height: 1.0,
                 fontWeight: FontWeight.w700,
-                color: isSelected ? Colors.white : const Color(0xFF1C2B2B),
+                color: isSelected ? Colors.white : const Color(0xFF0F172A),
               ),
             ),
           ],
@@ -1738,7 +1738,7 @@ class _RecentlyViewedSection extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.history_rounded,
-                  color: Color(0xFF063F46),
+                  color: Color(0xFF065F46),
                   size: 22,
                 ),
                 const SizedBox(width: 8),
@@ -1746,8 +1746,8 @@ class _RecentlyViewedSection extends StatelessWidget {
                   child: Text(
                     'ดูล่าสุด',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 22,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeH1,
                       height: 1.1,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1807,8 +1807,8 @@ class _AlmostFullRail extends StatelessWidget {
                   child: Text(
                     'รอบที่ที่นั่งเหลือน้อย',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 25,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeH1,
                       height: 1.1,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1871,8 +1871,8 @@ class _FlashSaleRail extends StatelessWidget {
                   child: Text(
                     'Flash Sale · ราคาพิเศษ',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 25,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeH1,
                       height: 1.1,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1932,8 +1932,8 @@ class _PopularTripsSection extends StatelessWidget {
                             ? _tripTypeLabel(activeType!)
                             : 'ทริปแนะนำ',
                         style: appFont(
-                          color: const Color(0xFF063F46),
-                          fontSize: 25,
+                          color: const Color(0xFF065F46),
+                          fontSize: AppText.sizeH1,
                           height: 1.1,
                           fontWeight: FontWeight.w900,
                         ),
@@ -1948,8 +1948,8 @@ class _PopularTripsSection extends StatelessWidget {
                   child: Text(
                     'ดูทั้งหมด',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 14,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1999,7 +1999,7 @@ class _TrustCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF044C4D);
+    const accent = Color(0xFF065F46);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2011,7 +2011,7 @@ class _TrustCell extends StatelessWidget {
             Text(
               data.value,
               style: appFont(
-                fontSize: 16,
+                fontSize: AppText.sizeSubtitle,
                 height: 1.0,
                 fontWeight: FontWeight.w900,
                 color: accent,
@@ -2026,10 +2026,10 @@ class _TrustCell extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: appFont(
-            fontSize: 11,
+            fontSize: AppText.sizeCaption,
             height: 1.0,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF5E7777),
+            color: const Color(0xFF475569),
           ),
         ),
       ],
@@ -2109,8 +2109,8 @@ class _UpcomingDeparturesSection extends StatelessWidget {
                       Text(
                         'ใกล้ออกเดินทาง',
                         style: appFont(
-                          color: const Color(0xFF063F46),
-                          fontSize: 22,
+                          color: const Color(0xFF065F46),
+                          fontSize: AppText.sizeH1,
                           height: 1.1,
                           fontWeight: FontWeight.w900,
                         ),
@@ -2120,7 +2120,7 @@ class _UpcomingDeparturesSection extends StatelessWidget {
                         'จองก่อนที่นั่งเต็ม',
                         style: appFont(
                           color: AppTheme.textSecondary,
-                          fontSize: 13,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -2134,8 +2134,8 @@ class _UpcomingDeparturesSection extends StatelessWidget {
                   child: Text(
                     'ดูทั้งหมด',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 14,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -2197,7 +2197,7 @@ class _DepartureCard extends StatelessWidget {
         (seats <= 3 || (total != null && total > 0 && seats <= total * 0.3));
 
     final (Color badgeBg, Color badgeFg, String seatText) = full
-        ? (const Color(0xFFFDECEC), const Color(0xFFC0392B), 'เต็มแล้ว')
+        ? (const Color(0xFFFDECEC), const Color(0xFFE11D48), 'เต็มแล้ว')
         : nearlyFull
         ? (
             const Color(0xFFFFF1E6),
@@ -2205,8 +2205,8 @@ class _DepartureCard extends StatelessWidget {
             'เหลือ $seats ที่นั่ง',
           )
         : (
-            const Color(0xFFE8F3EF),
-            const Color(0xFF0B6E5A),
+            const Color(0xFFECFDF5),
+            const Color(0xFF047857),
             seats != null ? 'ว่าง $seats ที่นั่ง' : 'เปิดรับสมัคร',
           );
 
@@ -2227,8 +2227,8 @@ class _DepartureCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEAF0F0)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
         child: Row(
           children: [
@@ -2236,7 +2236,7 @@ class _DepartureCard extends StatelessWidget {
               width: 64,
               height: 72,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -2245,7 +2245,7 @@ class _DepartureCard extends StatelessWidget {
                         imageUrl: image,
                         fit: BoxFit.cover,
                         placeholder: (_, _) =>
-                            const ColoredBox(color: Color(0xFF044C4D)),
+                            const ColoredBox(color: Color(0xFF065F46)),
                         errorWidget: (_, _, _) => const _DepartureCoverFallback(),
                       )
                     else
@@ -2269,14 +2269,14 @@ class _DepartureCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 3),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.94),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                         ),
                         child: Text(
                           '${date.day} ${_thaiMonthsShort[date.month]}',
                           textAlign: TextAlign.center,
                           style: appFont(
-                            color: const Color(0xFF044C4D),
-                            fontSize: 11.5,
+                            color: const Color(0xFF065F46),
+                            fontSize: AppText.sizeCaption,
                             height: 1.0,
                             fontWeight: FontWeight.w800,
                           ),
@@ -2298,8 +2298,8 @@ class _DepartureCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      color: const Color(0xFF111313),
-                      fontSize: 14.5,
+                      color: const Color(0xFF0F172A),
+                      fontSize: AppText.sizeBody,
                       height: 1.15,
                       fontWeight: FontWeight.w800,
                     ),
@@ -2311,7 +2311,7 @@ class _DepartureCard extends StatelessWidget {
                         const Icon(
                           Icons.place_rounded,
                           size: 13,
-                          color: Color(0xFF8A9FA0),
+                          color: Color(0xFF94A3B8),
                         ),
                         const SizedBox(width: 2),
                         Expanded(
@@ -2320,8 +2320,8 @@ class _DepartureCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
-                              color: const Color(0xFF6B8080),
-                              fontSize: 12,
+                              color: const Color(0xFF475569),
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -2337,13 +2337,13 @@ class _DepartureCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: badgeBg,
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                     child: Text(
                       seatText,
                       style: appFont(
                         color: badgeFg,
-                        fontSize: 11.5,
+                        fontSize: AppText.sizeCaption,
                         height: 1.0,
                         fontWeight: FontWeight.w800,
                       ),
@@ -2367,7 +2367,7 @@ class _DepartureCoverFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ColoredBox(
-      color: Color(0xFF044C4D),
+      color: Color(0xFF065F46),
       child: Center(
         child: Icon(
           Icons.terrain_rounded,
@@ -2409,8 +2409,8 @@ class _CustomerReviewsSection extends StatelessWidget {
                       Text(
                         'เสียงจากลูกทริป',
                         style: appFont(
-                          color: const Color(0xFF063F46),
-                          fontSize: 22,
+                          color: const Color(0xFF065F46),
+                          fontSize: AppText.sizeH1,
                           height: 1.1,
                           fontWeight: FontWeight.w900,
                         ),
@@ -2420,7 +2420,7 @@ class _CustomerReviewsSection extends StatelessWidget {
                         'รีวิวจริงจากผู้ที่เดินทางไปกับเรา',
                         style: appFont(
                           color: AppTheme.textSecondary,
-                          fontSize: 13,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -2434,8 +2434,8 @@ class _CustomerReviewsSection extends StatelessWidget {
                   child: Text(
                     'ดูทั้งหมด',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 14,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -2490,9 +2490,9 @@ class _HomeReviewCard extends StatelessWidget {
       width: 300,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFA),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEAF0F0)),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2505,7 +2505,7 @@ class _HomeReviewCard extends StatelessWidget {
                 clipBehavior: Clip.antiAlias,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF044C4D),
+                  color: Color(0xFF065F46),
                   shape: BoxShape.circle,
                 ),
                 child: avatar.isNotEmpty
@@ -2528,8 +2528,8 @@ class _HomeReviewCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        color: const Color(0xFF111313),
-                        fontSize: 14,
+                        color: const Color(0xFF0F172A),
+                        fontSize: AppText.sizeBody,
                         height: 1.1,
                         fontWeight: FontWeight.w800,
                       ),
@@ -2563,8 +2563,8 @@ class _HomeReviewCard extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                color: const Color(0xFF44595A),
-                fontSize: 13,
+                color: const Color(0xFF475569),
+                fontSize: AppText.sizeLabel,
                 height: 1.45,
                 fontWeight: FontWeight.w500,
               ),
@@ -2577,7 +2577,7 @@ class _HomeReviewCard extends StatelessWidget {
                 const Icon(
                   Icons.hiking_rounded,
                   size: 14,
-                  color: Color(0xFF0B6E5A),
+                  color: Color(0xFF047857),
                 ),
                 const SizedBox(width: 5),
                 Expanded(
@@ -2586,8 +2586,8 @@ class _HomeReviewCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      color: const Color(0xFF0B6E5A),
-                      fontSize: 12,
+                      color: const Color(0xFF047857),
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -2609,7 +2609,7 @@ class _HomeReviewCard extends StatelessWidget {
       initial,
       style: appFont(
         color: Colors.white,
-        fontSize: 16,
+        fontSize: AppText.sizeSubtitle,
         fontWeight: FontWeight.w800,
       ),
     );
@@ -2648,7 +2648,7 @@ class _HomeReviewThumbnails extends StatelessWidget {
           GestureDetector(
             onTap: () => _open(context, i),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               child: Stack(
                 children: [
                   CachedNetworkImage(
@@ -2659,16 +2659,16 @@ class _HomeReviewThumbnails extends StatelessWidget {
                     placeholder: (_, _) => Container(
                       width: _size,
                       height: _size,
-                      color: const Color(0xFFEAF0F0),
+                      color: const Color(0xFFE2E8F0),
                     ),
                     errorWidget: (_, _, _) => Container(
                       width: _size,
                       height: _size,
-                      color: const Color(0xFFEAF0F0),
+                      color: const Color(0xFFE2E8F0),
                       child: const Icon(
                         Icons.broken_image_rounded,
                         size: 18,
-                        color: Color(0xFF9CA3AF),
+                        color: Color(0xFF94A3B8),
                       ),
                     ),
                   ),
@@ -2681,7 +2681,7 @@ class _HomeReviewThumbnails extends StatelessWidget {
                           '+$extra',
                           style: appFont(
                             color: Colors.white,
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -2713,7 +2713,9 @@ class PromotionsSection extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 36, 0, 36),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(56)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusXl),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2731,7 +2733,7 @@ class PromotionsSection extends StatelessWidget {
                         'โปรโมชั่นและสิทธิพิเศษ',
                         style: appFont(
                           color: AppTheme.textMain,
-                          fontSize: 22,
+                          fontSize: AppText.sizeH1,
                           height: 1.1,
                           fontWeight: FontWeight.w900,
                         ),
@@ -2741,7 +2743,7 @@ class PromotionsSection extends StatelessWidget {
                         'ส่วนลดและโค้ดพิเศษสำหรับการจอง',
                         style: appFont(
                           color: AppTheme.textSecondary,
-                          fontSize: 13,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -2760,7 +2762,7 @@ class PromotionsSection extends StatelessWidget {
                     'ดูทั้งหมด',
                     style: appFont(
                       color: AppTheme.primaryColor,
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -2826,7 +2828,7 @@ class _PromotionCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2842,7 +2844,7 @@ class _PromotionCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     height: 1.3,
                   ),
@@ -2856,7 +2858,7 @@ class _PromotionCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.4),
                   ),
@@ -2865,7 +2867,7 @@ class _PromotionCard extends StatelessWidget {
                   _discountLabel(),
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -2883,7 +2885,7 @@ class _PromotionCard extends StatelessWidget {
                     'เหลือเพียง $remainingUses สิทธิ์',
                     style: appFont(
                       color: Colors.white,
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -2897,7 +2899,7 @@ class _PromotionCard extends StatelessWidget {
                   'ใช้ได้ถึง ${_formatDate(endDate.toString())}',
                   style: appFont(
                     color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 11,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -2957,7 +2959,7 @@ class _FlashCountdownState extends State<_FlashCountdown> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
       ),
       child: Row(
@@ -2969,7 +2971,7 @@ class _FlashCountdownState extends State<_FlashCountdown> {
             'FLASH SALE · $label',
             style: appFont(
               color: Colors.white,
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.2,
             ),
@@ -3005,7 +3007,7 @@ class _CodeChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.35),
             style: BorderStyle.solid,
@@ -3018,7 +3020,7 @@ class _CodeChip extends StatelessWidget {
               code,
               style: appFont(
                 color: Colors.white,
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.5,
               ),
@@ -3042,7 +3044,7 @@ class _CodeChip extends StatelessWidget {
         ),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
       ),
     );
   }
@@ -3069,7 +3071,7 @@ class PromotionsScreen extends StatelessWidget {
           'โปรโมชั่นและสิทธิพิเศษ',
           style: appFont(
             color: AppTheme.onSurface(context),
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -3090,7 +3092,7 @@ class PromotionsScreen extends StatelessWidget {
                   '${promotions.length} ดีลพร้อมใช้งาน',
                   style: appFont(
                     color: AppTheme.primaryColor,
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -3125,7 +3127,7 @@ class _PromotionsHintBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.16),
         ),
@@ -3142,7 +3144,7 @@ class _PromotionsHintBanner extends StatelessWidget {
             child: Text(
               'แตะที่โค้ดเพื่อคัดลอก แล้วนำไปกรอกตอนชำระเงินเพื่อรับส่วนลด',
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 height: 1.4,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.primaryColor,
@@ -3184,7 +3186,7 @@ class _PromotionsEmptyState extends StatelessWidget {
               'ยังไม่มีโปรโมชั่นตอนนี้',
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 20,
+                fontSize: AppText.sizeH2,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
               ),
@@ -3194,7 +3196,7 @@ class _PromotionsEmptyState extends StatelessWidget {
               'เรากำลังเตรียมดีลและสิทธิพิเศษใหม่ ๆ ไว้ให้ กลับมาเช็กได้เร็ว ๆ นี้',
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 height: 1.5,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
@@ -3215,7 +3217,7 @@ class _GuestBookingBanner extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         onTap: () {
           HapticFeedback.selectionClick();
           Navigator.of(context).push(
@@ -3234,7 +3236,7 @@ class _GuestBookingBanner extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: const Icon(
                   Icons.confirmation_number_rounded,
@@ -3250,7 +3252,7 @@ class _GuestBookingBanner extends StatelessWidget {
                     Text(
                       'มีรหัสการจองอยู่แล้ว?',
                       style: appFont(
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                         letterSpacing: -0.2,
@@ -3260,7 +3262,7 @@ class _GuestBookingBanner extends StatelessWidget {
                     Text(
                       'ดู QR เช็คอิน และติดตามรถ ไม่ต้องสมัครสมาชิก',
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.mutedText(context),
                         height: 1.35,
@@ -3332,7 +3334,7 @@ class _ScarcitySheet extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: badgeColor,
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -3347,7 +3349,7 @@ class _ScarcitySheet extends StatelessWidget {
                           label,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -3386,7 +3388,7 @@ class _ScarcitySheet extends StatelessWidget {
                   Text(
                     'ทริปที่คุณเปิดดู · ที่นั่งเหลือน้อย',
                     style: appFont(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.accentColor,
                     ),
@@ -3397,7 +3399,7 @@ class _ScarcitySheet extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      fontSize: 18,
+                      fontSize: AppText.sizeTitle,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.onSurface(context),
                     ),
@@ -3445,7 +3447,7 @@ class _ScarcitySheet extends StatelessWidget {
                       child: Text(
                         'ไม่ต้องแสดงอีก',
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textSecondary,
                         ),
@@ -3505,8 +3507,8 @@ class _YourTripSection extends StatelessWidget {
                     Text(
                       'ทริปของคุณ',
                       style: appFont(
-                        color: const Color(0xFF063F46),
-                        fontSize: 22,
+                        color: const Color(0xFF065F46),
+                        fontSize: AppText.sizeH1,
                         height: 1.1,
                         fontWeight: FontWeight.w900,
                       ),
@@ -3518,7 +3520,7 @@ class _YourTripSection extends StatelessWidget {
                           : 'เตรียมตัวให้พร้อมก่อนออกเดินทาง',
                       style: appFont(
                         color: AppTheme.textSecondary,
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -3530,8 +3532,8 @@ class _YourTripSection extends StatelessWidget {
                 child: Text(
                   more > 0 ? 'ดูทั้งหมด' : 'การจองของฉัน',
                   style: appFont(
-                    color: const Color(0xFF063F46),
-                    fontSize: 14,
+                    color: const Color(0xFF065F46),
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -3604,7 +3606,7 @@ class _OutstandingPaymentBanner extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           onTap: ref.isEmpty
               ? null
               : () {
@@ -3619,7 +3621,7 @@ class _OutstandingPaymentBanner extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: tone.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(color: tone.withValues(alpha: 0.35)),
             ),
             child: Row(
@@ -3634,16 +3636,16 @@ class _OutstandingPaymentBanner extends StatelessWidget {
                       Text(
                         'ยังต้องชำระ ${money(amount)}',
                         style: appFont(
-                          fontSize: 14.5,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF063F46),
+                          color: const Color(0xFF065F46),
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         _subtitle(booking, daysLeft, overdue, due.length),
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textSecondary,
                         ),
@@ -3658,12 +3660,12 @@ class _OutstandingPaymentBanner extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: tone,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
                     'ชำระเงิน',
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
@@ -3745,8 +3747,8 @@ class _HomeNextTripCard extends StatelessWidget {
         height: 172,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: const Color(0xFF0B3D42),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          color: const Color(0xFF065F46),
         ),
         child: Stack(
           fit: StackFit.expand,
@@ -3788,7 +3790,7 @@ class _HomeNextTripCard extends StatelessWidget {
                           color: isPending
                               ? const Color(0xFFD97706)
                               : countColor,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -3805,7 +3807,7 @@ class _HomeNextTripCard extends StatelessWidget {
                               isPending ? 'ค้างชำระ' : countLabel,
                               style: appFont(
                                 color: Colors.white,
-                                fontSize: 12,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.1,
                               ),
@@ -3822,7 +3824,7 @@ class _HomeNextTripCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: Colors.white,
-                      fontSize: 19,
+                      fontSize: AppText.sizeH2,
                       height: 1.15,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
@@ -3842,7 +3844,7 @@ class _HomeNextTripCard extends StatelessWidget {
                           thaiDateShort(travelDate),
                           style: appFont(
                             color: Colors.white.withValues(alpha: 0.85),
-                            fontSize: 12.5,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -3850,7 +3852,7 @@ class _HomeNextTripCard extends StatelessWidget {
                       if (travelDate != null && location.isNotEmpty)
                         Text(
                           '  ·  ',
-                          style: appFont(color: Colors.white54, fontSize: 12.5),
+                          style: appFont(color: Colors.white54, fontSize: AppText.sizeLabel),
                         ),
                       if (location.isNotEmpty)
                         Flexible(
@@ -3860,7 +3862,7 @@ class _HomeNextTripCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
                               color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -3895,14 +3897,14 @@ class _GlassPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
           child: Row(
@@ -3914,7 +3916,7 @@ class _GlassPill extends StatelessWidget {
                 label,
                 style: appFont(
                   color: Colors.white,
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.2,
                 ),
@@ -3951,7 +3953,7 @@ class _NextTripCta extends StatelessWidget {
           color: highlighted
               ? Colors.white
               : Colors.white.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           border: highlighted
               ? null
               : Border.all(color: Colors.white.withValues(alpha: 0.30)),
@@ -3963,7 +3965,7 @@ class _NextTripCta extends StatelessWidget {
               label,
               style: appFont(
                 color: highlighted ? const Color(0xFFB45309) : Colors.white,
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.1,
               ),
@@ -4104,8 +4106,8 @@ class _GroupTripSectionState extends State<_GroupTripSection> {
                     Text(
                       'เที่ยวเป็นกลุ่ม',
                       style: appFont(
-                        color: const Color(0xFF063F46),
-                        fontSize: 22,
+                        color: const Color(0xFF065F46),
+                        fontSize: AppText.sizeH1,
                         height: 1.1,
                         fontWeight: FontWeight.w900,
                       ),
@@ -4115,7 +4117,7 @@ class _GroupTripSectionState extends State<_GroupTripSection> {
                       'ชวนเพื่อนไปทริปเดียวกัน',
                       style: appFont(
                         color: AppTheme.textSecondary,
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -4128,8 +4130,8 @@ class _GroupTripSectionState extends State<_GroupTripSection> {
                   child: Text(
                     'ดูทั้งหมด',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 14,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -4194,8 +4196,8 @@ class _HomeGroupCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEAF0F0)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4209,13 +4211,13 @@ class _HomeGroupCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                   ),
                   child: Text(
                     isBooked ? 'จองแล้ว' : 'กำลังเปิดรับ',
                     style: appFont(
                       color: accent,
-                      fontSize: 11,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -4235,11 +4237,11 @@ class _HomeGroupCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 height: 1.2,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.2,
-                color: const Color(0xFF063F46),
+                color: const Color(0xFF065F46),
               ),
             ),
             const Spacer(),
@@ -4254,7 +4256,7 @@ class _HomeGroupCard extends StatelessWidget {
                 Text(
                   '${plan.readyCount}/${plan.seatCount} พร้อมแล้ว',
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textSecondary,
                   ),
@@ -4264,7 +4266,7 @@ class _HomeGroupCard extends StatelessWidget {
                   Text(
                     DateFormat('d MMM', 'th_TH').format(date),
                     style: appFont(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textSecondary,
                     ),
@@ -4294,9 +4296,9 @@ class _GroupPromoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: const Color(0xFFF7FCFA),
-        border: Border.all(color: const Color(0xFFE3EFEC)),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        color: const Color(0xFFECFDF5),
+        border: Border.all(color: const Color(0xFFECFDF5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4308,7 +4310,7 @@ class _GroupPromoCard extends StatelessWidget {
                 height: 46,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: const Icon(
                   Icons.groups_2_rounded,
@@ -4324,8 +4326,8 @@ class _GroupPromoCard extends StatelessWidget {
                     Text(
                       'ไปเป็นกลุ่ม สนุกกว่า',
                       style: appFont(
-                        color: const Color(0xFF063F46),
-                        fontSize: 16.5,
+                        color: const Color(0xFF065F46),
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.2,
                       ),
@@ -4335,7 +4337,7 @@ class _GroupPromoCard extends StatelessWidget {
                       'ชวนเพื่อนจองพร้อมกัน เลือกที่นั่งเองได้ หัวหน้ากลุ่มจ่ายทีเดียว',
                       style: appFont(
                         color: AppTheme.textSecondary,
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         height: 1.35,
                         fontWeight: FontWeight.w500,
                       ),
@@ -4409,8 +4411,8 @@ class _PromoButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: filled ? AppTheme.primaryColor : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: filled ? null : Border.all(color: const Color(0xFFD7E6E1)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: filled ? null : Border.all(color: const Color(0xFFCBD5E1)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -4424,8 +4426,8 @@ class _PromoButton extends StatelessWidget {
             Text(
               label,
               style: appFont(
-                color: filled ? Colors.white : const Color(0xFF063F46),
-                fontSize: 14,
+                color: filled ? Colors.white : const Color(0xFF065F46),
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.1,
               ),
@@ -4467,7 +4469,7 @@ class _JoinGroupSheetState extends State<_JoinGroupSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
         child: Column(
@@ -4480,7 +4482,7 @@ class _JoinGroupSheetState extends State<_JoinGroupSheet> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: AppTheme.border(context),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
               ),
             ),
@@ -4488,7 +4490,7 @@ class _JoinGroupSheetState extends State<_JoinGroupSheet> {
             Text(
               'เข้าร่วมกลุ่มด้วยโค้ด',
               style: appFont(
-                fontSize: 19,
+                fontSize: AppText.sizeH2,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.3,
                 color: AppTheme.onSurface(context),
@@ -4498,7 +4500,7 @@ class _JoinGroupSheetState extends State<_JoinGroupSheet> {
             Text(
               'กรอกโค้ดเชิญที่ได้รับจากหัวหน้ากลุ่ม',
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
               ),
@@ -4511,7 +4513,7 @@ class _JoinGroupSheetState extends State<_JoinGroupSheet> {
               textInputAction: TextInputAction.go,
               onSubmitted: (_) => _submit(),
               style: appFont(
-                fontSize: 18,
+                fontSize: AppText.sizeTitle,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 2,
                 color: AppTheme.onSurface(context),
@@ -4519,7 +4521,7 @@ class _JoinGroupSheetState extends State<_JoinGroupSheet> {
               decoration: InputDecoration(
                 hintText: 'เช่น AB12CD',
                 hintStyle: appFont(
-                  fontSize: 18,
+                  fontSize: AppText.sizeTitle,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 2,
                   color: AppTheme.mutedText(context).withValues(alpha: 0.5),
@@ -4531,7 +4533,7 @@ class _JoinGroupSheetState extends State<_JoinGroupSheet> {
                   vertical: 16,
                 ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -4545,13 +4547,13 @@ class _JoinGroupSheetState extends State<_JoinGroupSheet> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                 ),
                 child: Text(
                   'เข้าร่วมกลุ่ม',
                   style: appFont(
-                    fontSize: 15.5,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),
@@ -4658,7 +4660,7 @@ class _ReferralBannerState extends State<_ReferralBanner> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             color: const Color(0xFF047857),
           ),
           child: Row(
@@ -4668,7 +4670,7 @@ class _ReferralBannerState extends State<_ReferralBanner> {
                 height: 44,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: const Icon(
                   Icons.card_giftcard_rounded,
@@ -4685,7 +4687,7 @@ class _ReferralBannerState extends State<_ReferralBanner> {
                       'ชวนเพื่อน รับแต้มฟรีทั้งคู่',
                       style: appFont(
                         color: Colors.white,
-                        fontSize: 15.5,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.2,
                       ),
@@ -4699,7 +4701,7 @@ class _ReferralBannerState extends State<_ReferralBanner> {
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
                         color: Colors.white.withValues(alpha: 0.88),
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -4715,7 +4717,7 @@ class _ReferralBannerState extends State<_ReferralBanner> {
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -4730,7 +4732,7 @@ class _ReferralBannerState extends State<_ReferralBanner> {
                           'แชร์',
                           style: appFont(
                             color: const Color(0xFF047857),
-                            fontSize: 13.5,
+                            fontSize: AppText.sizeBody,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -4791,8 +4793,8 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                   child: Text(
                     'บทความ & ทริคเที่ยว',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 25,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeH1,
                       height: 1.1,
                       fontWeight: FontWeight.w900,
                     ),
@@ -4805,8 +4807,8 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                   child: Text(
                     'ดูทั้งหมด',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 14,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -4879,7 +4881,7 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                                     overflow: TextOverflow.ellipsis,
                                     style: appFont(
                                       color: AppTheme.onSurface(context),
-                                      fontSize: 15.5,
+                                      fontSize: AppText.sizeSubtitle,
                                       fontWeight: FontWeight.w800,
                                       height: 1.3,
                                       letterSpacing: -0.2,
@@ -4896,7 +4898,7 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                                             overflow: TextOverflow.ellipsis,
                                             style: appFont(
                                               color: AppTheme.primaryColor,
-                                              fontSize: 11.5,
+                                              fontSize: AppText.sizeCaption,
                                               fontWeight: FontWeight.w700,
                                             ),
                                           ),
@@ -4905,7 +4907,7 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                                           '  ·  ',
                                           style: appFont(
                                             color: AppTheme.mutedText(context),
-                                            fontSize: 11.5,
+                                            fontSize: AppText.sizeCaption,
                                           ),
                                         ),
                                       ],
@@ -4913,7 +4915,7 @@ class _ArticlesTeaserSectionState extends State<_ArticlesTeaserSection> {
                                         'อ่าน ${a.readingMinutes} นาที',
                                         style: appFont(
                                           color: AppTheme.mutedText(context),
-                                          fontSize: 11.5,
+                                          fontSize: AppText.sizeCaption,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -4992,8 +4994,8 @@ class _TravelerFeedSectionState extends State<_TravelerFeedSection> {
                   child: Text(
                     'ฟีดนักเดินทาง',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 25,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeH1,
                       height: 1.1,
                       fontWeight: FontWeight.w900,
                     ),
@@ -5004,8 +5006,8 @@ class _TravelerFeedSectionState extends State<_TravelerFeedSection> {
                   child: Text(
                     'ดูทั้งหมด',
                     style: appFont(
-                      color: const Color(0xFF063F46),
-                      fontSize: 14,
+                      color: const Color(0xFF065F46),
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -5017,7 +5019,7 @@ class _TravelerFeedSectionState extends State<_TravelerFeedSection> {
           Text(
             'รูปจริงจากลูกค้าที่เพิ่งกลับจากทริป',
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w600,
             ),
@@ -5040,7 +5042,7 @@ class _TravelerFeedSectionState extends State<_TravelerFeedSection> {
                 return GestureDetector(
                   onTap: _openFeed,
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     child: SizedBox(
                       width: 150,
                       height: 150,
@@ -5087,7 +5089,7 @@ class _TravelerFeedSectionState extends State<_TravelerFeedSection> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: appFont(
-                                      fontSize: 11,
+                                      fontSize: AppText.sizeCaption,
                                       color: Colors.white,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -5103,7 +5105,7 @@ class _TravelerFeedSectionState extends State<_TravelerFeedSection> {
                                   Text(
                                     '$likes',
                                     style: appFont(
-                                      fontSize: 10.5,
+                                      fontSize: AppText.sizeMicro,
                                       color: Colors.white,
                                       fontWeight: FontWeight.w800,
                                     ),

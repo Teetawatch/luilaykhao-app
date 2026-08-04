@@ -452,7 +452,7 @@ class _RegisterHeader extends StatelessWidget {
                 Text(
                   'สร้างบัญชีใหม่',
                   style: appFont(
-                    fontSize: 30,
+                    fontSize: AppText.sizeHero,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     height: 1.1,
@@ -468,7 +468,7 @@ class _RegisterHeader extends StatelessWidget {
                 Text(
                   'เริ่มต้นการเดินทางไปกับเรา',
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     color: Colors.white.withValues(alpha: 0.88),
                     fontWeight: FontWeight.w600,
                     shadows: [
@@ -535,7 +535,7 @@ class _SectionHeader extends StatelessWidget {
             color: color.withValues(
               alpha: AppTheme.isDark(context) ? 0.20 : 0.10,
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
           child: Icon(icon, color: color, size: 20),
         ),
@@ -548,7 +548,7 @@ class _SectionHeader extends StatelessWidget {
                 title,
                 style: appFont(
                   color: AppTheme.onSurface(context),
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -556,7 +556,7 @@ class _SectionHeader extends StatelessWidget {
                 subtitle,
                 style: appFont(
                   color: AppTheme.mutedText(context),
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -644,7 +644,7 @@ class _PasswordStrengthHint extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.5),
         ),
@@ -671,7 +671,7 @@ class _PasswordStrengthHint extends StatelessWidget {
                 c.label,
                 style: appFont(
                   color: color,
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -707,7 +707,7 @@ class _RegisterButton extends StatelessWidget {
           ),
           disabledForegroundColor: Colors.white.withValues(alpha: 0.70),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
         ),
         icon: loading
@@ -722,7 +722,7 @@ class _RegisterButton extends StatelessWidget {
             : const Icon(Icons.person_add_rounded, size: 22),
         label: Text(
           loading ? 'กำลังสมัครสมาชิก...' : 'สมัครสมาชิก',
-          style: appFont(fontWeight: FontWeight.w900, fontSize: 16),
+          style: appFont(fontWeight: FontWeight.w900, fontSize: AppText.sizeSubtitle),
         ),
       ),
     );
@@ -831,32 +831,32 @@ class _RegisterInput extends StatelessWidget {
         filled: true,
         fillColor: AppTheme.fieldSurface(context),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
             color: AppTheme.border(context).withValues(alpha: 0.65),
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
             color: AppTheme.border(context).withValues(alpha: 0.65),
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: const BorderSide(
             color: AppTheme.primaryColor,
             width: 1.5,
           ),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
             color: AppTheme.errorColor.withValues(alpha: 0.80),
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: const BorderSide(color: AppTheme.errorColor, width: 1.5),
         ),
         contentPadding: EdgeInsets.symmetric(
@@ -864,7 +864,7 @@ class _RegisterInput extends StatelessWidget {
           horizontal: 16,
         ),
         errorStyle: appFont(
-          fontSize: 11.5,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -896,7 +896,7 @@ class _RegisterSelect extends StatelessWidget {
     return DropdownButtonFormField<String>(
       initialValue: value,
       isExpanded: true,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       validator: validator,
       icon: Icon(
         Icons.keyboard_arrow_down_rounded,
@@ -905,7 +905,7 @@ class _RegisterSelect extends StatelessWidget {
       style: appFont(
         fontWeight: FontWeight.w700,
         color: AppTheme.onSurface(context),
-        fontSize: 14,
+        fontSize: AppText.sizeBody,
       ),
       dropdownColor: AppTheme.surface(context),
       decoration: InputDecoration(
@@ -921,32 +921,32 @@ class _RegisterSelect extends StatelessWidget {
         filled: true,
         fillColor: AppTheme.fieldSurface(context),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
             color: AppTheme.border(context).withValues(alpha: 0.65),
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
             color: AppTheme.border(context).withValues(alpha: 0.65),
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: const BorderSide(
             color: AppTheme.primaryColor,
             width: 1.5,
           ),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
             color: AppTheme.errorColor.withValues(alpha: 0.80),
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: const BorderSide(color: AppTheme.errorColor, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(
@@ -954,7 +954,7 @@ class _RegisterSelect extends StatelessWidget {
           horizontal: 16,
         ),
         errorStyle: appFont(
-          fontSize: 11.5,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w700,
         ),
       ),

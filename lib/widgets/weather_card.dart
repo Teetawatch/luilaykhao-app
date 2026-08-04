@@ -68,7 +68,7 @@ class WeatherCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: gradient,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,7 +92,7 @@ class WeatherCard extends StatelessWidget {
                         Text(
                           label,
                           style: appFont(
-                            fontSize: 12,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.2,
                             color: Colors.white.withValues(alpha: 0.75),
@@ -105,7 +105,7 @@ class WeatherCard extends StatelessWidget {
                       Text(
                         desc,
                         style: appFont(
-                          fontSize: 18,
+                          fontSize: AppText.sizeTitle,
                           fontWeight: FontWeight.w800,
                           height: 1.1,
                           color: Colors.white,
@@ -151,7 +151,7 @@ class WeatherCard extends StatelessWidget {
                   Text(
                     'ต่ำสุด ${tempMin.round()}°',
                     style: appFont(
-                      fontSize: 15,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w600,
                       color: Colors.white.withValues(alpha: 0.70),
                     ),
@@ -179,7 +179,7 @@ class WeatherCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +196,7 @@ class WeatherCard extends StatelessWidget {
                     child: Text(
                       note,
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         height: 1.4,
                         fontWeight: FontWeight.w600,
                         color: Colors.white.withValues(alpha: 0.95),
@@ -246,7 +246,7 @@ class WeatherCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: sky.withValues(alpha: isDark ? 0.22 : 0.10),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: sky.withValues(alpha: 0.30)),
       ),
       child: Column(
@@ -263,7 +263,7 @@ class WeatherCard extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: gradient,
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Icon(_iconFor(code), color: Colors.white, size: 22),
               ),
@@ -275,7 +275,7 @@ class WeatherCard extends StatelessWidget {
                     Text(
                       label,
                       style: appFont(
-                        fontSize: 11,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
                         color: muted,
@@ -291,7 +291,7 @@ class WeatherCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
-                                fontSize: 14,
+                                fontSize: AppText.sizeBody,
                                 fontWeight: FontWeight.w800,
                                 color: onSurface,
                               ),
@@ -302,7 +302,7 @@ class WeatherCard extends StatelessWidget {
                           Text(
                             '· $tempText',
                             style: appFont(
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w600,
                               color: muted,
                             ),
@@ -319,7 +319,7 @@ class WeatherCard extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
                   color: const Color(0xFF3B82F6).withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -333,7 +333,7 @@ class WeatherCard extends StatelessWidget {
                     Text(
                       '$popPercent%',
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF3B82F6),
                       ),
@@ -350,7 +350,7 @@ class WeatherCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
               decoration: BoxDecoration(
                 color: noteColor.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,7 +367,7 @@ class WeatherCard extends StatelessWidget {
                     child: Text(
                       note,
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         height: 1.35,
                         fontWeight: FontWeight.w600,
                         color: onSurface.withValues(alpha: 0.85),
@@ -388,7 +388,7 @@ class WeatherCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -398,7 +398,7 @@ class WeatherCard extends StatelessWidget {
           Text(
             text,
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
@@ -413,11 +413,11 @@ class WeatherCard extends StatelessWidget {
   List<Color> _gradientFor(String conditionCode) {
     final group = conditionCode.isNotEmpty ? conditionCode[0] : '';
     return switch (group) {
-      '2' => const [Color(0xFF3E4C66), Color(0xFF232C3F)], // thunderstorm
+      '2' => const [Color(0xFF334155), Color(0xFF1E293B)], // thunderstorm
       '3' => const [Color(0xFF5B7C9D), Color(0xFF3C566F)], // drizzle
       '5' => const [Color(0xFF4E6E8E), Color(0xFF2F4858)], // rain
       '6' => const [Color(0xFF7FA8C9), Color(0xFF587FA0)], // snow
-      '7' => const [Color(0xFF8A93A0), Color(0xFF5E6672)], // fog / haze
+      '7' => const [Color(0xFF94A3B8), Color(0xFF475569)], // fog / haze
       '8' => conditionCode == '800'
           ? const [Color(0xFF4A95D6), Color(0xFF2C6FB5)] // clear sky
           : const [Color(0xFF6E8AA8), Color(0xFF4C6582)], // clouds

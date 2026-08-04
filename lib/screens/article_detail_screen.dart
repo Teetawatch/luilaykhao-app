@@ -37,7 +37,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
           'บทความ',
           style: appFont(
             color: AppTheme.onSurface(context),
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -54,7 +54,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                 padding: const EdgeInsets.all(32),
                 child: Text(
                   'โหลดบทความไม่สำเร็จ',
-                  style: appFont(color: AppTheme.mutedText(context), fontSize: 15),
+                  style: appFont(color: AppTheme.mutedText(context), fontSize: AppText.sizeSubtitle),
                 ),
               ),
             );
@@ -91,7 +91,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   article.category!.name,
                   style: appFont(
                     color: AppTheme.primaryColor,
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -100,7 +100,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                 article.title,
                 style: appFont(
                   color: AppTheme.onSurface(context),
-                  fontSize: 26,
+                  fontSize: AppText.sizeH1,
                   fontWeight: FontWeight.w900,
                   height: 1.25,
                 ),
@@ -110,7 +110,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                 '${_byline(article)} · อ่าน ${article.readingMinutes} นาที',
                 style: appFont(
                   color: AppTheme.mutedText(context),
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -123,7 +123,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
             article.body ?? '',
             textStyle: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               height: 1.7,
             ),
             onTapUrl: (url) async {
@@ -158,14 +158,14 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppTheme.surface(context),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     border: Border.all(color: AppTheme.border(context)),
                   ),
                   child: Text(
                     '#$t',
                     style: appFont(
                       color: AppTheme.mutedText(context),
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -181,23 +181,23 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0D2B1E), Color(0xFF087C68)],
+          colors: [Color(0xFF0D2B1E), Color(0xFF059669)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'อยากออกทริปจริง ๆ แล้วใช่ไหม? 🏕️',
-            style: appFont(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900),
+            style: appFont(color: Colors.white, fontSize: AppText.sizeH2, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 4),
           Text(
             'จองกับลุยเลเขา ปลอดภัย มีไกด์มืออาชีพ',
-            style: appFont(color: Colors.white70, fontSize: 14),
+            style: appFont(color: Colors.white70, fontSize: AppText.sizeBody),
           ),
           const SizedBox(height: 14),
           ...article.relatedTrips.map((trip) => _tripRow(trip)),
@@ -227,7 +227,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
           ),
           clipBehavior: Clip.antiAlias,
@@ -252,12 +252,12 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: appFont(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+                        style: appFont(color: Colors.white, fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w800),
                       ),
                       if (location != null) ...[
                         const SizedBox(height: 2),
                         Text('📍 $location',
-                            style: appFont(color: Colors.white70, fontSize: 12)),
+                            style: appFont(color: Colors.white70, fontSize: AppText.sizeCaption)),
                       ],
                       if (price != null) ...[
                         const SizedBox(height: 6),
@@ -265,7 +265,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                           'เริ่ม ${_formatPrice(price)} ฿',
                           style: appFont(
                             color: const Color(0xFFE8A33D),
-                            fontSize: 14,
+                            fontSize: AppText.sizeBody,
                             fontWeight: FontWeight.w800,
                           ),
                         ),

@@ -133,7 +133,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
             '${alert.userName.isEmpty ? 'เพื่อนร่วมทริป' : alert.userName} ขอความช่วยเหลือ',
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 21,
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -143,7 +143,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
             'มีเพื่อนร่วมทริปของคุณกำลังต้องการความช่วยเหลือ',
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
             ),
           ),
@@ -155,7 +155,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
               child: Text(
                 alert.message!,
                 style: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.onSurface(context),
                 ),
@@ -170,7 +170,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
               child: Text(
                 alert.contactPhone!,
                 style: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.onSurface(context),
                 ),
@@ -185,7 +185,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
               child: Text(
                 '${alert.latitude!.toStringAsFixed(5)}, ${alert.longitude!.toStringAsFixed(5)}',
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.onSurface(context),
                 ),
@@ -198,7 +198,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
               icon: Icons.photo_outlined,
               label: 'รูปสถานที่',
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 child: GestureDetector(
                   onTap: () => _openPhoto(alert.photoUrl!),
                   child: Image.network(
@@ -253,7 +253,7 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
               child: Text(
                 'เคสนี้ถูกปิดแล้ว',
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.primaryColor,
                 ),
@@ -291,7 +291,7 @@ class _InfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context).withValues(alpha: 0.6)),
       ),
       child: Column(
@@ -304,7 +304,7 @@ class _InfoCard extends StatelessWidget {
               Text(
                 label,
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.mutedText(context),
                 ),
@@ -346,14 +346,14 @@ class _ActionButton extends StatelessWidget {
                 backgroundColor: color,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
               icon: Icon(icon),
               label: Text(
                 label,
                 style: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -364,14 +364,14 @@ class _ActionButton extends StatelessWidget {
                 foregroundColor: color,
                 side: BorderSide(color: color.withValues(alpha: 0.5)),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
               icon: Icon(icon),
               label: Text(
                 label,
                 style: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                 ),
               ),

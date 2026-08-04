@@ -79,7 +79,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
             decoration: BoxDecoration(
               color: AppTheme.background(context),
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(28),
+                top: Radius.circular(AppTheme.radiusXl),
               ),
             ),
             child: ListView(
@@ -93,7 +93,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     height: 4,
                     decoration: BoxDecoration(
                       color: AppTheme.border(context),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                   ),
                 ),
@@ -170,7 +170,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   textOf(trip['title'], 'รายละเอียดการจอง'),
                   style: appFont(
                     color: AppTheme.primaryColor,
-                    fontSize: 22,
+                    fontSize: AppText.sizeH1,
                     fontWeight: FontWeight.w900,
                     height: 1.25,
                   ),
@@ -180,7 +180,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   textOf(booking['booking_ref']),
                   style: appFont(
                     color: AppTheme.mutedText(context),
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -268,7 +268,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: AppTheme.subtleSurface(context),
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         border: Border.all(
                           color: AppTheme.border(
                             context,
@@ -298,7 +298,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                                   name.isEmpty ? '-' : name,
                                   style: appFont(
                                     fontWeight: FontWeight.w900,
-                                    fontSize: 14,
+                                    fontSize: AppText.sizeBody,
                                     color: AppTheme.onSurface(context),
                                   ),
                                 ),
@@ -306,7 +306,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                                 Text(
                                   phone,
                                   style: appFont(
-                                    fontSize: 12,
+                                    fontSize: AppText.sizeCaption,
                                     color: AppTheme.mutedText(context),
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -458,7 +458,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                           color: isPaid
                               ? AppTheme.primaryColor.withValues(alpha: 0.06)
                               : AppTheme.subtleSurface(context),
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                           border: Border.all(
                             color: isPaid
                                 ? AppTheme.primaryColor.withValues(alpha: 0.16)
@@ -487,14 +487,14 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                                     'งวดที่ ${textOf(inst['installment_no'])}  ·  ${money(inst['amount'])}',
                                     style: appFont(
                                       fontWeight: FontWeight.w900,
-                                      fontSize: 13,
+                                      fontSize: AppText.sizeLabel,
                                       color: AppTheme.onSurface(context),
                                     ),
                                   ),
                                   Text(
                                     'ครบกำหนด ${dateText(inst['due_date'])}',
                                     style: appFont(
-                                      fontSize: 12,
+                                      fontSize: AppText.sizeCaption,
                                       color: AppTheme.mutedText(context),
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -791,7 +791,7 @@ class _BookingActionCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: () {
           HapticFeedback.selectionClick();
           onTap();
@@ -800,7 +800,7 @@ class _BookingActionCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: color.withValues(alpha: 0.35)),
           ),
           child: Row(
@@ -810,7 +810,7 @@ class _BookingActionCard extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   color: color,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Icon(icon, size: 21, color: Colors.white),
               ),
@@ -823,7 +823,7 @@ class _BookingActionCard extends StatelessWidget {
                     Text(
                       title,
                       style: appFont(
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                       ),
@@ -832,7 +832,7 @@ class _BookingActionCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                         height: 1.35,
@@ -872,7 +872,7 @@ class _BookingActionNote extends StatelessWidget {
           child: Text(
             text,
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
               height: 1.35,
@@ -936,7 +936,7 @@ class _MySeatMapSectionState extends State<_MySeatMapSection> {
           padding: const EdgeInsets.fromLTRB(8, 14, 8, 16),
           decoration: BoxDecoration(
             color: AppTheme.subtleSurface(context),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
               color: AppTheme.border(context).withValues(alpha: 0.5),
             ),
@@ -976,7 +976,7 @@ class _MySeatMapSectionState extends State<_MySeatMapSection> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.5),
         ),
@@ -992,7 +992,7 @@ class _MySeatMapSectionState extends State<_MySeatMapSection> {
           Text(
             note,
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
             ),
@@ -1036,7 +1036,7 @@ class _BookingCustomerRow extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.6),
           ),
@@ -1053,7 +1053,7 @@ class _BookingCustomerRow extends StatelessWidget {
                   ? Text(
                       initials,
                       style: appFont(
-                        fontSize: 16,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor,
                       ),
@@ -1068,7 +1068,7 @@ class _BookingCustomerRow extends StatelessWidget {
                   Text(
                     'ผู้จอง',
                     style: appFont(
-                      fontSize: 11,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.2,
                       color: AppTheme.mutedText(context),
@@ -1080,7 +1080,7 @@ class _BookingCustomerRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      fontSize: 14.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
                     ),
@@ -1090,7 +1090,7 @@ class _BookingCustomerRow extends StatelessWidget {
                     Text(
                       phone,
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -1166,7 +1166,7 @@ class _BookingPickupSection extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppTheme.subtleSurface(context),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
               color: AppTheme.border(context).withValues(alpha: 0.6),
             ),
@@ -1211,7 +1211,7 @@ class _BookingPickupSection extends StatelessWidget {
                     Text(
                       location,
                       style: appFont(
-                        fontSize: 14.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                         height: 1.35,
@@ -1222,7 +1222,7 @@ class _BookingPickupSection extends StatelessWidget {
                       Text(
                         regionLabel,
                         style: appFont(
-                          fontSize: 12.5,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.mutedText(context),
                         ),
@@ -1242,7 +1242,7 @@ class _BookingPickupSection extends StatelessWidget {
                           Text(
                             'เวลา $time น.',
                             style: appFont(
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.primaryColor,
                             ),
@@ -1255,7 +1255,7 @@ class _BookingPickupSection extends StatelessWidget {
                       Text(
                         notes,
                         style: appFont(
-                          fontSize: 12.5,
+                          fontSize: AppText.sizeLabel,
                           color: AppTheme.mutedText(context),
                           height: 1.4,
                         ),
@@ -1282,7 +1282,7 @@ class _BookingPickupSection extends StatelessWidget {
                             Text(
                               'เปิดแผนที่',
                               style: appFont(
-                                fontSize: 13,
+                                fontSize: AppText.sizeLabel,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.primaryColor,
                               ),
@@ -1325,7 +1325,7 @@ class _BookingDepositSummary extends StatelessWidget {
         color: warning.withValues(
           alpha: AppTheme.isDark(context) ? 0.18 : 0.08,
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: warning.withValues(alpha: 0.28)),
       ),
       child: Column(
@@ -1339,7 +1339,7 @@ class _BookingDepositSummary extends StatelessWidget {
                 'จ่ายมัดจำแล้ว · มียอดส่วนที่เหลือต้องชำระ',
                 style: appFont(
                   color: warning,
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1360,7 +1360,7 @@ class _BookingDepositSummary extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: AppTheme.surface(context),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               border: Border.all(color: warning.withValues(alpha: 0.18)),
             ),
             child: Row(
@@ -1372,7 +1372,7 @@ class _BookingDepositSummary extends StatelessWidget {
                     'ครบกำหนดชำระภายใน $dueText',
                     style: appFont(
                       color: AppTheme.onSurface(context),
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1406,7 +1406,7 @@ class _BookingDepositRow extends StatelessWidget {
             label,
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1478,7 +1478,7 @@ class _RentedEquipmentList extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppTheme.subtleSurface(context),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(
                 color: AppTheme.border(context).withValues(alpha: 0.6),
               ),
@@ -1486,7 +1486,7 @@ class _RentedEquipmentList extends StatelessWidget {
             child: Row(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   child: image.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: image,
@@ -1520,7 +1520,7 @@ class _RentedEquipmentList extends StatelessWidget {
                     name,
                     style: appFont(
                       fontWeight: FontWeight.w800,
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       color: AppTheme.onSurface(context),
                     ),
                   ),
@@ -1530,13 +1530,13 @@ class _RentedEquipmentList extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: accent.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                   ),
                   child: Text(
                     '×$qty',
                     style: appFont(
                       fontWeight: FontWeight.w800,
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       color: accent,
                     ),
                   ),
@@ -1572,17 +1572,17 @@ class _TripRecapButton extends StatelessWidget {
             end: Alignment.centerRight,
             colors: [Color(0xFFEA580C), Color(0xFF9333EA)],
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('🏔️', style: TextStyle(fontSize: 18)),
+            const Text('🏔️', style: TextStyle(fontSize: AppText.sizeTitle)),
             const SizedBox(width: 8),
             Text(
               'ดูสรุปทริป • Recap',
               style: appFont(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w900,
                 color: Colors.white,
                 letterSpacing: -0.1,
@@ -1738,13 +1738,13 @@ class _SaveTravellersButtonState extends State<_SaveTravellersButton> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: _done || _saving ? null : _save,
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: AppTheme.subtleSurface(context),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: AppTheme.border(context)),
           ),
           child: Row(
@@ -1767,7 +1767,7 @@ class _SaveTravellersButtonState extends State<_SaveTravellersButton> {
                           ? 'เก็บเข้าสมุดแล้ว'
                           : 'เก็บผู้ร่วมเดินทางไว้ใช้ครั้งหน้า',
                       style: appFont(
-                        fontSize: 14.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                       ),
@@ -1778,7 +1778,7 @@ class _SaveTravellersButtonState extends State<_SaveTravellersButton> {
                           ? 'ครั้งหน้าเลือกชื่อจากสมุดได้เลย'
                           : 'จองรอบหน้าไม่ต้องกรอกใหม่ทั้ง ${widget.passengerCount} คน',
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -1879,7 +1879,7 @@ class _AddToCalendarButton extends StatelessWidget {
           color: isDark
               ? AppTheme.primaryColor.withValues(alpha: 0.12)
               : AppTheme.primaryColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: AppTheme.primaryColor.withValues(alpha: 0.30),
           ),
@@ -1896,7 +1896,7 @@ class _AddToCalendarButton extends StatelessWidget {
             Text(
               'เพิ่มลงปฏิทิน',
               style: appFont(
-                fontSize: 14.5,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.primaryColor,
                 letterSpacing: -0.1,
@@ -1972,7 +1972,7 @@ class _PreTripBriefingCard extends StatelessWidget {
               ? [const Color(0xFF0F4C2A), const Color(0xFF0A2E1A)]
               : [const Color(0xFFECFDF5), const Color(0xFFD1FAE5)],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.30),
         ),
@@ -1990,7 +1990,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                   height: 40,
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                   child: const Icon(
                     Icons.backpack_rounded,
@@ -2006,7 +2006,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                       Text(
                         'เตรียมพร้อมก่อนเดินทาง',
                         style: appFont(
-                          fontSize: 15,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w900,
                           color: AppTheme.primaryColor,
                         ),
@@ -2014,7 +2014,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                       Text(
                         countdownText,
                         style: appFont(
-                          fontSize: 12.5,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.primaryColor.withValues(alpha: 0.75),
                         ),
@@ -2029,12 +2029,12 @@ class _PreTripBriefingCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
                     departureText(schedule),
                     style: appFont(
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.primaryColor,
                     ),
@@ -2068,7 +2068,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                             textOf(pickupPoint['region']),
                           ),
                           style: appFont(
-                            fontSize: 13.5,
+                            fontSize: AppText.sizeBody,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.onSurface(context),
                             height: 1.4,
@@ -2077,7 +2077,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                         if (pickupImageUrl.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                             child: CachedNetworkImage(
                               imageUrl: pickupImageUrl,
                               height: 150,
@@ -2113,7 +2113,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                                       Text(
                                         'โหลดรูปไม่สำเร็จ',
                                         style: appFont(
-                                          fontSize: 11.5,
+                                          fontSize: AppText.sizeCaption,
                                           fontWeight: FontWeight.w600,
                                           color: AppTheme.mutedText(context),
                                         ),
@@ -2130,7 +2130,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                           Text(
                             textOf(pickupPoint['notes']),
                             style: appFont(
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               color: AppTheme.mutedText(context),
                               height: 1.4,
                             ),
@@ -2162,7 +2162,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                                 Text(
                                   'เปิดแผนที่',
                                   style: appFont(
-                                    fontSize: 12.5,
+                                    fontSize: AppText.sizeLabel,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.primaryColor,
                                     decoration: TextDecoration.underline,
@@ -2217,7 +2217,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                               color: AppTheme.surface(
                                 context,
                               ).withValues(alpha: 0.80),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                               border: Border.all(
                                 color: AppTheme.primaryColor.withValues(
                                   alpha: 0.20,
@@ -2238,7 +2238,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                                 Text(
                                   phone.isNotEmpty ? '$name  $phone' : name,
                                   style: appFont(
-                                    fontSize: 12.5,
+                                    fontSize: AppText.sizeLabel,
                                     fontWeight: FontWeight.w800,
                                     color: phone.isNotEmpty
                                         ? AppTheme.primaryColor
@@ -2285,7 +2285,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                                 child: Text(
                                   text,
                                   style: appFont(
-                                    fontSize: 13,
+                                    fontSize: AppText.sizeLabel,
                                     fontWeight: FontWeight.w500,
                                     color: AppTheme.mutedText(context),
                                     height: 1.4,
@@ -2308,7 +2308,7 @@ class _PreTripBriefingCard extends StatelessWidget {
                   Text(
                     'ข้อมูลจะถูกอัปเดตโดยทีมงานก่อนวันเดินทาง',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       color: AppTheme.mutedText(context),
                       fontStyle: FontStyle.italic,
                     ),
@@ -2347,7 +2347,7 @@ class _BriefingSection extends StatelessWidget {
               Text(
                 title,
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.mutedText(context),
                   letterSpacing: 0.3,
@@ -2405,7 +2405,7 @@ class _CustomPickupBriefing extends StatelessWidget {
           Text(
             textOf(customPickup['label']),
             style: appFont(
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w700,
               color: AppTheme.onSurface(context),
               height: 1.4,
@@ -2416,7 +2416,7 @@ class _CustomPickupBriefing extends StatelessWidget {
             Text(
               textOf(customPickup['note']),
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 color: AppTheme.mutedText(context),
                 height: 1.4,
               ),
@@ -2443,7 +2443,7 @@ class _CustomPickupBriefing extends StatelessWidget {
                   Text(
                     'เปิดแผนที่',
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.primaryColor,
                       decoration: TextDecoration.underline,
@@ -2459,7 +2459,7 @@ class _CustomPickupBriefing extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -2469,7 +2469,7 @@ class _CustomPickupBriefing extends StatelessWidget {
                 Text(
                   fee > 0 ? '$label · ค่าบริการ ${money(customPickup['price'])}' : label,
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: color,
                   ),
@@ -2483,7 +2483,7 @@ class _CustomPickupBriefing extends StatelessWidget {
             Text(
               textOf(customPickup['reject_reason']),
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 color: AppTheme.errorColor,
                 height: 1.4,
               ),
@@ -2502,7 +2502,7 @@ Color _flexiGreen(bool isDark) =>
 Color _flexiOrange(bool isDark) =>
     isDark ? const Color(0xFFFF9F0A) : const Color(0xFFFF9500);
 Color _flexiRed(bool isDark) =>
-    isDark ? const Color(0xFFFF453A) : const Color(0xFFFF3B30);
+    isDark ? const Color(0xFFE11D48) : const Color(0xFFE11D48);
 
 /// ระบบ Flexi-Price (Go Together) — การ์ดข้อเสนอ "ไปต่อกันไหม?" เมื่อรอบเดินทาง
 /// มีผู้จองไม่ครบ ผู้จัดขอเก็บส่วนต่างค่ารถท่านละ X (เก็บวันเดินทาง) เพื่อให้ทริป
@@ -2554,12 +2554,12 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
         builder: (ctx) => AlertDialog(
           title: Text(
             'ยืนยันการสละสิทธิ์?',
-            style: appFont(fontWeight: FontWeight.w800, fontSize: 17),
+            style: appFont(fontWeight: FontWeight.w800, fontSize: AppText.sizeTitle),
           ),
           content: Text(
             'หากคุณไม่ไปต่อ ทริปรอบนี้อาจไม่สามารถออกเดินทางได้ '
             'และทีมงานจะติดต่อกลับเรื่องการคืนเงิน ยืนยันหรือไม่?',
-            style: appFont(fontSize: 14, height: 1.4),
+            style: appFont(fontSize: AppText.sizeBody, height: 1.4),
           ),
           actions: [
             TextButton(
@@ -2633,7 +2633,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: tint.withValues(alpha: isDark ? 0.14 : 0.10),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: tint.withValues(alpha: 0.32)),
         ),
         child: Column(
@@ -2658,7 +2658,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                   child: Text(
                     confirmed ? 'ทริปไปต่อแน่นอน! 🎉' : 'ไปต่อกันไหม?',
                     style: appFont(
-                      fontSize: 16.5,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
                       letterSpacing: -0.3,
@@ -2676,7 +2676,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                       'ท่านละ ฿$perPerson ทริปจะออกเดินทางได้ตามกำหนดเดิม '
                       '(เก็บในวันเดินทาง)',
               style: appFont(
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.onSurface(context).withValues(alpha: 0.85),
                 height: 1.45,
@@ -2687,7 +2687,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
               Text(
                 '“$reason”',
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontStyle: FontStyle.italic,
                   color: AppTheme.mutedText(context),
                   height: 1.4,
@@ -2700,7 +2700,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: AppTheme.surface(context).withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Row(
                 children: [
@@ -2711,7 +2711,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                         Text(
                           'ส่วนต่างของคุณ',
                           style: appFont(
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.mutedText(context),
                           ),
@@ -2720,7 +2720,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                         Text(
                           '฿$myTotal',
                           style: appFont(
-                            fontSize: 18,
+                            fontSize: AppText.sizeTitle,
                             fontWeight: FontWeight.w800,
                             color: tint,
                           ),
@@ -2735,7 +2735,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                         Text(
                           'ตอบรับแล้ว',
                           style: appFont(
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.mutedText(context),
                           ),
@@ -2744,7 +2744,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                         Text(
                           '$accepted / $total คน',
                           style: appFont(
-                            fontSize: 16,
+                            fontSize: AppText.sizeSubtitle,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.onSurface(context),
                           ),
@@ -2765,7 +2765,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                         backgroundColor: tint,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         ),
                       ),
                       child: _submitting
@@ -2780,7 +2780,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                           : Text(
                               'ยินดีไปต่อ',
                               style: appFont(
-                                fontSize: 15,
+                                fontSize: AppText.sizeSubtitle,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                               ),
@@ -2793,7 +2793,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                     child: Text(
                       'ขอสละสิทธิ์',
                       style: appFont(
-                        fontSize: 14,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -2811,7 +2811,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
                     child: Text(
                       'คุณยืนยันไปต่อแล้ว กำลังรอเพื่อนร่วมทริปตอบรับให้ครบ',
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.onSurface(context),
                       ),
@@ -2897,13 +2897,13 @@ class _ChecklistEntryRowState extends State<_ChecklistEntryRow> {
 
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: InkWell(
         onTap: _open,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
               color: AppTheme.border(context).withValues(alpha: 0.55),
             ),
@@ -2917,7 +2917,7 @@ class _ChecklistEntryRowState extends State<_ChecklistEntryRow> {
                   height: 38,
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                   child: const Icon(
                     Icons.checklist_rounded,
@@ -2933,7 +2933,7 @@ class _ChecklistEntryRowState extends State<_ChecklistEntryRow> {
                       Text(
                         'เช็กของก่อนเดินทาง',
                         style: appFont(
-                          fontSize: 15,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.onSurface(context),
                           letterSpacing: -0.2,
@@ -2947,7 +2947,7 @@ class _ChecklistEntryRowState extends State<_ChecklistEntryRow> {
                                 ? 'เตรียมของครบแล้ว 🎒'
                                 : 'เตรียมแล้ว $done จาก $total รายการ',
                         style: appFont(
-                          fontSize: 12.5,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w500,
                           color: allDone
                               ? AppTheme.primaryColor
@@ -2957,7 +2957,7 @@ class _ChecklistEntryRowState extends State<_ChecklistEntryRow> {
                       if (total > 0) ...[
                         const SizedBox(height: 8),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                           child: LinearProgressIndicator(
                             value: progress,
                             minHeight: 5,
@@ -3133,7 +3133,7 @@ class _TripSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -3151,7 +3151,7 @@ class _TripSummaryCard extends StatelessWidget {
                 child: Text(
                   'สรุปการเดินทางของคุณ',
                   style: appFont(
-                    fontSize: 14.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.onSurface(context),
                     letterSpacing: -0.2,
@@ -3166,12 +3166,12 @@ class _TripSummaryCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
                     countdown,
                     style: appFont(
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.primaryColor,
                     ),
@@ -3325,7 +3325,7 @@ class _SummaryRow extends StatelessWidget {
                 Text(
                   label,
                   style: appFont(
-                    fontSize: 11,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
                   ),
@@ -3347,7 +3347,7 @@ class _SummaryRow extends StatelessWidget {
                   Text(
                     hint!,
                     style: appFont(
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
                     ),
@@ -3360,9 +3360,9 @@ class _SummaryRow extends StatelessWidget {
             const SizedBox(width: 8),
             Material(
               color: AppTheme.primaryColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               child: InkWell(
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 onTap: onAction,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -3378,7 +3378,7 @@ class _SummaryRow extends StatelessWidget {
                         Text(
                           actionLabel!,
                           style: appFont(
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.primaryColor,
                           ),
@@ -3406,7 +3406,7 @@ class _TripDayEntryCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => TripDayScreen(booking: booking)),
@@ -3422,7 +3422,7 @@ class _TripDayEntryCard extends StatelessWidget {
                 AppTheme.primaryColor.withValues(alpha: 0.8),
               ],
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           ),
           child: Row(
             children: [
@@ -3431,7 +3431,7 @@ class _TripDayEntryCard extends StatelessWidget {
                 height: 46,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: const Icon(
                   Icons.explore_rounded,
@@ -3447,7 +3447,7 @@ class _TripDayEntryCard extends StatelessWidget {
                     Text(
                       'เปิดโหมดวันเดินทาง',
                       style: appFont(
-                        fontSize: 16,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                       ),
@@ -3456,7 +3456,7 @@ class _TripDayEntryCard extends StatelessWidget {
                     Text(
                       'ETA รถ · กำหนดการ · แชท · เช็คลิสต์ · SOS รวมในที่เดียว',
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
@@ -3557,7 +3557,7 @@ class _AnnouncementsEntryState extends State<_AnnouncementsEntry> {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: isDark ? 0.12 : 0.06),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(
                 color: AppTheme.primaryColor.withValues(alpha: 0.22),
               ),
@@ -3570,7 +3570,7 @@ class _AnnouncementsEntryState extends State<_AnnouncementsEntry> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                   child: const Icon(
                     Icons.campaign_rounded,
@@ -3588,7 +3588,7 @@ class _AnnouncementsEntryState extends State<_AnnouncementsEntry> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
                         ),
@@ -3600,7 +3600,7 @@ class _AnnouncementsEntryState extends State<_AnnouncementsEntry> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
-                            fontSize: 12.5,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
                           ),
@@ -3612,7 +3612,7 @@ class _AnnouncementsEntryState extends State<_AnnouncementsEntry> {
                             ? 'ดูทั้งหมด ${_items.length} ประกาศ'
                             : 'ดูประกาศ',
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.primaryColor,
                         ),
@@ -3628,13 +3628,13 @@ class _AnnouncementsEntryState extends State<_AnnouncementsEntry> {
                       vertical: 3,
                     ),
                     decoration: const BoxDecoration(
-                      color: Color(0xFFFF3B30), // systemRed unread badge
-                      borderRadius: BorderRadius.all(Radius.circular(999)),
+                      color: Color(0xFFE11D48), // systemRed unread badge
+                      borderRadius: BorderRadius.all(Radius.circular(AppTheme.radiusPill)),
                     ),
                     child: Text(
                       _unread > 9 ? '9+' : '$_unread',
                       style: appFont(
-                        fontSize: 11,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                       ),
@@ -3677,7 +3677,7 @@ class _AssignedStaffList extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppTheme.subtleSurface(context),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(
                 color: AppTheme.primaryColor.withValues(alpha: 0.15),
               ),
@@ -3697,7 +3697,7 @@ class _AssignedStaffList extends StatelessWidget {
                               name.isEmpty ? '-' : name,
                               style: appFont(
                                 fontWeight: FontWeight.w900,
-                                fontSize: 14,
+                                fontSize: AppText.sizeBody,
                                 color: AppTheme.onSurface(context),
                               ),
                             ),
@@ -3713,12 +3713,12 @@ class _AssignedStaffList extends StatelessWidget {
                                 color: AppTheme.primaryColor.withValues(
                                   alpha: 0.10,
                                 ),
-                                borderRadius: BorderRadius.circular(999),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                               ),
                               child: Text(
                                 nickname,
                                 style: appFont(
-                                  fontSize: 11,
+                                  fontSize: AppText.sizeCaption,
                                   fontWeight: FontWeight.w800,
                                   color: AppTheme.primaryColor,
                                 ),
@@ -3745,7 +3745,7 @@ class _AssignedStaffList extends StatelessWidget {
                               Text(
                                 phone,
                                 style: appFont(
-                                  fontSize: 13,
+                                  fontSize: AppText.sizeLabel,
                                   fontWeight: FontWeight.w700,
                                   color: AppTheme.primaryColor,
                                   decoration: TextDecoration.underline,
@@ -3810,7 +3810,7 @@ class _VehicleDriverCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.7),
         ),
@@ -3832,7 +3832,7 @@ class _VehicleDriverCard extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: const Icon(
                   Icons.airport_shuttle_rounded,
@@ -3851,7 +3851,7 @@ class _VehicleDriverCard extends StatelessWidget {
                           : (type.isNotEmpty ? type : 'รถรับส่ง'),
                       style: appFont(
                         fontWeight: FontWeight.w900,
-                        fontSize: 14,
+                        fontSize: AppText.sizeBody,
                         color: AppTheme.onSurface(context),
                       ),
                     ),
@@ -3895,7 +3895,7 @@ class _VehicleDriverCard extends StatelessWidget {
                       Text(
                         'คนขับ',
                         style: appFont(
-                          fontSize: 11.5,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.mutedText(context),
                         ),
@@ -3903,7 +3903,7 @@ class _VehicleDriverCard extends StatelessWidget {
                       Text(
                         driverName.isNotEmpty ? driverName : '-',
                         style: appFont(
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
                         ),
@@ -3962,7 +3962,7 @@ class _VehicleImages extends StatelessWidget {
       return GestureDetector(
         onTap: () => _open(context, 0),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           child: AspectRatio(
             aspectRatio: 16 / 9,
             child: _thumb(context, images.first),
@@ -3981,7 +3981,7 @@ class _VehicleImages extends StatelessWidget {
         itemBuilder: (_, i) => GestureDetector(
           onTap: () => _open(context, i),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             child: SizedBox(
               width: 190,
               child: _thumb(context, images[i]),
@@ -4004,7 +4004,7 @@ class _PlateChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
         border: Border.all(
           color: AppTheme.border(context),
           width: 1.2,
@@ -4022,7 +4022,7 @@ class _PlateChip extends StatelessWidget {
           Text(
             plate,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.5,
               color: AppTheme.onSurface(context),
@@ -4046,7 +4046,7 @@ class _ColorChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
@@ -4068,7 +4068,7 @@ class _ColorChip extends StatelessWidget {
           Text(
             color,
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: AppTheme.onSurface(context),
             ),
@@ -4083,11 +4083,11 @@ class _ColorChip extends StatelessWidget {
     final c = raw.toLowerCase();
     bool has(List<String> keys) => keys.any(c.contains);
     if (has(['ขาว', 'white'])) return const Color(0xFFF8FAFC);
-    if (has(['ดำ', 'black'])) return const Color(0xFF1F2937);
+    if (has(['ดำ', 'black'])) return const Color(0xFF1E293B);
     if (has(['เทา', 'gray', 'grey', 'silver', 'เงิน'])) {
-      return const Color(0xFF9CA3AF);
+      return const Color(0xFF94A3B8);
     }
-    if (has(['แดง', 'red'])) return const Color(0xFFEF4444);
+    if (has(['แดง', 'red'])) return const Color(0xFFE11D48);
     if (has(['น้ำเงิน', 'ฟ้า', 'blue'])) return const Color(0xFF3B82F6);
     if (has(['เขียว', 'green'])) return const Color(0xFF10B981);
     if (has(['เหลือง', 'yellow'])) return const Color(0xFFF59E0B);
@@ -4109,9 +4109,9 @@ class _CallButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.primaryColor,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         onTap: () async {
           final uri = Uri(scheme: 'tel', path: phone);
           if (await canLaunchUrl(uri)) await launchUrl(uri);
@@ -4126,7 +4126,7 @@ class _CallButton extends StatelessWidget {
               Text(
                 'โทร',
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                 ),
@@ -4168,7 +4168,7 @@ class _StaffAvatar extends StatelessWidget {
           child: Stack(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 child: CachedNetworkImage(
                   imageUrl: url,
                   width: 44,
@@ -4185,7 +4185,7 @@ class _StaffAvatar extends StatelessWidget {
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.45),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                   ),
                   child: const Icon(
                     Icons.zoom_out_map_rounded,
@@ -4209,13 +4209,13 @@ class _StaffAvatar extends StatelessWidget {
       height: 44,
       decoration: BoxDecoration(
         color: AppTheme.primaryColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       ),
       child: Center(
         child: Text(
           initial,
           style: appFont(
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             fontWeight: FontWeight.w900,
             color: Colors.white,
           ),
@@ -4305,13 +4305,13 @@ class _StaffPhotoView extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                     child: Text(
                       name,
                       style: appFont(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -4430,7 +4430,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.background(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
       ),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.9,
@@ -4446,7 +4446,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
               height: 4,
               decoration: BoxDecoration(
                 color: AppTheme.border(context),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
             ),
           ),
@@ -4454,7 +4454,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           Text(
             'เปลี่ยนวันเดินทาง',
             style: appFont(
-              fontSize: 19,
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -4465,7 +4465,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
             ),
@@ -4513,12 +4513,12 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: AppTheme.primaryColor,
-            borderRadius: BorderRadius.circular(7),
+            borderRadius: BorderRadius.circular(AppTheme.radiusXs),
           ),
           child: Text(
             step,
             style: appFont(
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
               color: Colors.white,
             ),
@@ -4529,7 +4529,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           child: Text(
             label,
             style: appFont(
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -4547,7 +4547,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -4558,7 +4558,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           Text(
             'รอบปัจจุบัน',
             style: appFont(
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.3,
               color: AppTheme.mutedText(context),
@@ -4587,7 +4587,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           child: Text(
             text,
             style: appFont(
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w700,
               color: AppTheme.onSurface(context),
             ),
@@ -4608,7 +4608,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.18),
         ),
@@ -4646,7 +4646,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
       child: Text(
         '• $text',
         style: appFont(
-          fontSize: 12.5,
+          fontSize: AppText.sizeLabel,
           height: 1.45,
           fontWeight: FontWeight.w600,
           color: AppTheme.onSurface(context).withValues(alpha: 0.8),
@@ -4679,13 +4679,13 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
             padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
             decoration: BoxDecoration(
               color: AppTheme.subtleSurface(context),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: Text(
               'ไม่มีรอบเดินทางอื่นให้เลือกในขณะนี้',
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
               ),
@@ -4719,7 +4719,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: enough ? () => _selectSchedule(sched) : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
@@ -4728,7 +4728,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
             color: selected
                 ? AppTheme.primaryColor.withValues(alpha: 0.08)
                 : AppTheme.subtleSurface(context),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
               color: selected
                   ? AppTheme.primaryColor
@@ -4758,7 +4758,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                           child: Text(
                             dateLine,
                             style: appFont(
-                              fontSize: 14,
+                              fontSize: AppText.sizeBody,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.onSurface(context),
                             ),
@@ -4775,12 +4775,12 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                               color: AppTheme.primaryColor.withValues(
                                 alpha: 0.10,
                               ),
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             ),
                             child: Text(
                               nights,
                               style: appFont(
-                                fontSize: 11,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.primaryColor,
                               ),
@@ -4805,7 +4805,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                                 ? 'ว่าง $avail ที่นั่ง'
                                 : 'ที่นั่งไม่พอ (ว่าง $avail · ต้องการ $_passengerCount)',
                             style: appFont(
-                              fontSize: 12,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w700,
                               color: accent,
                             ),
@@ -4840,7 +4840,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
       padding: const EdgeInsets.fromLTRB(8, 14, 8, 16),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.5),
         ),
@@ -4902,7 +4902,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                   : available
                   ? AppTheme.surface(context)
                   : AppTheme.border(context).withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               border: Border.all(
                 color: picked ? AppTheme.primaryColor : AppTheme.border(context),
               ),
@@ -4910,7 +4910,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
             child: Text(
               label,
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w800,
                 color: picked
                     ? Colors.white
@@ -4950,7 +4950,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                   'ย้ายไป: $targetDate'
                   '${seatSummary != null ? ' · $seatSummary' : ''}',
                   style: appFont(
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -5035,7 +5035,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.background(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
       ),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.8,
@@ -5051,7 +5051,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
               height: 4,
               decoration: BoxDecoration(
                 color: AppTheme.border(context),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
             ),
           ),
@@ -5059,7 +5059,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
           Text(
             'เปลี่ยนจุดรับ',
             style: appFont(
-              fontSize: 18,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -5068,7 +5068,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
           Text(
             'เลือกจุดรับใหม่สำหรับรอบเดินทางนี้ · คงราคาเดิม',
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w600,
             ),
@@ -5085,7 +5085,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       onTap: id == null
                           ? null
                           : () => setState(() => _selectedId = id),
@@ -5095,7 +5095,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                           color: selected
                               ? AppTheme.primaryColor.withValues(alpha: 0.08)
                               : AppTheme.subtleSurface(context),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                           border: Border.all(
                             color: selected
                                 ? AppTheme.primaryColor
@@ -5119,7 +5119,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                             const SizedBox(width: 12),
                             if (ApiConfig.mediaUrl(p['image_url']).isNotEmpty) ...[
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                                 child: CachedNetworkImage(
                                   imageUrl: ApiConfig.mediaUrl(p['image_url']),
                                   width: 48,
@@ -5144,7 +5144,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                             textOf(p['region_label']),
                                           ),
                                           style: appFont(
-                                            fontSize: 14,
+                                            fontSize: AppText.sizeBody,
                                             fontWeight: FontWeight.w900,
                                             color: AppTheme.onSurface(context),
                                           ),
@@ -5167,7 +5167,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                           child: Text(
                                             'ปัจจุบัน',
                                             style: appFont(
-                                              fontSize: 10.5,
+                                              fontSize: AppText.sizeMicro,
                                               fontWeight: FontWeight.w800,
                                               color: AppTheme.mutedText(
                                                 context,
@@ -5182,7 +5182,7 @@ class _ChangePickupSheetState extends State<_ChangePickupSheet> {
                                     Text(
                                       textOf(p['region_label']),
                                       style: appFont(
-                                        fontSize: 12,
+                                        fontSize: AppText.sizeCaption,
                                         fontWeight: FontWeight.w600,
                                         color: AppTheme.mutedText(context),
                                       ),
@@ -5313,7 +5313,7 @@ class _GiftCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('🎁', style: TextStyle(fontSize: 20)),
+              const Text('🎁', style: TextStyle(fontSize: AppText.sizeH2)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -5321,7 +5321,7 @@ class _GiftCard extends StatelessWidget {
                       ? 'ของขวัญที่คุณส่ง'
                       : 'ของขวัญจาก ${textOf(gift['from_name'], 'คนพิเศษ')}',
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -5335,12 +5335,12 @@ class _GiftCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
                     'รับแล้ว',
                     style: appFont(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.primaryColor,
                     ),
@@ -5355,12 +5355,12 @@ class _GiftCard extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: AppTheme.subtleSurface(context),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
               child: Text(
                 '"${textOf(gift['message'])}"',
                 style: appFont(
-                  fontSize: 13.5,
+                  fontSize: AppText.sizeBody,
                   height: 1.6,
                   fontStyle: FontStyle.italic,
                   color: AppTheme.onSurface(context),
@@ -5374,7 +5374,7 @@ class _GiftCard extends StatelessWidget {
               Text(
                 'ชำระเงินให้ครบก่อน แล้วโค้ดของขวัญจะพร้อมส่งให้ผู้รับ',
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   height: 1.6,
                   color: AppTheme.mutedText(context),
                 ),
@@ -5383,13 +5383,13 @@ class _GiftCard extends StatelessWidget {
               // โค้ดตัวใหญ่ อ่านง่าย — แตะเพื่อคัดลอก
               InkWell(
                 onTap: () => _copyCode(context),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
                     color: AppTheme.subtleSurface(context),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     border: Border.all(
                       color: AppTheme.border(context).withValues(alpha: 0.6),
                     ),
@@ -5400,7 +5400,7 @@ class _GiftCard extends StatelessWidget {
                       Text(
                         _code,
                         style: appFont(
-                          fontSize: 24,
+                          fontSize: AppText.sizeH1,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 4,
                           color: AppTheme.onSurface(context),
@@ -5429,7 +5429,7 @@ class _GiftCard extends StatelessWidget {
               Text(
                 'ผู้รับกรอกโค้ดนี้ในแอป (โปรไฟล์ → รับของขวัญ) เพื่อรับทริปไปเป็นของตัวเอง',
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   height: 1.6,
                   color: AppTheme.mutedText(context),
                 ),
@@ -5441,7 +5441,7 @@ class _GiftCard extends StatelessWidget {
             Text(
               'ผู้รับกดรับของขวัญเรียบร้อยแล้ว ทริปนี้เป็นของผู้รับแล้ว 🎉',
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 height: 1.6,
                 color: AppTheme.mutedText(context),
               ),

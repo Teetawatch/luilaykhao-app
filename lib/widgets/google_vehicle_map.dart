@@ -342,7 +342,7 @@ class _GoogleVehicleMapState extends State<GoogleVehicleMap> {
       ),
       'destination': await _pinBitmap(
         dpr: dpr,
-        color: const Color(0xFF111111),
+        color: const Color(0xFF0F172A),
         icon: Icons.flag_rounded,
         label: 'ปลายทาง',
       ),
@@ -415,7 +415,7 @@ class _GoogleVehicleMapState extends State<GoogleVehicleMap> {
 
       final pill = RRect.fromRectAndRadius(
         Rect.fromLTWH((width - labelWidth) / 2, 40, labelWidth, 20),
-        const Radius.circular(999),
+        const Radius.circular(AppTheme.radiusPill),
       );
       canvas.drawRRect(pill, Paint()..color = Colors.white);
       labelPainter.paint(

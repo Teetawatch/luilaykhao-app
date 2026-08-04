@@ -48,7 +48,7 @@ class OfflineBanner extends StatelessWidget {
                             'ออฟไลน์อยู่ ข้อมูลบางส่วนอาจไม่อัปเดต',
                             style: appFont(
                               color: Colors.white,
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w800,
                             ),
                           ),

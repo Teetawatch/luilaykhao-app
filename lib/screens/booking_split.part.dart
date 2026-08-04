@@ -72,7 +72,7 @@ class _BookingSplitSectionState extends State<_BookingSplitSection> {
           'ระบบจะหารยอดคงเหลือเท่ากันตามจำนวนผู้เดินทาง '
           'เพื่อนจ่ายส่วนของตัวเองผ่านแอปหรือลิงก์ได้เลย '
           'และคุณแก้ยอดของแต่ละคนภายหลังได้',
-          style: appFont(fontSize: 13.5, height: 1.5),
+          style: appFont(fontSize: AppText.sizeBody, height: 1.5),
         ),
         actions: [
           TextButton(
@@ -101,7 +101,7 @@ class _BookingSplitSectionState extends State<_BookingSplitSection> {
         ),
         content: Text(
           'ส่วนที่เพื่อนจ่ายแล้วยังคงอยู่ ยอดที่เหลือกลับไปชำระรวมตามปกติ',
-          style: appFont(fontSize: 13.5, height: 1.5),
+          style: appFont(fontSize: AppText.sizeBody, height: 1.5),
         ),
         actions: [
           TextButton(
@@ -179,7 +179,7 @@ class _BookingSplitSectionState extends State<_BookingSplitSection> {
       showDragHandle: true,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
       ),
       builder: (_) => _SplitEditSheet(bookingRef: _ref, split: split),
     );
@@ -221,7 +221,7 @@ class _BookingSplitSectionState extends State<_BookingSplitSection> {
             'แบ่งยอดคงเหลือให้เพื่อนร่วมทริปช่วยจ่าย แต่ละคนจ่ายส่วนของตัวเอง '
             'ผ่านแอปหรือลิงก์ ไม่ต้องออกเงินก้อนเดียว',
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
               height: 1.45,
             ),
@@ -242,7 +242,7 @@ class _BookingSplitSectionState extends State<_BookingSplitSection> {
             'จ่ายแล้ว $paidCount จาก ${shares.length} คน · '
             'ยอดคงเหลือ ${money(split?['outstanding_amount'])}',
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
             ),
@@ -321,7 +321,7 @@ class _SplitShareTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: isMine && !paid
                 ? AppTheme.primaryColor.withValues(alpha: 0.55)
@@ -348,7 +348,7 @@ class _SplitShareTile extends StatelessWidget {
                     isMine ? '$name (คุณ)' : name,
                     style: appFont(
                       fontWeight: FontWeight.w800,
-                      fontSize: 13.5,
+                      fontSize: AppText.sizeBody,
                       color: AppTheme.onSurface(context),
                     ),
                   ),
@@ -356,7 +356,7 @@ class _SplitShareTile extends StatelessWidget {
                   Text(
                     '${money(share['amount'])} · ${paid ? 'จ่ายแล้ว' : 'รอจ่าย'}',
                     style: appFont(
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       color: statusColor,
                       fontWeight: FontWeight.w700,
                     ),
@@ -395,7 +395,7 @@ class _SplitShareTile extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                   ),
-                  child: Text('จ่าย', style: appFont(fontSize: 12.5)),
+                  child: Text('จ่าย', style: appFont(fontSize: AppText.sizeLabel)),
                 ),
             ],
           ],
@@ -500,7 +500,7 @@ class _SplitEditSheetState extends State<_SplitEditSheet> {
           Text(
             'แก้ไขยอดของแต่ละคน',
             style: appFont(
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
               color: AppTheme.onSurface(context),
             ),
@@ -509,7 +509,7 @@ class _SplitEditSheetState extends State<_SplitEditSheet> {
           Text(
             'ผลรวมต้องเท่ากับยอดคงเหลือ ${money(_target)}',
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               color: matched ? Colors.green : AppTheme.errorColor,
               fontWeight: FontWeight.w700,
             ),
@@ -525,7 +525,7 @@ class _SplitEditSheetState extends State<_SplitEditSheet> {
                     child: Text(
                       textOf(share['name'], 'ผู้ร่วมทริป'),
                       style: appFont(
-                        fontSize: 13.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.onSurface(context),
                       ),
@@ -558,7 +558,7 @@ class _SplitEditSheetState extends State<_SplitEditSheet> {
                 child: Text(
                   'รวม ${money(_sum)}',
                   style: appFont(
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w800,
                     color: matched ? Colors.green : AppTheme.errorColor,
                   ),

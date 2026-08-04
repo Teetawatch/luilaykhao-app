@@ -110,7 +110,7 @@ class _RelatedTripCard extends StatelessWidget {
           children: [
             // Cover image + rating chip
             ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               child: Stack(
                 children: [
                   if (image.isEmpty)
@@ -154,7 +154,7 @@ class _RelatedTripCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -168,7 +168,7 @@ class _RelatedTripCard extends StatelessWidget {
                             Text(
                               rating.toStringAsFixed(1),
                               style: appFont(
-                                fontSize: 11,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                               ),
@@ -187,7 +187,7 @@ class _RelatedTripCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w800,
                 color: isDark ? Colors.white : _premiumText,
                 height: 1.3,
@@ -210,7 +210,7 @@ class _RelatedTripCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -227,7 +227,7 @@ class _RelatedTripCard extends StatelessWidget {
                 Text(
                   money(price),
                   style: appFont(
-                    fontSize: 16,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: _softAccent,
                     letterSpacing: -0.3,
@@ -239,7 +239,7 @@ class _RelatedTripCard extends StatelessWidget {
                   child: Text(
                     '/ คน',
                     style: appFont(
-                      fontSize: 11,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
                     ),

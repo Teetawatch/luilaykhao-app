@@ -199,7 +199,7 @@ class _TripFinderScreenState extends State<TripFinderScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text('ค้นหาทริปที่ใช่',
-            style: appFont(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.onSurface(context))),
+            style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800, color: AppTheme.onSurface(context))),
       ),
       body: SafeArea(
         child: _showResults ? _buildResults(context) : _buildQuiz(app),
@@ -239,7 +239,7 @@ class _TripFinderScreenState extends State<TripFinderScreen> {
                     : done
                         ? AppTheme.primaryColor.withValues(alpha: 0.4)
                         : AppTheme.outlineColor,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
             );
           }),
@@ -266,10 +266,10 @@ class _TripFinderScreenState extends State<TripFinderScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(_stepTitle,
-                      style: appFont(fontSize: 26, fontWeight: FontWeight.w800, color: AppTheme.onSurface(context))),
+                      style: appFont(fontSize: AppText.sizeH1, fontWeight: FontWeight.w800, color: AppTheme.onSurface(context))),
                   const SizedBox(height: 6),
                   Text(_stepSubtitle,
-                      style: appFont(fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+                      style: appFont(fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
                   const SizedBox(height: 20),
                   ...options.map((opt) => _OptionCard(
                         label: textOf(opt['label']),
@@ -331,11 +331,11 @@ class _TripFinderScreenState extends State<TripFinderScreen> {
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: [
         Text(_results.isEmpty ? 'ยังไม่เจอทริปที่ตรงเป๊ะ' : 'ทริปที่ใช่สำหรับคุณ',
-            style: appFont(fontSize: 26, fontWeight: FontWeight.w800, color: AppTheme.onSurface(context))),
+            style: appFont(fontSize: AppText.sizeH1, fontWeight: FontWeight.w800, color: AppTheme.onSurface(context))),
         if (_selectionSummary.isNotEmpty) ...[
           const SizedBox(height: 6),
           Text(_selectionSummary,
-              style: appFont(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+              style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
         ],
         const SizedBox(height: 16),
         if (_relaxedNote.isNotEmpty)
@@ -354,7 +354,7 @@ class _TripFinderScreenState extends State<TripFinderScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(_relaxedNote,
-                      style: appFont(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.onSurface(context))),
+                      style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w600, color: AppTheme.onSurface(context))),
                 ),
               ],
             ),
@@ -368,7 +368,7 @@ class _TripFinderScreenState extends State<TripFinderScreen> {
                 const SizedBox(height: 12),
                 Text('ลองเริ่มใหม่แล้วปรับเงื่อนไขให้กว้างขึ้นนะครับ',
                     textAlign: TextAlign.center,
-                    style: appFont(fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+                    style: appFont(fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
               ],
             ),
           )
@@ -454,10 +454,10 @@ class TripFinderEntryCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text('ค้นหาทริปที่ใช่',
-                        style: appFont(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
+                        style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800, color: Colors.white)),
                     const SizedBox(height: 2),
                     Text('ตอบ 3 ข้อ เจอทริปที่ชอบใน 1 นาที',
-                        style: appFont(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.9))),
+                        style: appFont(fontSize: AppText.sizeLabel, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.9))),
                   ],
                 ),
               ),
@@ -512,11 +512,11 @@ class _OptionCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(label,
-                          style: appFont(fontSize: 17, fontWeight: FontWeight.w800, color: AppTheme.onSurface(context))),
+                          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800, color: AppTheme.onSurface(context))),
                       if (desc != null) ...[
                         const SizedBox(height: 2),
                         Text(desc!,
-                            style: appFont(fontSize: 13.5, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+                            style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
                       ],
                     ],
                   ),

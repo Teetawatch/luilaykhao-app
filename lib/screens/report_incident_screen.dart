@@ -196,7 +196,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         centerTitle: false,
         title: Text(
           'แจ้งเหตุฉุกเฉิน',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
       body: ListView(
@@ -211,7 +211,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
             Text(
               widget.scheduleTitle,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.mutedText(context),
               ),
@@ -239,7 +239,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _personController,
-            style: appFont(fontSize: 14.5),
+            style: appFont(fontSize: AppText.sizeBody),
             decoration: const InputDecoration(hintText: 'ชื่อผู้โดยสาร'),
           ),
           if (names.isNotEmpty) ...[
@@ -253,7 +253,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                     label: Text(
                       name,
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.onSurface(context),
                       ),
@@ -270,7 +270,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _descController,
-            style: appFont(fontSize: 14.5),
+            style: appFont(fontSize: AppText.sizeBody),
             minLines: 3,
             maxLines: 6,
             decoration: const InputDecoration(
@@ -324,7 +324,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   Widget _label(String text) => Text(
     text,
     style: appFont(
-      fontSize: 13,
+      fontSize: AppText.sizeLabel,
       fontWeight: FontWeight.w700,
       color: AppTheme.mutedText(context),
     ),
@@ -352,7 +352,7 @@ class _SeverityChip extends StatelessWidget {
           color: selected
               ? severity.color
               : severity.color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           border: Border.all(
             color: selected
                 ? severity.color
@@ -362,7 +362,7 @@ class _SeverityChip extends StatelessWidget {
         child: Text(
           severity.label,
           style: appFont(
-            fontSize: 13.5,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w800,
             color: selected ? Colors.white : severity.color,
           ),
@@ -413,7 +413,7 @@ class _LocationTile extends StatelessWidget {
                 Text(
                   'แนบตำแหน่งปัจจุบัน',
                   style: appFont(
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.onSurface(context),
                   ),
@@ -424,7 +424,7 @@ class _LocationTile extends StatelessWidget {
                   child: Text(
                     status,
                     style: appFont(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.mutedText(context),
                     ),
@@ -463,7 +463,7 @@ class _PhotoTile extends StatelessWidget {
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               child: Image.file(
                 File(photoPath!),
                 width: 56,
@@ -476,7 +476,7 @@ class _PhotoTile extends StatelessWidget {
               child: Text(
                 'แนบรูปแล้ว',
                 style: appFont(
-                  fontSize: 13.5,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.onSurface(context),
                 ),
@@ -500,7 +500,7 @@ class _PhotoTile extends StatelessWidget {
       icon: const Icon(Icons.add_a_photo_rounded),
       label: Text(
         'ถ่ายรูปประกอบ (ถ้ามี)',
-        style: appFont(fontSize: 14, fontWeight: FontWeight.w700),
+        style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w700),
       ),
     );
   }

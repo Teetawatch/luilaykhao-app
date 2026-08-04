@@ -211,7 +211,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ? '$unread รายการที่ยังไม่ได้อ่าน'
                         : 'อ่านครบทุกรายการแล้ว',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w600,
                       color: unread > 0
                           ? AppTheme.primaryColor
@@ -437,7 +437,7 @@ class _MarkAllReadAction extends StatelessWidget {
                   minimumSize: const Size(0, 36),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   ),
                 ),
                 child: saving
@@ -452,7 +452,7 @@ class _MarkAllReadAction extends StatelessWidget {
                     : Text(
                         'อ่านทั้งหมด',
                         style: appFont(
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -477,7 +477,7 @@ class _NotificationSectionHeader extends StatelessWidget {
           Text(
             label,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.2,
               color: AppTheme.mutedText(context),
@@ -487,7 +487,7 @@ class _NotificationSectionHeader extends StatelessWidget {
           Text(
             '$count',
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: AppTheme.mutedText(context).withValues(alpha: 0.55),
             ),
@@ -527,7 +527,7 @@ class _NotificationsEmptyState extends StatelessWidget {
               'ยังไม่มีการแจ้งเตือน',
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 20,
+                fontSize: AppText.sizeH2,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
               ),
@@ -537,7 +537,7 @@ class _NotificationsEmptyState extends StatelessWidget {
               'เมื่อมีอัปเดตการจอง การชำระเงิน หรือโปรโมชันใหม่ จะแสดงที่นี่',
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 height: 1.5,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
@@ -576,7 +576,7 @@ class _SwipableNotificationCard extends StatelessWidget {
         padding: const EdgeInsets.only(right: 26),
         decoration: BoxDecoration(
           color: AppTheme.errorColor,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -587,7 +587,7 @@ class _SwipableNotificationCard extends StatelessWidget {
               'ลบ',
               style: appFont(
                 color: Colors.white,
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -624,7 +624,7 @@ class _NotificationCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: busy ? null : onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         child: Ink(
           padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
           decoration: BoxDecoration(
@@ -634,7 +634,7 @@ class _NotificationCard extends StatelessWidget {
                     AppTheme.surface(context),
                   )
                 : AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             border: Border.all(
               color: unread
                   ? accent.withValues(alpha: isDark ? 0.30 : 0.18)
@@ -666,7 +666,7 @@ class _NotificationCard extends StatelessWidget {
                 height: 46,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: isDark ? 0.18 : 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: Icon(_notificationIcon(type), color: accent, size: 24),
               ),
@@ -683,7 +683,7 @@ class _NotificationCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
-                              fontSize: 11.5,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.2,
                               color: accent,
@@ -694,7 +694,7 @@ class _NotificationCard extends StatelessWidget {
                         Text(
                           _notificationTimeAgo(notification['created_at']),
                           style: appFont(
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.mutedText(context),
                           ),
@@ -707,7 +707,7 @@ class _NotificationCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 15.5,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
                         height: 1.2,
                         color: AppTheme.onSurface(context),
@@ -720,7 +720,7 @@ class _NotificationCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
-                          fontSize: 13.5,
+                          fontSize: AppText.sizeBody,
                           height: 1.45,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.mutedText(context),

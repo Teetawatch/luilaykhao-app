@@ -294,7 +294,7 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
     // border — not a heavy drop shadow. The shadow that remains is a single,
     // very soft, low-opacity layer (no spread, no colour tint) living on an
     // OUTER layer outside the clip so it isn't clipped away.
-    const topCorners = BorderRadius.vertical(top: Radius.circular(28));
+    const topCorners = BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl));
     return DecoratedBox(
       decoration: ShapeDecoration(
         shape: const RoundedSuperellipseBorder(borderRadius: topCorners),
@@ -512,7 +512,7 @@ class _NavItemState extends State<_NavItem>
                         color: activeColor.withValues(
                           alpha: 0.12 * _pillWidth.value,
                         ),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       ),
                     ),
                     // icon
@@ -540,7 +540,7 @@ class _NavItemState extends State<_NavItem>
                           ),
                           decoration: BoxDecoration(
                             color: AppTheme.errorColor,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                             border: Border.all(
                               color: isDark
                                   ? AppTheme.surfaceDark
@@ -556,7 +556,7 @@ class _NavItemState extends State<_NavItem>
                             widget.badge > 99 ? '99+' : '${widget.badge}',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: AppText.sizeMicro,
                               fontWeight: FontWeight.w900,
                               height: 1.1,
                             ),
@@ -572,7 +572,7 @@ class _NavItemState extends State<_NavItem>
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 220),
               style: appFont(
-                fontSize: 10.5,
+                fontSize: AppText.sizeMicro,
                 fontWeight: widget.isSelected
                     ? FontWeight.w800
                     : FontWeight.w500,

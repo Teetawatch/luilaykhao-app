@@ -112,7 +112,7 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
           children: [
             Text(
               'กำหนดการเดินทาง',
-              style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+              style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
             ),
             if (widget.tripTitle.isNotEmpty)
               Text(
@@ -120,7 +120,7 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
                 ),
@@ -151,7 +151,7 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
                     child: Text(
                       'กำลังแสดงกำหนดการที่บันทึกไว้ (ออฟไลน์)',
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -256,7 +256,7 @@ class _ProgressHeader extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context).withValues(alpha: 0.55)),
       ),
       child: Column(
@@ -275,7 +275,7 @@ class _ProgressHeader extends StatelessWidget {
               Text(
                 'เช็คอินแล้ว $reached/$total จุด',
                 style: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                   letterSpacing: -0.2,
@@ -285,7 +285,7 @@ class _ProgressHeader extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7,
@@ -312,7 +312,7 @@ class _ProgressHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
                   ),
@@ -344,12 +344,12 @@ class _DayHeader extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
           decoration: BoxDecoration(
             color: AppTheme.primaryColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           ),
           child: Text(
             label,
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w800,
               color: AppTheme.primaryColor,
               letterSpacing: -0.1,
@@ -364,7 +364,7 @@ class _DayHeader extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.mutedText(context),
               ),
@@ -493,7 +493,7 @@ class _TimelineRow extends StatelessWidget {
                   color: reached
                       ? green.withValues(alpha: 0.05)
                       : AppTheme.surface(context),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   border: Border.all(
                     color: isNext
                         ? AppTheme.primaryColor.withValues(alpha: 0.55)
@@ -516,7 +516,7 @@ class _TimelineRow extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -530,7 +530,7 @@ class _TimelineRow extends StatelessWidget {
                                 Text(
                                   time,
                                   style: appFont(
-                                    fontSize: 12.5,
+                                    fontSize: AppText.sizeLabel,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.primaryColor,
                                     letterSpacing: -0.2,
@@ -548,12 +548,12 @@ class _TimelineRow extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryColor,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                             ),
                             child: Text(
                               'จุดถัดไป',
                               style: appFont(
-                                fontSize: 11,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                                 letterSpacing: -0.1,
@@ -567,7 +567,7 @@ class _TimelineRow extends StatelessWidget {
                     Text(
                       title.isEmpty ? 'ไม่ระบุหัวข้อ' : title,
                       style: appFont(
-                        fontSize: 15.5,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         height: 1.3,
                         color: AppTheme.onSurface(context),
@@ -579,7 +579,7 @@ class _TimelineRow extends StatelessWidget {
                       Text(
                         detail,
                         style: appFont(
-                          fontSize: 13.5,
+                          fontSize: AppText.sizeBody,
                           height: 1.5,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.onSurface(
@@ -647,7 +647,7 @@ class _CheckInButton extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: green,
                     ),
@@ -672,7 +672,7 @@ class _CheckInButton extends StatelessWidget {
                 : Text(
                     'ยกเลิก',
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -690,7 +690,7 @@ class _CheckInButton extends StatelessWidget {
           backgroundColor: AppTheme.primaryColor,
           padding: const EdgeInsets.symmetric(vertical: 11),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
         ),
         icon: loading
@@ -706,7 +706,7 @@ class _CheckInButton extends StatelessWidget {
         label: Text(
           'เช็คอินจุดนี้',
           style: appFont(
-            fontSize: 14,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w800,
             color: Colors.white,
             letterSpacing: -0.2,
@@ -761,10 +761,10 @@ class _ItineraryLinkButton extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Material(
         color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         child: InkWell(
           onTap: () => _open(context),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
@@ -779,7 +779,7 @@ class _ItineraryLinkButton extends StatelessWidget {
                 Text(
                   isMap ? 'เปิดแผนที่' : 'เปิดลิงก์',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                     color: color,
                     letterSpacing: -0.1,
@@ -818,7 +818,7 @@ class _MessageState extends StatelessWidget {
           title,
           textAlign: TextAlign.center,
           style: appFont(
-            fontSize: 16,
+            fontSize: AppText.sizeSubtitle,
             fontWeight: FontWeight.w800,
             color: AppTheme.onSurface(context),
           ),
@@ -830,7 +830,7 @@ class _MessageState extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.5,
               fontWeight: FontWeight.w500,
               color: AppTheme.mutedText(context),

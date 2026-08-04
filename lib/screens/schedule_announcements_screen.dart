@@ -102,7 +102,7 @@ class _ScheduleAnnouncementsScreenState
           children: [
             Text(
               'ประกาศจากผู้จัด',
-              style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+              style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
             ),
             if (widget.tripTitle.isNotEmpty)
               Text(
@@ -110,7 +110,7 @@ class _ScheduleAnnouncementsScreenState
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
                 ),
@@ -215,7 +215,7 @@ _CategoryStyle _styleFor(String category) {
     case 'urgent':
       return const _CategoryStyle(
         Icons.priority_high_rounded,
-        Color(0xFFFF3B30), // systemRed
+        Color(0xFFE11D48), // systemRed
         'ด่วน',
       );
     default:
@@ -249,7 +249,7 @@ class _AnnouncementCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: pinned
               ? style.color.withValues(alpha: 0.45)
@@ -270,7 +270,7 @@ class _AnnouncementCard extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: style.color.withValues(alpha: isDark ? 0.22 : 0.12),
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Icon(style.icon, size: 20, color: style.color),
               ),
@@ -284,7 +284,7 @@ class _AnnouncementCard extends StatelessWidget {
                         Text(
                           style.label,
                           style: appFont(
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.2,
                             color: style.color,
@@ -303,7 +303,7 @@ class _AnnouncementCard extends StatelessWidget {
                           Text(
                             when,
                             style: appFont(
-                              fontSize: 11.5,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.mutedText(context),
                             ),
@@ -314,7 +314,7 @@ class _AnnouncementCard extends StatelessWidget {
                     Text(
                       title,
                       style: appFont(
-                        fontSize: 15.5,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         height: 1.25,
                         color: AppTheme.onSurface(context),
@@ -330,7 +330,7 @@ class _AnnouncementCard extends StatelessWidget {
             Text(
               body,
               style: appFont(
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 height: 1.5,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.onSurface(context).withValues(alpha: 0.82),
@@ -349,7 +349,7 @@ class _AnnouncementCard extends StatelessWidget {
               Text(
                 author,
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.mutedText(context),
                 ),
@@ -380,7 +380,7 @@ class _SectionHeader extends StatelessWidget {
         Text(
           label,
           style: appFont(
-            fontSize: 12.5,
+            fontSize: AppText.sizeLabel,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.3,
             color: muted,
@@ -415,7 +415,7 @@ class _MessageState extends StatelessWidget {
           title,
           textAlign: TextAlign.center,
           style: appFont(
-            fontSize: 16,
+            fontSize: AppText.sizeSubtitle,
             fontWeight: FontWeight.w800,
             color: AppTheme.onSurface(context),
           ),
@@ -427,7 +427,7 @@ class _MessageState extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.5,
               fontWeight: FontWeight.w500,
               color: AppTheme.mutedText(context),

@@ -63,7 +63,7 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
         centerTitle: false,
         title: Text(
           widget.title.isEmpty ? 'รายการแจ้งเหตุ' : widget.title,
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
       body: RefreshIndicator(
@@ -108,7 +108,7 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
             child: Text(
               'ยังไม่มีการแจ้งเหตุในรอบนี้',
               style: appFont(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.mutedText(context),
               ),
@@ -190,12 +190,12 @@ class _IncidentCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: meta.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Text(
                   severityLabel,
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: meta.color,
                   ),
@@ -207,7 +207,7 @@ class _IncidentCard extends StatelessWidget {
               Text(
                 _formatDateTime(_text(incident['created_at'])),
                 style: appFont(
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
                 ),
@@ -227,7 +227,7 @@ class _IncidentCard extends StatelessWidget {
                 Text(
                   passenger,
                   style: appFont(
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.onSurface(context),
                   ),
@@ -239,7 +239,7 @@ class _IncidentCard extends StatelessWidget {
           Text(
             description,
             style: appFont(
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               height: 1.5,
               color: AppTheme.onSurface(context),
             ),
@@ -247,7 +247,7 @@ class _IncidentCard extends StatelessWidget {
           if (photoUrl.isNotEmpty) ...[
             const SizedBox(height: 12),
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               child: CachedNetworkImage(
                 imageUrl: photoUrl,
                 height: 160,
@@ -264,7 +264,7 @@ class _IncidentCard extends StatelessWidget {
                 child: Text(
                   reporter.isEmpty ? 'ไม่ระบุผู้แจ้ง' : 'แจ้งโดย $reporter',
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedText(context),
                   ),
@@ -281,7 +281,7 @@ class _IncidentCard extends StatelessWidget {
                   icon: const Icon(Icons.map_outlined, size: 16),
                   label: Text(
                     'ดูตำแหน่ง',
-                    style: appFont(fontSize: 12, fontWeight: FontWeight.w700),
+                    style: appFont(fontSize: AppText.sizeCaption, fontWeight: FontWeight.w700),
                   ),
                 ),
             ],
@@ -291,7 +291,7 @@ class _IncidentCard extends StatelessWidget {
             Text(
               'ปิดเคสโดย ${_text(incident['resolved_by_name'])}',
               style: appFont(
-                fontSize: 11.5,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
               ),
@@ -324,11 +324,11 @@ class _StatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         resolved ? 'ปิดเคสแล้ว' : 'รอดำเนินการ',
-        style: appFont(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+        style: appFont(fontSize: AppText.sizeCaption, fontWeight: FontWeight.w700, color: color),
       ),
     );
   }

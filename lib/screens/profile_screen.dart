@@ -167,7 +167,7 @@ class ProfileHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         color: AppTheme.surface(context),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
@@ -189,7 +189,7 @@ class ProfileHeader extends StatelessWidget {
                     Text(
                       _greeting(),
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.mutedText(context),
                       ),
@@ -200,7 +200,7 @@ class ProfileHeader extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 21,
+                        fontSize: AppText.sizeH2,
                         height: 1.2,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
@@ -213,7 +213,7 @@ class ProfileHeader extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 13.5,
+                        fontSize: AppText.sizeBody,
                         height: 1.4,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.mutedText(context),
@@ -243,14 +243,14 @@ class ProfileHeader extends StatelessWidget {
                 backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.08),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
               ),
               icon: const Icon(Icons.edit_outlined, size: 17),
               label: Text(
                 'แก้ไขโปรไฟล์',
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -274,9 +274,9 @@ class _BirthDatePromptBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.primaryColor.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: () => _pushPremium(context, EditProfileScreen(initialUser: user)),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -295,7 +295,7 @@ class _BirthDatePromptBanner extends StatelessWidget {
                     Text(
                       'เพิ่มวัน/เดือน/ปีเกิด',
                       style: appFont(
-                        fontSize: 14,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                       ),
@@ -304,7 +304,7 @@ class _BirthDatePromptBanner extends StatelessWidget {
                     Text(
                       'บางทริปต้องใช้ข้อมูลวันเกิด กรอกไว้เพื่อให้จองครั้งต่อไปสะดวกขึ้น',
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         height: 1.35,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.mutedText(context),
@@ -351,7 +351,7 @@ class _Avatar extends StatelessWidget {
                     initial,
                     style: appFont(
                       color: AppTheme.primaryColor,
-                      fontSize: 28,
+                      fontSize: AppText.sizeHero,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -367,7 +367,7 @@ class _Avatar extends StatelessWidget {
                       initial,
                       style: appFont(
                         color: AppTheme.primaryColor,
-                        fontSize: 28,
+                        fontSize: AppText.sizeHero,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -428,7 +428,7 @@ class ProfileStatsSection extends StatelessWidget {
                       Text(
                         'สมาชิกลุยเลเขา',
                         style: appFont(
-                          fontSize: 15.5,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.textMain,
                           letterSpacing: -0.1,
@@ -439,7 +439,7 @@ class ProfileStatsSection extends StatelessWidget {
                         Text(
                           'สะสมแต้มเพื่อปลดล็อกสิทธิพิเศษ',
                           style: appFont(
-                            fontSize: 12.5,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
                           ),
@@ -456,7 +456,7 @@ class ProfileStatsSection extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -471,7 +471,7 @@ class ProfileStatsSection extends StatelessWidget {
                           _loyaltyTierLabel(tier, label: tierLabel),
                           style: appFont(
                             color: AppTheme.primaryColor,
-                            fontSize: 11.5,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -504,7 +504,7 @@ class ProfileStatsSection extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             ClipRRect(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               child: LinearProgressIndicator(
                 minHeight: 6,
                 value: progress,
@@ -518,7 +518,7 @@ class ProfileStatsSection extends StatelessWidget {
                   ? 'คุณอยู่ในระดับสูงสุดแล้ว'
                   : 'ไปด้วยกันอีก ${_formatCompact(tripsRemaining)} ทริป ถึงระดับ ${_cleanText(nextTier['label'])}',
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.textSecondary,
               ),
@@ -535,7 +535,7 @@ class ProfileStatsSection extends StatelessWidget {
                 Text(
                   'แลกของรางวัล',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
                   ),
@@ -587,7 +587,7 @@ class _StatMetric extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.55),
           ),
@@ -603,7 +603,7 @@ class _StatMetric extends StatelessWidget {
               child: Text(
                 value,
                 style: appFont(
-                  fontSize: 26,
+                  fontSize: AppText.sizeH1,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                   letterSpacing: -0.4,
@@ -616,7 +616,7 @@ class _StatMetric extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
               ),
@@ -720,19 +720,19 @@ class _QuickActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       shadowColor: Colors.black.withValues(alpha: 0.05),
       elevation: 0,
       child: Ink(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.55),
           ),
         ),
         child: InkWell(
           onTap: action.onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           splashColor: AppTheme.primaryColor.withValues(alpha: 0.06),
           highlightColor: AppTheme.primaryColor.withValues(alpha: 0.04),
           child: Padding(
@@ -747,7 +747,7 @@ class _QuickActionTile extends StatelessWidget {
                       height: 38,
                       decoration: BoxDecoration(
                         color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       ),
                       child: Icon(
                         action.icon,
@@ -764,13 +764,13 @@ class _QuickActionTile extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.warningTint(context),
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                         ),
                         child: Text(
                           action.badge!,
                           style: appFont(
                             color: AppTheme.warningColor,
-                            fontSize: 11,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -783,7 +783,7 @@ class _QuickActionTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     height: 1.25,
                     color: AppTheme.textMain,
                     fontWeight: FontWeight.w700,
@@ -825,10 +825,10 @@ class _BookingsShortcutCard extends StatelessWidget {
       label: 'การจองของฉัน',
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           child: Ink(
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -836,7 +836,7 @@ class _BookingsShortcutCard extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF059669), Color(0xFF10B981)],
               ),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -848,7 +848,7 @@ class _BookingsShortcutCard extends StatelessWidget {
                     height: 50,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                     child: const Icon(
                       Icons.confirmation_number_rounded,
@@ -867,7 +867,7 @@ class _BookingsShortcutCard extends StatelessWidget {
                             Text(
                               'การจองของฉัน',
                               style: appFont(
-                                fontSize: 16.5,
+                                fontSize: AppText.sizeSubtitle,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                                 letterSpacing: -0.3,
@@ -882,12 +882,12 @@ class _BookingsShortcutCard extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.22),
-                                  borderRadius: BorderRadius.circular(999),
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                                 ),
                                 child: Text(
                                   '$total',
                                   style: appFont(
-                                    fontSize: 12,
+                                    fontSize: AppText.sizeCaption,
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white,
                                   ),
@@ -902,7 +902,7 @@ class _BookingsShortcutCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
-                            fontSize: 12.5,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w500,
                             height: 1.2,
                             color: Colors.white.withValues(alpha: 0.85),
@@ -917,7 +917,7 @@ class _BookingsShortcutCard extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -931,7 +931,7 @@ class _BookingsShortcutCard extends StatelessWidget {
                                 Text(
                                   '$upcoming ทริปกำลังจะถึง',
                                   style: appFont(
-                                    fontSize: 12,
+                                    fontSize: AppText.sizeCaption,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
                                   ),
@@ -1156,12 +1156,12 @@ class _UnreadPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: AppTheme.errorColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Text(
         count > 99 ? '99+' : '$count',
         style: appFont(
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w800,
           color: Colors.white,
         ),
@@ -1234,7 +1234,7 @@ class _MenuTile extends StatelessWidget {
                 height: 30,
                 decoration: BoxDecoration(
                   color: colorScheme.primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 ),
                 child: Icon(item.icon, color: colorScheme.primary, size: 18),
               ),
@@ -1249,7 +1249,7 @@ class _MenuTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w600,
                         color: colorScheme.onSurface,
                         letterSpacing: -0.1,
@@ -1262,7 +1262,7 @@ class _MenuTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w500,
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -1276,7 +1276,7 @@ class _MenuTile extends StatelessWidget {
                 Text(
                   item.trailing!,
                   style: appFont(
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w500,
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -1291,7 +1291,7 @@ class _MenuTile extends StatelessWidget {
                 Icons.chevron_right_rounded,
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.28)
-                    : const Color(0xFFC7C7CC), // iOS tertiary label grey
+                    : const Color(0xFFCBD5E1), // iOS tertiary label grey
                 size: 20,
               ),
             ],
@@ -1483,7 +1483,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
       content: Text(
         'บัญชีและข้อมูลทั้งหมดของคุณถูกลบออกจากระบบอย่างถาวรเรียบร้อยแล้ว '
         'ขอบคุณที่ใช้บริการลุยเลเขา',
-        style: appFont(fontSize: 14, height: 1.5),
+        style: appFont(fontSize: AppText.sizeBody, height: 1.5),
       ),
       actions: [
         FilledButton(
@@ -1511,7 +1511,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           Text(
             'การลบบัญชีจะลบข้อมูลส่วนตัว ประวัติการจอง แต้มสะสม และรีวิวทั้งหมดอย่างถาวร '
             'การดำเนินการนี้ไม่สามารถย้อนกลับได้',
-            style: appFont(fontSize: 14, height: 1.5),
+            style: appFont(fontSize: AppText.sizeBody, height: 1.5),
           ),
           if (widget.requiresPassword) ...[
             const SizedBox(height: 16),
@@ -1542,7 +1542,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
               _error!,
               style: appFont(
                 color: AppTheme.errorColor,
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1605,7 +1605,7 @@ class _AccountActionTile extends StatelessWidget {
                 height: 30,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 ),
                 child: Icon(icon, color: color, size: 18),
               ),
@@ -1614,7 +1614,7 @@ class _AccountActionTile extends StatelessWidget {
                 child: Text(
                   label,
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w600,
                     color: color,
                     letterSpacing: -0.1,
@@ -1625,7 +1625,7 @@ class _AccountActionTile extends StatelessWidget {
                 Icons.chevron_right_rounded,
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.28)
-                    : const Color(0xFFC7C7CC),
+                    : const Color(0xFFCBD5E1),
                 size: 20,
               ),
             ],

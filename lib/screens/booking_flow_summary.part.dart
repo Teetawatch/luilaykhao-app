@@ -55,7 +55,7 @@ class BookingProgressStepper extends StatelessWidget {
                                   ? Colors.white
                                   : _mutedTextColor(context),
                               fontWeight: FontWeight.w800,
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                             ),
                           ),
                   ),
@@ -71,7 +71,7 @@ class BookingProgressStepper extends StatelessWidget {
                           ? _premiumText(context)
                           : _mutedTextColor(context),
                       fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                     ),
                   ),
                 ),
@@ -83,7 +83,7 @@ class BookingProgressStepper extends StatelessWidget {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: isConnectorDone ? _softAccent : borderColor,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                   ),
               ],
@@ -132,7 +132,7 @@ class TripSummaryCard extends StatelessWidget {
         children: [
           RepaintBoundary(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
               child: SizedBox(
                 width: 104,
                 height: 116,
@@ -167,7 +167,7 @@ class TripSummaryCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 17,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w800,
                     height: 1.25,
                     color: _premiumText(context),
@@ -348,7 +348,7 @@ class TravelInfoSection extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF7C3AED).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(5),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                           border: Border.all(
                             color: const Color(0xFF7C3AED).withValues(alpha: 0.30),
                           ),
@@ -356,7 +356,7 @@ class TravelInfoSection extends StatelessWidget {
                         child: Text(
                           'เหมา',
                           style: appFont(
-                            fontSize: 10,
+                            fontSize: AppText.sizeMicro,
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF7C3AED),
                           ),
@@ -431,7 +431,7 @@ class TravelInfoSection extends StatelessWidget {
                             maxLines: 1,
                             style: appFont(
                               color: _premiumText(context),
-                              fontSize: 14,
+                              fontSize: AppText.sizeBody,
                               fontWeight: FontWeight.w700,
                             ),
                           );
@@ -452,7 +452,7 @@ class TravelInfoSection extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                               style: appFont(
-                                fontSize: 14,
+                                fontSize: AppText.sizeBody,
                                 fontWeight: FontWeight.w700,
                                 color: _premiumText(context),
                               ),
@@ -462,7 +462,7 @@ class TravelInfoSection extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                               style: appFont(
-                                fontSize: 12,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w600,
                                 color: _mutedTextColor(context),
                               ),
@@ -534,11 +534,11 @@ class _CustomPickupTile extends StatelessWidget {
     if (cp == null) {
       return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
               color: AppTheme.border(context),
               width: 1.2,
@@ -555,7 +555,7 @@ class _CustomPickupTile extends StatelessWidget {
                 child: Text(
                   'ไม่มีจุดที่สะดวก? ปักหมุดจุดรับเอง',
                   style: appFont(
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.onSurface(context),
                   ),
@@ -572,7 +572,7 @@ class _CustomPickupTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: amber.withValues(alpha: 0.4), width: 1.2),
         color: amber.withValues(alpha: 0.06),
       ),
@@ -587,7 +587,7 @@ class _CustomPickupTile extends StatelessWidget {
                 child: Text(
                   'จุดรับที่ปักหมุดเอง',
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: amber,
                     letterSpacing: 0.2,
@@ -605,7 +605,7 @@ class _CustomPickupTile extends StatelessWidget {
           Text(
             textOf(cp['label']),
             style: appFont(
-              fontSize: 14.5,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w700,
               color: AppTheme.onSurface(context),
             ),
@@ -615,7 +615,7 @@ class _CustomPickupTile extends StatelessWidget {
             Text(
               textOf(cp['note']),
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w500,
                 color: _mutedTextColor(context),
               ),
@@ -632,7 +632,7 @@ class _CustomPickupTile extends StatelessWidget {
                       ? 'คิดราคาเท่าจุดรับ ${_pickupLocationLabel(nearest)} ที่ใกล้หมุดที่สุด · ${money(quotedPrice)} / คน'
                       : 'ใช้ราคาเดียวกับรอบเดินทาง · ${money(quotedPrice)} / คน',
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w600,
                     color: amber,
                   ),
@@ -646,7 +646,7 @@ class _CustomPickupTile extends StatelessWidget {
             child: Text(
               'แก้ไขจุดที่ปักหมุด',
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.primaryColor,
               ),
@@ -673,14 +673,14 @@ class _JoinTripSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => onChanged(!selected),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: selected
               ? _softAccent.withValues(alpha: 0.10)
               : _fieldBackground(context),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: selected ? _softAccent.withValues(alpha: 0.28) : _cardBorder(context),
           ),
@@ -702,7 +702,7 @@ class _JoinTripSwitch extends StatelessWidget {
                     'Join Trip',
                     style: appFont(
                       color: _premiumText(context),
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.1,
                     ),
@@ -712,7 +712,7 @@ class _JoinTripSwitch extends StatelessWidget {
                     price > 0 ? '${money(price)} / คน' : 'ใช้ราคาจากรอบเดินทาง',
                     style: appFont(
                       color: _mutedTextColor(context),
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

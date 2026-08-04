@@ -40,7 +40,7 @@ class _SectionTitle extends StatelessWidget {
             color: _accent.withValues(
               alpha: AppTheme.isDark(context) ? 0.18 : 0.10,
             ),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
           child: Icon(icon, color: _accent, size: 18),
         ),
@@ -50,7 +50,7 @@ class _SectionTitle extends StatelessWidget {
             title,
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -80,7 +80,7 @@ class _ChoiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
@@ -91,7 +91,7 @@ class _ChoiceTile extends StatelessWidget {
                   alpha: AppTheme.isDark(context) ? 0.18 : 0.08,
                 )
               : AppTheme.fieldSurface(context),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: selected ? _accent : AppTheme.border(context),
             width: selected ? 1.5 : 1,
@@ -161,7 +161,7 @@ class _InfoPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: AppTheme.fieldSurface(context),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
@@ -173,7 +173,7 @@ class _InfoPill extends StatelessWidget {
             text,
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -208,7 +208,7 @@ class _SummaryRow extends StatelessWidget {
             style: appFont(
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
             ),
           ),
         ),
@@ -223,7 +223,7 @@ class _SummaryRow extends StatelessWidget {
             style: appFont(
               color: valueColor ?? AppTheme.onSurface(context),
               fontWeight: FontWeight.w900,
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
             ),
           ),
         ),
@@ -247,7 +247,7 @@ class _InstallmentRow extends StatelessWidget {
         color: isFirst
             ? AppTheme.warningTint(context)
             : AppTheme.fieldSurface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: isFirst
               ? AppTheme.warningColor.withValues(alpha: 0.35)
@@ -272,7 +272,7 @@ class _InstallmentRow extends StatelessWidget {
                   color: isFirst
                       ? AppTheme.warningColor
                       : AppTheme.mutedText(context),
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -288,14 +288,14 @@ class _InstallmentRow extends StatelessWidget {
                   style: appFont(
                     color: AppTheme.onSurface(context),
                     fontWeight: FontWeight.w900,
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                   ),
                 ),
                 Text(
                   dateText(row.dueDate),
                   style: appFont(
                     color: AppTheme.mutedText(context),
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -307,7 +307,7 @@ class _InstallmentRow extends StatelessWidget {
             style: appFont(
               color: isFirst ? AppTheme.warningColor : _accent,
               fontWeight: FontWeight.w900,
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
             ),
           ),
         ],
@@ -328,7 +328,7 @@ class _BankInfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.fieldSurface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
@@ -337,7 +337,7 @@ class _BankInfoRow extends StatelessWidget {
             label,
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -375,13 +375,13 @@ class _CopyButton extends StatelessWidget {
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: appFont(fontWeight: FontWeight.w800, fontSize: 12),
+        style: appFont(fontWeight: FontWeight.w800, fontSize: AppText.sizeCaption),
       ),
       style: OutlinedButton.styleFrom(
         foregroundColor: _accent,
         side: BorderSide(color: AppTheme.border(context)),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
@@ -407,7 +407,7 @@ class _PickerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
@@ -418,7 +418,7 @@ class _PickerTile extends StatelessWidget {
                   alpha: AppTheme.isDark(context) ? 0.16 : 0.07,
                 )
               : AppTheme.fieldSurface(context),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: filled ? _accent : AppTheme.border(context),
             width: filled ? 1.4 : 1,
@@ -440,7 +440,7 @@ class _PickerTile extends StatelessWidget {
                     label,
                     style: appFont(
                       color: AppTheme.mutedText(context),
-                      fontSize: 11,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -452,7 +452,7 @@ class _PickerTile extends StatelessWidget {
                     style: appFont(
                       color: filled ? _accent : AppTheme.onSurface(context),
                       fontWeight: FontWeight.w900,
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                     ),
                   ),
                 ],
@@ -477,14 +477,14 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
         label,
         style: appFont(
           color: color,
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -505,7 +505,7 @@ class _RequiredBadge extends StatelessWidget {
         color: done
             ? _accent.withValues(alpha: 0.10)
             : AppTheme.warningTint(context),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(
           color: done
               ? _accent.withValues(alpha: 0.20)
@@ -516,7 +516,7 @@ class _RequiredBadge extends StatelessWidget {
         done ? 'แนบแล้ว' : 'จำเป็น',
         style: appFont(
           color: done ? _accent : AppTheme.warningColor,
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -538,13 +538,13 @@ class _SourceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: AppTheme.fieldSurface(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: AppTheme.border(context)),
         ),
         child: Row(
@@ -554,7 +554,7 @@ class _SourceTile extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: _accent.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Icon(icon, color: _accent, size: 22),
             ),
@@ -563,7 +563,7 @@ class _SourceTile extends StatelessWidget {
               label,
               style: appFont(
                 fontWeight: FontWeight.w800,
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 color: AppTheme.onSurface(context),
               ),
             ),

@@ -115,7 +115,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                   _accent.withValues(alpha: 0.04),
                 ],
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
         border: Border.all(color: _accent.withValues(alpha: 0.22)),
       ),
       padding: const EdgeInsets.all(20),
@@ -146,7 +146,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
             'พร้อมสำหรับเช็คอิน',
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 20,
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -157,7 +157,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
             style: appFont(
               color: AppTheme.mutedText(context),
               fontWeight: FontWeight.w700,
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
             ),
           ),
           if (checkInCode.isNotEmpty) ...[
@@ -168,7 +168,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   border: Border.all(color: _accent.withValues(alpha: 0.18)),
                 ),
                 child: QrImageView(
@@ -190,7 +190,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                   foregroundColor: _accent,
                   side: BorderSide(color: _accent.withValues(alpha: 0.30)),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                 ),
                 icon: _downloadingQr
@@ -206,7 +206,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                 label: Text(
                   _downloadingQr ? 'กำลังดาวน์โหลด' : 'ดาวน์โหลด QR CODE',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -219,7 +219,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: AppTheme.surface(context),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(color: _accent.withValues(alpha: 0.18)),
             ),
             child: Column(
@@ -228,7 +228,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                   'รหัสการจอง',
                   style: appFont(
                     color: AppTheme.mutedText(context),
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -238,7 +238,7 @@ class _PaymentCompletedCardState extends State<_PaymentCompletedCard>
                   textAlign: TextAlign.center,
                   style: appFont(
                     color: _accent,
-                    fontSize: 22,
+                    fontSize: AppText.sizeH1,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.3,
                   ),
@@ -286,7 +286,7 @@ class _SubmitButton extends StatelessWidget {
           disabledBackgroundColor: _accent.withValues(alpha: 0.40),
           disabledForegroundColor: Colors.white.withValues(alpha: 0.70),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
         ),
         icon: paying
@@ -303,7 +303,7 @@ class _SubmitButton extends StatelessWidget {
           labelText,
           style: appFont(
             fontWeight: FontWeight.w900,
-            fontSize: 16,
+            fontSize: AppText.sizeSubtitle,
           ),
         ),
       ),
@@ -326,13 +326,13 @@ class _HomeButton extends StatelessWidget {
           foregroundColor: _accent,
           side: BorderSide(color: _accent.withValues(alpha: 0.32)),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
         ),
         icon: const Icon(Icons.home_rounded),
         label: Text(
           'กลับหน้าหลัก',
-          style: appFont(fontWeight: FontWeight.w900, fontSize: 15),
+          style: appFont(fontWeight: FontWeight.w900, fontSize: AppText.sizeSubtitle),
         ),
       ),
     );

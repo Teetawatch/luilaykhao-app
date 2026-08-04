@@ -60,7 +60,7 @@ class _HalalChoiceButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
@@ -70,7 +70,7 @@ class _HalalChoiceButton extends StatelessWidget {
           color: selected
               ? _softAccent.withValues(alpha: 0.10)
               : _fieldBackground(context),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: selected ? _softAccent : _cardBorder(context),
             width: selected ? 1.4 : 1,
@@ -88,7 +88,7 @@ class _HalalChoiceButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
                   color: selected ? _softAccent : _mutedTextColor(context),
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -138,11 +138,11 @@ class _PremiumDropdown<T> extends StatelessWidget {
           ),
           style: appFont(
             color: _premiumText(context),
-            fontSize: 14,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w700,
           ),
           dropdownColor: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           selectedItemBuilder: selectedItemBuilder,
           items: items,
           onChanged: items.isEmpty ? null : onChanged,
@@ -207,7 +207,7 @@ class _PremiumTextField extends StatelessWidget {
           ),
           style: appFont(
             color: _premiumText(context),
-            fontSize: 14,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -250,7 +250,7 @@ class _PremiumDatePicker extends StatelessWidget {
               validator: validator,
               builder: (field) {
                 return InkWell(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   onTap: () async {
                     final now = DateTime.now();
                     final picked = await showDatePicker(
@@ -286,7 +286,7 @@ class _PremiumDatePicker extends StatelessWidget {
                             _birthDateLabel(current),
                             style: appFont(
                               color: _premiumText(context),
-                              fontSize: 14,
+                              fontSize: AppText.sizeBody,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -358,7 +358,7 @@ class _SummaryMeta extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: appFont(
               color: _mutedTextColor(context),
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               height: 1.35,
               fontWeight: FontWeight.w600,
             ),
@@ -423,7 +423,7 @@ class _CompactNotice extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _fieldBackground(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: _cardBorder(context)),
       ),
       child: Row(
@@ -436,7 +436,7 @@ class _CompactNotice extends StatelessWidget {
               style: appFont(
                 color: _mutedTextColor(context),
                 fontWeight: FontWeight.w700,
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
               ),
             ),
           ),
@@ -452,7 +452,7 @@ class _TripImageFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFE7F3EF),
+      color: const Color(0xFFECFDF5),
       child: const Center(
         child: Icon(Icons.landscape_rounded, color: _softAccent, size: 34),
       ),

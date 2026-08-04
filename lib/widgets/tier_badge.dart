@@ -43,7 +43,7 @@ class TierBadge extends StatelessWidget {
   }
 
   static const _colors = <String, Color>{
-    'frequent': Color(0xFF0F6B5C),
+    'frequent': Color(0xFF047857),
     'comrade': Color(0xFF1D4E86),
     'insider': Color(0xFF8A5A12),
   };
@@ -68,7 +68,7 @@ class TierBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

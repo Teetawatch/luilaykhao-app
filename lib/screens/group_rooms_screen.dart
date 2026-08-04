@@ -80,7 +80,7 @@ class _GroupRoomsScreenState extends State<GroupRoomsScreen> {
         elevation: 0,
         title: Text(
           'กลุ่มของฉัน',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
         actions: [
           TextButton.icon(
@@ -88,7 +88,7 @@ class _GroupRoomsScreenState extends State<GroupRoomsScreen> {
             icon: const Icon(Icons.add_rounded, size: 20),
             label: Text(
               'สร้างกลุ่ม',
-              style: appFont(fontSize: 14, fontWeight: FontWeight.w800),
+              style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w800),
             ),
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.primaryColor,
@@ -133,7 +133,7 @@ class _GroupRoomsScreenState extends State<GroupRoomsScreen> {
               icon: const Icon(Icons.add_rounded, size: 20),
               label: Text(
                 'สร้างกลุ่มใหม่',
-                style: appFont(fontSize: 15, fontWeight: FontWeight.w800),
+                style: appFont(fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w800),
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
@@ -143,7 +143,7 @@ class _GroupRoomsScreenState extends State<GroupRoomsScreen> {
                   vertical: 14,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
             ),
@@ -180,13 +180,13 @@ class _GroupRoomCard extends StatelessWidget {
 
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: AppTheme.border(context)),
           ),
           clipBehavior: Clip.antiAlias,
@@ -221,7 +221,7 @@ class _GroupRoomCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
-                                fontSize: 15,
+                                fontSize: AppText.sizeSubtitle,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -238,7 +238,7 @@ class _GroupRoomCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
-                            fontSize: 12.5,
+                            fontSize: AppText.sizeLabel,
                             color: AppTheme.mutedText(context),
                           ),
                         ),
@@ -252,7 +252,7 @@ class _GroupRoomCard extends StatelessWidget {
                           Text(
                             dateLabel.isEmpty ? '-' : dateLabel,
                             style: appFont(
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               color: AppTheme.mutedText(context),
                             ),
                           ),
@@ -263,7 +263,7 @@ class _GroupRoomCard extends StatelessWidget {
                           Text(
                             'เลือกแล้ว $claimed / ${plan.seatCount}',
                             style: appFont(
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               color: AppTheme.mutedText(context),
                             ),
                           ),
@@ -278,7 +278,7 @@ class _GroupRoomCard extends StatelessWidget {
                               child: Text(
                                 'คุณเป็นหัวหน้ากลุ่ม',
                                 style: appFont(
-                                  fontSize: 11.5,
+                                  fontSize: AppText.sizeCaption,
                                   fontWeight: FontWeight.w700,
                                   color: AppTheme.primaryColor,
                                 ),
@@ -288,7 +288,7 @@ class _GroupRoomCard extends StatelessWidget {
                           Text(
                             'รหัส ${plan.inviteCode}',
                             style: appFont(
-                              fontSize: 11.5,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.mutedText(context),
                             ),
@@ -326,12 +326,12 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         label,
         style: appFont(
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w800,
           color: color,
         ),

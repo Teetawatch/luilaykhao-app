@@ -75,7 +75,7 @@ class DestinationInfoSection extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                fontSize: 25,
+                fontSize: AppText.sizeH1,
                 fontWeight: FontWeight.w800,
                 color: isDark ? Colors.white : _premiumText,
                 height: 1.2,
@@ -96,7 +96,7 @@ class DestinationInfoSection extends StatelessWidget {
                     height: 22,
                     decoration: BoxDecoration(
                       color: _softAccent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                     ),
                     child: const Icon(
                       Icons.location_on_rounded,
@@ -111,7 +111,7 @@ class DestinationInfoSection extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         color: _mutedText,
                         height: 1.4,
                         fontWeight: FontWeight.w600,
@@ -131,11 +131,11 @@ class DestinationInfoSection extends StatelessWidget {
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.04)
                     : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 border: Border.all(
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.06)
-                      : const Color(0xFFE9F5F1),
+                      : const Color(0xFFECFDF5),
                 ),
               ),
               child: QuickInfoChips(trip: trip),
@@ -215,7 +215,7 @@ class _StatTile extends StatelessWidget {
     final isDark = AppTheme.isDark(context);
     final dividerColor = isDark
         ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFE9F5F1);
+        : const Color(0xFFECFDF5);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -243,7 +243,7 @@ class _StatTile extends StatelessWidget {
                   _softAccent.withValues(alpha: 0.08),
                 ],
               ),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
             child: Icon(icon, size: 16, color: _softAccent),
           ),
@@ -254,7 +254,7 @@ class _StatTile extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 color: isDark ? Colors.white.withValues(alpha: 0.85) : _premiumText,
                 height: 1.35,
@@ -320,9 +320,9 @@ class AboutSection extends StatelessWidget {
               maxLines: isExpanded ? null : 5,
               overflow: isExpanded ? TextOverflow.visible : TextOverflow.fade,
               style: appFont(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 height: 1.75,
-                color: const Color(0xFF374151),
+                color: const Color(0xFF334155),
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -382,7 +382,7 @@ class PhotoGallerySection extends StatelessWidget {
               itemBuilder: (context, index) => GestureDetector(
                 onTap: () => _openFullscreen(context, images, index),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   child: CachedNetworkImage(
                     imageUrl: images[index],
                     width: 120,
@@ -393,7 +393,7 @@ class PhotoGallerySection extends StatelessWidget {
                     errorWidget: (_, _, _) => Container(
                       width: 120,
                       height: 160,
-                      color: const Color(0xFFE7ECEA),
+                      color: const Color(0xFFE2E8F0),
                       child: const Icon(
                         Icons.landscape_rounded,
                         color: _softAccent,
@@ -551,7 +551,7 @@ class _VideoThumbCardState extends State<_VideoThumbCard> {
     final playSize = widget.height < 110 ? 38.0 : 54.0;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: SizedBox(
         width: widget.width,
         height: widget.height,
@@ -569,7 +569,7 @@ class _VideoThumbCardState extends State<_VideoThumbCard> {
               )
             else
               const DecoratedBox(
-                decoration: BoxDecoration(color: Color(0xFF1F2937)),
+                decoration: BoxDecoration(color: Color(0xFF1E293B)),
               ),
             // Subtle scrim so the play button and label stay legible.
             const DecoratedBox(
@@ -603,7 +603,7 @@ class _VideoThumbCardState extends State<_VideoThumbCard> {
                 child: Text(
                   'วิดีโอ ${widget.index + 1}',
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                   ),
@@ -810,7 +810,7 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
                   textAlign: TextAlign.center,
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w700,
                     shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
                   ),
@@ -860,7 +860,7 @@ class MustKnowSection extends StatelessWidget {
                     color: isDark
                         ? const Color(0xFFB45309).withValues(alpha: 0.2)
                         : const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     border: Border.all(
                       color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
                     ),
@@ -879,7 +879,7 @@ class MustKnowSection extends StatelessWidget {
                       Text(
                         'สิ่งที่ควรรู้ก่อนเดินทาง',
                         style: appFont(
-                          fontSize: 16,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w800,
                           color: isDark
                               ? const Color(0xFFF59E0B)
@@ -890,7 +890,7 @@ class MustKnowSection extends StatelessWidget {
                       Text(
                         'อ่านก่อนทำการจอง',
                         style: appFont(
-                          fontSize: 11.5,
+                          fontSize: AppText.sizeCaption,
                           color: isDark
                               ? const Color(0xFFD97706)
                               : const Color(0xFFB45309),
@@ -962,7 +962,7 @@ class _MustKnowItemRow extends StatelessWidget {
             child: Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   child: CachedNetworkImage(
                     imageUrl: item.imageUrl,
                     width: 52,
@@ -992,7 +992,7 @@ class _MustKnowItemRow extends StatelessWidget {
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                     ),
                     child: const Icon(
                       Icons.zoom_in_rounded,
@@ -1009,7 +1009,7 @@ class _MustKnowItemRow extends StatelessWidget {
             child: Text(
               title,
               style: appFont(
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w700,
                 color: isDark ? Colors.white.withValues(alpha: 0.9) : _premiumText,
                 height: 1.4,
@@ -1090,7 +1090,7 @@ class _FaqItemState extends State<_FaqItem> {
       children: [
         InkWell(
           onTap: _toggle,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
             child: Row(
@@ -1100,7 +1100,7 @@ class _FaqItemState extends State<_FaqItem> {
                   child: Text(
                     widget.question,
                     style: appFont(
-                      fontSize: 14.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w700,
                       color: isDark ? Colors.white : _premiumText,
                       height: 1.4,
@@ -1129,7 +1129,7 @@ class _FaqItemState extends State<_FaqItem> {
             child: Text(
               widget.answer,
               style: appFont(
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w500,
                 color: answerColor,
                 height: 1.55,
@@ -1186,13 +1186,13 @@ class PreparationsSection extends StatelessWidget {
                     height: 26,
                     decoration: BoxDecoration(
                       color: _softAccent.withValues(alpha: isDark ? 0.18 : 0.10),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                     ),
                     child: Center(
                       child: Text(
                         '${i + 1}',
                         style: appFont(
-                          fontSize: 11.5,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w700,
                           color: _softAccent,
                         ),
@@ -1206,7 +1206,7 @@ class PreparationsSection extends StatelessWidget {
                       child: Text(
                         text,
                         style: appFont(
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w600,
                           color: isDark
                               ? Colors.white.withValues(alpha: 0.85)

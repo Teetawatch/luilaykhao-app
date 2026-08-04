@@ -31,7 +31,7 @@ class ForceUpdateScreen extends StatelessWidget {
                 'มีเวอร์ชันใหม่',
                 style: appFont(
                   color: AppTheme.onSurface(context),
-                  fontSize: 22,
+                  fontSize: AppText.sizeH1,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -41,7 +41,7 @@ class ForceUpdateScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: appFont(
                   color: AppTheme.mutedText(context),
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   height: 1.55,
                   fontWeight: FontWeight.w600,
                 ),
@@ -52,7 +52,7 @@ class ForceUpdateScreen extends StatelessWidget {
                   'ต้องใช้เวอร์ชัน ${result.minVersion} ขึ้นไป',
                   style: appFont(
                     color: AppTheme.mutedText(context),
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -66,7 +66,7 @@ class ForceUpdateScreen extends StatelessWidget {
                     vertical: 14,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                 ),
                 onPressed: () async {
@@ -82,7 +82,7 @@ class ForceUpdateScreen extends StatelessWidget {
                   'อัปเดตทันที',
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w900,
                   ),
                 ),

@@ -251,11 +251,11 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('ศูนย์ช่วยเหลือ',
-                style: appFont(fontSize: 18, fontWeight: FontWeight.w800)),
+                style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800)),
             Text(
               'ทีมงานลุยเลเขา · ตอบกลับโดยเร็วที่สุด',
               style: appFont(
-                fontSize: 11,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.mutedText(context),
               ),
@@ -357,7 +357,7 @@ class _MessageBubble extends StatelessWidget {
                 child: Text(
                   'ทีมงาน',
                   style: appFont(
-                    fontSize: 11,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.primaryColor,
                   ),
@@ -367,8 +367,8 @@ class _MessageBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
+                  topLeft: const Radius.circular(AppTheme.radiusMd),
+                  topRight: const Radius.circular(AppTheme.radiusMd),
                   bottomLeft: Radius.circular(isMine ? 16 : 4),
                   bottomRight: Radius.circular(isMine ? 4 : 16),
                 ),
@@ -408,7 +408,7 @@ class _MessageBubble extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
                       child: Text(
                         body,
-                        style: appFont(fontSize: 15, color: fg, height: 1.35),
+                        style: appFont(fontSize: AppText.sizeSubtitle, color: fg, height: 1.35),
                       ),
                     ),
                 ],
@@ -419,7 +419,7 @@ class _MessageBubble extends StatelessWidget {
               child: Text(
                 _formatTime(message['created_at']),
                 style: appFont(
-                  fontSize: 10,
+                  fontSize: AppText.sizeMicro,
                   color: AppTheme.mutedText(context),
                 ),
               ),
@@ -444,14 +444,14 @@ class _SystemNotice extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Text(
         text,
         textAlign: TextAlign.center,
         style: appFont(
-          fontSize: 12.5,
+          fontSize: AppText.sizeLabel,
           height: 1.4,
           color: AppTheme.mutedText(context),
         ),
@@ -502,7 +502,7 @@ class _Composer extends StatelessWidget {
               constraints: const BoxConstraints(maxHeight: 120),
               decoration: BoxDecoration(
                 color: AppTheme.fieldSurface(context),
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                 border: Border.all(color: AppTheme.border(context)),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -511,13 +511,13 @@ class _Composer extends StatelessWidget {
                 minLines: 1,
                 maxLines: 5,
                 textCapitalization: TextCapitalization.sentences,
-                style: appFont(fontSize: 15),
+                style: appFont(fontSize: AppText.sizeSubtitle),
                 decoration: InputDecoration(
                   isDense: true,
                   border: InputBorder.none,
                   hintText: 'พิมพ์ข้อความถึงทีมงาน...',
                   hintStyle: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     color: AppTheme.mutedText(context),
                   ),
                 ),

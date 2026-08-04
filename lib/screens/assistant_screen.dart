@@ -228,7 +228,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
         foregroundColor: AppTheme.onSurface(context),
         title: Text(
           'ผู้ช่วยส่วนตัว',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
       body: Column(
@@ -359,8 +359,8 @@ class _Bubble extends StatelessWidget {
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
+                  topLeft: const Radius.circular(AppTheme.radiusMd),
+                  topRight: const Radius.circular(AppTheme.radiusMd),
                   bottomLeft: Radius.circular(isMine ? 16 : 4),
                   bottomRight: Radius.circular(isMine ? 4 : 16),
                 ),
@@ -370,7 +370,7 @@ class _Bubble extends StatelessWidget {
               ),
               child: Text(
                 turn.text,
-                style: appFont(fontSize: 15, color: fg, height: 1.4),
+                style: appFont(fontSize: AppText.sizeSubtitle, color: fg, height: 1.4),
               ),
             ),
             if (turn.actions.isNotEmpty)
@@ -402,7 +402,7 @@ class _ActionChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.primaryColor.withValues(alpha: 0.10),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -416,7 +416,7 @@ class _ActionChip extends StatelessWidget {
               Text(
                 action.label,
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.primaryColor,
                 ),
@@ -442,10 +442,10 @@ class _Thinking extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(4),
-            bottomRight: Radius.circular(16),
+            topLeft: Radius.circular(AppTheme.radiusMd),
+            topRight: Radius.circular(AppTheme.radiusMd),
+            bottomLeft: Radius.circular(AppTheme.radiusPill),
+            bottomRight: Radius.circular(AppTheme.radiusMd),
           ),
           border: Border.all(color: AppTheme.border(context)),
         ),
@@ -464,7 +464,7 @@ class _Thinking extends StatelessWidget {
             Text(
               'กำลังดูข้อมูลการจองของคุณ...',
               style: appFont(
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 color: AppTheme.mutedText(context),
               ),
             ),
@@ -497,7 +497,7 @@ class _EmptyState extends StatelessWidget {
         Text(
           'ถามอะไรก็ได้เรื่องทริปของคุณ',
           textAlign: TextAlign.center,
-          style: appFont(fontSize: 19, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeH2, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 8),
         Text(
@@ -505,7 +505,7 @@ class _EmptyState extends StatelessWidget {
           'ยอดคงเหลือ และของที่ต้องเตรียมได้ทันที',
           textAlign: TextAlign.center,
           style: appFont(
-            fontSize: 13.5,
+            fontSize: AppText.sizeBody,
             height: 1.5,
             color: AppTheme.mutedText(context),
           ),
@@ -536,20 +536,20 @@ class _SuggestionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: AppTheme.border(context)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           child: Row(
             children: [
               Expanded(
-                child: Text(text, style: appFont(fontSize: 14.5)),
+                child: Text(text, style: appFont(fontSize: AppText.sizeBody)),
               ),
               Icon(
                 Icons.north_east_rounded,
@@ -594,7 +594,7 @@ class _Composer extends StatelessWidget {
                 constraints: const BoxConstraints(maxHeight: 120),
                 decoration: BoxDecoration(
                   color: AppTheme.fieldSurface(context),
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   border: Border.all(color: AppTheme.border(context)),
                 ),
                 padding: const EdgeInsets.symmetric(
@@ -609,14 +609,14 @@ class _Composer extends StatelessWidget {
                   enabled: !asking,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => onSend(),
-                  style: appFont(fontSize: 15),
+                  style: appFont(fontSize: AppText.sizeSubtitle),
                   decoration: InputDecoration(
                     isDense: true,
                     border: InputBorder.none,
                     counterText: '',
                     hintText: 'ถามเรื่องทริปของคุณ...',
                     hintStyle: appFont(
-                      fontSize: 15,
+                      fontSize: AppText.sizeSubtitle,
                       color: AppTheme.mutedText(context),
                     ),
                   ),

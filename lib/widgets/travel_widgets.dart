@@ -75,9 +75,9 @@ class SectionTitle extends StatelessWidget {
     return Text(
       text,
       style: appFont(
-        fontSize: 18,
+        fontSize: AppText.sizeTitle,
         fontWeight: FontWeight.w800,
-        color: const Color(0xFF1A1C1C),
+        color: const Color(0xFF0F172A),
       ),
     );
   }
@@ -98,7 +98,7 @@ class TravelChip extends StatelessWidget {
       child: Text(
         text,
         style: appFont(
-          fontSize: 12,
+          fontSize: AppText.sizeCaption,
           color: AppTheme.primaryColor,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.2,
@@ -124,7 +124,7 @@ class BulletPoint extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: appFont(color: const Color(0xFF414755)),
+              style: appFont(color: const Color(0xFF334155)),
             ),
           ),
         ],
@@ -155,22 +155,22 @@ class EmptyState extends StatelessWidget {
           Icon(
             icon,
             size: 56,
-            color: const Color(0xFF414755).withValues(alpha: 0.4),
+            color: const Color(0xFF334155).withValues(alpha: 0.4),
           ),
           const SizedBox(height: 16),
           Text(
             title,
             style: appFont(
               fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: const Color(0xFF1A1C1C),
+              fontSize: AppText.sizeH2,
+              color: const Color(0xFF0F172A),
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             body,
-            style: appFont(color: const Color(0xFF414755)),
+            style: appFont(color: const Color(0xFF334155)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -258,7 +258,7 @@ class PrimaryCTAButton extends StatelessWidget {
             Text(
               label,
               style: appFont(
-                fontSize: 16,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
               ),
@@ -473,7 +473,7 @@ class _LargeTitleHeaderDelegate extends SliverPersistentHeaderDelegate {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
-                          fontSize: 17,
+                          fontSize: AppText.sizeTitle,
                           fontWeight: FontWeight.w800,
                           color: onSurface,
                         ),
@@ -500,7 +500,7 @@ class _LargeTitleHeaderDelegate extends SliverPersistentHeaderDelegate {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 30,
+                        fontSize: AppText.sizeHero,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
                         color: onSurface,
@@ -513,7 +513,7 @@ class _LargeTitleHeaderDelegate extends SliverPersistentHeaderDelegate {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
-                          fontSize: 13,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w600,
                           color: subtitleColor ?? AppTheme.mutedText(context),
                         ),

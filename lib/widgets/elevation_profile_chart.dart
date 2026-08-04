@@ -154,7 +154,7 @@ class _ElevationProfileChartState extends State<ElevationProfileChart> {
               ? Text(
                   'ลากนิ้วบนกราฟเพื่อดูความสูงแต่ละช่วง',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedText(context),
                   ),
@@ -164,7 +164,7 @@ class _ElevationProfileChartState extends State<ElevationProfileChart> {
                     Text(
                       'กม. ${touched.km.toStringAsFixed(1)}',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.mutedText(context),
                       ),
@@ -173,7 +173,7 @@ class _ElevationProfileChartState extends State<ElevationProfileChart> {
                     Text(
                       '${touched.elevation.round()} ม.',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.onSurface(context),
                       ),
@@ -342,7 +342,7 @@ class _ElevationPainter extends CustomPainter {
       text: TextSpan(
         text: text,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: AppText.sizeMicro,
           fontWeight: FontWeight.w700,
           color: color,
         ),

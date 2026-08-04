@@ -177,7 +177,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       showDragHandle: true,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(

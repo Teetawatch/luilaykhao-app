@@ -106,14 +106,14 @@ class _GiftScreenState extends State<GiftScreen> {
         builder: (ctx) => AlertDialog(
           title: Text(
             'รับของขวัญสำเร็จ 🎉',
-            style: appFont(fontSize: 17, fontWeight: FontWeight.w800),
+            style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
           ),
           content: Text(
             'ทริปนี้เป็นของคุณแล้ว ดูรายละเอียดได้ที่ "การจองของฉัน" '
             '(เลขการจอง $ref)\n\nอย่าลืมกรอกข้อมูลส่วนตัวในโปรไฟล์ให้ครบ '
             'เพื่อให้ทีมงานดูแลคุณได้เต็มที่',
             style: appFont(
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               height: 1.6,
               color: AppTheme.mutedText(ctx),
             ),
@@ -161,7 +161,7 @@ class _GiftScreenState extends State<GiftScreen> {
                   Text(
                     'ของขวัญที่ฉันส่ง',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -202,13 +202,13 @@ class _GiftScreenState extends State<GiftScreen> {
         children: [
           Row(
             children: [
-              const Text('🎁', style: TextStyle(fontSize: 22)),
+              const Text('🎁', style: TextStyle(fontSize: AppText.sizeH1)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'รับของขวัญ',
                   style: appFont(
-                    fontSize: 16,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -220,7 +220,7 @@ class _GiftScreenState extends State<GiftScreen> {
           Text(
             'มีคนส่งทริปมาให้? กรอกโค้ดของขวัญที่ได้รับเพื่อรับทริปไปเป็นของคุณ',
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               height: 1.6,
               color: AppTheme.mutedText(context),
             ),
@@ -235,14 +235,14 @@ class _GiftScreenState extends State<GiftScreen> {
                   textInputAction: TextInputAction.search,
                   onSubmitted: (_) => _lookup(),
                   style: appFont(
-                    fontSize: 17,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 2,
                   ),
                   decoration: InputDecoration(
                     hintText: 'เช่น K7XPQ2MB',
                     hintStyle: appFont(
-                      fontSize: 15,
+                      fontSize: AppText.sizeSubtitle,
                       letterSpacing: 1,
                       color: AppTheme.mutedText(context),
                     ),
@@ -253,11 +253,11 @@ class _GiftScreenState extends State<GiftScreen> {
                       vertical: 14,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       borderSide: BorderSide(color: AppTheme.border(context)),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       borderSide: BorderSide(color: AppTheme.border(context)),
                     ),
                   ),
@@ -290,7 +290,7 @@ class _GiftScreenState extends State<GiftScreen> {
             Text(
               _error!,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 color: AppTheme.errorColor,
                 fontWeight: FontWeight.w600,
               ),
@@ -340,7 +340,7 @@ class _GiftPreviewCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.30),
         ),
@@ -352,7 +352,7 @@ class _GiftPreviewCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 child: cover.isEmpty
                     ? Container(
                         width: 64,
@@ -375,7 +375,7 @@ class _GiftPreviewCard extends StatelessWidget {
                     Text(
                       '${trip['title'] ?? 'ทริปเดินทาง'}',
                       style: appFont(
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         height: 1.35,
                         color: AppTheme.onSurface(context),
@@ -388,7 +388,7 @@ class _GiftPreviewCard extends StatelessWidget {
                         '$travelers ที่นั่ง',
                       ].join(' · '),
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         color: AppTheme.mutedText(context),
                       ),
                     ),
@@ -397,7 +397,7 @@ class _GiftPreviewCard extends StatelessWidget {
                       Text(
                         'ของขวัญจาก $fromName 🎁',
                         style: appFont(
-                          fontSize: 12.5,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.primaryColor,
                         ),
@@ -413,7 +413,7 @@ class _GiftPreviewCard extends StatelessWidget {
             Text(
               '"$message"',
               style: appFont(
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 height: 1.6,
                 fontStyle: FontStyle.italic,
                 color: AppTheme.onSurface(context),
@@ -445,7 +445,7 @@ class _GiftPreviewCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppTheme.errorColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Text(
                 claimed
@@ -454,7 +454,7 @@ class _GiftPreviewCard extends StatelessWidget {
                           ? blockedReason
                           : 'ของขวัญนี้ยังรับไม่ได้'),
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.errorColor,
                 ),
@@ -505,7 +505,7 @@ class _SentGiftCard extends StatelessWidget {
                   child: Text(
                     '${gift['trip_title'] ?? 'ทริปเดินทาง'}',
                     style: appFont(
-                      fontSize: 14.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
                     ),
@@ -518,12 +518,12 @@ class _SentGiftCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
                     statusLabel,
                     style: appFont(
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                       color: statusColor,
                     ),
@@ -538,7 +538,7 @@ class _SentGiftCard extends StatelessWidget {
                 if (claimed && claimedBy.isNotEmpty) 'ผู้รับ: $claimedBy',
               ].join(' · '),
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 color: AppTheme.mutedText(context),
               ),
             ),
@@ -553,7 +553,7 @@ class _SentGiftCard extends StatelessWidget {
                     const SnackBar(content: Text('คัดลอกโค้ดของขวัญแล้ว')),
                   );
                 },
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -561,7 +561,7 @@ class _SentGiftCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.fieldSurface(context),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     border: Border.all(color: AppTheme.border(context)),
                   ),
                   child: Row(
@@ -570,7 +570,7 @@ class _SentGiftCard extends StatelessWidget {
                       Text(
                         code,
                         style: appFont(
-                          fontSize: 15,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 2.5,
                           color: AppTheme.onSurface(context),

@@ -66,11 +66,11 @@ class _WishlistTile extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         onTap: () async {
           if (slug.isEmpty) return;
           // Trip detail needs an AppProvider-loaded trip object, so load on tap.
@@ -97,7 +97,7 @@ class _WishlistTile extends StatelessWidget {
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 child: SizedBox(
                   width: 88,
                   height: 88,
@@ -127,7 +127,7 @@ class _WishlistTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
                         color: AppTheme.onSurface(context),
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -138,7 +138,7 @@ class _WishlistTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
                         color: AppTheme.mutedText(context),
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -148,7 +148,7 @@ class _WishlistTile extends StatelessWidget {
                         '$priceLabel / คน',
                         style: appFont(
                           color: AppTheme.primaryColor,
-                          fontSize: 13.5,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -192,7 +192,7 @@ class _EmptyState extends StatelessWidget {
               'ยังไม่มีทริปที่บันทึกไว้',
               style: appFont(
                 color: AppTheme.onSurface(context),
-                fontSize: 16,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -202,7 +202,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: appFont(
                 color: AppTheme.mutedText(context),
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 height: 1.5,
                 fontWeight: FontWeight.w600,
               ),

@@ -38,7 +38,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.event_seat_rounded,
       title: 'เลือกที่นั่งแบบเรียลไทม์',
       body: 'จองที่นั่งบนรถตู้ได้ทันที พร้อมล็อกที่นั่งชั่วคราวระหว่างชำระเงิน',
-      gradient: [Color(0xFF0D9488), Color(0xFF2DD4BF)],
+      gradient: [Color(0xFF059669), Color(0xFF34D399)],
     ),
     _OnboardingSlide(
       icon: Icons.near_me_rounded,
@@ -98,7 +98,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: Text(
                       'ข้าม',
                       style: appFont(
-                        fontSize: 14,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -135,7 +135,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       color: active
                           ? null
                           : AppTheme.border(context).withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                   );
                 }),
@@ -223,7 +223,7 @@ class _SlideView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: appFont(
                 color: AppTheme.onSurface(context),
-                fontSize: 27,
+                fontSize: AppText.sizeHero,
                 height: 1.2,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.3,
@@ -235,7 +235,7 @@ class _SlideView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: appFont(
                 color: AppTheme.mutedText(context),
-                fontSize: 15.5,
+                fontSize: AppText.sizeSubtitle,
                 height: 1.65,
                 fontWeight: FontWeight.w500,
               ),
@@ -280,7 +280,7 @@ class _HeroVisual extends StatelessWidget {
             width: 132,
             height: 132,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(38),
+              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -315,19 +315,19 @@ class _PrimaryButton extends StatelessWidget {
       height: 56,
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: gradient),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           onTap: onTap,
           child: Center(
             child: Text(
               label,
               style: appFont(
                 color: Colors.white,
-                fontSize: 16,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.2,
               ),

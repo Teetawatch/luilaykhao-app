@@ -26,7 +26,7 @@ class ETACard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
       ),
       child: SafeArea(
         top: false,
@@ -40,7 +40,7 @@ class ETACard extends StatelessWidget {
                 height: 4,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
               ),
               const SizedBox(height: 24),
@@ -87,7 +87,7 @@ class _StatusHeader extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppTheme.primaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           child: const Icon(
             Icons.airport_shuttle_rounded,
@@ -104,7 +104,7 @@ class _StatusHeader extends StatelessWidget {
                 tripTitle,
                 style: appFont(
                   fontWeight: FontWeight.w800,
-                  fontSize: 16,
+                  fontSize: AppText.sizeSubtitle,
                   color: AppTheme.onSurface(context),
                 ),
                 maxLines: 1,
@@ -123,7 +123,7 @@ class _StatusHeader extends StatelessWidget {
                     child: Text(
                       pickupLabel,
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         color: AppTheme.mutedText(context),
                         fontWeight: FontWeight.w500,
                       ),
@@ -160,14 +160,14 @@ class _PhaseBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Text(
         label,
         style: appFont(
           color: color,
-          fontSize: 12,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -187,7 +187,7 @@ class _TrackingStats extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -237,7 +237,7 @@ class _StatTile extends StatelessWidget {
         Text(
           label,
           style: appFont(
-            fontSize: 10,
+            fontSize: AppText.sizeMicro,
             color: AppTheme.mutedText(context),
             fontWeight: FontWeight.w600,
           ),

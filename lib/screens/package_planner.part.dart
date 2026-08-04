@@ -19,7 +19,7 @@ class PackageListSection extends StatelessWidget {
         padding: EdgeInsets.only(bottom: 8),
         child: Text(
           'ยังไม่มีรายละเอียดภาค/จุดรับสำหรับรอบนี้',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          style: TextStyle(color: AppTheme.textSecondary, fontSize: AppText.sizeCaption),
         ),
       );
     }
@@ -39,7 +39,7 @@ class PackageListSection extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppTheme.surface(context),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               border: Border.all(
                 color: AppTheme.border(context).withValues(alpha: 0.4),
               ),
@@ -55,7 +55,7 @@ class PackageListSection extends StatelessWidget {
                         region,
                         style: appFont(
                           color: AppTheme.primaryColor,
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -66,7 +66,7 @@ class PackageListSection extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
                           color: AppTheme.textSecondary,
-                          fontSize: 13,
+                          fontSize: AppText.sizeLabel,
                           height: 1.2,
                         ),
                       ),
@@ -78,7 +78,7 @@ class PackageListSection extends StatelessWidget {
                   price,
                   style: appFont(
                     color: AppTheme.primaryColor,
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -116,7 +116,7 @@ class PrimaryCTAButton extends StatelessWidget {
           backgroundColor: AppTheme.primaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           elevation: 0,
         ),
@@ -124,7 +124,7 @@ class PrimaryCTAButton extends StatelessWidget {
         label: Text(
           label,
           style: appFont(
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.5,
           ),
@@ -151,7 +151,7 @@ class _PlannerSelectFrame extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.5),
         ),
@@ -177,7 +177,7 @@ class _PlannerSelectFrame extends StatelessWidget {
                   label,
                   style: appFont(
                     color: AppTheme.mutedText(context),
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.3,
                   ),

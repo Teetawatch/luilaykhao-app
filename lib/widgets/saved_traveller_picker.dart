@@ -133,7 +133,7 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
                         Text(
                           'สมุดผู้ร่วมเดินทาง',
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: AppText.sizeTitle,
                             fontWeight: FontWeight.w900,
                             color: AppTheme.onSurface(context),
                           ),
@@ -142,7 +142,7 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
                         Text(
                           'แตะเพื่อกรอกข้อมูลคนนี้ลงในฟอร์ม',
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.mutedText(context),
                           ),
@@ -209,7 +209,7 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
             Text(
               'ยังไม่มีใครในสมุด',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.onSurface(context),
               ),
@@ -220,7 +220,7 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
               'แล้วครั้งต่อไปจะกรอกให้อัตโนมัติ',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 height: 1.5,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
@@ -249,9 +249,9 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
 
         return Material(
           color: AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             onTap: () => _pick(traveller),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
@@ -270,7 +270,7 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 14.5,
+                                  fontSize: AppText.sizeBody,
                                   fontWeight: FontWeight.w800,
                                   color: AppTheme.onSurface(context),
                                 ),
@@ -287,12 +287,12 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
                                   color: AppTheme.primaryColor.withValues(
                                     alpha: 0.12,
                                   ),
-                                  borderRadius: BorderRadius.circular(999),
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                                 ),
                                 child: Text(
                                   label,
                                   style: const TextStyle(
-                                    fontSize: 10.5,
+                                    fontSize: AppText.sizeMicro,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.primaryColor,
                                   ),
@@ -308,7 +308,7 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.mutedText(context),
                             ),

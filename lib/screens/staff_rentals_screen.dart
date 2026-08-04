@@ -119,7 +119,7 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
         centerTitle: false,
         title: Text(
           'อุปกรณ์ที่ต้องแจก',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
         actions: [
           IconButton(
@@ -152,7 +152,7 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
               _error!,
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
               ),
@@ -180,7 +180,7 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
             child: Text(
               'รอบนี้ยังไม่มีใครเช่าอุปกรณ์',
               style: appFont(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.mutedText(context),
               ),
@@ -209,7 +209,7 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
             Text(
               'รายการจอง',
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.mutedText(context),
               ),
@@ -220,7 +220,7 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
               onSelected: (v) => setState(() => _onlyPending = v),
               label: Text(
                 'เฉพาะที่ยังไม่แจก',
-                style: appFont(fontSize: 12, fontWeight: FontWeight.w700),
+                style: appFont(fontSize: AppText.sizeCaption, fontWeight: FontWeight.w700),
               ),
               showCheckmark: false,
               visualDensity: VisualDensity.compact,
@@ -235,7 +235,7 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
               child: Text(
                 'แจกครบทุกคนแล้ว 🎉',
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.primaryColor,
                 ),
@@ -288,7 +288,7 @@ class _RentalSummaryCard extends StatelessWidget {
               Text(
                 'ต้องเตรียมทั้งหมด $total ชิ้น',
                 style: appFont(
-                  fontSize: 14.5,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                 ),
@@ -299,7 +299,7 @@ class _RentalSummaryCard extends StatelessWidget {
           Text(
             'แจกแล้ว $handed / $total · รับคืนแล้ว $returned / $total',
             style: appFont(
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
             ),
@@ -350,7 +350,7 @@ class _RentalTotalRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 13.5,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.onSurface(context),
                 ),
@@ -360,7 +360,7 @@ class _RentalTotalRow extends StatelessWidget {
             Text(
               'แจก $handedOut/$quantity · คืน $returned',
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w800,
                 color: done ? AppTheme.primaryColor : AppTheme.mutedText(context),
               ),
@@ -369,13 +369,13 @@ class _RentalTotalRow extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         ClipRRect(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           child: LinearProgressIndicator(
             value: ratio,
             minHeight: 5,
             backgroundColor: AppTheme.border(context),
             valueColor: AlwaysStoppedAnimation(
-              done ? AppTheme.primaryColor : const Color(0xFF0D9488),
+              done ? AppTheme.primaryColor : const Color(0xFF059669),
             ),
           ),
         ),
@@ -428,7 +428,7 @@ class _RentalBookingCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 14,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                       ),
@@ -436,7 +436,7 @@ class _RentalBookingCard extends StatelessWidget {
                     Text(
                       ref,
                       style: appFont(
-                        fontSize: 11.5,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -453,7 +453,7 @@ class _RentalBookingCard extends StatelessWidget {
               else if (allHandedOut)
                 const _RentalStatusPill(
                   label: 'แจกครบ',
-                  color: Color(0xFF0D9488),
+                  color: Color(0xFF059669),
                   icon: Icons.check_circle_rounded,
                 )
               else
@@ -503,7 +503,7 @@ class _RentalStatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -513,7 +513,7 @@ class _RentalStatusPill extends StatelessWidget {
           Text(
             label,
             style: appFont(
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
               color: color,
             ),
@@ -563,7 +563,7 @@ class _RentalItemRow extends StatelessWidget {
                     name,
                     maxLines: 2,
                     style: appFont(
-                      fontSize: 13.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.onSurface(context),
                       height: 1.3,
@@ -578,13 +578,13 @@ class _RentalItemRow extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.subtleSurface(context),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     border: Border.all(color: AppTheme.border(context)),
                   ),
                   child: Text(
                     'x$quantity',
                     style: appFont(
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
                     ),
@@ -641,14 +641,14 @@ class _RentalToggle extends StatelessWidget {
         color: active
             ? AppTheme.primaryColor.withValues(alpha: 0.10)
             : AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         child: InkWell(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           onTap: (disabled || busy) ? null : onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               border: Border.all(
                 color: active
                     ? AppTheme.primaryColor.withValues(alpha: 0.45)
@@ -676,7 +676,7 @@ class _RentalToggle extends StatelessWidget {
                 Text(
                   label,
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: color,
                   ),

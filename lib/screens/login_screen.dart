@@ -162,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen>
           style: appFont(fontWeight: FontWeight.w600),
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
     );
@@ -205,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       child: Scaffold(
         resizeToAvoidBottomInset: false,
-        backgroundColor: const Color(0xFF071A1A),
+        backgroundColor: const Color(0xFF052E24),
         body: Stack(
           children: [
             // ── Background image ──────────────────────────────────────
@@ -289,7 +289,7 @@ class _HeroBg extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF044C4D), Color(0xFF082A2A)],
+                    colors: [Color(0xFF065F46), Color(0xFF052E24)],
                   ),
                 ),
               )
@@ -302,7 +302,7 @@ class _HeroBg extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF044C4D), Color(0xFF082A2A)],
+                      colors: [Color(0xFF065F46), Color(0xFF052E24)],
                     ),
                   ),
                 ),
@@ -317,7 +317,7 @@ class _HeroBg extends StatelessWidget {
                 Color(0x28000000),
                 Color(0x00000000),
                 Color(0xCC071A1A),
-                Color(0xFF071A1A),
+                Color(0xFF052E24),
               ],
               stops: [0.0, 0.30, 0.72, 1.0],
             ),
@@ -339,7 +339,7 @@ class _HeroBg extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF06C755).withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   border: Border.all(
                     color: const Color(0xFF06C755).withValues(alpha: 0.38),
                   ),
@@ -360,7 +360,7 @@ class _HeroBg extends StatelessWidget {
                       'พร้อมเดินทางทุกเส้นทาง',
                       style: appFont(
                         color: const Color(0xFF34D399),
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.3,
                       ),
@@ -384,7 +384,7 @@ class _HeroBg extends StatelessWidget {
                 'การผจญภัยครั้งใหม่รอคุณอยู่',
                 style: appFont(
                   color: Colors.white.withValues(alpha: 0.62),
-                  fontSize: 16,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w500,
                   height: 1.4,
                   letterSpacing: -0.1,
@@ -446,13 +446,13 @@ class _LoginSheet extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
         child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
             child: Container(
               decoration: const BoxDecoration(
                 color: Color(0xF2FFFFFF),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
               ),
               child: SafeArea(
                 top: false,
@@ -471,7 +471,7 @@ class _LoginSheet extends StatelessWidget {
                           margin: const EdgeInsets.only(bottom: 24),
                           decoration: BoxDecoration(
                             color: const Color(0xFFCBD5E1),
-                            borderRadius: BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                           ),
                         ),
                       ),
@@ -483,7 +483,7 @@ class _LoginSheet extends StatelessWidget {
                           height: 58,
                           clipBehavior: Clip.antiAlias,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                           ),
                           child: Image.asset('logo_ios.png', fit: BoxFit.cover),
                         ),
@@ -496,7 +496,7 @@ class _LoginSheet extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: appFont(
                           color: AppTheme.textMain,
-                          fontSize: 25,
+                          fontSize: AppText.sizeH1,
                           fontWeight: FontWeight.w900,
                           height: 1.1,
                           letterSpacing: -0.3,
@@ -510,7 +510,7 @@ class _LoginSheet extends StatelessWidget {
                             'ยังไม่มีบัญชี? ',
                             style: appFont(
                               color: AppTheme.textSecondary,
-                              fontSize: 14,
+                              fontSize: AppText.sizeBody,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -520,7 +520,7 @@ class _LoginSheet extends StatelessWidget {
                               'สมัครสมาชิกฟรี',
                               style: appFont(
                                 color: AppTheme.primaryColor,
-                                fontSize: 14,
+                                fontSize: AppText.sizeBody,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -571,7 +571,7 @@ class _LoginSheet extends StatelessWidget {
                           child: Text(
                             'ลืมรหัสผ่าน?',
                             style: appFont(
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.primaryColor,
                             ),
@@ -682,7 +682,7 @@ class _AppleSignInButton extends StatelessWidget {
       height: 52,
       child: Material(
         color: Colors.black,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: isLoading ? null : onPressed,
@@ -709,7 +709,7 @@ class _AppleSignInButton extends StatelessWidget {
                         'ลงชื่อเข้าด้วย Apple',
                         style: appFont(
                           color: Colors.white,
-                          fontSize: 16,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -741,13 +741,13 @@ class _SocialTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: isLoading ? null : onPressed,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: Ink(
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE3E8EF)),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: Column(
             children: [
@@ -771,7 +771,7 @@ class _SocialTile extends StatelessWidget {
                 label,
                 style: appFont(
                   color: AppTheme.textMain,
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -799,7 +799,7 @@ class _DividerOr extends StatelessWidget {
             'หรือใช้อีเมล',
             style: appFont(
               color: AppTheme.textSecondary,
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -913,11 +913,11 @@ class _FieldRowState extends State<_FieldRow> {
       curve: Curves.easeOut,
       decoration: BoxDecoration(
         color: focused ? Colors.white : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: focused
               ? AppTheme.primaryColor.withValues(alpha: 0.6)
-              : const Color(0xFFE6EAF0),
+              : const Color(0xFFE2E8F0),
           width: focused ? 1.5 : 1,
         ),
       ),
@@ -931,14 +931,14 @@ class _FieldRowState extends State<_FieldRow> {
         cursorColor: AppTheme.primaryColor,
         style: appFont(
           color: AppTheme.textMain,
-          fontSize: 15,
+          fontSize: AppText.sizeSubtitle,
           fontWeight: FontWeight.w600,
         ),
         decoration: InputDecoration(
           hintText: widget.hint,
           hintStyle: appFont(
             color: const Color(0xFF94A3B8),
-            fontSize: 15,
+            fontSize: AppText.sizeSubtitle,
             fontWeight: FontWeight.w500,
           ),
           prefixIcon: Padding(
@@ -1011,7 +1011,7 @@ class _LoginButtonState extends State<_LoginButton> {
         child: Container(
           height: 54,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             color: enabled ? AppTheme.primaryColor : const Color(0xFFCBD5E1),
           ),
           child: Center(
@@ -1035,7 +1035,7 @@ class _LoginButtonState extends State<_LoginButton> {
                           'กำลังเข้าสู่ระบบ...',
                           style: appFont(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: AppText.sizeSubtitle,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -1051,7 +1051,7 @@ class _LoginButtonState extends State<_LoginButton> {
                             color: enabled
                                 ? Colors.white
                                 : const Color(0xFF94A3B8),
-                            fontSize: 17,
+                            fontSize: AppText.sizeTitle,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.3,
                           ),
@@ -1084,7 +1084,7 @@ class _LegalNote extends StatelessWidget {
       textAlign: TextAlign.center,
       style: appFont(
         color: const Color(0xFF94A3B8),
-        fontSize: 11,
+        fontSize: AppText.sizeCaption,
         height: 1.5,
         fontWeight: FontWeight.w500,
       ),
@@ -1158,7 +1158,7 @@ class _FacebookMark extends StatelessWidget {
         'f',
         style: GoogleFonts.inter(
           color: Colors.white,
-          fontSize: 24,
+          fontSize: AppText.sizeH1,
           fontWeight: FontWeight.w900,
           height: 0.98,
         ),
@@ -1206,7 +1206,7 @@ class _LineMarkPainter extends CustomPainter {
         text: 'LINE',
         style: GoogleFonts.inter(
           color: Colors.white,
-          fontSize: 6.4,
+          fontSize: AppText.sizeMicro,
           fontWeight: FontWeight.w900,
           letterSpacing: 0,
         ),
@@ -1291,7 +1291,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
       height: 56,
       decoration: BoxDecoration(
         color: fillColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: borderColor, width: _hasFocus ? 1.3 : 1),
       ),
       child: TextField(
@@ -1304,15 +1304,15 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
         cursorColor: AppTheme.primaryColor,
         style: appFont(
           color: AppTheme.textMain,
-          fontSize: 15,
+          fontSize: AppText.sizeSubtitle,
           fontWeight: FontWeight.w600,
           height: 1.25,
         ),
         decoration: InputDecoration(
           hintText: widget.hintText,
           hintStyle: appFont(
-            color: const Color(0xFF9AA0A6),
-            fontSize: 15,
+            color: const Color(0xFF94A3B8),
+            fontSize: AppText.sizeSubtitle,
             fontWeight: FontWeight.w500,
           ),
           prefixIcon: Icon(

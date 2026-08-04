@@ -72,7 +72,7 @@ class _BookingCardState extends State<BookingCard> {
     return Container(
       padding: const EdgeInsets.all(20), // Standardized spacing
       decoration: _ecoCardDecoration(context).copyWith(
-        borderRadius: BorderRadius.circular(24), // Softer corners
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg), // Softer corners
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,7 +89,7 @@ class _BookingCardState extends State<BookingCard> {
                 'อยากไปเที่ยวที่ไหน?',
                 style: appFont(
                   color: AppTheme.primaryColor,
-                  fontSize: 20,
+                  fontSize: AppText.sizeH2,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -169,14 +169,14 @@ class DestinationDropdown extends StatelessWidget {
       child: options.isEmpty
           ? const Text(
               'ยังไม่มีทริปที่เปิดขาย',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: AppText.sizeSubtitle),
             )
           : DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: slug,
                 isExpanded: true,
                 menuMaxHeight: 400,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 icon: const Icon(
                   Icons.keyboard_arrow_down_rounded,
                   color: AppTheme.primaryColor,
@@ -190,7 +190,7 @@ class DestinationDropdown extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
                         color: AppTheme.primaryColor,
-                        fontSize: 16,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -200,7 +200,7 @@ class DestinationDropdown extends StatelessWidget {
                   'เลือกทริป',
                   style: appFont(
                     color: AppTheme.textSecondary,
-                    fontSize: 16,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -258,7 +258,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
         label: 'เลือกภาคที่จะขึ้น',
         child: Text(
           'เลือกทริปก่อน',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+          style: TextStyle(color: AppTheme.textSecondary, fontSize: AppText.sizeSubtitle),
         ),
       );
     }
@@ -287,7 +287,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
             label: 'เลือกวันเดินทาง',
             child: Text(
               'ยังไม่มีวันเดินทางที่เปิดจอง',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: AppText.sizeSubtitle),
             ),
           );
         }
@@ -326,14 +326,14 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                       'ยังไม่มีข้อมูลภาค/จุดรับสำหรับทริปนี้',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                       ),
                     )
                   : DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: selectedRegion?.key,
                         isExpanded: true,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         icon: const Icon(
                           Icons.keyboard_arrow_down_rounded,
                           color: AppTheme.primaryColor,
@@ -342,7 +342,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                           'เลือกภาค',
                           style: appFont(
                             color: AppTheme.textSecondary,
-                            fontSize: 16,
+                            fontSize: AppText.sizeSubtitle,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -355,7 +355,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
                                 color: AppTheme.primaryColor,
-                                fontSize: 16,
+                                fontSize: AppText.sizeSubtitle,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -381,7 +381,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                       'เลือกภาคก่อนจึงจะเลือกวันได้',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                       ),
                     )
                   : filteredSchedules.isEmpty
@@ -389,7 +389,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                       'ยังไม่มีวันเดินทางสำหรับภาคนี้',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                       ),
                     )
                   : _ScheduleDropdown(
@@ -420,7 +420,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                       'เลือกวันเดินทางก่อน',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                       ),
                     )
                   : Builder(
@@ -438,7 +438,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                             'ยังไม่มีจุดขึ้นรถสำหรับภาคนี้',
                             style: TextStyle(
                               color: AppTheme.textSecondary,
-                              fontSize: 15,
+                              fontSize: AppText.sizeSubtitle,
                             ),
                           );
                         }
@@ -456,7 +456,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                             value: validId,
                             isExpanded: true,
                             itemHeight: 64,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                             icon: const Icon(
                               Icons.keyboard_arrow_down_rounded,
                               color: AppTheme.primaryColor,
@@ -475,7 +475,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                                       overflow: TextOverflow.ellipsis,
                                       style: appFont(
                                         color: AppTheme.primaryColor,
-                                        fontSize: 15,
+                                        fontSize: AppText.sizeSubtitle,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -506,7 +506,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                                       overflow: TextOverflow.ellipsis,
                                       style: appFont(
                                         color: AppTheme.primaryColor,
-                                        fontSize: 15,
+                                        fontSize: AppText.sizeSubtitle,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -522,7 +522,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                                         overflow: TextOverflow.ellipsis,
                                         style: appFont(
                                           color: AppTheme.textSecondary,
-                                          fontSize: 12,
+                                          fontSize: AppText.sizeCaption,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -556,7 +556,7 @@ class _DateSelectorCardState extends State<DateSelectorCard> {
                   return Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       child: CachedNetworkImage(
                         imageUrl: imageUrl,
                         height: 160,
@@ -613,7 +613,7 @@ class _ScheduleDropdown extends StatelessWidget {
         value: value,
         isExpanded: true,
         itemHeight: 70,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         icon: const Icon(
           Icons.keyboard_arrow_down_rounded,
           color: AppTheme.primaryColor,
@@ -622,7 +622,7 @@ class _ScheduleDropdown extends StatelessWidget {
           'เลือกวันเดินทาง',
           style: appFont(
             color: AppTheme.textSecondary,
-            fontSize: 16,
+            fontSize: AppText.sizeSubtitle,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -639,7 +639,7 @@ class _ScheduleDropdown extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: AppTheme.primaryColor,
-                      fontSize: 16,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -663,7 +663,7 @@ class _ScheduleDropdown extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: AppTheme.primaryColor,
-                      fontSize: 15,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -707,7 +707,7 @@ class _SchedulePickupDetailToggle extends StatelessWidget {
               child: Text(
                 'รายละเอียดจุดรับและราคา',
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   color: AppTheme.textSecondary,
                   fontWeight: FontWeight.w600,
                 ),
@@ -743,7 +743,7 @@ class _SeatBadge extends StatelessWidget {
         color: isLow
             ? const Color(0xFFFFDAD6)
             : AppTheme.primaryColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
       ),
       child: Text(
         'เหลือ $count ที่',

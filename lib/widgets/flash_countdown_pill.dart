@@ -57,7 +57,7 @@ class _FlashCountdownPillState extends State<FlashCountdownPill> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: AppTheme.flashSaleColor,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -68,7 +68,7 @@ class _FlashCountdownPillState extends State<FlashCountdownPill> {
             label,
             style: appFont(
               color: Colors.white,
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.2,
             ),

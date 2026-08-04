@@ -55,7 +55,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
           'บทความ',
           style: appFont(
             color: AppTheme.onSurface(context),
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -157,7 +157,7 @@ class _CategoryFilter extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
             color: active ? AppTheme.primaryColor : AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             border: Border.all(
               color: active ? AppTheme.primaryColor : AppTheme.border(context),
             ),
@@ -166,7 +166,7 @@ class _CategoryFilter extends StatelessWidget {
             label,
             style: appFont(
               color: active ? Colors.white : AppTheme.textSecondary,
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.1,
             ),
@@ -221,7 +221,7 @@ class _ArticleCard extends StatelessWidget {
                       article.category!.name,
                       style: appFont(
                         color: AppTheme.primaryColor,
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -230,7 +230,7 @@ class _ArticleCard extends StatelessWidget {
                     article.title,
                     style: appFont(
                       color: AppTheme.onSurface(context),
-                      fontSize: 18,
+                      fontSize: AppText.sizeTitle,
                       fontWeight: FontWeight.w800,
                       height: 1.3,
                     ),
@@ -243,7 +243,7 @@ class _ArticleCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
                         color: AppTheme.mutedText(context),
-                        fontSize: 14,
+                        fontSize: AppText.sizeBody,
                         height: 1.45,
                       ),
                     ),
@@ -253,7 +253,7 @@ class _ArticleCard extends StatelessWidget {
                     '${_formatDate(article.publishedAt)} · อ่าน ${article.readingMinutes} นาที',
                     style: appFont(
                       color: AppTheme.mutedText(context),
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

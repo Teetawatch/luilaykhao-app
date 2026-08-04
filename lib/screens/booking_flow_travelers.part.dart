@@ -19,8 +19,8 @@ class TravelerCounter extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: _fieldBackground(context),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFE5E7E5)),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -43,7 +43,7 @@ class TravelerCounter extends StatelessWidget {
                   '$count',
                   style: appFont(
                     fontWeight: FontWeight.w800,
-                    fontSize: 17,
+                    fontSize: AppText.sizeTitle,
                     color: _premiumText(context),
                   ),
                 ),
@@ -239,7 +239,7 @@ class PricingSummaryCard extends StatelessWidget {
             const SizedBox(height: 10),
           ],
           InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             onTap: onExpandedChanged,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -249,7 +249,7 @@ class PricingSummaryCard extends StatelessWidget {
                     expanded ? 'ซ่อนรายละเอียดราคา' : 'ดูรายละเอียดราคา',
                     style: appFont(
                       color: _softAccent,
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -306,7 +306,7 @@ class _PromoField extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: _softAccent.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: _softAccent.withValues(alpha: 0.35)),
         ),
         child: Row(
@@ -321,7 +321,7 @@ class _PromoField extends StatelessWidget {
                     'ใช้โค้ด ${textOf(appliedPromo!['code'])} แล้ว',
                     style: appFont(
                       color: _softAccent,
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -330,7 +330,7 @@ class _PromoField extends StatelessWidget {
                     'ส่วนลด ${money(discount)}',
                     style: appFont(
                       color: _softAccent,
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -339,7 +339,7 @@ class _PromoField extends StatelessWidget {
             ),
             InkWell(
               onTap: onRemove,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               child: Padding(
                 padding: const EdgeInsets.all(6),
                 child: Icon(
@@ -380,7 +380,7 @@ class _PromoField extends StatelessWidget {
                   backgroundColor: _softAccent,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                 ),
                 child: loading
@@ -396,7 +396,7 @@ class _PromoField extends StatelessWidget {
                         'ใช้โค้ด',
                         style: appFont(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -416,7 +416,7 @@ class _PromoField extends StatelessWidget {
                   error!,
                   style: appFont(
                     color: AppTheme.errorColor,
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -467,7 +467,7 @@ class AddonSelectionSection extends StatelessWidget {
               'เลือกจำนวนได้ตามต้องการ ไม่ต้องเท่าจำนวนผู้เดินทาง',
               style: appFont(
                 color: AppTheme.mutedText(context),
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -493,7 +493,7 @@ class AddonSelectionSection extends StatelessWidget {
                   color: selected
                       ? const Color(0xFFFFFBEB)
                       : AppTheme.fieldSurface(context),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   border: Border.all(
                     color: selected ? _accent : AppTheme.border(context),
                     width: selected ? 1.4 : 1,
@@ -509,7 +509,7 @@ class AddonSelectionSection extends StatelessWidget {
                       child: Stack(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                             child: addon.hasImage
                                 ? CachedNetworkImage(
                                     imageUrl: addon.imageUrl,
@@ -551,7 +551,7 @@ class AddonSelectionSection extends StatelessWidget {
                                 padding: const EdgeInsets.all(1.5),
                                 decoration: BoxDecoration(
                                   color: Colors.black.withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(5),
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                                 ),
                                 child: const Icon(
                                   Icons.zoom_in_rounded,
@@ -574,7 +574,7 @@ class AddonSelectionSection extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
                               color: AppTheme.onSurface(context),
-                              fontSize: 14,
+                              fontSize: AppText.sizeBody,
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.1,
                             ),
@@ -584,7 +584,7 @@ class AddonSelectionSection extends StatelessWidget {
                             '${money(addon.price)} ${addon.priceTypeLabel}',
                             style: appFont(
                               color: AppTheme.mutedText(context),
-                              fontSize: 12,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -595,7 +595,7 @@ class AddonSelectionSection extends StatelessWidget {
                               style: appFont(
                                 color: const Color(0xFFB45309),
                                 fontWeight: FontWeight.w800,
-                                fontSize: 13,
+                                fontSize: AppText.sizeLabel,
                               ),
                             ),
                           ],
@@ -676,7 +676,7 @@ class RentalSelectionSection extends StatelessWidget {
                   color: selected
                       ? const Color(0xFFEFF6FF)
                       : AppTheme.fieldSurface(context),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   border: Border.all(
                     color: selected ? _accent : AppTheme.border(context),
                     width: selected ? 1.4 : 1,
@@ -690,7 +690,7 @@ class RentalSelectionSection extends StatelessWidget {
                           ? () => _openAddonImage(context, rental.imageUrl)
                           : null,
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                         child: rental.hasImage
                             ? CachedNetworkImage(
                                 imageUrl: rental.imageUrl,
@@ -736,7 +736,7 @@ class RentalSelectionSection extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
                               color: AppTheme.onSurface(context),
-                              fontSize: 14,
+                              fontSize: AppText.sizeBody,
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.1,
                             ),
@@ -746,7 +746,7 @@ class RentalSelectionSection extends StatelessWidget {
                             '${money(rental.price)} / ชิ้น',
                             style: appFont(
                               color: AppTheme.mutedText(context),
-                              fontSize: 12,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -757,7 +757,7 @@ class RentalSelectionSection extends StatelessWidget {
                               style: appFont(
                                 color: _accent,
                                 fontWeight: FontWeight.w800,
-                                fontSize: 13,
+                                fontSize: AppText.sizeLabel,
                               ),
                             ),
                           ],
@@ -817,7 +817,7 @@ class _QuantityStepper extends StatelessWidget {
             '$quantity',
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 16,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
               color: quantity > 0
                   ? AppTheme.onSurface(context)
@@ -861,7 +861,7 @@ class _StepperButton extends StatelessWidget {
         height: 32,
         decoration: BoxDecoration(
           color: enabled ? accent.withValues(alpha: 0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(AppTheme.radiusXs),
           border: Border.all(
             color: enabled
                 ? accent.withValues(alpha: 0.35)
@@ -909,7 +909,7 @@ class TrustSignalsSection extends StatelessWidget {
               style: appFont(
                 color: color,
                 fontWeight: FontWeight.w600,
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
               ),
             ),
           ],
@@ -1015,7 +1015,7 @@ class StickyCheckoutBar extends StatelessWidget {
                           disabledForegroundColor:
                               _mutedTextColor(context).withValues(alpha: 0.4),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                           ),
                         ),
                         icon: Icon(Icons.arrow_back_rounded, size: iconSize + 2),
@@ -1031,9 +1031,9 @@ class StickyCheckoutBar extends StatelessWidget {
                         style: FilledButton.styleFrom(
                           backgroundColor: _softAccent,
                           foregroundColor: Colors.white,
-                          disabledBackgroundColor: const Color(0xFFC8D5D1),
+                          disabledBackgroundColor: const Color(0xFFCBD5E1),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                           ),
                           padding: EdgeInsets.symmetric(
                             horizontal: isNarrow ? 12 : 16,
@@ -1113,7 +1113,7 @@ class _SectionShell extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: _softAccent.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Icon(icon, color: _softAccent, size: 19),
               ),
@@ -1122,7 +1122,7 @@ class _SectionShell extends StatelessWidget {
                 child: Text(
                   title,
                   style: appFont(
-                    fontSize: 17,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w800,
                     color: _premiumText(context),
                     letterSpacing: -0.3,
@@ -1156,7 +1156,7 @@ class _SeatDrivenTravelerCount extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: _softAccent.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1167,7 +1167,7 @@ class _SeatDrivenTravelerCount extends StatelessWidget {
             count > 0 ? '$count คน' : 'เลือกที่นั่ง',
             style: appFont(
               color: _softAccent,
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1220,7 +1220,7 @@ class _TravelerCard extends StatelessWidget {
                     style: appFont(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                     ),
                   ),
                 ),
@@ -1232,7 +1232,7 @@ class _TravelerCard extends StatelessWidget {
                   style: appFont(
                     fontWeight: FontWeight.w800,
                     color: _premiumText(context),
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                   ),
                 ),
               ),
@@ -1244,14 +1244,14 @@ class _TravelerCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: _fieldBackground(context),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     border: Border.all(color: _cardBorder(context)),
                   ),
                   child: Text(
                     'ที่นั่ง $seatId',
                     style: appFont(
                       color: _mutedTextColor(context),
-                      fontSize: 11,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1264,7 +1264,7 @@ class _TravelerCard extends StatelessWidget {
                   if (val == 'book') onUseSavedTraveller();
                 },
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 itemBuilder: (_) => [
                   // สมุดผู้ร่วมเดินทางอยู่บนสุด — เป็นทางที่ใช้บ่อยที่สุดเมื่อ
@@ -1314,7 +1314,7 @@ class _TravelerCard extends StatelessWidget {
                       horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: _softAccent.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1325,7 +1325,7 @@ class _TravelerCard extends StatelessWidget {
                       Text(
                         'กรอกจาก',
                         style: appFont(
-                          fontSize: 12.5,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w800,
                           color: _softAccent,
                         ),
@@ -1348,7 +1348,7 @@ class _TravelerCard extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: _fieldBackground(context),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     border: Border.all(color: _cardBorder(context)),
                   ),
                   child: Column(
@@ -1362,7 +1362,7 @@ class _TravelerCard extends StatelessWidget {
                           Text(
                             'จุดขึ้นรถ',
                             style: appFont(
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w700,
                               color: _premiumText(context),
                             ),
@@ -1371,7 +1371,7 @@ class _TravelerCard extends StatelessWidget {
                           Text(
                             '*',
                             style: appFont(
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w700,
                               color: Colors.red,
                             ),
@@ -1397,7 +1397,7 @@ class _TravelerCard extends StatelessWidget {
                                 color: isSelected
                                     ? const Color(0xFF059669).withValues(alpha: 0.1)
                                     : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                                 border: Border.all(
                                   color: isSelected
                                       ? const Color(0xFF059669)
@@ -1421,7 +1421,7 @@ class _TravelerCard extends StatelessWidget {
                                   Text(
                                     location,
                                     style: appFont(
-                                      fontSize: 13,
+                                      fontSize: AppText.sizeLabel,
                                       fontWeight: FontWeight.w700,
                                       color: isSelected
                                           ? const Color(0xFF059669)
@@ -1432,7 +1432,7 @@ class _TravelerCard extends StatelessWidget {
                                   Text(
                                     money(price),
                                     style: appFont(
-                                      fontSize: 11,
+                                      fontSize: AppText.sizeCaption,
                                       color: _mutedTextColor(context),
                                     ),
                                   ),
@@ -1447,7 +1447,7 @@ class _TravelerCard extends StatelessWidget {
                         Text(
                           '* กรุณาเลือกจุดขึ้นรถ',
                           style: appFont(
-                            fontSize: 11,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w700,
                             color: Colors.red,
                           ),
@@ -1666,7 +1666,7 @@ class _TravelerCard extends StatelessWidget {
             style: appFont(
               color: _premiumText(context),
               fontWeight: FontWeight.w800,
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
             ),
           ),
           const SizedBox(height: 10),
@@ -1777,7 +1777,7 @@ class GiftModeSection extends StatelessWidget {
                 child: Text(
                   'ซื้อทริปนี้ให้แฟน เพื่อน หรือคนพิเศษ — ชำระเงินแล้วรับโค้ดของขวัญส่งต่อให้ผู้รับกดรับในแอป',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     height: 1.6,
                     color: _mutedTextColor(context),
                   ),
@@ -1837,7 +1837,7 @@ class GiftModeSection extends StatelessWidget {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: _softAccent.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       border: Border.all(
                         color: _softAccent.withValues(alpha: 0.25),
                       ),
@@ -1847,7 +1847,7 @@ class GiftModeSection extends StatelessWidget {
                       'ระบบจะดึงข้อมูลจากโปรไฟล์ของผู้รับให้อัตโนมัติ '
                       'หลังชำระเงินคุณจะได้โค้ดของขวัญไว้ส่งให้ผู้รับ',
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         height: 1.6,
                         color: _premiumText(context),
                       ),

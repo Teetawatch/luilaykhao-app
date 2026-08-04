@@ -55,7 +55,7 @@ class _PaymentEmptyState extends StatelessWidget {
               'ไม่พบข้อมูลการจอง',
               style: appFont(
                 color: AppTheme.onSurface(context),
-                fontSize: 18,
+                fontSize: AppText.sizeTitle,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -73,7 +73,7 @@ class _PaymentEmptyState extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: _accent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
               icon: const Icon(Icons.refresh_rounded),
@@ -150,7 +150,7 @@ class _PaymentProgress extends StatelessWidget {
                         color: isActive
                             ? _accent
                             : AppTheme.mutedText(context),
-                        fontSize: 11,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -163,7 +163,7 @@ class _PaymentProgress extends StatelessWidget {
                   height: 2.5,
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                 ),
             ],
@@ -188,7 +188,7 @@ class _PaymentNotice extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.warningTint(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.warningColor.withValues(alpha: 0.30),
         ),
@@ -200,7 +200,7 @@ class _PaymentNotice extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: AppTheme.warningColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: const Icon(
               Icons.priority_high_rounded,
@@ -217,7 +217,7 @@ class _PaymentNotice extends StatelessWidget {
                     ? const Color(0xFFFCD34D)
                     : const Color(0xFF92400E),
                 fontWeight: FontWeight.w800,
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 height: 1.4,
               ),
             ),
@@ -265,7 +265,7 @@ class _BalanceDueBanner extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: color.withValues(alpha: 0.30)),
       ),
       child: Row(
@@ -276,7 +276,7 @@ class _BalanceDueBanner extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: Icon(
               isOverdue ? Icons.warning_amber_rounded : Icons.schedule_rounded,
@@ -293,7 +293,7 @@ class _BalanceDueBanner extends StatelessWidget {
                   isOverdue ? 'เลยกำหนดชำระยอดส่วนที่เหลือ' : 'ครบกำหนดชำระยอดส่วนที่เหลือ',
                   style: appFont(
                     color: color,
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -306,7 +306,7 @@ class _BalanceDueBanner extends StatelessWidget {
                             : 'กรุณาชำระ ${money(balance)} ภายในวันที่ $dueText (อีก $daysLeft วัน)'),
                   style: appFont(
                     color: AppTheme.onSurface(context),
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
                     height: 1.4,
                   ),
@@ -351,7 +351,7 @@ class _SplitShareBanner extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: color.withValues(alpha: 0.30)),
       ),
       child: Row(
@@ -362,7 +362,7 @@ class _SplitShareBanner extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: Icon(
               paid ? Icons.check_rounded : Icons.call_split_rounded,
@@ -383,7 +383,7 @@ class _SplitShareBanner extends StatelessWidget {
                           : 'ชำระส่วนของ $name (แบ่งจ่ายกลุ่ม)',
                   style: appFont(
                     color: color,
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -394,7 +394,7 @@ class _SplitShareBanner extends StatelessWidget {
                       : 'ยอด ${money(share['amount'])} · กรุณาชำระภายในวันที่ $dueText',
                   style: appFont(
                     color: AppTheme.onSurface(context),
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
                     height: 1.4,
                   ),
@@ -439,7 +439,7 @@ class _InstallmentBanner extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: color.withValues(alpha: 0.30)),
       ),
       child: Row(
@@ -450,7 +450,7 @@ class _InstallmentBanner extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: Icon(
               paid ? Icons.check_circle_rounded : Icons.receipt_long_rounded,
@@ -467,7 +467,7 @@ class _InstallmentBanner extends StatelessWidget {
                   paid ? 'ชำระงวดที่ $no แล้ว' : 'ชำระงวดที่ $no',
                   style: appFont(
                     color: color,
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -478,7 +478,7 @@ class _InstallmentBanner extends StatelessWidget {
                       : 'ยอดชำระ ${money(amount)} · ครบกำหนด $dueText',
                   style: appFont(
                     color: AppTheme.onSurface(context),
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
                     height: 1.4,
                   ),
@@ -533,7 +533,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Row(
@@ -543,7 +543,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
             height: 42,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: Icon(
               expired ? Icons.timer_off_rounded : Icons.timer_rounded,
@@ -561,7 +561,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
                   style: appFont(
                     color: color,
                     fontWeight: FontWeight.w900,
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -572,7 +572,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
                   style: appFont(
                     color: AppTheme.mutedText(context),
                     fontWeight: FontWeight.w600,
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     height: 1.35,
                   ),
                 ),
@@ -731,7 +731,7 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
           child: Text(
             'ที่นั่งที่รอการจอง',
             style: appFont(
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),

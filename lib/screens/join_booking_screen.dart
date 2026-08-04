@@ -130,7 +130,7 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
             Text(
               'มีเพื่อนเชิญเข้าทริปไหม?',
               style: appFont(
-                fontSize: 20,
+                fontSize: AppText.sizeH2,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
               ),
@@ -140,7 +140,7 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
               'วางลิงก์หรือรหัสคำเชิญที่เจ้าของการจองส่งมา เพื่อเข้ากลุ่มแชท '
               'และติดตามสถานะรถได้จากบัญชีของคุณเอง',
               style: appFont(
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 color: AppTheme.mutedText(context),
                 height: 1.5,
               ),
@@ -170,7 +170,7 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
                   },
                 ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -236,7 +236,7 @@ class _InvitePreviewCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.25),
         ),
@@ -248,7 +248,7 @@ class _InvitePreviewCard extends StatelessWidget {
             Text(
               '$invitedBy เชิญคุณเข้าร่วม',
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
               ),
@@ -257,7 +257,7 @@ class _InvitePreviewCard extends StatelessWidget {
           Text(
             tripTitle,
             style: appFont(
-              fontSize: 18,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -290,7 +290,7 @@ class _PreviewRow extends StatelessWidget {
           Text(
             text,
             style: appFont(
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               color: AppTheme.onSurface(context),
               fontWeight: FontWeight.w600,
             ),
@@ -318,7 +318,7 @@ class _InfoBanner extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
@@ -330,7 +330,7 @@ class _InfoBanner extends StatelessWidget {
             child: Text(
               text,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 color: AppTheme.onSurface(context),
                 fontWeight: FontWeight.w600,
                 height: 1.4,

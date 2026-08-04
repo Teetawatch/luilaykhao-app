@@ -136,7 +136,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
           content: Text('บันทึก Wallet แล้ว',
               style: appFont(fontWeight: FontWeight.w700)),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         ),
       );
@@ -176,7 +176,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
             style: appFont(fontWeight: FontWeight.w700)),
         behavior: SnackBarBehavior.floating,
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
     );
@@ -204,7 +204,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
           'Document Wallet',
           style: appFont(
             fontWeight: FontWeight.w800,
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             color: AppTheme.onSurface(context),
           ),
         ),
@@ -234,7 +234,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                     decoration: BoxDecoration(
                       color:
                           AppTheme.primaryColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       border: Border.all(
                         color: AppTheme.primaryColor.withValues(alpha: 0.20),
                       ),
@@ -251,7 +251,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                             'แล้วกด "กรอกจาก Wallet" ในขั้นตอนจองได้เลย — '
                             'ข้อมูลเก็บไว้บนเครื่องนี้เท่านั้น',
                             style: appFont(
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               color: AppTheme.primaryColor,
                               height: 1.5,
                               fontWeight: FontWeight.w600,
@@ -396,7 +396,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                         horizontal: 16, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppTheme.fieldSurface(context),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       border: Border.all(
                         color:
                             AppTheme.border(context).withValues(alpha: 0.65),
@@ -407,7 +407,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                       title: Text(
                         'ต้องการอาหารฮาลาล',
                         style: appFont(
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.onSurface(context),
                         ),
@@ -427,7 +427,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                       style: FilledButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                         ),
                       ),
                       icon: _saving
@@ -442,7 +442,7 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
                         _saving ? 'กำลังบันทึก...' : 'บันทึก Wallet',
                         style: appFont(
                           fontWeight: FontWeight.w900,
-                          fontSize: 16,
+                          fontSize: AppText.sizeSubtitle,
                         ),
                       ),
                     ),
@@ -479,7 +479,7 @@ class _WalletSectionHeader extends StatelessWidget {
           height: 32,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
           child: Icon(icon, color: color, size: 18),
         ),
@@ -487,7 +487,7 @@ class _WalletSectionHeader extends StatelessWidget {
         Text(
           title,
           style: appFont(
-            fontSize: 14,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w900,
             color: AppTheme.onSurface(context),
           ),
@@ -539,17 +539,17 @@ class _WalletField extends StatelessWidget {
         filled: true,
         fillColor: AppTheme.fieldSurface(context),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
               color: AppTheme.border(context).withValues(alpha: 0.65)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
               color: AppTheme.border(context).withValues(alpha: 0.65)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide:
               const BorderSide(color: AppTheme.primaryColor, width: 1.5),
         ),
@@ -582,13 +582,13 @@ class _WalletDropdown extends StatelessWidget {
     return DropdownButtonFormField<String>(
       initialValue: value,
       isExpanded: true,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       icon: Icon(Icons.keyboard_arrow_down_rounded,
           color: AppTheme.mutedText(context)),
       style: appFont(
         fontWeight: FontWeight.w700,
         color: AppTheme.onSurface(context),
-        fontSize: 14,
+        fontSize: AppText.sizeBody,
       ),
       dropdownColor: AppTheme.surface(context),
       decoration: InputDecoration(
@@ -604,17 +604,17 @@ class _WalletDropdown extends StatelessWidget {
         filled: true,
         fillColor: AppTheme.fieldSurface(context),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
               color: AppTheme.border(context).withValues(alpha: 0.65)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide: BorderSide(
               color: AppTheme.border(context).withValues(alpha: 0.65)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           borderSide:
               const BorderSide(color: AppTheme.primaryColor, width: 1.5),
         ),

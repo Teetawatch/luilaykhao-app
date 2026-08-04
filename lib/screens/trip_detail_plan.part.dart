@@ -210,7 +210,7 @@ List<Widget> _departureTimeNotice(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: orange.withValues(alpha: isDark ? 0.16 : 0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         border: Border.all(color: orange.withValues(alpha: 0.30)),
       ),
       child: Row(
@@ -225,7 +225,7 @@ List<Widget> _departureTimeNotice(
             child: Text(
               label,
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.onSurface(context),
               ),
@@ -303,7 +303,7 @@ List<Widget> _departureStatusNotice(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: tint.withValues(alpha: isDark ? 0.14 : 0.10),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: tint.withValues(alpha: 0.32)),
       ),
       child: Column(
@@ -328,7 +328,7 @@ List<Widget> _departureStatusNotice(
                     Text(
                       title,
                       style: appFont(
-                        fontSize: 14.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                       ),
@@ -337,7 +337,7 @@ List<Widget> _departureStatusNotice(
                     Text(
                       subtitle,
                       style: appFont(
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.mutedText(context),
                         height: 1.35,
@@ -351,7 +351,7 @@ List<Widget> _departureStatusNotice(
           const SizedBox(height: 12),
           // แถบความคืบหน้าไปสู่การการันตีออกเดินทาง
           ClipRRect(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7,
@@ -366,7 +366,7 @@ List<Widget> _departureStatusNotice(
               Text(
                 'จองแล้ว $booked ที่นั่ง',
                 style: appFont(
-                  fontSize: 11,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   color: tint,
                 ),
@@ -374,7 +374,7 @@ List<Widget> _departureStatusNotice(
               Text(
                 'การันตีที่ $guaranteeMin ที่นั่ง',
                 style: appFont(
-                  fontSize: 11,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
                 ),
@@ -431,14 +431,14 @@ class _PlanStepLabel extends StatelessWidget {
           height: 22,
           decoration: BoxDecoration(
             color: const Color(0xFF059669),
-            borderRadius: BorderRadius.circular(7),
+            borderRadius: BorderRadius.circular(AppTheme.radiusXs),
           ),
           child: Center(
             child: Text(
               step,
               style: appFont(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -448,7 +448,7 @@ class _PlanStepLabel extends StatelessWidget {
         Text(
           label,
           style: appFont(
-            fontSize: 13,
+            fontSize: AppText.sizeLabel,
             fontWeight: FontWeight.w800,
             color: isDark ? Colors.white.withValues(alpha: 0.85) : _premiumText,
             letterSpacing: 0.1,
@@ -517,8 +517,8 @@ class _RegionPill extends StatelessWidget {
               ? _softAccent
               : isDark
                   ? AppTheme.subtleSurface(context)
-                  : const Color(0xFFF0FDF4),
-          borderRadius: BorderRadius.circular(24),
+                  : const Color(0xFFECFDF5),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: isSelected
                 ? _softAccent
@@ -529,13 +529,13 @@ class _RegionPill extends StatelessWidget {
         child: Text(
           label,
           style: appFont(
-            fontSize: 13,
+            fontSize: AppText.sizeLabel,
             fontWeight: FontWeight.w700,
             color: isSelected
                 ? Colors.white
                 : isDark
                     ? Colors.white.withValues(alpha: 0.75)
-                    : const Color(0xFF374151),
+                    : const Color(0xFF334155),
           ),
         ),
       ),
@@ -824,7 +824,7 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
                         Text(
                           'เลื่อนดูวันอื่น ๆ',
                           style: appFont(
-                            fontSize: 11,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w700,
                             color: muted,
                             letterSpacing: 0.2,
@@ -900,7 +900,7 @@ class _SeeAllDatesButton extends StatelessWidget {
           Text(
             'ดูวันทั้งหมด ($count วัน)',
             style: appFont(
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
               color: _softAccent,
               letterSpacing: 0.1,
@@ -932,8 +932,8 @@ class _SeeAllDatesTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark
               ? _softAccent.withValues(alpha: 0.10)
-              : const Color(0xFFF0FDF4),
-          borderRadius: BorderRadius.circular(18),
+              : const Color(0xFFECFDF5),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: _softAccent.withValues(alpha: isDark ? 0.35 : 0.30),
             width: 1.5,
@@ -960,7 +960,7 @@ class _SeeAllDatesTile extends StatelessWidget {
               'ดูทั้งหมด',
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w800,
                 color: _softAccent,
                 height: 1.1,
@@ -970,7 +970,7 @@ class _SeeAllDatesTile extends StatelessWidget {
             Text(
               '$count วัน',
               style: appFont(
-                fontSize: 10.5,
+                fontSize: AppText.sizeMicro,
                 fontWeight: FontWeight.w700,
                 color: _softAccent.withValues(alpha: 0.75),
               ),
@@ -1015,7 +1015,7 @@ class _MonthDivider extends StatelessWidget {
             margin: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               color: AppTheme.border(context).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(1),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             ),
           ),
           Expanded(
@@ -1027,7 +1027,7 @@ class _MonthDivider extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 11,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: muted,
                     letterSpacing: 0.5,
@@ -1138,14 +1138,14 @@ class _ScheduleChip extends StatelessWidget {
     } else if (isUnavailable) {
       bg = isDark
           ? Colors.white.withValues(alpha: 0.04)
-          : const Color(0xFFF9FAFB);
+          : const Color(0xFFF8FAFC);
       border = AppTheme.border(context).withValues(alpha: 0.35);
       fg = AppTheme.mutedText(context).withValues(alpha: 0.40);
       sub = AppTheme.mutedText(context).withValues(alpha: 0.30);
     } else {
       bg = isDark
           ? AppTheme.subtleSurface(context)
-          : const Color(0xFFF0FDF4);
+          : const Color(0xFFECFDF5);
       border = isDark
           ? AppTheme.border(context).withValues(alpha: 0.45)
           : _softAccent.withValues(alpha: 0.20);
@@ -1179,7 +1179,7 @@ class _ScheduleChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: border, width: 1.5),
         ),
         child: Column(
@@ -1190,7 +1190,7 @@ class _ScheduleChip extends StatelessWidget {
               Text(
                 weekdayLabel,
                 style: appFont(
-                  fontSize: 11,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   color: sub,
                   letterSpacing: 0.4,
@@ -1202,7 +1202,7 @@ class _ScheduleChip extends StatelessWidget {
             Text(
               dayLabel,
               style: appFont(
-                fontSize: 26,
+                fontSize: AppText.sizeH1,
                 fontWeight: FontWeight.w800,
                 color: fg,
                 height: 1.0,
@@ -1213,7 +1213,7 @@ class _ScheduleChip extends StatelessWidget {
             Text(
               monthLabel,
               style: appFont(
-                fontSize: 11,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w700,
                 color: sub,
                 height: 1.1,
@@ -1236,14 +1236,14 @@ class _ScheduleChip extends StatelessWidget {
                         : isDark
                             ? _softAccent.withValues(alpha: 0.14)
                             : const Color(0xFFD1FAE5),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                   ),
                   child: Text(
                     nightsLabel,
                     maxLines: 1,
                     softWrap: false,
                     style: appFont(
-                      fontSize: 9.5,
+                      fontSize: AppText.sizeMicro,
                       fontWeight: FontWeight.w800,
                       color: isSelected ? Colors.white : _softAccent,
                       height: 1.0,
@@ -1259,7 +1259,7 @@ class _ScheduleChip extends StatelessWidget {
                 Text(
                   'ผ่านแล้ว',
                   style: appFont(
-                    fontSize: 9.5,
+                    fontSize: AppText.sizeMicro,
                     fontWeight: FontWeight.w700,
                     color: sub,
                   ),
@@ -1268,7 +1268,7 @@ class _ScheduleChip extends StatelessWidget {
                 Text(
                   'เต็ม',
                   style: appFont(
-                    fontSize: 9.5,
+                    fontSize: AppText.sizeMicro,
                     fontWeight: FontWeight.w700,
                     color: isSelected
                         ? Colors.white.withValues(alpha: 0.75)
@@ -1299,7 +1299,7 @@ class _ScheduleChip extends StatelessWidget {
                         maxLines: 1,
                         softWrap: false,
                         style: appFont(
-                          fontSize: 9.5,
+                          fontSize: AppText.sizeMicro,
                           fontWeight: FontWeight.w700,
                           color: isSelected
                               ? Colors.white.withValues(alpha: 0.88)
@@ -1318,7 +1318,7 @@ class _ScheduleChip extends StatelessWidget {
               Text(
                 'เหมา',
                 style: appFont(
-                  fontSize: 9.5,
+                  fontSize: AppText.sizeMicro,
                   fontWeight: FontWeight.w700,
                   color: sub,
                 ),
@@ -1385,7 +1385,7 @@ class _ScheduleDateSheet extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppTheme.surfaceDark : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
           ),
           child: Column(
             children: [
@@ -1396,7 +1396,7 @@ class _ScheduleDateSheet extends StatelessWidget {
                 height: 4,
                 decoration: BoxDecoration(
                   color: AppTheme.border(context),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
               ),
               // Header
@@ -1411,7 +1411,7 @@ class _ScheduleDateSheet extends StatelessWidget {
                           Text(
                             'เลือกวันเดินทาง',
                             style: appFont(
-                              fontSize: 18,
+                              fontSize: AppText.sizeTitle,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.onSurface(context),
                             ),
@@ -1420,7 +1420,7 @@ class _ScheduleDateSheet extends StatelessWidget {
                           Text(
                             '${upcoming.length} วันเดินทางที่เปิดจอง',
                             style: appFont(
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.mutedText(context),
                             ),
@@ -1470,14 +1470,14 @@ class _ScheduleDateSheet extends StatelessWidget {
                                     height: 15,
                                     decoration: BoxDecoration(
                                       color: _softAccent,
-                                      borderRadius: BorderRadius.circular(2),
+                                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
                                     item,
                                     style: appFont(
-                                      fontSize: 13,
+                                      fontSize: AppText.sizeLabel,
                                       fontWeight: FontWeight.w800,
                                       color: AppTheme.onSurface(context),
                                       letterSpacing: 0.2,
@@ -1545,10 +1545,10 @@ class _SheetDateRow extends StatelessWidget {
     if (isSelected) {
       bg = isDark
           ? _softAccent.withValues(alpha: 0.16)
-          : const Color(0xFFF0FDF4);
+          : const Color(0xFFECFDF5);
       border = _softAccent;
     } else if (disabled) {
-      bg = isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF9FAFB);
+      bg = isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF8FAFC);
       border = AppTheme.border(context).withValues(alpha: 0.4);
     } else {
       bg = isDark ? AppTheme.subtleSurface(context) : Colors.white;
@@ -1600,7 +1600,7 @@ class _SheetDateRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: border, width: isSelected ? 1.5 : 1),
           ),
           child: Row(
@@ -1615,7 +1615,7 @@ class _SheetDateRow extends StatelessWidget {
                       : (isDark
                           ? Colors.white.withValues(alpha: 0.05)
                           : const Color(0xFFF1F5F9)),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1623,7 +1623,7 @@ class _SheetDateRow extends StatelessWidget {
                     Text(
                       weekdayLabel,
                       style: appFont(
-                        fontSize: 10,
+                        fontSize: AppText.sizeMicro,
                         fontWeight: FontWeight.w700,
                         color: isSelected
                             ? Colors.white.withValues(alpha: 0.85)
@@ -1635,7 +1635,7 @@ class _SheetDateRow extends StatelessWidget {
                     Text(
                       dayLabel,
                       style: appFont(
-                        fontSize: 20,
+                        fontSize: AppText.sizeH2,
                         fontWeight: FontWeight.w800,
                         color: isSelected ? Colors.white : dateFg,
                         height: 1.05,
@@ -1644,7 +1644,7 @@ class _SheetDateRow extends StatelessWidget {
                     Text(
                       monthLabel,
                       style: appFont(
-                        fontSize: 10,
+                        fontSize: AppText.sizeMicro,
                         fontWeight: FontWeight.w700,
                         color: isSelected
                             ? Colors.white.withValues(alpha: 0.85)
@@ -1667,7 +1667,7 @@ class _SheetDateRow extends StatelessWidget {
                         Text(
                           statusText,
                           style: appFont(
-                            fontSize: 14,
+                            fontSize: AppText.sizeBody,
                             fontWeight: FontWeight.w800,
                             color: disabled && !isFull
                                 ? AppTheme.mutedText(context)
@@ -1685,12 +1685,12 @@ class _SheetDateRow extends StatelessWidget {
                               color: isDark
                                   ? _softAccent.withValues(alpha: 0.14)
                                   : const Color(0xFFD1FAE5),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                             ),
                             child: Text(
                               nightsLabel,
                               style: appFont(
-                                fontSize: 10,
+                                fontSize: AppText.sizeMicro,
                                 fontWeight: FontWeight.w800,
                                 color: _softAccent,
                               ),
@@ -1705,7 +1705,7 @@ class _SheetDateRow extends StatelessWidget {
                           ? thaiDateShort(departureDate)
                           : 'ไม่ระบุวัน',
                       style: appFont(
-                        fontSize: 11.5,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -1785,7 +1785,7 @@ class _PickupPointSelector extends StatelessWidget {
         if (selectedImage.isNotEmpty) ...[
           const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             child: CachedNetworkImage(
               imageUrl: selectedImage,
               height: 170,
@@ -1820,7 +1820,7 @@ class _PickupTimeBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: _softAccent,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1830,7 +1830,7 @@ class _PickupTimeBadge extends StatelessWidget {
           Text(
             'ขึ้นรถ ',
             style: appFont(
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
               color: Colors.white.withValues(alpha: 0.9),
               letterSpacing: -0.1,
@@ -1839,7 +1839,7 @@ class _PickupTimeBadge extends StatelessWidget {
           Text(
             '$time น.',
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w800,
               color: Colors.white,
               letterSpacing: -0.2,
@@ -1879,9 +1879,9 @@ class _PickupPointRow extends StatelessWidget {
           color: isSelected
               ? (isDark
                   ? _softAccent.withValues(alpha: 0.12)
-                  : const Color(0xFFF0FDF4))
+                  : const Color(0xFFECFDF5))
               : (isDark ? AppTheme.subtleSurface(context) : Colors.white),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: isSelected
                 ? _softAccent.withValues(alpha: isDark ? 0.45 : 0.55)
@@ -1920,7 +1920,7 @@ class _PickupPointRow extends StatelessWidget {
                   Text(
                     location.isNotEmpty ? location : 'ไม่ระบุจุดขึ้นรถ',
                     style: appFont(
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       fontWeight:
                           isSelected ? FontWeight.w800 : FontWeight.w600,
                       color: isSelected
@@ -1947,12 +1947,12 @@ class _PickupPointRow extends StatelessWidget {
                       : (isDark
                           ? _softAccent.withValues(alpha: 0.12)
                           : const Color(0xFFECFDF5)),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 ),
                 child: Text(
                   price,
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: isSelected
                         ? _softAccent

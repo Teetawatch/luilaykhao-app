@@ -149,7 +149,7 @@ class _AllReviewsScreenState extends State<AllReviewsScreen> {
                 style: appFont(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w800,
-                  fontSize: 18,
+                  fontSize: AppText.sizeTitle,
                 ),
               ),
               leading: Navigator.canPop(context)
@@ -190,7 +190,7 @@ class _AllReviewsScreenState extends State<AllReviewsScreen> {
                   ? 'รีวิวจริง $_total รายการจากผู้ที่เดินทางไปกับเรา'
                   : 'ความประทับใจจากผู้ที่เดินทางไปกับเรา',
               style: appFont(
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 height: 1.4,
                 fontWeight: FontWeight.w600,
                 color: _mutedText,
@@ -289,7 +289,7 @@ class _AllReviewsScreenState extends State<AllReviewsScreen> {
               child: Text(
                 'แสดงครบทุกรีวิวแล้ว',
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w600,
                   color: _mutedText.withValues(alpha: 0.7),
                 ),
@@ -342,8 +342,8 @@ class _RatingFilterBar extends StatelessWidget {
                     ? _softAccent
                     : (isDark
                           ? Colors.white.withValues(alpha: 0.06)
-                          : const Color(0xFFF1F5F4)),
-                borderRadius: BorderRadius.circular(99),
+                          : const Color(0xFFF1F5F9)),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 border: Border.all(
                   color: active
                       ? _softAccent
@@ -365,7 +365,7 @@ class _RatingFilterBar extends StatelessWidget {
                   Text(
                     label,
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: active
                           ? Colors.white
@@ -391,17 +391,17 @@ class _ReviewSkeleton extends StatelessWidget {
     final isDark = AppTheme.isDark(context);
     final base = isDark
         ? Colors.white.withValues(alpha: 0.05)
-        : const Color(0xFFF1F5F4);
+        : const Color(0xFFF1F5F9);
     final block = isDark
         ? Colors.white.withValues(alpha: 0.08)
-        : const Color(0xFFE6EBEA);
+        : const Color(0xFFE2E8F0);
 
     Widget bar(double w, double h) => Container(
       width: w,
       height: h,
       decoration: BoxDecoration(
         color: block,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
       ),
     );
 
@@ -409,7 +409,7 @@ class _ReviewSkeleton extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: base,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,7 +474,7 @@ class _AllReviewsMessage extends StatelessWidget {
             decoration: BoxDecoration(
               color: isDark
                   ? Colors.white.withValues(alpha: 0.05)
-                  : const Color(0xFFF1F5F4),
+                  : const Color(0xFFF1F5F9),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 32, color: _mutedText),
@@ -484,7 +484,7 @@ class _AllReviewsMessage extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 17,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w800,
               color: isDark ? Colors.white : _premiumText,
             ),
@@ -494,7 +494,7 @@ class _AllReviewsMessage extends StatelessWidget {
             body,
             textAlign: TextAlign.center,
             style: appFont(
-              fontSize: 13.5,
+              fontSize: AppText.sizeBody,
               height: 1.5,
               fontWeight: FontWeight.w500,
               color: _mutedText,
@@ -512,12 +512,12 @@ class _AllReviewsMessage extends StatelessWidget {
                   vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(99),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
               ),
               child: Text(
                 actionLabel!,
-                style: appFont(fontSize: 14, fontWeight: FontWeight.w700),
+                style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w700),
               ),
             ),
           ],

@@ -96,7 +96,7 @@ class RouteFactsSection extends StatelessWidget {
             Text(
               'โปรไฟล์ความชัน',
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.mutedText(context),
               ),
@@ -109,7 +109,7 @@ class RouteFactsSection extends StatelessWidget {
                 'ช่วงชันที่สุดอยู่ที่ กม. ${track.steepest!.fromKm.toStringAsFixed(1)}–${track.steepest!.toKm.toStringAsFixed(1)} '
                 'ไต่ขึ้น ${track.steepest!.riseM} ม. (ความชัน ${track.steepest!.gradePercent.toStringAsFixed(0)}%)',
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   height: 1.5,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
@@ -121,7 +121,7 @@ class RouteFactsSection extends StatelessWidget {
               Text(
                 'ตลอดเส้นทางไต่ขึ้นรวม ${track.elevationGainM} ม. และลงรวม ${track.elevationLossM} ม.',
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   height: 1.5,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
@@ -143,7 +143,7 @@ class RouteFactsSection extends StatelessWidget {
                   child: Text(
                     'ความสูงสะสมเทียบดอยอินทนนท์ (2,565 ม.)',
                     style: appFont(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -153,7 +153,7 @@ class RouteFactsSection extends StatelessWidget {
                 Text(
                   '$inthanonPercent%',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.onSurface(context),
                   ),
@@ -162,7 +162,7 @@ class RouteFactsSection extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ClipRRect(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               child: LinearProgressIndicator(
                 value: (inthanonPercent / 100).clamp(0.0, 1.0),
                 minHeight: 8,
@@ -202,7 +202,7 @@ class _RouteFactCell extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   color: muted,
                 ),
@@ -215,7 +215,7 @@ class _RouteFactCell extends StatelessWidget {
           TextSpan(
             text: fact.value,
             style: appFont(
-              fontSize: 24,
+              fontSize: AppText.sizeH1,
               height: 1.0,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
@@ -225,7 +225,7 @@ class _RouteFactCell extends StatelessWidget {
                 TextSpan(
                   text: ' ${fact.unit}',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
                     color: muted,
                   ),
@@ -240,7 +240,7 @@ class _RouteFactCell extends StatelessWidget {
           Text(
             fact.note!,
             style: appFont(
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
               color: muted,
             ),
@@ -354,7 +354,7 @@ class ExcludedSection extends StatelessWidget {
             (item) => _FeatureRow(
               icon: Icons.close_rounded,
               title: item,
-              iconColor: const Color(0xFFEF4444),
+              iconColor: const Color(0xFFE11D48),
               iconBackground: const Color(0xFFFEF2F2),
             ),
           ),
@@ -438,7 +438,7 @@ class _ItinerarySectorTile extends StatelessWidget {
       margin: EdgeInsets.only(top: index == 0 ? 0 : 10),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
@@ -451,22 +451,22 @@ class _ItinerarySectorTile extends StatelessWidget {
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           iconColor: _softAccent,
           collapsedIconColor: _mutedText,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
           collapsedShape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
           leading: Container(
             width: 38,
             height: 38,
             decoration: BoxDecoration(
               color: grad[0].withValues(alpha: isDark ? 0.20 : 0.12),
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
             child: Center(
               child: Text(
                 '${index + 1}',
                 style: appFont(
                   color: grad[0],
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -478,7 +478,7 @@ class _ItinerarySectorTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: appFont(
               color: isDark ? Colors.white : _premiumText,
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.2,
             ),
@@ -489,13 +489,13 @@ class _ItinerarySectorTile extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: grad[0].withValues(alpha: isDark ? 0.2 : 0.1),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                 ),
                 child: Text(
                   '${sector.items.length} รายการ',
                   style: appFont(
                     color: grad[0],
-                    fontSize: 11,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -563,7 +563,7 @@ class _ItineraryTimelineItem extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
                         color: Colors.white,
-                        fontSize: 10.5,
+                        fontSize: AppText.sizeMicro,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -583,7 +583,7 @@ class _ItineraryTimelineItem extends StatelessWidget {
                             accentColor.withValues(alpha: 0.1),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(1),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                       ),
                     ),
                   ),
@@ -600,7 +600,7 @@ class _ItineraryTimelineItem extends StatelessWidget {
                   Text(
                     item.title,
                     style: appFont(
-                      fontSize: 15,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w800,
                       color: isDark ? Colors.white : _premiumText,
                       height: 1.35,
@@ -611,7 +611,7 @@ class _ItineraryTimelineItem extends StatelessWidget {
                     Text(
                       item.description,
                       style: appFont(
-                        fontSize: 13.5,
+                        fontSize: AppText.sizeBody,
                         color: _mutedText,
                         height: 1.65,
                         fontWeight: FontWeight.w500,

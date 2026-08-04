@@ -102,7 +102,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
           'ชวนเพื่อน',
           style: appFont(
             color: AppTheme.onSurface(context),
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -169,7 +169,7 @@ class _HeroCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -184,7 +184,7 @@ class _HeroCard extends StatelessWidget {
             height: 52,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: const Icon(
               Icons.card_giftcard_rounded,
@@ -197,7 +197,7 @@ class _HeroCard extends StatelessWidget {
             'ชวนเพื่อน รับแต้มฟรีทั้งคู่',
             style: appFont(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: AppText.sizeH1,
               fontWeight: FontWeight.w900,
               height: 1.25,
               letterSpacing: -0.3,
@@ -209,7 +209,7 @@ class _HeroCard extends StatelessWidget {
             'คุณรับ $referrerPoints แต้ม และเพื่อนรับ $refereePoints แต้มทันที',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.92),
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               height: 1.5,
               fontWeight: FontWeight.w500,
             ),
@@ -239,7 +239,7 @@ class _CodeCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -250,7 +250,7 @@ class _CodeCard extends StatelessWidget {
             'โค้ดเชิญเพื่อนของคุณ',
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -262,7 +262,7 @@ class _CodeCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 border: Border.all(
                   color: AppTheme.primaryColor.withValues(alpha: 0.22),
                 ),
@@ -274,7 +274,7 @@ class _CodeCard extends StatelessWidget {
                     code.isEmpty ? '—' : code,
                     style: GoogleFonts.spaceMono(
                       color: AppTheme.primaryColor,
-                      fontSize: 26,
+                      fontSize: AppText.sizeH1,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 4,
                     ),
@@ -299,14 +299,14 @@ class _CodeCard extends StatelessWidget {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
               ),
               icon: const Icon(Icons.ios_share_rounded, size: 19),
               label: Text(
                 'แชร์คำเชิญ',
                 style: appFont(
-                  fontSize: 15.5,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -375,7 +375,7 @@ class _SummaryTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.6),
           ),
@@ -387,7 +387,7 @@ class _SummaryTile extends StatelessWidget {
             Text(
               value,
               style: appFont(
-                fontSize: 20,
+                fontSize: AppText.sizeH2,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.onSurface(context),
               ),
@@ -396,7 +396,7 @@ class _SummaryTile extends StatelessWidget {
             Text(
               label,
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
               ),
@@ -437,7 +437,7 @@ class _HowItWorks extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 18),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -455,7 +455,7 @@ class _HowItWorks extends StatelessWidget {
                     height: 40,
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     child: Icon(
                       steps[i].icon,
@@ -471,7 +471,7 @@ class _HowItWorks extends StatelessWidget {
                         Text(
                           '${i + 1}. ${steps[i].title}',
                           style: appFont(
-                            fontSize: 15,
+                            fontSize: AppText.sizeSubtitle,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.onSurface(context),
                           ),
@@ -480,7 +480,7 @@ class _HowItWorks extends StatelessWidget {
                         Text(
                           steps[i].body,
                           style: appFont(
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             height: 1.4,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
@@ -519,7 +519,7 @@ class _FriendsList extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.6),
           ),
@@ -535,7 +535,7 @@ class _FriendsList extends StatelessWidget {
             Text(
               'ยังไม่มีเพื่อนที่ชวน',
               style: appFont(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.onSurface(context),
               ),
@@ -545,7 +545,7 @@ class _FriendsList extends StatelessWidget {
               'แชร์โค้ดของคุณให้เพื่อน แล้วมาดูความคืบหน้าที่นี่',
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 height: 1.45,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.mutedText(context),
@@ -559,7 +559,7 @@ class _FriendsList extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -605,7 +605,7 @@ class _FriendTile extends StatelessWidget {
               style: appFont(
                 color: AppTheme.primaryColor,
                 fontWeight: FontWeight.w800,
-                fontSize: 16,
+                fontSize: AppText.sizeSubtitle,
               ),
             ),
           ),
@@ -617,7 +617,7 @@ class _FriendTile extends StatelessWidget {
                 Text(
                   name,
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.onSurface(context),
                   ),
@@ -626,7 +626,7 @@ class _FriendTile extends StatelessWidget {
                 Text(
                   rewarded ? 'จองทริปแรกแล้ว' : 'รอจองทริปแรก',
                   style: appFont(
-                    fontSize: 12.5,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.mutedText(context),
                   ),
@@ -654,12 +654,12 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         rewarded ? '+$points แต้ม' : 'รอดำเนินการ',
         style: appFont(
-          fontSize: 12,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w800,
           color: color,
         ),
@@ -680,7 +680,7 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       text,
       style: appFont(
-        fontSize: 13,
+        fontSize: AppText.sizeLabel,
         fontWeight: FontWeight.w700,
         color: AppTheme.mutedText(context),
       ),
@@ -712,7 +712,7 @@ class _ErrorView extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 14.5,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
               ),

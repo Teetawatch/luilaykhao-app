@@ -133,7 +133,7 @@ class _TripReadinessSectionState extends State<TripReadinessSection> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: style.color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,7 +147,7 @@ class _TripReadinessSectionState extends State<TripReadinessSection> {
                   Text(
                     style.label,
                     style: appFont(
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w800,
                       color: style.color,
                     ),
@@ -156,7 +156,7 @@ class _TripReadinessSectionState extends State<TripReadinessSection> {
                   Text(
                     textOf(d['message']),
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
                       height: 1.45,
@@ -195,7 +195,7 @@ class _TripReadinessSectionState extends State<TripReadinessSection> {
             ? 'เทียบจากทริปที่คุณเดินจบมาแล้ว ${_num(you['trips_count'])?.toInt() ?? 0} ทริป'
             : 'เทียบจากข้อมูลที่คุณกรอกไว้เอง',
         style: appFont(
-          fontSize: 11.5,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w600,
           color: AppTheme.mutedText(context).withValues(alpha: 0.75),
         ),
@@ -207,7 +207,7 @@ class _TripReadinessSectionState extends State<TripReadinessSection> {
         Text(
           'ลองทริปที่เบากว่านี้ก่อนไหม',
           style: appFont(
-            fontSize: 13.5,
+            fontSize: AppText.sizeBody,
             fontWeight: FontWeight.w800,
             color: AppTheme.onSurface(context),
           ),
@@ -261,7 +261,7 @@ class _TripReadinessSectionState extends State<TripReadinessSection> {
       Text(
         'ไม่แน่ใจก็กรอกคร่าว ๆ ได้ ใช้แค่เทียบให้ดูเท่านั้น',
         style: appFont(
-          fontSize: 11.5,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w600,
           color: AppTheme.mutedText(context).withValues(alpha: 0.75),
         ),
@@ -341,7 +341,7 @@ class _CompareBar extends StatelessWidget {
             Text(
               label,
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.onSurface(context),
               ),
@@ -351,7 +351,7 @@ class _CompareBar extends StatelessWidget {
               Text(
                 '${_formatNumber(ratio!)} เท่า',
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w800,
                   color: color,
                 ),
@@ -404,7 +404,7 @@ class _Bar extends StatelessWidget {
           child: Text(
             caption,
             style: appFont(
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
             ),
@@ -412,7 +412,7 @@ class _Bar extends StatelessWidget {
         ),
         Expanded(
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(AppTheme.radiusXs),
             child: LinearProgressIndicator(
               value: fraction.clamp(0.0, 1.0),
               minHeight: 8,
@@ -429,7 +429,7 @@ class _Bar extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: appFont(
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
               color: AppTheme.onSurface(context),
             ),
@@ -455,7 +455,7 @@ class _AlternativeRow extends StatelessWidget {
     ];
 
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       onTap: () {
         HapticFeedback.selectionClick();
         Navigator.of(context).push(
@@ -477,7 +477,7 @@ class _AlternativeRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.onSurface(context),
                     ),
@@ -487,7 +487,7 @@ class _AlternativeRow extends StatelessWidget {
                     Text(
                       parts.join(' · '),
                       style: appFont(
-                        fontSize: 11.5,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -522,7 +522,7 @@ class _MessageRow extends StatelessWidget {
     return Text(
       message,
       style: appFont(
-        fontSize: 13,
+        fontSize: AppText.sizeLabel,
         fontWeight: FontWeight.w600,
         color: AppTheme.mutedText(context),
         height: 1.5,
@@ -547,7 +547,7 @@ class _BaselineField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      style: appFont(fontSize: 14, fontWeight: FontWeight.w700),
+      style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w700),
       decoration: InputDecoration(
         labelText: label,
         suffixText: suffix,

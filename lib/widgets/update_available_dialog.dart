@@ -56,7 +56,7 @@ class UpdateAvailableDialog extends StatelessWidget {
 
     return Dialog(
       backgroundColor: AppTheme.surface(context),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusLg)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
         child: Column(
@@ -80,7 +80,7 @@ class UpdateAvailableDialog extends StatelessWidget {
               'มีเวอร์ชันใหม่',
               style: appFont(
                 color: AppTheme.onSurface(context),
-                fontSize: 19,
+                fontSize: AppText.sizeH2,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -90,7 +90,7 @@ class UpdateAvailableDialog extends StatelessWidget {
               textAlign: TextAlign.center,
               style: appFont(
                 color: AppTheme.mutedText(context),
-                fontSize: 13.5,
+                fontSize: AppText.sizeBody,
                 height: 1.55,
                 fontWeight: FontWeight.w600,
               ),
@@ -101,7 +101,7 @@ class UpdateAvailableDialog extends StatelessWidget {
                 'เวอร์ชัน ${result.latestVersion}',
                 style: appFont(
                   color: AppTheme.mutedText(context),
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -114,7 +114,7 @@ class UpdateAvailableDialog extends StatelessWidget {
                   backgroundColor: AppTheme.primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                 ),
                 onPressed: () async {
@@ -131,7 +131,7 @@ class UpdateAvailableDialog extends StatelessWidget {
                   'อัปเดตทันที',
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -147,7 +147,7 @@ class UpdateAvailableDialog extends StatelessWidget {
                 'ไว้ภายหลัง',
                 style: appFont(
                   color: AppTheme.mutedText(context),
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w700,
                 ),
               ),

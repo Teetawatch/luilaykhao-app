@@ -178,18 +178,18 @@ class ActiveSeatLockBanner extends StatelessWidget {
         .join(', ');
     final remainingSeconds = _remainingSeconds(lock);
     final isUrgent = remainingSeconds <= 120;
-    final accent = isUrgent ? AppTheme.errorColor : const Color(0xFF0F8F75);
+    final accent = isUrgent ? AppTheme.errorColor : const Color(0xFF059669);
     final remainingText = _remainingText(remainingSeconds);
 
     return Material(
       elevation: 0,
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: accent.withValues(alpha: 0.22)),
         ),
         child: Row(
@@ -199,7 +199,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Icon(Icons.timer_rounded, color: accent, size: 22),
             ),
@@ -215,7 +215,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
                       color: AppTheme.onSurface(context),
-                      fontSize: 13.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -228,7 +228,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
                       color: isUrgent
                           ? AppTheme.errorColor
                           : AppTheme.mutedText(context),
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -252,7 +252,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
                     ),
                     minimumSize: const Size(0, 38),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     textStyle: appFont(fontWeight: FontWeight.w900),
                   ),
@@ -277,7 +277,7 @@ class ActiveSeatLockBanner extends StatelessWidget {
                     ),
                     minimumSize: const Size(0, 38),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       side: BorderSide(
                         color: AppTheme.errorColor.withValues(alpha: 0.22),
                       ),

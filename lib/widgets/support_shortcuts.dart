@@ -63,7 +63,7 @@ class SupportShortcuts extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -73,7 +73,7 @@ class SupportShortcuts extends StatelessWidget {
             'ติดต่อด่วน',
             style: appFont(
               color: AppTheme.onSurface(context),
-              fontSize: 15,
+              fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -82,7 +82,7 @@ class SupportShortcuts extends StatelessWidget {
             'เลือกช่องทางที่สะดวกที่สุด ทีมงานพร้อมตอบทุกวัน 08:00–22:00',
             style: appFont(
               color: AppTheme.mutedText(context),
-              fontSize: 12.5,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -168,14 +168,14 @@ class _ShortcutTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: color.withValues(alpha: 0.22)),
         ),
         child: Row(
@@ -199,7 +199,7 @@ class _ShortcutTile extends StatelessWidget {
                     title,
                     style: appFont(
                       color: AppTheme.onSurface(context),
-                      fontSize: 14,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -207,7 +207,7 @@ class _ShortcutTile extends StatelessWidget {
                     subtitle,
                     style: appFont(
                       color: AppTheme.mutedText(context),
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

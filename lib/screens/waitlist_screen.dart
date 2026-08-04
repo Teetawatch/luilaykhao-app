@@ -111,11 +111,11 @@ class _WaitlistScreenState extends State<WaitlistScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(
           'ออกจากคิวรอ?',
-          style: appFont(fontSize: 17, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
         content: Text(
           'คุณจะเสียลำดับคิวปัจจุบัน หากต้องการกลับเข้าคิวภายหลังจะต้องเริ่มต่อท้ายใหม่',
-          style: appFont(fontSize: 14, color: AppTheme.mutedText(ctx)),
+          style: appFont(fontSize: AppText.sizeBody, color: AppTheme.mutedText(ctx)),
         ),
         actions: [
           TextButton(
@@ -188,7 +188,7 @@ class _WaitlistScreenState extends State<WaitlistScreen> {
         elevation: 0,
         title: Text(
           'คิวรอที่นั่ง',
-          style: appFont(fontSize: 18, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
       body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
@@ -271,7 +271,7 @@ class _WaitlistCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: isOffered
               ? AppTheme.accentColor.withValues(alpha: 0.5)
@@ -311,7 +311,7 @@ class _WaitlistCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
-                                fontSize: 15,
+                                fontSize: AppText.sizeSubtitle,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -376,7 +376,7 @@ class _MetaRow extends StatelessWidget {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: appFont(fontSize: 12.5, color: AppTheme.mutedText(context)),
+            style: appFont(fontSize: AppText.sizeLabel, color: AppTheme.mutedText(context)),
           ),
         ),
       ],
@@ -409,7 +409,7 @@ class _WaitingFooter extends StatelessWidget {
           Text(
             position > 0 ? 'คิวที่ $position ในรายการรอ' : 'อยู่ในคิวรอ',
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
               color: AppTheme.onSurface(context),
             ),
@@ -422,7 +422,7 @@ class _WaitingFooter extends StatelessWidget {
             ),
             child: Text(
               'ออกจากคิว',
-              style: appFont(fontSize: 13, fontWeight: FontWeight.w700),
+              style: appFont(fontSize: AppText.sizeLabel, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -479,7 +479,7 @@ class _OfferFooter extends StatelessWidget {
                       ? 'สิทธิ์การจองหมดเวลาแล้ว'
                       : 'มีที่นั่งว่างแล้ว! จองภายใน $mm:$ss',
                   style: appFont(
-                    fontSize: 13,
+                    fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                     color: expired
                         ? AppTheme.mutedText(context)
@@ -498,14 +498,14 @@ class _OfferFooter extends StatelessWidget {
                   icon: const Icon(Icons.hiking_rounded, size: 18),
                   label: Text(
                     'จองเลย',
-                    style: appFont(fontSize: 14, fontWeight: FontWeight.w800),
+                    style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w800),
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                   ),
                 ),
@@ -544,11 +544,11 @@ class _WaitlistStatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         label,
-        style: appFont(fontSize: 11, fontWeight: FontWeight.w800, color: color),
+        style: appFont(fontSize: AppText.sizeCaption, fontWeight: FontWeight.w800, color: color),
       ),
     );
   }

@@ -78,7 +78,7 @@ class _PassportScreenState extends State<PassportScreen> {
           'สมุดสะสมการเดินทาง',
           style: appFont(
             color: AppTheme.onSurface(context),
-            fontSize: 18,
+            fontSize: AppText.sizeTitle,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -137,7 +137,7 @@ class _PassportScreenState extends State<PassportScreen> {
             Text(
               'ตราสะสม',
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.mutedText(context),
               ),
@@ -146,7 +146,7 @@ class _PassportScreenState extends State<PassportScreen> {
             Text(
               'ปลดล็อกแล้ว $earned/$total',
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.primaryColor,
               ),
@@ -189,7 +189,7 @@ class _PassportHero extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -209,7 +209,7 @@ class _PassportHero extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -224,7 +224,7 @@ class _PassportHero extends StatelessWidget {
                       'นักเดินทางสายเดินป่า',
                       style: appFont(
                         color: Colors.white,
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -238,7 +238,7 @@ class _PassportHero extends StatelessWidget {
             'ทริปที่ไปมาแล้ว',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -262,7 +262,7 @@ class _PassportHero extends StatelessWidget {
                 'ทริป',
                 style: appFont(
                   color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -299,7 +299,7 @@ class _PassportHero extends StatelessWidget {
               'รวม $days วันบนเส้นทางธรรมชาติ',
               style: appFont(
                 color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -350,7 +350,7 @@ class _HeroStat extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -360,7 +360,7 @@ class _HeroStat extends StatelessWidget {
                 unit,
                 style: appFont(
                   color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 11,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -371,7 +371,7 @@ class _HeroStat extends StatelessWidget {
             label,
             style: appFont(
               color: Colors.white.withValues(alpha: 0.75),
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -419,7 +419,7 @@ class _RecordedStrip extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,7 +427,7 @@ class _RecordedStrip extends StatelessWidget {
             Text(
               'วัดจาก GPS ของคุณเอง · $tracks ทริป',
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.mutedText(context),
               ),
@@ -489,7 +489,7 @@ class _RecordedFigure extends StatelessWidget {
         Text(
           label,
           style: appFont(
-            fontSize: 11.5,
+            fontSize: AppText.sizeCaption,
             fontWeight: FontWeight.w700,
             color: muted,
           ),
@@ -499,7 +499,7 @@ class _RecordedFigure extends StatelessWidget {
           TextSpan(
             text: value,
             style: appFont(
-              fontSize: 18,
+              fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
             ),
@@ -507,7 +507,7 @@ class _RecordedFigure extends StatelessWidget {
               TextSpan(
                 text: ' $unit',
                 style: appFont(
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   color: muted,
                 ),
@@ -538,7 +538,7 @@ class _ConquestMapEntry extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: () {
           HapticFeedback.selectionClick();
           Navigator.of(context).push(
@@ -549,7 +549,7 @@ class _ConquestMapEntry extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.subtleSurface(context),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           child: Row(
             children: [
@@ -558,7 +558,7 @@ class _ConquestMapEntry extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: const Icon(
                   Icons.map_rounded,
@@ -575,7 +575,7 @@ class _ConquestMapEntry extends StatelessWidget {
                     Text(
                       'แผนที่พิชิต',
                       style: appFont(
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                       ),
@@ -586,7 +586,7 @@ class _ConquestMapEntry extends StatelessWidget {
                           ? 'ปักหมุดแล้ว $regions จาก $totalRegions ภาค'
                           : 'ยังไม่มีหมุด — เริ่มจากทริปแรกของคุณ',
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.mutedText(context),
                       ),
@@ -624,20 +624,20 @@ class _InthanonStrip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.18),
         ),
       ),
       child: Row(
         children: [
-          const Text('🏔️', style: TextStyle(fontSize: 26)),
+          const Text('🏔️', style: TextStyle(fontSize: AppText.sizeH1)),
           const SizedBox(width: 14),
           Expanded(
             child: RichText(
               text: TextSpan(
                 style: appFont(
-                  fontSize: 13.5,
+                  fontSize: AppText.sizeBody,
                   height: 1.4,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.onSurface(context),
@@ -647,7 +647,7 @@ class _InthanonStrip extends StatelessWidget {
                   TextSpan(
                     text: '${_trim(multiple)} ครั้ง',
                     style: appFont(
-                      fontSize: 13.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.primaryColor,
                     ),
@@ -693,7 +693,7 @@ class _BadgeTile extends StatelessWidget {
             color: earned
                 ? AppTheme.primaryColor.withValues(alpha: 0.08)
                 : AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(
               color: earned
                   ? AppTheme.primaryColor.withValues(alpha: 0.28)
@@ -711,7 +711,7 @@ class _BadgeTile extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   height: 1.2,
                   fontWeight: FontWeight.w800,
                   color: earned
@@ -726,7 +726,7 @@ class _BadgeTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 10,
+                  fontSize: AppText.sizeMicro,
                   fontWeight: FontWeight.w700,
                   color: earned
                       ? AppTheme.primaryColor
@@ -772,7 +772,7 @@ class _BadgeMedallion extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: earned
-          ? Text(emoji, style: const TextStyle(fontSize: 24))
+          ? Text(emoji, style: const TextStyle(fontSize: AppText.sizeH1))
           : Icon(
               Icons.lock_rounded,
               size: 20,
@@ -806,7 +806,7 @@ class _BadgeSheet extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -834,7 +834,7 @@ class _BadgeSheet extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: appFont(
-                  fontSize: 19,
+                  fontSize: AppText.sizeH2,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.onSurface(context),
                 ),
@@ -844,7 +844,7 @@ class _BadgeSheet extends StatelessWidget {
                 desc,
                 textAlign: TextAlign.center,
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   height: 1.45,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
@@ -885,12 +885,12 @@ class _StatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         label,
         style: appFont(
-          fontSize: 13,
+          fontSize: AppText.sizeLabel,
           fontWeight: FontWeight.w800,
           color: color,
         ),
@@ -913,7 +913,7 @@ class _ProgressBar extends StatelessWidget {
     return Column(
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           child: LinearProgressIndicator(
             value: ratio.toDouble(),
             minHeight: 8,
@@ -925,7 +925,7 @@ class _ProgressBar extends StatelessWidget {
         Text(
           '${_trim(current)} / ${_trim(target)}',
           style: appFont(
-            fontSize: 13,
+            fontSize: AppText.sizeLabel,
             fontWeight: FontWeight.w800,
             color: AppTheme.onSurface(context),
           ),
@@ -962,7 +962,7 @@ class _ErrorState extends StatelessWidget {
             Text(
               'โหลดสมุดสะสมไม่สำเร็จ',
               style: appFont(
-                fontSize: 15.5,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.onSurface(context),
               ),
@@ -977,7 +977,7 @@ class _ErrorState extends StatelessWidget {
                   vertical: 11,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
               ),
               child: Text(
@@ -1066,7 +1066,7 @@ class _ShareSheetState extends State<_ShareSheet> {
               margin: const EdgeInsets.only(bottom: 18),
               decoration: BoxDecoration(
                 color: AppTheme.mutedText(context).withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
             ),
             RepaintBoundary(
@@ -1082,7 +1082,7 @@ class _ShareSheetState extends State<_ShareSheet> {
                   backgroundColor: AppTheme.primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                 ),
                 icon: _sharing
@@ -1144,7 +1144,7 @@ class _ShareCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(26, 28, 26, 24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -1162,7 +1162,7 @@ class _ShareCard extends StatelessWidget {
                 'ลุยเลเขา',
                 style: appFont(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1171,7 +1171,7 @@ class _ShareCard extends StatelessWidget {
                 'PASSPORT',
                 style: appFont(
                   color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 11,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2,
                 ),
@@ -1183,7 +1183,7 @@ class _ShareCard extends StatelessWidget {
             'ไปมาแล้วทั้งหมด',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.82),
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1207,7 +1207,7 @@ class _ShareCard extends StatelessWidget {
                 'ทริป',
                 style: appFont(
                   color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 18,
+                  fontSize: AppText.sizeTitle,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1233,18 +1233,18 @@ class _ShareCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
               child: Row(
                 children: [
-                  const Text('🏔️', style: TextStyle(fontSize: 18)),
+                  const Text('🏔️', style: TextStyle(fontSize: AppText.sizeTitle)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'สูงเท่าปีนดอยอินทนนท์ ${_fmtDouble(multiple)} ครั้ง',
                       style: appFont(
                         color: Colors.white,
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1258,7 +1258,7 @@ class _ShareCard extends StatelessWidget {
             Row(
               children: [
                 for (final e in earnedEmojis.take(6)) ...[
-                  Text(e, style: const TextStyle(fontSize: 22)),
+                  Text(e, style: const TextStyle(fontSize: AppText.sizeH1)),
                   const SizedBox(width: 6),
                 ],
                 const Spacer(),
@@ -1266,7 +1266,7 @@ class _ShareCard extends StatelessWidget {
                   'ปลดล็อก $earnedCount ตรา',
                   style: appFont(
                     color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1280,7 +1280,7 @@ class _ShareCard extends StatelessWidget {
             '#ลุยเลเขา · สายเดินป่า',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.7),
-              fontSize: 12,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1318,7 +1318,7 @@ class _ShareStat extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 17,
+                    fontSize: AppText.sizeTitle,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -1328,7 +1328,7 @@ class _ShareStat extends StatelessWidget {
                 unit,
                 style: appFont(
                   color: Colors.white.withValues(alpha: 0.75),
-                  fontSize: 10,
+                  fontSize: AppText.sizeMicro,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1339,7 +1339,7 @@ class _ShareStat extends StatelessWidget {
             label,
             style: appFont(
               color: Colors.white.withValues(alpha: 0.72),
-              fontSize: 10.5,
+              fontSize: AppText.sizeMicro,
               fontWeight: FontWeight.w600,
             ),
           ),

@@ -671,7 +671,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       context: context,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (sheetContext) => SafeArea(
         child: Column(
@@ -703,7 +703,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ListTile(
               leading: const Icon(
                 Icons.location_on_rounded,
-                color: Color(0xFFDC2626),
+                color: Color(0xFFE11D48),
               ),
               title: Text(
                 'แชร์ตำแหน่งของฉัน',
@@ -712,7 +712,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               subtitle: Text(
                 'ส่งจุดที่คุณอยู่ตอนนี้เป็นลิงก์แผนที่',
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   color: AppTheme.mutedText(context),
                 ),
               ),
@@ -733,7 +733,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               subtitle: Text(
                 'ให้เพื่อนร่วมทริปโหวตเลือกด้วยกัน',
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   color: AppTheme.mutedText(context),
                 ),
               ),
@@ -1071,7 +1071,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       isScrollControlled: true,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (_) => _TripInfoSheet(info: _tripInfo!, focus: ask),
     );
@@ -1103,7 +1103,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       isScrollControlled: true,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (_) => const _CreatePollSheet(),
     );
@@ -1302,7 +1302,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       SnackBar(
         content: Text(text, style: appFont(fontWeight: FontWeight.w600)),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusSm)),
       ),
     );
   }
@@ -1377,7 +1377,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       context: context,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (sheetContext) => SafeArea(
         child: Column(
@@ -1398,7 +1398,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       },
                       child: Padding(
                         padding: const EdgeInsets.all(6),
-                        child: Text(emoji, style: const TextStyle(fontSize: 28)),
+                        child: Text(emoji, style: const TextStyle(fontSize: AppText.sizeHero)),
                       ),
                     ),
                 ],
@@ -1586,7 +1586,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       backgroundColor: AppTheme.surface(context),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (_) => _RoomInfoSheet(
         vehicle: _vehicle,
@@ -1628,7 +1628,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
                 ),
@@ -1731,7 +1731,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 _error!,
                 textAlign: TextAlign.center,
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
                   height: 1.4,
@@ -1750,13 +1750,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     vertical: 11,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                 ),
                 child: Text(
                   'ลองอีกครั้ง',
                   style: appFont(
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1778,7 +1778,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 height: 56,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                 ),
                 child: const Icon(
                   Icons.chat_bubble_outline_rounded,
@@ -1790,7 +1790,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               Text(
                 'ยังไม่มีข้อความ',
                 style: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.onSurface(context),
                   letterSpacing: -0.1,
@@ -1801,7 +1801,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 'เริ่มทักทายเพื่อนร่วมทริปได้เลย',
                 textAlign: TextAlign.center,
                 style: appFont(
-                  fontSize: 13.5,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.mutedText(context),
                 ),
@@ -1979,7 +1979,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusSm)),
       ),
     );
   }
@@ -2011,7 +2011,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   Text(
                     'ไม่มีสมาชิกให้แท็ก',
                     style: appFont(
-                      fontSize: 13.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
                     ),
@@ -2029,12 +2029,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           if (showAll && i == 0) {
             return InkWell(
               onTap: _applyAllMention,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -2048,7 +2048,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     const SizedBox(width: 4),
                     Text('ทุกคน',
                         style: appFont(
-                            fontSize: 12,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w600,
                             color: Colors.white.withValues(alpha: 0.85))),
                   ],
@@ -2060,7 +2060,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           final label = _mentionLabel(m);
           return InkWell(
             onTap: () => _applyMention(m),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
               decoration: BoxDecoration(
@@ -2068,7 +2068,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 // the strip and reads as a tappable mention.
                 color: AppTheme.primaryColor
                     .withValues(alpha: isDark ? 0.24 : 0.10),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 border: Border.all(
                   color: AppTheme.primaryColor.withValues(alpha: 0.45),
                 ),
@@ -2154,7 +2154,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       onChanged: _onInputChanged,
                       textInputAction: TextInputAction.newline,
                 style: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w500,
                   height: 1.4,
                 ),
@@ -2162,7 +2162,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   hintText: 'พิมพ์ข้อความ...',
                   hintStyle: appFont(
                     color: AppTheme.mutedText(context),
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w500,
                   ),
                   counterText: '',
@@ -2174,7 +2174,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     vertical: 11,
                   ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                     borderSide: BorderSide.none,
                   ),
                 ),
@@ -2275,12 +2275,12 @@ class _DateSeparator extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: AppTheme.mutedText(context).withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           ),
           child: Text(
             _label(),
             style: appFont(
-              fontSize: 11.5,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
               letterSpacing: -0.1,
@@ -2317,13 +2317,13 @@ class _SystemMessage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             ),
             child: Text(
               body,
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.primaryColor,
                 letterSpacing: -0.1,
@@ -2348,7 +2348,7 @@ class _SystemMessage extends StatelessWidget {
           color: AppTheme.primaryColor.withValues(
             alpha: AppTheme.isDark(context) ? 0.12 : 0.06,
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: AppTheme.primaryColor.withValues(alpha: 0.18),
           ),
@@ -2361,7 +2361,7 @@ class _SystemMessage extends StatelessWidget {
                 Text(
                   'ข้อความจากทีมงาน',
                   style: appFont(
-                    fontSize: 10.5,
+                    fontSize: AppText.sizeMicro,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
                     letterSpacing: 0.2,
@@ -2371,7 +2371,7 @@ class _SystemMessage extends StatelessWidget {
                 Text(
                   _systemTime(message),
                   style: appFont(
-                    fontSize: 10.5,
+                    fontSize: AppText.sizeMicro,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.mutedText(context),
                   ),
@@ -2382,7 +2382,7 @@ class _SystemMessage extends StatelessWidget {
             Text(
               heading,
               style: appFont(
-                fontSize: 14,
+                fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.onSurface(context),
                 letterSpacing: -0.1,
@@ -2394,7 +2394,7 @@ class _SystemMessage extends StatelessWidget {
               Text(
                 rest,
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.onSurface(context).withValues(alpha: 0.86),
                   height: 1.55,
@@ -2496,14 +2496,14 @@ class _QuickAskChip extends StatelessWidget {
       color: filled
           ? AppTheme.primaryColor
           : AppTheme.subtleSurface(context),
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       child: InkWell(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             border: filled
                 ? null
                 : Border.all(color: AppTheme.border(context)),
@@ -2520,7 +2520,7 @@ class _QuickAskChip extends StatelessWidget {
               Text(
                 label,
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w700,
                   color: fg,
                 ),
@@ -2592,7 +2592,7 @@ class _TripInfoSheet extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 color: AppTheme.mutedText(context).withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
             ),
             Padding(
@@ -2606,7 +2606,7 @@ class _TripInfoSheet extends StatelessWidget {
                     child: Text(
                       'ข้อมูลการเดินทางของคุณ',
                       style: appFont(
-                        fontSize: 16,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                         letterSpacing: -0.2,
@@ -2624,7 +2624,7 @@ class _TripInfoSheet extends StatelessWidget {
                   child: Text(
                     'ออกเดินทาง ${_text(info['departure_label'])}',
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
                     ),
@@ -2762,7 +2762,7 @@ class _TripInfoBlock extends StatelessWidget {
         color: highlight
             ? AppTheme.primaryColor.withValues(alpha: 0.06)
             : AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: highlight
               ? AppTheme.primaryColor.withValues(alpha: 0.35)
@@ -2780,7 +2780,7 @@ class _TripInfoBlock extends StatelessWidget {
               Text(
                 ask.label,
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.mutedText(context),
                 ),
@@ -2792,7 +2792,7 @@ class _TripInfoBlock extends StatelessWidget {
             Text(
               answer!,
               style: appFont(
-                fontSize: 15,
+                fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.onSurface(context),
                 height: 1.3,
@@ -2802,7 +2802,7 @@ class _TripInfoBlock extends StatelessWidget {
             Text(
               pending,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
                 height: 1.4,
@@ -2813,7 +2813,7 @@ class _TripInfoBlock extends StatelessWidget {
             Text(
               detail!,
               style: appFont(
-                fontSize: 12.5,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedText(context),
                 height: 1.4,
@@ -2827,9 +2827,9 @@ class _TripInfoBlock extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Material(
                 color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   onTap: onAction,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -2848,7 +2848,7 @@ class _TripInfoBlock extends StatelessWidget {
                         Text(
                           actionLabel!,
                           style: appFont(
-                            fontSize: 12,
+                            fontSize: AppText.sizeCaption,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.primaryColor,
                           ),
@@ -2895,7 +2895,7 @@ class _TripInfoContactRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 14,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -2905,7 +2905,7 @@ class _TripInfoContactRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedText(context),
                   ),
@@ -3031,7 +3031,7 @@ class _PollCard extends StatelessWidget {
               child: Text(
                 poll['question']?.toString() ?? '',
                 style: appFont(
-                  fontSize: 14.5,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                   letterSpacing: -0.1,
@@ -3045,7 +3045,7 @@ class _PollCard extends StatelessWidget {
         Text(
           meta.join(' · '),
           style: appFont(
-            fontSize: 11,
+            fontSize: AppText.sizeCaption,
             fontWeight: FontWeight.w600,
             color: AppTheme.mutedText(context),
           ),
@@ -3079,7 +3079,7 @@ class _PollCard extends StatelessWidget {
                 Text(
                   'ปิดโหวต',
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.mutedText(context),
                   ),
@@ -3120,13 +3120,13 @@ class _PollOptionRow extends StatelessWidget {
 
     return Material(
       color: AppTheme.surface(context),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         onTap: closed ? null : onTap,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             border: Border.all(color: border, width: mine ? 1.5 : 1),
           ),
           clipBehavior: Clip.antiAlias,
@@ -3163,7 +3163,7 @@ class _PollOptionRow extends StatelessWidget {
                       child: Text(
                         option['label']?.toString() ?? '',
                         style: appFont(
-                          fontSize: 13.5,
+                          fontSize: AppText.sizeBody,
                           fontWeight: mine ? FontWeight.w800 : FontWeight.w600,
                           color: AppTheme.onSurface(context),
                           height: 1.3,
@@ -3174,7 +3174,7 @@ class _PollOptionRow extends StatelessWidget {
                     Text(
                       votes == 0 ? '—' : '$votes · $percent%',
                       style: appFont(
-                        fontSize: 11.5,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.mutedText(context),
                       ),
@@ -3290,7 +3290,7 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: AppTheme.mutedText(context).withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
               ),
               Padding(
@@ -3303,7 +3303,7 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                     Text(
                       'สร้างโพล',
                       style: appFont(
-                        fontSize: 16,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.onSurface(context),
                         letterSpacing: -0.2,
@@ -3323,14 +3323,14 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                       textInputAction: TextInputAction.next,
                       onChanged: (_) => setState(() {}),
                       style: appFont(
-                        fontSize: 14.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.onSurface(context),
                       ),
                       decoration: InputDecoration(
                         hintText: 'คำถาม เช่น แวะกินข้าวเย็นที่ไหนดี',
                         hintStyle: appFont(
-                          fontSize: 14,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.mutedText(context),
                         ),
@@ -3338,11 +3338,11 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                         fillColor: AppTheme.subtleSurface(context),
                         counterText: '',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                           borderSide: BorderSide(color: AppTheme.border(context)),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                           borderSide: BorderSide(color: AppTheme.border(context)),
                         ),
                       ),
@@ -3361,14 +3361,14 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                                 textInputAction: TextInputAction.next,
                                 onChanged: (_) => setState(() {}),
                                 style: appFont(
-                                  fontSize: 14,
+                                  fontSize: AppText.sizeBody,
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.onSurface(context),
                                 ),
                                 decoration: InputDecoration(
                                   hintText: 'ตัวเลือกที่ ${i + 1}',
                                   hintStyle: appFont(
-                                    fontSize: 13.5,
+                                    fontSize: AppText.sizeBody,
                                     fontWeight: FontWeight.w500,
                                     color: AppTheme.mutedText(context),
                                   ),
@@ -3381,13 +3381,13 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                                     vertical: 12,
                                   ),
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                                     borderSide: BorderSide(
                                       color: AppTheme.border(context),
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                                     borderSide: BorderSide(
                                       color: AppTheme.border(context),
                                     ),
@@ -3417,7 +3417,7 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                           label: Text(
                             'เพิ่มตัวเลือก',
                             style: appFont(
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -3431,7 +3431,7 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                       title: Text(
                         'เลือกได้หลายข้อ',
                         style: appFont(
-                          fontSize: 13.5,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.onSurface(context),
                         ),
@@ -3451,7 +3451,7 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                             label: Text(
                               option.$2,
                               style: appFont(
-                                fontSize: 12.5,
+                                fontSize: AppText.sizeLabel,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -3473,13 +3473,13 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       ),
                     ),
                     child: Text(
                       'ส่งโพลเข้าห้อง',
                       style: appFont(
-                        fontSize: 14.5,
+                        fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -3506,7 +3506,7 @@ class _PollSheetLabel extends StatelessWidget {
       child: Text(
         label,
         style: appFont(
-          fontSize: 13,
+          fontSize: AppText.sizeLabel,
           fontWeight: FontWeight.w700,
           color: AppTheme.mutedText(context),
         ),
@@ -3640,7 +3640,7 @@ class _MessageTextState extends State<_MessageText> {
       spans.add(TextSpan(
         text: '  แก้ไขแล้ว',
         style: appFont(
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           color: fg.withValues(alpha: 0.55),
           fontStyle: FontStyle.italic,
           fontWeight: FontWeight.w500,
@@ -3655,7 +3655,7 @@ class _MessageTextState extends State<_MessageText> {
     return Text.rich(
       TextSpan(children: _spans),
       style: appFont(
-        fontSize: 15,
+        fontSize: AppText.sizeSubtitle,
         height: 1.4,
         color: widget.color,
         fontWeight: FontWeight.w500,
@@ -3767,7 +3767,7 @@ class _MessageBubble extends StatelessWidget {
     final isDark = AppTheme.isDark(context);
     final neutralBg = isDark
         ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFF1F3F4);
+        : const Color(0xFFF1F5F9);
     final bg = (isMine && poll == null) ? AppTheme.primaryColor : neutralBg;
     final fg = (isMine && poll == null)
         ? Colors.white
@@ -3776,8 +3776,8 @@ class _MessageBubble extends StatelessWidget {
     // iMessage-style asymmetric corners: the "tail" corner (bottom on the
     // sender's side) tightens on the last bubble of a group so the cluster
     // reads as a single utterance.
-    const r = Radius.circular(18);
-    const rTight = Radius.circular(6);
+    const r = Radius.circular(AppTheme.radiusMd);
+    const rTight = Radius.circular(AppTheme.radiusXs);
     final shape = isMine
         ? BorderRadius.only(
             topLeft: r,
@@ -3828,7 +3828,7 @@ class _MessageBubble extends StatelessWidget {
                             author,
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
-                              fontSize: 12,
+                              fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.onSurface(context),
                               letterSpacing: -0.1,
@@ -3898,7 +3898,7 @@ class _MessageBubble extends StatelessWidget {
                               Text(
                                 'ข้อความนี้ถูกลบ',
                                 style: appFont(
-                                  fontSize: 14,
+                                  fontSize: AppText.sizeBody,
                                   height: 1.4,
                                   color: fg.withValues(alpha: 0.6),
                                   fontStyle: FontStyle.italic,
@@ -3955,7 +3955,7 @@ class _MessageBubble extends StatelessWidget {
                           Text(
                             'ส่งไม่สำเร็จ · แตะเพื่อลองใหม่',
                             style: appFont(
-                              fontSize: 10.5,
+                              fontSize: AppText.sizeMicro,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.errorColor,
                             ),
@@ -3980,7 +3980,7 @@ class _MessageBubble extends StatelessWidget {
                         Text(
                           'กำลังส่ง…',
                           style: appFont(
-                            fontSize: 10.5,
+                            fontSize: AppText.sizeMicro,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
                           ),
@@ -4010,7 +4010,7 @@ class _MessageBubble extends StatelessWidget {
                           Text(
                             'อ่าน $readByCount',
                             style: appFont(
-                              fontSize: 10.5,
+                              fontSize: AppText.sizeMicro,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.primaryColor.withValues(alpha: 0.8),
                             ),
@@ -4020,7 +4020,7 @@ class _MessageBubble extends StatelessWidget {
                         Text(
                           _timeText(),
                           style: appFont(
-                            fontSize: 10.5,
+                            fontSize: AppText.sizeMicro,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
                           ),
@@ -4092,7 +4092,7 @@ class _Avatar extends StatelessWidget {
       child: Text(
         initial,
         style: appFont(
-          fontSize: 13.5,
+          fontSize: AppText.sizeBody,
           fontWeight: FontWeight.w700,
           color: AppTheme.primaryColor,
         ),
@@ -4141,7 +4141,7 @@ class _ChatImage extends StatelessWidget {
         MaterialPageRoute(builder: (_) => _ImageViewer(url: url)),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 240),
           child: CachedNetworkImage(
@@ -4183,7 +4183,7 @@ class _LocalChatImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 240),
         child: Image.file(
@@ -4262,7 +4262,7 @@ class _ImageViewer extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 15,
+                  fontSize: AppText.sizeSubtitle,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                   letterSpacing: -0.1,
@@ -4354,7 +4354,7 @@ class _RoomInfoSheet extends StatelessWidget {
       backgroundColor: AppTheme.surface(context),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (_) => _PickupPointsSheet(points: pickupPoints),
     );
@@ -4365,7 +4365,7 @@ class _RoomInfoSheet extends StatelessWidget {
       context: context,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (_) => SafeArea(
         top: false,
@@ -4383,7 +4383,7 @@ class _RoomInfoSheet extends StatelessWidget {
                   Text(
                     'อากาศวันเดินทาง',
                     style: appFont(
-                      fontSize: 16,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
                       letterSpacing: -0.2,
@@ -4423,7 +4423,7 @@ class _RoomInfoSheet extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 color: AppTheme.mutedText(context).withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
             ),
             Padding(
@@ -4436,7 +4436,7 @@ class _RoomInfoSheet extends StatelessWidget {
                   Text(
                     'สมาชิกในห้อง',
                     style: appFont(
-                      fontSize: 16,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
                       letterSpacing: -0.2,
@@ -4446,7 +4446,7 @@ class _RoomInfoSheet extends StatelessWidget {
                   Text(
                     '$memberCount คน',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -4506,7 +4506,7 @@ class _RoomInfoSheet extends StatelessWidget {
                         child: Text(
                           'ยังไม่มีข้อมูลสมาชิก',
                           style: appFont(
-                            fontSize: 13,
+                            fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedText(context),
                           ),
@@ -4539,9 +4539,9 @@ class _TripInfoAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.primaryColor.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: () {
           HapticFeedback.selectionClick();
           onTap();
@@ -4557,7 +4557,7 @@ class _TripInfoAction extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.onSurface(context),
                   letterSpacing: -0.1,
@@ -4628,7 +4628,7 @@ class _PickupPointsSheet extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 color: AppTheme.mutedText(context).withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
             ),
             Padding(
@@ -4641,7 +4641,7 @@ class _PickupPointsSheet extends StatelessWidget {
                   Text(
                     'จุดรับ-ส่ง',
                     style: appFont(
-                      fontSize: 16,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
                       letterSpacing: -0.2,
@@ -4668,7 +4668,7 @@ class _PickupPointsSheet extends StatelessWidget {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: AppTheme.subtleSurface(context),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       border: Border.all(color: AppTheme.border(context)),
                     ),
                     child: Column(
@@ -4680,7 +4680,7 @@ class _PickupPointsSheet extends StatelessWidget {
                               child: Text(
                                 region.isEmpty ? location : region,
                                 style: appFont(
-                                  fontSize: 14.5,
+                                  fontSize: AppText.sizeBody,
                                   fontWeight: FontWeight.w800,
                                   color: AppTheme.onSurface(context),
                                   letterSpacing: -0.1,
@@ -4694,7 +4694,7 @@ class _PickupPointsSheet extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   color: AppTheme.primaryColor
                                       .withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(999),
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -4706,7 +4706,7 @@ class _PickupPointsSheet extends StatelessWidget {
                                     Text(
                                       time,
                                       style: appFont(
-                                        fontSize: 12,
+                                        fontSize: AppText.sizeCaption,
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.primaryColor,
                                       ),
@@ -4721,7 +4721,7 @@ class _PickupPointsSheet extends StatelessWidget {
                           Text(
                             location,
                             style: appFont(
-                              fontSize: 13,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w500,
                               color: AppTheme.mutedText(context),
                               height: 1.35,
@@ -4733,7 +4733,7 @@ class _PickupPointsSheet extends StatelessWidget {
                           Text(
                             notes,
                             style: appFont(
-                              fontSize: 12.5,
+                              fontSize: AppText.sizeLabel,
                               fontWeight: FontWeight.w500,
                               color: AppTheme.mutedText(context),
                               height: 1.35,
@@ -4744,7 +4744,7 @@ class _PickupPointsSheet extends StatelessWidget {
                           const SizedBox(height: 10),
                           InkWell(
                             onTap: () => _openMap(context, p),
-                            borderRadius: BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -4754,7 +4754,7 @@ class _PickupPointsSheet extends StatelessWidget {
                                 Text(
                                   'เปิดแผนที่',
                                   style: appFont(
-                                    fontSize: 12.5,
+                                    fontSize: AppText.sizeLabel,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.primaryColor,
                                   ),
@@ -4799,7 +4799,7 @@ class _VehicleCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: AppTheme.primaryColor.withValues(alpha: 0.16),
         ),
@@ -4811,7 +4811,7 @@ class _VehicleCard extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
             child: const Icon(
               Icons.directions_bus_rounded,
@@ -4827,7 +4827,7 @@ class _VehicleCard extends StatelessWidget {
                 Text(
                   name.isEmpty ? 'รถประจำรอบ' : name,
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                     letterSpacing: -0.1,
@@ -4837,7 +4837,7 @@ class _VehicleCard extends StatelessWidget {
                   Text(
                     meta,
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.mutedText(context),
                     ),
@@ -4846,7 +4846,7 @@ class _VehicleCard extends StatelessWidget {
                   Text(
                     'คนขับ: $driverName',
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.mutedText(context),
                     ),
@@ -4906,7 +4906,7 @@ class _MemberTile extends StatelessWidget {
                     name,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      fontSize: 14.5,
+                      fontSize: AppText.sizeBody,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.onSurface(context),
                       letterSpacing: -0.1,
@@ -4918,7 +4918,7 @@ class _MemberTile extends StatelessWidget {
                   Text(
                     '(คุณ)',
                     style: appFont(
-                      fontSize: 12,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.mutedText(context),
                     ),
@@ -4972,12 +4972,12 @@ class _RoleTag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         _MessageBubble._roleLabels[role] ?? role,
         style: appFont(
-          fontSize: 10,
+          fontSize: AppText.sizeMicro,
           fontWeight: FontWeight.w700,
           color: color,
           letterSpacing: -0.1,
@@ -5039,7 +5039,7 @@ class _PinnedBanner extends StatelessWidget {
                     Text(
                       senderName.isEmpty ? 'ปักหมุด' : 'ปักหมุด · $senderName',
                       style: appFont(
-                        fontSize: 11,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor,
                       ),
@@ -5049,7 +5049,7 @@ class _PinnedBanner extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        fontSize: 13,
+                        fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.onSurface(context),
                       ),
@@ -5108,7 +5108,7 @@ class _QuotedReply extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: bgColor,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppTheme.radiusXs),
           border: Border(left: BorderSide(color: barColor, width: 3)),
         ),
         child: Column(
@@ -5118,7 +5118,7 @@ class _QuotedReply extends StatelessWidget {
             Text(
               name,
               style: appFont(
-                fontSize: 11.5,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w800,
                 color: textColor.withValues(alpha: 0.9),
               ),
@@ -5129,7 +5129,7 @@ class _QuotedReply extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w500,
                   color: textColor.withValues(alpha: 0.8),
                 ),
@@ -5200,7 +5200,7 @@ class _ReactionChip extends StatelessWidget {
           color: mine
               ? AppTheme.primaryColor.withValues(alpha: 0.12)
               : AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           border: Border.all(
             color: mine
                 ? AppTheme.primaryColor.withValues(alpha: 0.4)
@@ -5210,13 +5210,13 @@ class _ReactionChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 13)),
+            Text(emoji, style: const TextStyle(fontSize: AppText.sizeLabel)),
             if (count > 1) ...[
               const SizedBox(width: 3),
               Text(
                 '$count',
                 style: appFont(
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w800,
                   color: color,
                 ),
@@ -5273,7 +5273,7 @@ class _ReplyPreviewBar extends StatelessWidget {
                 Text(
                   'ตอบกลับ $name',
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
                   ),
@@ -5284,7 +5284,7 @@ class _ReplyPreviewBar extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.mutedText(context),
                     ),
@@ -5334,7 +5334,7 @@ class _EditPreviewBar extends StatelessWidget {
                 Text(
                   'กำลังแก้ไขข้อความ',
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFFD97706),
                   ),
@@ -5345,7 +5345,7 @@ class _EditPreviewBar extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.mutedText(context),
                     ),
@@ -5398,7 +5398,7 @@ class _TypingIndicator extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                fontSize: 12,
+                fontSize: AppText.sizeCaption,
                 fontStyle: FontStyle.italic,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.mutedText(context),
@@ -5457,9 +5457,9 @@ class _MentionJumpChip extends StatelessWidget {
     return Material(
       elevation: 0,
       color: AppTheme.primaryColor,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       child: InkWell(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -5472,7 +5472,7 @@ class _MentionJumpChip extends StatelessWidget {
               Text(
                 count > 1 ? 'ถูกแท็ก $count' : 'ถูกแท็ก',
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                   letterSpacing: -0.1,
@@ -5504,7 +5504,7 @@ class _JoinedBanner extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: AppTheme.primaryColor.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -5521,7 +5521,7 @@ class _JoinedBanner extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                     letterSpacing: -0.1,
@@ -5556,7 +5556,7 @@ class _UnreadDivider extends StatelessWidget {
             child: Text(
               'ข้อความใหม่',
               style: appFont(
-                fontSize: 11.5,
+                fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.primaryColor,
               ),
@@ -5624,7 +5624,7 @@ class _ContactBar extends StatelessWidget {
       backgroundColor: AppTheme.surface(context),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (_) => _ContactSheet(contacts: contacts),
     );
@@ -5659,7 +5659,7 @@ class _ContactBar extends StatelessWidget {
           : Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 onTap: () => _openSheet(context),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -5677,7 +5677,7 @@ class _ContactBar extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
-                                fontSize: 14,
+                                fontSize: AppText.sizeBody,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.onSurface(context),
                                 letterSpacing: -0.1,
@@ -5688,7 +5688,7 @@ class _ContactBar extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
-                                fontSize: 11.5,
+                                fontSize: AppText.sizeCaption,
                                 fontWeight: FontWeight.w600,
                                 color: AppTheme.mutedText(context),
                               ),
@@ -5704,7 +5704,7 @@ class _ContactBar extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor,
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -5718,7 +5718,7 @@ class _ContactBar extends StatelessWidget {
                             Text(
                               'ดูเบอร์',
                               style: appFont(
-                                fontSize: 12.5,
+                                fontSize: AppText.sizeLabel,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                               ),
@@ -5775,7 +5775,7 @@ class _ContactAvatarStack extends StatelessWidget {
                 child: Text(
                   '+$extra',
                   style: appFont(
-                    fontSize: 11.5,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
                   ),
@@ -5805,7 +5805,7 @@ class _StackedAvatar extends StatelessWidget {
       child: Text(
         initial,
         style: appFont(
-          fontSize: 12.5,
+          fontSize: AppText.sizeLabel,
           fontWeight: FontWeight.w700,
           color: AppTheme.primaryColor,
         ),
@@ -5863,7 +5863,7 @@ class _ContactSheet extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 color: AppTheme.mutedText(context).withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
             ),
             Padding(
@@ -5876,7 +5876,7 @@ class _ContactSheet extends StatelessWidget {
                   Text(
                     'เบอร์ติดต่อในทริป',
                     style: appFont(
-                      fontSize: 16,
+                      fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.onSurface(context),
                       letterSpacing: -0.2,
@@ -5886,7 +5886,7 @@ class _ContactSheet extends StatelessWidget {
                   Text(
                     '${contacts.length} คน',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -5929,7 +5929,7 @@ class _ContactGroupLabel extends StatelessWidget {
       child: Text(
         label,
         style: appFont(
-          fontSize: 13,
+          fontSize: AppText.sizeLabel,
           fontWeight: FontWeight.w700,
           color: AppTheme.mutedText(context),
         ),
@@ -5950,14 +5950,14 @@ class _ContactSheetTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           onTap: () => _callContact(context, contact),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(color: AppTheme.border(context)),
             ),
             child: Row(
@@ -5974,7 +5974,7 @@ class _ContactSheetTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
-                          fontSize: 14.5,
+                          fontSize: AppText.sizeBody,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onSurface(context),
                           letterSpacing: -0.1,
@@ -5986,7 +5986,7 @@ class _ContactSheetTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: appFont(
-                          fontSize: 11.5,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.mutedText(context),
                         ),
@@ -5996,7 +5996,7 @@ class _ContactSheetTile extends StatelessWidget {
                         contact.phone,
                         maxLines: 1,
                         style: appFont(
-                          fontSize: 13,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.onSurface(context),
                         ),
@@ -6056,7 +6056,7 @@ class _ContactCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                   letterSpacing: -0.1,
@@ -6067,7 +6067,7 @@ class _ContactCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 11.5,
+                  fontSize: AppText.sizeCaption,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
                 ),

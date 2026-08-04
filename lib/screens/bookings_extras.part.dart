@@ -28,7 +28,7 @@ class _RefundStatusCallToAction extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => RefundStatusScreen(bookingRef: ref),
@@ -38,7 +38,7 @@ class _RefundStatusCallToAction extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.subtleSurface(context),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: AppTheme.border(context)),
           ),
           child: Row(
@@ -56,7 +56,7 @@ class _RefundStatusCallToAction extends StatelessWidget {
                   label,
                   style: appFont(
                     color: AppTheme.onSurface(context),
-                    fontSize: 13.5,
+                    fontSize: AppText.sizeBody,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -97,11 +97,11 @@ class _CancelPendingButtonState extends State<_CancelPendingButton> {
       builder: (ctx) => AlertDialog(
         title: Text(
           'ยกเลิกการจองนี้?',
-          style: appFont(fontSize: 17, fontWeight: FontWeight.w800),
+          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
         content: Text(
           'ที่นั่งจะถูกคืนให้คนอื่นทันที และการจองนี้จะกู้กลับมาไม่ได้',
-          style: appFont(fontSize: 14, color: AppTheme.mutedText(ctx)),
+          style: appFont(fontSize: AppText.sizeBody, color: AppTheme.mutedText(ctx)),
         ),
         actions: [
           TextButton(
@@ -177,7 +177,7 @@ class _CustomPickupStatusNote extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
@@ -199,7 +199,7 @@ class _CustomPickupStatusNote extends StatelessWidget {
                     rejected ? 'จุดรับที่ขอไว้ถูกปฏิเสธ' : 'จุดรับพิเศษ · รออนุมัติ',
                     style: appFont(
                       color: color,
-                      fontSize: 12.5,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -210,7 +210,7 @@ class _CustomPickupStatusNote extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
                         color: AppTheme.onSurface(context),
-                        fontSize: 11.5,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -219,7 +219,7 @@ class _CustomPickupStatusNote extends StatelessWidget {
                     body,
                     style: appFont(
                       color: AppTheme.mutedText(context),
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w600,
                       height: 1.3,
                     ),
@@ -331,7 +331,7 @@ class _ExtraChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
@@ -343,7 +343,7 @@ class _ExtraChip extends StatelessWidget {
             label,
             style: appFont(
               color: color,
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -363,9 +363,9 @@ class BookingStatusChip extends StatelessWidget {
     final key = _statusKey(booking);
     final color = switch (key) {
       'pending' => const Color(0xFFD97706),
-      'near' => const Color(0xFF006565),
+      'near' => const Color(0xFF047857),
       'completed' => const Color(0xFF315A9D),
-      'cancelled' => const Color(0xFF687272),
+      'cancelled' => const Color(0xFF475569),
       _ => AppTheme.primaryColor,
     };
     final label = switch (key) {
@@ -380,7 +380,7 @@ class BookingStatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.13),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: color.withValues(alpha: 0.20)),
       ),
       child: Row(
@@ -396,7 +396,7 @@ class BookingStatusChip extends StatelessWidget {
             label,
             style: TextStyle(
               color: color,
-              fontSize: 11,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -417,23 +417,23 @@ class _DateBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       ),
       child: Column(
         children: [
           Text(
             date == null ? '--' : DateFormat('MMM', 'th_TH').format(date!),
             style: const TextStyle(
-              color: Color(0xFF687272),
-              fontSize: 10,
+              color: Color(0xFF475569),
+              fontSize: AppText.sizeMicro,
               fontWeight: FontWeight.w900,
             ),
           ),
           Text(
             date == null ? '--' : DateFormat('d', 'th_TH').format(date!),
             style: const TextStyle(
-              color: Color(0xFF111313),
-              fontSize: 20,
+              color: Color(0xFF0F172A),
+              fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
               height: 1,
             ),
@@ -455,15 +455,15 @@ class _CountdownPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         _countdownText(booking),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
-          color: Color(0xFF111313),
-          fontSize: 12,
+          color: Color(0xFF0F172A),
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -510,12 +510,12 @@ class _ActionChipButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
           decoration: BoxDecoration(
             color: AppTheme.subtleSurface(context),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             border: Border.all(
               color: AppTheme.border(context).withValues(alpha: 0.7),
             ),
@@ -533,7 +533,7 @@ class _ActionChipButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
                     color: AppTheme.onSurface(context),
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -621,7 +621,7 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
             Text(
               'ตั้งชื่อเล่นให้คำเชิญนี้ (ไม่บังคับ) แล้วส่งลิงก์ให้เพื่อน '
               'เพื่อนกดเข้าร่วมด้วยบัญชีของตัวเองได้ทุกวิธีล็อกอิน',
-              style: appFont(fontSize: 13, height: 1.4),
+              style: appFont(fontSize: AppText.sizeLabel, height: 1.4),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -699,7 +699,7 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
           'เชิญเพื่อนร่วมเดินทางเข้าการจองนี้ เพื่อนจะเข้ากลุ่มแชทและติดตามรถ '
           'ได้จากบัญชีของตัวเอง (ใช้การจองและการชำระเงินใบเดียวกัน)',
           style: appFont(
-            fontSize: 12.5,
+            fontSize: AppText.sizeLabel,
             color: AppTheme.mutedText(context),
             height: 1.45,
           ),
@@ -760,7 +760,7 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
               Text(
                 'เชิญสมาชิกครบตามจำนวนผู้เดินทางแล้ว',
                 style: appFont(
-                  fontSize: 12,
+                  fontSize: AppText.sizeCaption,
                   color: AppTheme.mutedText(context),
                 ),
               ),
@@ -792,7 +792,7 @@ class _MemberTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: AppTheme.border(context).withValues(alpha: 0.6),
           ),
@@ -813,7 +813,7 @@ class _MemberTile extends StatelessWidget {
                     name,
                     style: appFont(
                       fontWeight: FontWeight.w800,
-                      fontSize: 13.5,
+                      fontSize: AppText.sizeBody,
                       color: AppTheme.onSurface(context),
                     ),
                   ),
@@ -821,7 +821,7 @@ class _MemberTile extends StatelessWidget {
                   Text(
                     subtitle,
                     style: appFont(
-                      fontSize: 11.5,
+                      fontSize: AppText.sizeCaption,
                       color: statusColor,
                       fontWeight: FontWeight.w700,
                     ),
@@ -954,7 +954,7 @@ class EmptyStateWidget extends StatelessWidget {
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
         border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
@@ -964,7 +964,7 @@ class EmptyStateWidget extends StatelessWidget {
             height: 88,
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
             ),
             child: const Icon(
               Icons.travel_explore_rounded,
@@ -977,7 +977,7 @@ class EmptyStateWidget extends StatelessWidget {
             'ยังไม่มีการจอง',
             style: TextStyle(
               color: AppTheme.onSurface(context),
-              fontSize: 22,
+              fontSize: AppText.sizeH1,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -987,7 +987,7 @@ class EmptyStateWidget extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppTheme.mutedText(context),
-              fontSize: 14,
+              fontSize: AppText.sizeBody,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1058,7 +1058,7 @@ class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
           ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
         ),
       );
@@ -1083,11 +1083,11 @@ class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
       color: Colors.transparent,
       child: InkWell(
         onTap: _isLoading ? null : _onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         child: Ink(
           decoration: BoxDecoration(
             color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             border: Border.all(
               color: AppTheme.primaryColor.withValues(alpha: 0.30),
             ),
@@ -1125,7 +1125,7 @@ class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
                       'ติดตามรถแบบเรียลไทม์',
                       style: appFont(
                         color: AppTheme.onSurface(context),
-                        fontSize: 15.5,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1134,7 +1134,7 @@ class _TrackVehicleButtonState extends State<_TrackVehicleButton> {
                       'ดูตำแหน่งรถและเวลาถึงโดยประมาณ',
                       style: appFont(
                         color: AppTheme.mutedText(context),
-                        fontSize: 12,
+                        fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

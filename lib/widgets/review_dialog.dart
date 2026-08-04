@@ -127,7 +127,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 style: appFont()),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           ),
         );
@@ -185,7 +185,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 style: appFont()),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           ),
         );
@@ -265,7 +265,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
             child: Text(
               _categoryLabels[key]!,
               style: appFont(
-                fontSize: 13,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.onSurface(context),
               ),
@@ -304,7 +304,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
   Widget build(BuildContext context) {
     final maxHeight = MediaQuery.of(context).size.height * 0.85;
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusLg)),
       backgroundColor: AppTheme.surface(context),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: 420, maxHeight: maxHeight),
@@ -322,7 +322,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                     textAlign: TextAlign.center,
                     style: appFont(
                       color: AppTheme.onSurface(context),
-                      fontSize: 20,
+                      fontSize: AppText.sizeH2,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -332,7 +332,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                     textAlign: TextAlign.center,
                     style: appFont(
                       color: AppTheme.mutedText(context),
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -353,7 +353,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 'ภาพรวม',
                 textAlign: TextAlign.center,
                 style: appFont(
-                  fontSize: 13,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.mutedText(context),
                 ),
@@ -387,7 +387,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
                 decoration: BoxDecoration(
                   color: AppTheme.fieldSurface(context),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: Column(
                   children: [
@@ -396,7 +396,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                       child: Text(
                         'ให้คะแนนแยกหมวด (ไม่บังคับ)',
                         style: appFont(
-                          fontSize: 12,
+                          fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.mutedText(context),
                         ),
@@ -420,12 +420,12 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                   filled: true,
                   fillColor: AppTheme.fieldSurface(context),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     borderSide:
                         BorderSide(color: AppTheme.border(context)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     borderSide: const BorderSide(
                       color: AppTheme.primaryColor,
                       width: 1.4,
@@ -441,7 +441,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                   Text(
                     'รูปภาพ (${_selectedImages.length}/$_maxImages)',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -482,7 +482,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                         clipBehavior: Clip.none,
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                             child: Image.file(
                               _selectedImages[index],
                               width: 82,
@@ -494,7 +494,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                           if (uploading || !uploaded)
                             Positioned.fill(
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                                 child: Container(
                                   color: Colors.black.withValues(
                                       alpha: uploading ? 0.45 : 0.25),
@@ -576,7 +576,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                   Text(
                     'วิดีโอ (${_selectedVideos.length}/$_maxVideos)',
                     style: appFont(
-                      fontSize: 13,
+                      fontSize: AppText.sizeLabel,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.mutedText(context),
                     ),
@@ -617,11 +617,11 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                             width: 120,
                             height: 82,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [Color(0xFF1F2937), Color(0xFF0F172A)],
+                                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
                               ),
                             ),
                             child: Center(
@@ -698,7 +698,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                         _error!,
                         style: appFont(
                           color: AppTheme.errorColor,
-                          fontSize: 12.5,
+                          fontSize: AppText.sizeLabel,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -735,7 +735,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                         alpha: 0.40,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 22,

@@ -90,7 +90,7 @@ class _RallyCardState extends State<RallyCard> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.35)),
       ),
       child: Column(
@@ -108,7 +108,7 @@ class _RallyCardState extends State<RallyCard> {
                 child: Text(
                   'ช่วยกันเปิดรอบนี้',
                   style: appFont(
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.onSurface(context),
                   ),
@@ -118,7 +118,7 @@ class _RallyCardState extends State<RallyCard> {
                 Text(
                   'เหลือ $daysLeft วัน',
                   style: appFont(
-                    fontSize: 12,
+                    fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.warningColor,
                   ),
@@ -129,7 +129,7 @@ class _RallyCardState extends State<RallyCard> {
           Text(
             textOf(data['headline']),
             style: appFont(
-              fontSize: 13,
+              fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w600,
               color: AppTheme.mutedText(context),
               height: 1.5,
@@ -141,7 +141,7 @@ class _RallyCardState extends State<RallyCard> {
             children: [
               Expanded(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                   child: LinearProgressIndicator(
                     value: target > 0 ? (booked / target).clamp(0.0, 1.0) : 0,
                     minHeight: 7,
@@ -156,7 +156,7 @@ class _RallyCardState extends State<RallyCard> {
               Text(
                 '$booked/$target',
                 style: appFont(
-                  fontSize: 12.5,
+                  fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.onSurface(context),
                 ),

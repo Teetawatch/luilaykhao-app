@@ -45,7 +45,7 @@ class MaintenanceScreen extends StatelessWidget {
                 'ปิดปรับปรุงชั่วคราว',
                 style: appFont(
                   color: AppTheme.onSurface(context),
-                  fontSize: 22,
+                  fontSize: AppText.sizeH1,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -55,7 +55,7 @@ class MaintenanceScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: appFont(
                   color: AppTheme.mutedText(context),
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   height: 1.6,
                   fontWeight: FontWeight.w600,
                 ),
@@ -69,7 +69,7 @@ class MaintenanceScreen extends StatelessWidget {
                     vertical: 14,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                 ),
                 onPressed: checking ? null : onRetry,
@@ -87,7 +87,7 @@ class MaintenanceScreen extends StatelessWidget {
                   checking ? 'กำลังตรวจสอบ...' : 'ลองอีกครั้ง',
                   style: appFont(
                     color: Colors.white,
-                    fontSize: 15,
+                    fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w900,
                   ),
                 ),

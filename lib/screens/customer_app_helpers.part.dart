@@ -16,7 +16,7 @@ class _Chip extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 12,
+          fontSize: AppText.sizeCaption,
           color: AppTheme.primaryColor,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.2,
@@ -58,7 +58,7 @@ class _StatusChip extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.bold,
-          fontSize: 12,
+          fontSize: AppText.sizeCaption,
           letterSpacing: 0.2,
         ),
       ),
@@ -109,7 +109,7 @@ class _EmptyState extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: appFont(
-                fontSize: 17,
+                fontSize: AppText.sizeTitle,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.2,
                 color: AppTheme.onSurface(context),
@@ -122,7 +122,7 @@ class _EmptyState extends StatelessWidget {
                 body,
                 textAlign: TextAlign.center,
                 style: appFont(
-                  fontSize: 14,
+                  fontSize: AppText.sizeBody,
                   height: 1.45,
                   fontWeight: FontWeight.w500,
                   color: muted,
@@ -378,7 +378,7 @@ class _SheetSectionTitle extends StatelessWidget {
         Text(
           title,
           style: appFont(
-            fontSize: 15,
+            fontSize: AppText.sizeSubtitle,
             fontWeight: FontWeight.w900,
             color: AppTheme.onSurface(context),
           ),
@@ -399,7 +399,7 @@ class _InlineBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.6),
         ),
@@ -407,7 +407,7 @@ class _InlineBadge extends StatelessWidget {
       child: Text(
         text,
         style: appFont(
-          fontSize: 11,
+          fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w700,
           color: AppTheme.mutedText(context),
         ),
@@ -548,7 +548,7 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
                   color: isDark
                       ? AppTheme.surfaceDark.withValues(alpha: 0.97)
                       : Colors.white.withValues(alpha: 0.97),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   border: Border.all(
                     color: accent.withValues(alpha: 0.25),
                     width: 1,
@@ -561,7 +561,7 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
                       height: 44,
                       decoration: BoxDecoration(
                         color: accent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       ),
                       child: Icon(_icon(), color: accent, size: 22),
                     ),
@@ -577,7 +577,7 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
-                                fontSize: 14,
+                                fontSize: AppText.sizeBody,
                                 fontWeight: FontWeight.w800,
                                 color: isDark
                                     ? Colors.white
@@ -591,7 +591,7 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
-                                fontSize: 12.5,
+                                fontSize: AppText.sizeLabel,
                                 fontWeight: FontWeight.w500,
                                 color: AppTheme.textSecondary,
                                 height: 1.4,

@@ -51,8 +51,8 @@ const double _contentOverlap = 28;
 // Semantic status colors with the light / dark variants from Apple's system
 // palette, used for state (full / low seats / warnings) instead of ad-hoc
 // values so they read correctly in both color schemes.
-const Color _systemRed = Color(0xFFFF3B30);
-const Color _systemRedDark = Color(0xFFFF453A);
+const Color _systemRed = Color(0xFFE11D48);
+const Color _systemRedDark = Color(0xFFE11D48);
 const Color _systemOrange = Color(0xFFFF9500);
 const Color _systemOrangeDark = Color(0xFFFF9F0A);
 const Color _systemGreen = Color(0xFF34C759);
@@ -199,19 +199,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       height: 72,
                       decoration: BoxDecoration(
                         color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                       ),
                       child: const Icon(
                         Icons.wifi_off_rounded,
                         size: 36,
-                        color: Color(0xFFEF4444),
+                        color: Color(0xFFE11D48),
                       ),
                     ),
                     const SizedBox(height: 20),
                     Text(
                       'โหลดข้อมูลไม่สำเร็จ',
                       style: appFont(
-                        fontSize: 18,
+                        fontSize: AppText.sizeTitle,
                         fontWeight: FontWeight.w900,
                         color: _premiumText,
                       ),
@@ -221,7 +221,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       'กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต\nแล้วลองใหม่อีกครั้ง',
                       textAlign: TextAlign.center,
                       style: appFont(
-                        fontSize: 14,
+                        fontSize: AppText.sizeBody,
                         color: _mutedText,
                         height: 1.6,
                       ),
@@ -238,14 +238,14 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                           vertical: 14,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         ),
                       ),
                       icon: const Icon(Icons.refresh_rounded),
                       label: Text(
                         'ลองใหม่',
                         style: appFont(
-                          fontSize: 15,
+                          fontSize: AppText.sizeSubtitle,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -838,14 +838,14 @@ class _GroupInviteEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.accentColor.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         onTap: onPressed,
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border:
                 Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
           ),
@@ -860,7 +860,7 @@ class _GroupInviteEntry extends StatelessWidget {
                     Text(
                       'ชวนเพื่อนมาเป็นกลุ่ม',
                       style: appFont(
-                        fontSize: 15,
+                        fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
                         color: _premiumText,
                       ),
@@ -868,7 +868,7 @@ class _GroupInviteEntry extends StatelessWidget {
                     Text(
                       'จองที่นั่งติดกัน เพื่อนเลือกที่นั่งเอง คุณจ่ายทีเดียว',
                       style: appFont(
-                        fontSize: 12.5,
+                        fontSize: AppText.sizeLabel,
                         color: _mutedText,
                       ),
                     ),
