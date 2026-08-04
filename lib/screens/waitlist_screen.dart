@@ -83,7 +83,11 @@ class _WaitlistScreenState extends State<WaitlistScreen> {
     );
     if (hasLiveOffer && _ticker == null) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) setState(() {});
+        if (!mounted) return;
+        setState(() {});
+        // เมื่อตัวสุดท้ายนับถึงศูนย์ก็หยุดเอง ไม่ปล่อยให้ rebuild ทุกวินาที
+        // ค้างไว้ตลอดเวลาที่เปิดหน้านี้ทิ้งไว้
+        _syncTicker();
       });
     } else if (!hasLiveOffer) {
       _ticker?.cancel();

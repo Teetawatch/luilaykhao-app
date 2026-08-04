@@ -860,9 +860,7 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
               final schedule = entry.schedule!;
               final disabled = _asBool(schedule['is_charter']) ||
                   _isSchedulePast(schedule) ||
-                  (int.tryParse(textOf(schedule['available_seats'], '0')) ??
-                          0) ==
-                      0;
+                  _scheduleAvailableSeats(schedule) == 0;
               return _ScheduleChip(
                 schedule: schedule,
                 isSelected: widget.selectedId ==
@@ -1120,7 +1118,7 @@ class _ScheduleChip extends StatelessWidget {
     final isCharter = _asBool(schedule['is_charter']);
     final departureDate = DateTime.tryParse(textOf(schedule['departure_date']));
     final returnDate = DateTime.tryParse(textOf(schedule['return_date']));
-    final seats = int.tryParse(textOf(schedule['available_seats'], '0')) ?? 0;
+    final seats = _scheduleAvailableSeats(schedule);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final isPast = departureDate != null && departureDate.isBefore(today);
@@ -1534,7 +1532,7 @@ class _SheetDateRow extends StatelessWidget {
     final isCharter = _asBool(schedule['is_charter']);
     final departureDate = DateTime.tryParse(textOf(schedule['departure_date']));
     final returnDate = DateTime.tryParse(textOf(schedule['return_date']));
-    final seats = int.tryParse(textOf(schedule['available_seats'], '0')) ?? 0;
+    final seats = _scheduleAvailableSeats(schedule);
     final isPast = _isSchedulePast(schedule);
     final isLowSeats = !isCharter && !isPast && seats > 0 && seats <= 5;
     final isFull = !isCharter && !isPast && seats == 0;

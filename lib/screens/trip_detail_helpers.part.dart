@@ -639,8 +639,15 @@ Map<String, dynamic> _selectedScheduleFor(
   );
 }
 
+/// ที่นั่งที่ "จองได้จริง" ของรอบนี้ — ใช้ `bookable_seats` จาก API ซึ่งหักที่นั่ง
+/// ที่ถูกกันไว้ให้คนในคิวรอที่ได้รับสิทธิ์แล้วออกไป (ไม่งั้นจะโชว์ว่ายังว่างแล้ว
+/// ลูกค้ากดจนถึงขั้นตอนสุดท้ายค่อยโดนปฏิเสธ) payload เก่า/endpoint ที่ยังไม่ส่ง
+/// ค่านี้มา ก็ตกกลับไปใช้ available_seats ตามเดิม
 int _scheduleAvailableSeats(Map<String, dynamic> schedule) =>
-    int.tryParse(textOf(schedule['available_seats'], '0')) ?? 0;
+    int.tryParse(
+      textOf(schedule['bookable_seats'] ?? schedule['available_seats'], '0'),
+    ) ??
+    0;
 
 /// รอบที่ "จองได้จริง": ไม่ใช่รอบเหมา ยังไม่ผ่านวันเดินทาง และยังมีที่นั่งว่าง
 bool _scheduleIsBookable(Map<String, dynamic> schedule) {

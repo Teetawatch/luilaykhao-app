@@ -675,56 +675,33 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     icon: Icons.edit_calendar_rounded,
                     title: 'แก้ไขการจอง',
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'เปลี่ยนวันเดินทางได้ครั้งเดียว และต้องก่อนเดินทางอย่างน้อย 20 วัน · คงราคาเดิม',
-                    style: appFont(
-                      fontSize: 12,
-                      color: AppTheme.mutedText(context),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                   const SizedBox(height: 10),
                   if (_asBool(booking['can_reschedule']))
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _openReschedule(context, booking),
-                        icon: const Icon(Icons.event_repeat_rounded),
-                        label: const Text('เปลี่ยนวันเดินทาง'),
-                      ),
+                    _BookingActionCard(
+                      icon: Icons.event_repeat_rounded,
+                      color: AppTheme.primaryColor,
+                      title: 'เปลี่ยนวันเดินทาง',
+                      subtitle:
+                          'ได้ครั้งเดียว · ก่อนเดินทางอย่างน้อย 20 วัน · คงราคาเดิม',
+                      onTap: () => _openReschedule(context, booking),
                     )
-                  else if (textOf(booking['rescheduled_at']).isNotEmpty)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline_rounded,
-                          size: 16,
-                          color: AppTheme.mutedText(context),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'เปลี่ยนวันเดินทางได้ครั้งเดียว · ใช้สิทธิ์ไปแล้ว',
-                            style: appFont(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.mutedText(context),
-                            ),
-                          ),
-                        ),
-                      ],
+                  // เหตุผลที่ปุ่มเปลี่ยนวันไม่ขึ้น — ใช้สิทธิ์ไปแล้ว หรือเลยกำหนด
+                  // ไม่ให้หายไปเฉย ๆ จนลูกค้าสงสัยว่าทำไมทำไม่ได้
+                  else
+                    _BookingActionNote(
+                      text: textOf(booking['rescheduled_at']).isNotEmpty
+                          ? 'เปลี่ยนวันเดินทางได้ครั้งเดียว · ใช้สิทธิ์ไปแล้ว'
+                          : 'เลยกำหนดเปลี่ยนวันเดินทางแล้ว · ต้องแจ้งก่อนเดินทางอย่างน้อย 20 วัน',
                     ),
                   if (_asBool(booking['can_modify']) &&
                       asList(schedule['pickup_points']).isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _openChangePickup(context, booking),
-                        icon: const Icon(Icons.location_on_rounded),
-                        label: const Text('เปลี่ยนจุดรับ'),
-                      ),
+                    const SizedBox(height: 10),
+                    _BookingActionCard(
+                      icon: Icons.location_on_rounded,
+                      color: AppTheme.accentColor,
+                      title: 'เปลี่ยนจุดรับ',
+                      subtitle: 'ย้ายจุดขึ้นรถได้ถึงก่อนเดินทาง 1 วัน · คงราคาเดิม',
+                      onTap: () => _openChangePickup(context, booking),
                     ),
                   ],
                 ],
@@ -787,6 +764,123 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
       _reload();
       if (context.mounted) showSnack(context, 'เปลี่ยนจุดรับสำเร็จ');
     }
+  }
+}
+
+/// การ์ดแอ็กชันในชีตรายละเอียดการจอง (เปลี่ยนวันเดินทาง / เปลี่ยนจุดรับ)
+/// เดิมเป็นปุ่ม outlined บาง ๆ ที่กลืนไปกับข้อความรอบข้าง ทั้งที่เป็นสองอย่างที่
+/// ลูกค้าตามหาบ่อยที่สุดในชีตนี้ — จึงยกเป็นการ์ดเต็มความกว้าง มีไอคอนสี
+/// เงื่อนไขการใช้สิทธิ์อยู่ในตัว และลูกศรบอกว่ากดได้
+class _BookingActionCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _BookingActionCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 21, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: appFont(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: appFont(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right_rounded, size: 22, color: color),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// บรรทัดอธิบายเมื่อสิทธิ์แก้ไขใช้ไม่ได้แล้ว — คู่กับ [_BookingActionCard]
+class _BookingActionNote extends StatelessWidget {
+  final String text;
+
+  const _BookingActionNote({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.info_outline_rounded,
+          size: 16,
+          color: AppTheme.mutedText(context),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: appFont(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.mutedText(context),
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1715,9 +1809,12 @@ class _AddToCalendarButton extends StatelessWidget {
   const _AddToCalendarButton({required this.booking, required this.schedule});
 
   String _pickupLocation() {
+    // API ส่งชื่อจุดที่ปักหมุดมาใน `label` (เดิมอ่าน location_name/address ซึ่ง
+    // ไม่มีอยู่จริง ชื่อจุดรับแบบปักหมุดจึงไม่เคยเข้าไปในอีเวนต์ปฏิทิน)
+    // และใช้เฉพาะจุดที่แอดมินอนุมัติแล้วเท่านั้น
     final custom = asMap(booking['custom_pickup']);
-    if (custom.isNotEmpty) {
-      final name = textOf(custom['location_name'], textOf(custom['address']));
+    if (textOf(custom['status']) == 'approved') {
+      final name = textOf(custom['label']);
       if (name.isNotEmpty) return name;
     }
     final booked = asMap(booking['pickup_point']);
