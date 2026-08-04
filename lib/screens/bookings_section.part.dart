@@ -1034,8 +1034,10 @@ class _CompactHistoryCard extends StatelessWidget {
             color: AppTheme.border(context).withValues(alpha: 0.55),
           ),
         ),
+        // ความสูงมาจากรูปที่ fix ไว้ 88 — ห้ามใช้ stretch ตรงนี้ เพราะการ์ดอยู่ใน
+        // Column ที่ความสูงไม่จำกัด stretch จะส่ง constraint สูงอนันต์ให้ลูก
+        // แล้ว layout ทั้ง sliver ล้มทั้งแผง (ในโหมด release = หน้าเปล่า)
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
               width: 84,
