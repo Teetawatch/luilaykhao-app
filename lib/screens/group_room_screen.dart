@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/group_plan.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/vehicle_seat_map.dart';
@@ -250,9 +251,7 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
 
   void _toast(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
-    );
+    AppSnack.show(context, message);
   }
 
   Future<void> _share() async {

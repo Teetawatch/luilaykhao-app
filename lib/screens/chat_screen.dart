@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import '../widgets/weather_card.dart';
 import '../widgets/tier_badge.dart';
@@ -621,9 +622,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    AppSnack.show(context, message);
   }
 
   /// Captures the user's current GPS position and posts it as a Google Maps
@@ -1298,13 +1297,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   void _toast(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text, style: appFont(fontWeight: FontWeight.w600)),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusSm)),
-      ),
-    );
+    AppSnack.show(context, text);
   }
 
   GlobalKey _keyFor(int messageId) =>

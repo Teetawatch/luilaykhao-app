@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 
@@ -132,16 +133,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop(); // close loader
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.errorColor,
-          content: Text(
-            'แลกไม่สำเร็จ ลองอีกครั้ง',
-            style: appFont(fontWeight: FontWeight.w700),
-          ),
-        ),
-      );
+      AppSnack.error(context, 'แลกไม่สำเร็จ ลองอีกครั้ง');
     }
   }
 }
@@ -659,20 +651,7 @@ class _CouponCard extends StatelessWidget {
                         ? () {
                             Clipboard.setData(ClipboardData(text: code));
                             HapticFeedback.selectionClick();
-                            ScaffoldMessenger.of(context)
-                              ..hideCurrentSnackBar()
-                              ..showSnackBar(
-                                SnackBar(
-                                  behavior: SnackBarBehavior.floating,
-                                  backgroundColor: AppTheme.primaryColor,
-                                  content: Text(
-                                    'คัดลอกโค้ดแล้ว',
-                                    style: appFont(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              );
+                            AppSnack.success(context, 'คัดลอกโค้ดแล้ว');
                           }
                         : null,
                     child: Text(
@@ -956,18 +935,7 @@ class _RedeemSuccessSheet extends StatelessWidget {
             onTap: () {
               Clipboard.setData(ClipboardData(text: code));
               HapticFeedback.selectionClick();
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  SnackBar(
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: AppTheme.primaryColor,
-                    content: Text(
-                      'คัดลอกโค้ดแล้ว',
-                      style: appFont(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                );
+              AppSnack.success(context, 'คัดลอกโค้ดแล้ว');
             },
             child: Container(
               width: double.infinity,

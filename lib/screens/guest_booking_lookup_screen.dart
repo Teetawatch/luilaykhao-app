@@ -9,6 +9,7 @@ import '../config/api_endpoints.dart';
 import '../models/tracking_model.dart';
 import '../providers/tracking_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import 'tracking_screen.dart';
 
@@ -252,21 +253,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            msg,
-            style: appFont(fontWeight: FontWeight.w600),
-          ),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          ),
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        ),
-      );
+    AppSnack.show(context, msg);
   }
 
   void _resetResults() => setState(() {

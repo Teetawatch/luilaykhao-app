@@ -1156,21 +1156,5 @@ void _showSuccess(BuildContext context, String message) {
 
 void _showError(BuildContext context, Object error) {
   final message = error is ApiException ? error.message : error.toString();
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: appFont(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.errorColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      ),
-    );
+  AppSnack.error(context, message);
 }

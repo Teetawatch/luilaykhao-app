@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import 'staff_check_in_screen.dart' show asMap, asList, textOf;
 
@@ -105,9 +106,7 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    AppSnack.show(context, message);
   }
 
   @override

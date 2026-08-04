@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import 'incident_list_screen.dart';
 import 'report_incident_screen.dart';
@@ -124,15 +125,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppTheme.primaryColor,
-          content: Text(
-            result.message,
-            style: appFont(color: Colors.white),
-          ),
-        ),
-      );
+      AppSnack.success(context, result.message);
       await _load();
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -169,29 +162,13 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       final notified = int.tryParse(textOf(result['notified'], '0')) ?? 0;
       final next = asMap(result['next_point']);
       if (complete) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppTheme.primaryColor,
-            content: Text(
-              next.isNotEmpty
+        AppSnack.success(context, next.isNotEmpty
                   ? 'แจ้งจุดถัดไป "${textOf(next['label'])}" แล้ว ($notified คน)'
-                  : 'รับครบทุกจุดแล้ว',
-              style: appFont(color: Colors.white),
-            ),
-          ),
-        );
+                  : 'รับครบทุกจุดแล้ว');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppTheme.errorColor,
-          content: Text(
-            e is ApiException ? e.message : 'อัปเดตไม่สำเร็จ',
-            style: appFont(color: Colors.white),
-          ),
-        ),
-      );
+      AppSnack.error(context, e is ApiException ? e.message : 'อัปเดตไม่สำเร็จ');
     } finally {
       if (mounted) setState(() => _completingPoints.remove(pointId));
     }

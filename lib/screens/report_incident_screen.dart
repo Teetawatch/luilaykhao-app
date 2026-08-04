@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
 
@@ -175,12 +176,11 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   }
 
   void _snack(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: isError ? AppTheme.errorColor : AppTheme.primaryColor,
-        content: Text(message, style: appFont(color: Colors.white)),
-      ),
-    );
+    if (isError) {
+      AppSnack.error(context, message);
+    } else {
+      AppSnack.success(context, message);
+    }
   }
 
   @override

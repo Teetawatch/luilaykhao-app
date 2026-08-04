@@ -430,6 +430,26 @@ class AppTheme {
         ),
         hintStyle: appFont(color: textSecondary.withValues(alpha: 0.5)),
       ),
+      // One shape for every toast in the app. Set here rather than at the call
+      // sites: the app raises snackbars from 131 places, only 19 of which had
+      // opted into floating, so the rest were rendering as square edge-to-edge
+      // bars. Theming it centrally fixes all of them without touching a call.
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: textMain,
+        elevation: 0,
+        insetPadding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+        ),
+        contentTextStyle: appFont(
+          color: Colors.white,
+          fontSize: AppText.sizeBody,
+          fontWeight: FontWeight.w600,
+          height: 1.4,
+        ),
+        actionTextColor: brandSoft,
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
@@ -526,6 +546,26 @@ class AppTheme {
           borderSide: const BorderSide(color: accentColor, width: 2),
         ),
         hintStyle: appFont(color: darkTextSecondary.withValues(alpha: 0.62)),
+      ),
+      // Mirrors the light theme, but lifted off the dark scaffold: a slate
+      // surface with a hairline border reads as a toast where near-black
+      // would disappear into the background.
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1E293B),
+        elevation: 0,
+        insetPadding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          side: const BorderSide(color: outlineDark),
+        ),
+        contentTextStyle: appFont(
+          color: darkTextMain,
+          fontSize: AppText.sizeBody,
+          fontWeight: FontWeight.w600,
+          height: 1.4,
+        ),
+        actionTextColor: brandSoft,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

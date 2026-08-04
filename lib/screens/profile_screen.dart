@@ -12,6 +12,7 @@ import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import '../widgets/support_shortcuts.dart';
 import '../widgets/travel_widgets.dart';

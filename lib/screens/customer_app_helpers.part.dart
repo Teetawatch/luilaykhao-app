@@ -325,7 +325,7 @@ String dateText(dynamic value) {
 }
 
 void showSnack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  AppSnack.show(context, message);
 }
 
 Future<String?> promptText(

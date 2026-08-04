@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../providers/app_provider.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 
 /// "ชวนเพื่อน" — referral hub. Shows the user's invite code, a share CTA, how
@@ -62,18 +63,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
     await Clipboard.setData(ClipboardData(text: code));
     HapticFeedback.selectionClick();
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.primaryColor,
-          content: Text(
-            'คัดลอกโค้ดแล้ว',
-            style: appFont(fontWeight: FontWeight.w700),
-          ),
-        ),
-      );
+    AppSnack.success(context, 'คัดลอกโค้ดแล้ว');
   }
 
   Future<void> _share() async {

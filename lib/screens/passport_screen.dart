@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../providers/app_provider.dart';
+import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import 'conquest_map_screen.dart';
@@ -1035,16 +1036,7 @@ class _ShareSheetState extends State<_ShareSheet> {
       );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppTheme.errorColor,
-            content: Text(
-              'แชร์ไม่สำเร็จ ลองใหม่อีกครั้ง',
-              style: appFont(color: Colors.white, fontWeight: FontWeight.w700),
-            ),
-          ),
-        );
+        AppSnack.error(context, 'แชร์ไม่สำเร็จ ลองใหม่อีกครั้ง');
       }
     } finally {
       if (mounted) setState(() => _sharing = false);
