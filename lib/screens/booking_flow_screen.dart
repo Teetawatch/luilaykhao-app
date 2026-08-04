@@ -1109,6 +1109,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         selectedSeatIds: _selectedSeatIds,
         onSeatTap: _toggleSeat,
         onRetry: _loadSeatMap,
+        // ล็อกของคนอื่นนับถอยหลังถึงศูนย์ = ที่นั่งน่าจะหลุดแล้ว ดึงผังใหม่ทันที
+        // ไม่ต้องรอรอบ poll ถัดไป (Redis TTL หมดเองไม่มี event ยิงมาทาง Reverb)
+        onLockExpired: () => _loadSeatMap(silent: true),
       );
     }
 

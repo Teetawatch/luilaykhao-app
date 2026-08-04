@@ -832,8 +832,20 @@ String _seatTooltip(
   return '$id ว่าง';
 }
 
+/// วินาทีที่เหลือของล็อกที่นั่ง ณ ตอนนี้จริง ๆ — เดินต่อเองระหว่างรอ refetch
+/// ครั้งถัดไป โดยอิง client_deadline_ms ที่ AppProvider.seats() ตรึงไว้ตอนโหลด
+/// (ถ้าไม่มีก็ตกกลับไปใช้ ttl ดิบซึ่งจะค้างจนกว่าจะโหลดใหม่)
+int _seatLockRemainingSeconds(Map<String, dynamic> seat) {
+  final deadline = seat['client_deadline_ms'];
+  if (deadline is int) {
+    final diff = deadline - DateTime.now().millisecondsSinceEpoch;
+    return diff > 0 ? (diff / 1000).ceil() : 0;
+  }
+  return int.tryParse(textOf(seat['locked_ttl_seconds'])) ?? 0;
+}
+
 String _seatLockRemainingText(Map<String, dynamic> seat) {
-  final seconds = int.tryParse(textOf(seat['locked_ttl_seconds'])) ?? 0;
+  final seconds = _seatLockRemainingSeconds(seat);
   if (seconds <= 0) return '';
   final minutes = seconds ~/ 60;
   final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');

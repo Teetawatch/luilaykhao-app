@@ -333,6 +333,9 @@ class SeatSelectionSection extends StatelessWidget {
   final ValueChanged<Map<String, dynamic>> onSeatTap;
   final VoidCallback onRetry;
 
+  /// ยิงเมื่อล็อกของคนอื่นนับถอยหลังหมดฝั่งเครื่อง เพื่อให้ผังที่นั่งถูกโหลดใหม่
+  final VoidCallback? onLockExpired;
+
   const SeatSelectionSection({
     super.key,
     required this.seatMap,
@@ -341,6 +344,7 @@ class SeatSelectionSection extends StatelessWidget {
     required this.selectedSeatIds,
     required this.onSeatTap,
     required this.onRetry,
+    this.onLockExpired,
   });
 
   @override
@@ -373,6 +377,7 @@ class SeatSelectionSection extends StatelessWidget {
                   _SeatRealtimeSummary(
                     counts: statusCounts,
                     refreshInterval: _seatRefreshInterval,
+                    onLockExpired: onLockExpired,
                   ),
                   const SizedBox(height: 16),
                   const Center(child: _SeatLegend()),
@@ -456,10 +461,12 @@ class _SelectedSeatSummary extends StatelessWidget {
 class _SeatRealtimeSummary extends StatelessWidget {
   final _SeatStatusCounts counts;
   final Duration refreshInterval;
+  final VoidCallback? onLockExpired;
 
   const _SeatRealtimeSummary({
     required this.counts,
     required this.refreshInterval,
+    this.onLockExpired,
   });
 
   @override
@@ -517,16 +524,11 @@ class _SeatRealtimeSummary extends StatelessWidget {
               ),
             ],
           ),
-          if (counts.lockedSeatLabels.isNotEmpty) ...[
+          if (counts.lockedSeats.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(
-              'กำลังจองอยู่: ${counts.lockedSeatLabels.take(4).join(', ')}${counts.lockedSeatLabels.length > 4 ? ' ...' : ''}',
-              style: appFont(
-                color: const Color(0xFF126B5B),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-              ),
+            _LockedSeatsCountdown(
+              seats: counts.lockedSeats,
+              onExpired: onLockExpired,
             ),
           ],
         ],
@@ -1103,20 +1105,23 @@ class _SeatStatusCounts {
   final int available;
   final int locked;
   final int booked;
-  final List<String> lockedSeatLabels;
+
+  /// ที่นั่งที่ถูกล็อกอยู่ (ส่งทั้ง map ไปให้ตัวนับถอยหลังคำนวณเวลาที่เหลือเอง
+  /// ทุกวินาที ไม่ใช่ประกอบเป็นข้อความไว้ล่วงหน้าซึ่งจะค้างจนกว่าจะโหลดใหม่)
+  final List<Map<String, dynamic>> lockedSeats;
 
   const _SeatStatusCounts({
     required this.available,
     required this.locked,
     required this.booked,
-    required this.lockedSeatLabels,
+    required this.lockedSeats,
   });
 
   factory _SeatStatusCounts.from(Map<String, dynamic> seatMap) {
     var available = 0;
     var locked = 0;
     var booked = 0;
-    final lockedSeatLabels = <String>[];
+    final lockedSeats = <Map<String, dynamic>>[];
 
     for (final item in asList(seatMap['seats'])) {
       final seat = asMap(item);
@@ -1125,11 +1130,7 @@ class _SeatStatusCounts {
         booked++;
       } else if (status == 'locked') {
         locked++;
-        final seatLabel = textOf(seat['label'], textOf(seat['id']));
-        final remaining = _seatLockRemainingText(seat);
-        lockedSeatLabels.add(
-          remaining.isEmpty ? seatLabel : '$seatLabel $remaining',
-        );
+        lockedSeats.add(seat);
       } else {
         available++;
       }
@@ -1139,7 +1140,79 @@ class _SeatStatusCounts {
       available: available,
       locked: locked,
       booked: booked,
-      lockedSeatLabels: lockedSeatLabels,
+      lockedSeats: lockedSeats,
+    );
+  }
+}
+
+/// "กำลังจองอยู่: A2 4:32 นาที, A3 1:07 นาที" — เดินถอยหลังเองทุกวินาที
+/// ตัวจับเวลาอยู่ในวิดเจ็ตนี้ตัวเดียว จึง rebuild แค่บรรทัดนี้ ไม่ลากทั้งผังที่นั่ง
+/// และหยุดเองเมื่อทุกล็อกหมดเวลาแล้ว
+class _LockedSeatsCountdown extends StatefulWidget {
+  final List<Map<String, dynamic>> seats;
+  final VoidCallback? onExpired;
+
+  const _LockedSeatsCountdown({required this.seats, this.onExpired});
+
+  @override
+  State<_LockedSeatsCountdown> createState() => _LockedSeatsCountdownState();
+}
+
+class _LockedSeatsCountdownState extends State<_LockedSeatsCountdown> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncTicker();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LockedSeatsCountdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncTicker();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  void _syncTicker({bool notifyOnStop = false}) {
+    final hasLive = widget.seats.any(
+      (seat) => _seatLockRemainingSeconds(seat) > 0,
+    );
+    if (hasLive && _ticker == null) {
+      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() {});
+        _syncTicker(notifyOnStop: true);
+      });
+    } else if (!hasLive && _ticker != null) {
+      _ticker?.cancel();
+      _ticker = null;
+      // นับถึงศูนย์ระหว่างเปิดหน้าอยู่ = ที่นั่งน่าจะหลุดแล้ว ขอผังใหม่รอบเดียว
+      if (notifyOnStop) widget.onExpired?.call();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = widget.seats.map((seat) {
+      final label = textOf(seat['label'], textOf(seat['id']));
+      final remaining = _seatLockRemainingText(seat);
+      return remaining.isEmpty ? label : '$label $remaining';
+    }).toList();
+
+    return Text(
+      'กำลังจองอยู่: ${labels.take(4).join(', ')}${labels.length > 4 ? ' ...' : ''}',
+      style: appFont(
+        color: const Color(0xFF126B5B),
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        height: 1.35,
+      ),
     );
   }
 }
