@@ -74,6 +74,285 @@ class _RefundStatusCallToAction extends StatelessWidget {
   }
 }
 
+/// ยกเลิกการจองที่ยังไม่ได้ชำระ — backend รองรับมาตลอด แต่แอปไม่เคยมีทางเข้า
+/// ลูกค้าที่เปลี่ยนใจจึงต้องนั่งรอให้ระบบตัดทิ้งเอง
+class _CancelPendingButton extends StatefulWidget {
+  final Map<String, dynamic> booking;
+
+  const _CancelPendingButton({required this.booking});
+
+  @override
+  State<_CancelPendingButton> createState() => _CancelPendingButtonState();
+}
+
+class _CancelPendingButtonState extends State<_CancelPendingButton> {
+  bool _busy = false;
+
+  Future<void> _cancel() async {
+    final ref = textOf(widget.booking['booking_ref']);
+    if (ref.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'ยกเลิกการจองนี้?',
+          style: appFont(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          'ที่นั่งจะถูกคืนให้คนอื่นทันที และการจองนี้จะกู้กลับมาไม่ได้',
+          style: appFont(fontSize: 14, color: AppTheme.mutedText(ctx)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('เก็บไว้ก่อน', style: appFont(fontWeight: FontWeight.w700)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'ยกเลิกการจอง',
+              style: appFont(
+                fontWeight: FontWeight.w800,
+                color: AppTheme.errorColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    HapticFeedback.mediumImpact();
+    setState(() => _busy = true);
+    final app = context.read<AppProvider>();
+    try {
+      await app.cancelBooking(ref, 'ลูกค้ายกเลิกเอง');
+      await app.loadAccountData();
+      if (mounted) showSnack(context, 'ยกเลิกการจองแล้ว');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      showSnack(context, e.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ActionChipButton(
+      icon: _busy ? Icons.hourglass_empty_rounded : Icons.close_rounded,
+      label: _busy ? 'กำลังยกเลิก...' : 'ยกเลิกการจอง',
+      onPressed: _busy ? () {} : _cancel,
+    );
+  }
+}
+
+/// สถานะจุดรับที่ลูกค้าปักหมุดขอเอง — รออนุมัติ / ไม่อนุมัติ (พร้อมเหตุผล)
+/// จุดที่อนุมัติแล้วไม่ต้องแจ้งซ้ำ เพราะไปโผล่เป็นจุดรับปกติในสรุปอยู่แล้ว
+class _CustomPickupStatusNote extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _CustomPickupStatusNote({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final custom = asMap(booking['custom_pickup']);
+    final status = textOf(custom['status']);
+    if (status.isEmpty || status == 'approved') return const SizedBox.shrink();
+
+    final rejected = status == 'rejected';
+    final label = textOf(custom['label']);
+    final reason = textOf(custom['reject_reason']);
+
+    final color = rejected ? AppTheme.errorColor : const Color(0xFFD97706);
+    final body = rejected
+        ? (reason.isNotEmpty
+              ? 'จุดรับที่ขอไว้ไม่ผ่านการอนุมัติ · $reason'
+              : 'จุดรับที่ขอไว้ไม่ผ่านการอนุมัติ กรุณาเลือกจุดรับอื่น')
+        : 'ทีมงานกำลังตรวจสอบจุดรับที่คุณปักหมุดไว้ จะแจ้งผลให้ทราบ';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              rejected
+                  ? Icons.wrong_location_rounded
+                  : Icons.pin_drop_outlined,
+              size: 17,
+              color: color,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rejected ? 'จุดรับที่ขอไว้ถูกปฏิเสธ' : 'จุดรับพิเศษ · รออนุมัติ',
+                    style: appFont(
+                      color: color,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (label.isNotEmpty)
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        color: AppTheme.onSurface(context),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  const SizedBox(height: 2),
+                  Text(
+                    body,
+                    style: appFont(
+                      color: AppTheme.mutedText(context),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// สิ่งที่ผูกกับการจองแต่เดิมมองไม่เห็นเลยจากหน้ารายการ — แบ่งจ่ายกลุ่ม,
+/// ส่วนต่างที่ต้องจ่ายวันเดินทาง, อุปกรณ์ที่เช่า, ตัวเลือกเสริม, ของขวัญ
+class _BookingExtrasChips extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _BookingExtrasChips({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <Widget>[];
+
+    final split = asMap(booking['split']);
+    if (_asBool(split['enabled'])) {
+      final paid = int.tryParse(textOf(split['paid_shares'])) ?? 0;
+      final total = int.tryParse(textOf(split['total_shares'])) ?? 0;
+      chips.add(
+        _ExtraChip(
+          icon: Icons.groups_2_rounded,
+          label: 'แบ่งจ่าย $paid/$total คน',
+          color: paid >= total && total > 0
+              ? AppTheme.primaryColor
+              : const Color(0xFFD97706),
+        ),
+      );
+    }
+
+    final flexi = num.tryParse(textOf(booking['flexi_surcharge'])) ?? 0;
+    if (flexi > 0) {
+      chips.add(
+        _ExtraChip(
+          icon: Icons.savings_rounded,
+          label: 'จ่ายเพิ่มวันเดินทาง ${money(flexi)}',
+          color: const Color(0xFFD97706),
+        ),
+      );
+    }
+
+    final rentals = asList(booking['selected_rentals']);
+    if (rentals.isNotEmpty) {
+      chips.add(
+        _ExtraChip(
+          icon: Icons.backpack_rounded,
+          label: 'เช่าอุปกรณ์ ${rentals.length} รายการ',
+          color: const Color(0xFF6366F1),
+        ),
+      );
+    }
+
+    final addons = asList(booking['selected_addons']);
+    if (addons.isNotEmpty) {
+      chips.add(
+        _ExtraChip(
+          icon: Icons.add_circle_outline_rounded,
+          label: 'ตัวเลือกเสริม ${addons.length} รายการ',
+          color: const Color(0xFF6366F1),
+        ),
+      );
+    }
+
+    if (_asBool(booking['is_gift'])) {
+      final gift = asMap(booking['gift']);
+      final claimed = _asBool(gift['claimed']);
+      chips.add(
+        _ExtraChip(
+          icon: Icons.card_giftcard_rounded,
+          label: claimed ? 'ของขวัญ · รับแล้ว' : 'ของขวัญ · รอผู้รับกดรับ',
+          color: const Color(0xFFDB2777),
+        ),
+      );
+    }
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Wrap(spacing: 6, runSpacing: 6, children: chips),
+    );
+  }
+}
+
+class _ExtraChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _ExtraChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: appFont(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class BookingStatusChip extends StatelessWidget {
   final Map<String, dynamic> booking;
 
@@ -636,6 +915,10 @@ class _BookingActionDeck extends StatelessWidget {
     bool hasPickupPoints,
   ) {
     return [
+      // ยังไม่ได้ชำระ = ถอนตัวได้เอง ไม่ต้องรอระบบตัดทิ้งหรือทักหาแอดมิน
+      if (textOf(booking['status']) == 'pending' &&
+          textOf(booking['slip_ocr_status']).isEmpty)
+        _CancelPendingButton(booking: booking),
       // เปลี่ยนวันได้เฉพาะเมื่อยังไม่เคยใช้สิทธิ์ และก่อนเดินทางอย่างน้อย 20 วัน
       if (canReschedule)
         _ActionChipButton(

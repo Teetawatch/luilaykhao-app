@@ -390,29 +390,65 @@ class ReservationSegmentTabs extends StatelessWidget {
 // ─── Utility Bar ──────────────────────────────────────────────────────────────
 
 class _BookingUtilityBar extends StatelessWidget {
-  final String query;
+  final TextEditingController controller;
   final String sort;
   final String statusFilter;
+  final bool showStatusFilter;
   final ValueChanged<String> onQueryChanged;
+  final VoidCallback onClearQuery;
   final ValueChanged<String> onSortChanged;
   final ValueChanged<String> onStatusFilterChanged;
 
   const _BookingUtilityBar({
-    required this.query,
+    required this.controller,
     required this.sort,
     required this.statusFilter,
+    required this.showStatusFilter,
     required this.onQueryChanged,
+    required this.onClearQuery,
     required this.onSortChanged,
     required this.onStatusFilterChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _searchRow(context),
+        // ตัวกรองสถานะเคยซ่อนอยู่หลังไอคอน ไม่มีใครหาเจอและไม่รู้ว่าเปิดค้างไว้
+        // อยู่หรือเปล่า — ย้ายมาเป็นชิปที่เห็นสถานะตัวเองชัด ๆ
+        if (showStatusFilter) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final option in const [
+                ('all', 'ทุกสถานะ'),
+                ('confirmed', 'ยืนยันแล้ว'),
+                ('pending', 'รอชำระเงิน'),
+              ]) ...[
+                if (option.$1 != 'all') const SizedBox(width: 8),
+                _StatusFilterChip(
+                  label: option.$2,
+                  selected: statusFilter == option.$1,
+                  onTap: () => onStatusFilterChanged(option.$1),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _searchRow(BuildContext context) {
     return Row(
       children: [
         Expanded(
           child: TextField(
+            controller: controller,
             onChanged: onQueryChanged,
+            textInputAction: TextInputAction.search,
             style: appFont(
               fontSize: 14.5,
               fontWeight: FontWeight.w600,
@@ -429,6 +465,25 @@ class _BookingUtilityBar extends StatelessWidget {
                 Icons.search_rounded,
                 color: AppTheme.mutedText(context),
                 size: 18,
+              ),
+              // ปุ่มล้างคำค้น — เดิมต้องลบทีละตัวอักษรเอง
+              suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: controller,
+                builder: (_, value, _) => value.text.isEmpty
+                    ? const SizedBox.shrink()
+                    : IconButton(
+                        tooltip: 'ล้างคำค้นหา',
+                        icon: Icon(
+                          Icons.cancel_rounded,
+                          size: 17,
+                          color: AppTheme.mutedText(context),
+                        ),
+                        onPressed: onClearQuery,
+                      ),
+              ),
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
               ),
               filled: true,
               fillColor: AppTheme.surface(context),
@@ -469,25 +524,62 @@ class _BookingUtilityBar extends StatelessWidget {
           ],
           child: const _UtilityIconButton(icon: Icons.swap_vert_rounded),
         ),
-        const SizedBox(width: 8),
-        PopupMenuButton<String>(
-          tooltip: 'กรองการจอง',
-          initialValue: statusFilter,
-          onSelected: onStatusFilterChanged,
-          // Time-based states (เดินทางแล้ว / ยกเลิก) live in the segment tabs, so
-          // this filter only carries the booking states the tabs don't cover.
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'all', child: Text('ทุกสถานะ')),
-            PopupMenuItem(value: 'confirmed', child: Text('ยืนยันแล้ว')),
-            PopupMenuItem(value: 'pending', child: Text('รอชำระเงิน')),
-          ],
-          child: _UtilityIconButton(
-            icon: statusFilter == 'all'
-                ? Icons.tune_rounded
-                : Icons.filter_alt_rounded,
+      ],
+    );
+  }
+}
+
+class _StatusFilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _StatusFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppTheme.primaryColor.withValues(alpha: 0.10)
+                  : AppTheme.surface(context),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected
+                    ? AppTheme.primaryColor.withValues(alpha: 0.45)
+                    : AppTheme.border(context).withValues(alpha: 0.55),
+              ),
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: appFont(
+                color: selected
+                    ? AppTheme.primaryColor
+                    : AppTheme.mutedText(context),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -636,6 +728,20 @@ class ReservationCard extends StatelessWidget {
     final isUpcoming = _isUpcomingBooking(booking);
     final isPast = _isPastBooking(booking);
     final status = textOf(booking['status']);
+
+    // ทริปที่จบหรือยกเลิกไปแล้วเป็น "ประวัติ" ไม่ใช่สิ่งที่ต้องลงมือทำต่อ
+    // ย่อเหลือแถวเดียวเพื่อให้เลื่อนหาทริปข้างหน้าเจอเร็ว รายละเอียดอยู่ในชีตครบเหมือนเดิม
+    // (ยกเว้นรายการที่ยังรีวิวได้/ยังติดตามเงินคืนอยู่ — ยังมีสิ่งที่ต้องทำ)
+    final hasPendingAction =
+        _asBool(booking['can_review']) ||
+        (isCancelled &&
+            (num.tryParse(textOf(booking['paid_amount'])) ?? 0) > 0);
+    if ((isPast || isCancelled) && !hasPendingAction) {
+      return _CompactHistoryCard(
+        booking: booking,
+        onTap: () => _openDetail(context, bookingRef),
+      );
+    }
     final paymentType = textOf(booking['payment_type'], 'full');
     final image = ApiConfig.mediaUrl(
       textOf(
@@ -810,6 +916,12 @@ class ReservationCard extends StatelessWidget {
                     _DepartureTimeNote(schedule: schedule),
                   ],
 
+                  // จุดรับที่ปักหมุดเองยังรออนุมัติ/ถูกปฏิเสธ — ต้องรู้ก่อนถึงวันเดินทาง
+                  if (!isCancelled) _CustomPickupStatusNote(booking: booking),
+
+                  // แบ่งจ่ายกลุ่ม / ส่วนต่างวันเดินทาง / อุปกรณ์เช่า / ของขวัญ
+                  if (!isCancelled) _BookingExtrasChips(booking: booking),
+
                   const SizedBox(height: 12),
 
                   // Who's travelling — overlapping passenger avatars
@@ -886,6 +998,136 @@ class ReservationCard extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BookingDetailSheet(bookingRef: bookingRef),
+    );
+  }
+}
+
+/// การ์ดแบบย่อสำหรับทริปที่จบ/ยกเลิกแล้ว — รูปเล็ก ชื่อ วันที่ สถานะ จบ
+/// เต็มใบสูงกว่า 400px ต่อรายการ พอมีประวัติหลายสิบทริปเลื่อนหาอะไรไม่เจอเลย
+class _CompactHistoryCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final VoidCallback onTap;
+
+  const _CompactHistoryCard({required this.booking, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final schedule = asMap(booking['schedule']);
+    final trip = asMap(schedule['trip']);
+    final isCancelled = _isCancelledBooking(booking);
+    final image = ApiConfig.mediaUrl(
+      textOf(
+        trip['thumbnail_image'],
+        textOf(trip['cover_image'], '/images/landscape.webp'),
+      ),
+    );
+
+    return _PressableCard(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppTheme.surface(context),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: AppTheme.border(context).withValues(alpha: 0.55),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 84,
+              height: 88,
+              child: CachedNetworkImage(
+                imageUrl: image,
+                fit: BoxFit.cover,
+                color: isCancelled ? Colors.grey : null,
+                colorBlendMode: isCancelled ? BlendMode.saturation : null,
+                placeholder: (_, _) => Container(color: const Color(0xFFEDEFEF)),
+                errorWidget: (_, _, _) => Container(
+                  color: const Color(0xFFEDEFEF),
+                  child: const Icon(Icons.landscape_rounded, size: 20),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      textOf(trip['title'], 'การจอง'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        color: AppTheme.onSurface(context),
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_month_rounded,
+                          size: 12,
+                          color: AppTheme.mutedText(context),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            _travelDateText(booking),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: appFont(
+                              color: AppTheme.mutedText(context),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        BookingStatusChip(booking: booking),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            textOf(booking['booking_ref'], '-'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: appFont(
+                              color: AppTheme.mutedText(context),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1251,7 +1493,16 @@ class _PaymentStatusRow extends StatelessWidget {
     final paid = num.tryParse(booking['paid_amount']?.toString() ?? '') ?? 0;
 
     if (status == 'pending') {
-      return _PendingPaymentBar(total: total, onPay: onPayPressed);
+      // ส่งสลิปแล้วแต่ยอดไม่ตรง → backend ค้างสถานะ pending ไว้รอแอดมินตรวจ
+      // ต้องไม่ชวนให้จ่ายซ้ำ และไม่ต้องนับถอยหลัง (ที่นั่งถูกถือไว้ให้แล้ว)
+      if (textOf(booking['slip_ocr_status']).isNotEmpty) {
+        return const _SlipUnderReviewBar();
+      }
+      return _PendingPaymentBar(
+        total: total,
+        expiresAt: DateTime.tryParse(textOf(booking['expires_at'])),
+        onPay: onPayPressed,
+      );
     }
 
     if (status == 'cancelled' || status == 'refunded') {
@@ -1297,14 +1548,122 @@ class _PaymentStatusRow extends StatelessWidget {
   }
 }
 
-class _PendingPaymentBar extends StatelessWidget {
-  final num total;
-  final VoidCallback onPay;
-
-  const _PendingPaymentBar({required this.total, required this.onPay});
+/// ส่งสลิปแล้ว ยอดไม่ตรงจึงค้างรอแอดมินอนุมัติ — ห้ามชวนให้จ่ายอีกรอบ
+class _SlipUnderReviewBar extends StatelessWidget {
+  const _SlipUnderReviewBar();
 
   @override
   Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.hourglass_top_rounded,
+            color: Color(0xFF1D4ED8),
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ได้รับสลิปแล้ว · รอทีมงานตรวจสอบ',
+                  style: appFont(
+                    color: const Color(0xFF1E3A8A),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'ที่นั่งถูกจองไว้ให้แล้ว ไม่ต้องโอนซ้ำ',
+                  style: appFont(
+                    color: const Color(0xFF1D4ED8),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingPaymentBar extends StatefulWidget {
+  final num total;
+  final DateTime? expiresAt;
+  final VoidCallback onPay;
+
+  const _PendingPaymentBar({
+    required this.total,
+    required this.expiresAt,
+    required this.onPay,
+  });
+
+  @override
+  State<_PendingPaymentBar> createState() => _PendingPaymentBarState();
+}
+
+class _PendingPaymentBarState extends State<_PendingPaymentBar> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncTicker();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PendingPaymentBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncTicker();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  /// เดินวินาทีเฉพาะตอนยังเหลือเวลาจริง แล้วหยุดเองเมื่อหมด
+  void _syncTicker() {
+    if (_remaining() > Duration.zero) {
+      _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() {});
+        _syncTicker();
+      });
+    } else {
+      _ticker?.cancel();
+      _ticker = null;
+    }
+  }
+
+  Duration _remaining() {
+    final deadline = widget.expiresAt;
+    if (deadline == null) return Duration.zero;
+    final diff = deadline.difference(DateTime.now());
+    return diff.isNegative ? Duration.zero : diff;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = _remaining();
+    final expired = widget.expiresAt != null && remaining == Duration.zero;
+    final mm = remaining.inMinutes.toString().padLeft(2, '0');
+    final ss = (remaining.inSeconds % 60).toString().padLeft(2, '0');
+
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
       decoration: BoxDecoration(
@@ -1333,7 +1692,7 @@ class _PendingPaymentBar extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  money(total),
+                  money(widget.total),
                   style: appFont(
                     color: const Color(0xFFD97706),
                     fontSize: 17,
@@ -1342,11 +1701,27 @@ class _PendingPaymentBar extends StatelessWidget {
                     letterSpacing: -0.3,
                   ),
                 ),
+                // เส้นตายที่ระบบจะคืนที่นั่งอัตโนมัติ — เดิมเงียบสนิท ลูกค้า
+                // กลับมาอีกทีเจอ "ยกเลิก" โดยไม่รู้ว่าเพราะอะไร
+                if (widget.expiresAt != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    expired
+                        ? 'หมดเวลาชำระเงินแล้ว · ที่นั่งกำลังถูกคืน'
+                        : 'เหลือเวลาชำระอีก $mm:$ss นาที ก่อนที่นั่งถูกคืน',
+                    style: appFont(
+                      color: const Color(0xFF92400E),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
           FilledButton(
-            onPressed: onPay,
+            onPressed: widget.onPay,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFD97706),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),

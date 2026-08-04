@@ -14,6 +14,30 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   String _query = '';
   String _sort = 'upcoming';
   String _statusFilter = 'all';
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// หน่วงการค้นหาไว้ครู่หนึ่ง — เดิม setState ทุกตัวอักษรทำให้ทั้งหน้า
+  /// (รวมทุกการ์ดพร้อมรูป) rebuild ระหว่างพิมพ์
+  void _onQueryChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 280), () {
+      if (mounted) setState(() => _query = value);
+    });
+  }
+
+  void _clearQuery() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    setState(() => _query = '');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +62,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     // First-ever load (no cache yet): show a skeleton instead of flashing the
     // "no bookings" empty state before data arrives.
     final isInitialLoading = !app.accountLoaded && allBookings.isEmpty;
+    // โหลดไม่สำเร็จและไม่มีข้อมูลเก่าให้แสดง — ต้องบอกและให้ลองใหม่ได้
+    final hasLoadError = app.accountError != null && allBookings.isEmpty;
+    // ยังไม่เคยจอง: ข้ามแดชบอร์ด/แท็บ/ช่องค้นหาไปที่คำชวนให้เริ่มทริปแรกเลย
+    // (เดิมเจอสถิติเลข 0 สามช่องกับช่องค้นหาที่ไม่มีอะไรให้ค้น)
+    final hasNoBookings = allBookings.isEmpty;
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
@@ -55,13 +84,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
               scrolledUnderElevation: 0,
               backgroundColor: AppTheme.background(context),
               surfaceTintColor: Colors.transparent,
-              title: const Text(
-                'การจองของฉัน',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
-                ),
-              ),
+              title: const Text('การจองของฉัน'),
               actions: [
                 IconButton(
                   tooltip: 'เข้าร่วมการจองของเพื่อน',
@@ -91,6 +114,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                       children: [
                         if (isInitialLoading)
                           const _BookingsLoadingSkeleton()
+                        else if (hasLoadError)
+                          _BookingsErrorState(
+                            message: app.accountError!,
+                            onRetry: app.loadAccountData,
+                          )
+                        else if (hasNoBookings)
+                          const EmptyStateWidget()
                         else ...[
                         _BookingsHeader(
                           totalCount: allBookings.length,
@@ -123,20 +153,22 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                         ),
                         const SizedBox(height: 16),
                         _BookingUtilityBar(
-                          query: _query,
+                          controller: _searchController,
                           sort: _sort,
                           statusFilter: _statusFilter,
-                          onQueryChanged: (value) =>
-                              setState(() => _query = value),
+                          // ตัวกรองสถานะมีความหมายเฉพาะรายการที่ยังไม่จบ
+                          showStatusFilter:
+                              _segment == _ReservationSegment.all ||
+                              _segment == _ReservationSegment.upcoming,
+                          onQueryChanged: _onQueryChanged,
+                          onClearQuery: _clearQuery,
                           onSortChanged: (value) =>
                               setState(() => _sort = value),
                           onStatusFilterChanged: (value) =>
                               setState(() => _statusFilter = value),
                         ),
                         const SizedBox(height: 24),
-                        if (app.bookings.isEmpty)
-                          const EmptyStateWidget()
-                        else if (filtered.isEmpty)
+                        if (filtered.isEmpty)
                           const _FilteredEmptyState()
                         else ...[
                           if (_segment == _ReservationSegment.all) ...[
@@ -231,6 +263,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         final bCreated = DateTime.tryParse(textOf(b['created_at'])) ?? bDate;
         return bCreated.compareTo(aCreated);
       }
+      // ทริปข้างหน้า: ใกล้ถึงก่อน — ทริปที่จบ/ยกเลิกไปแล้ว: ล่าสุดก่อน
+      // (เดิมเรียงขึ้นทั้งหมด "เดินทางแล้ว" จึงขึ้นทริปเมื่อหลายปีก่อนไว้บนสุด)
+      final aDone = _isPastBooking(a) || _isCancelledBooking(a);
+      final bDone = _isPastBooking(b) || _isCancelledBooking(b);
+      if (aDone && bDone) return bDate.compareTo(aDate);
+      if (aDone != bDone) return aDone ? 1 : -1;
       return aDate.compareTo(bDate);
     });
     return result;
@@ -535,6 +573,76 @@ class _BookingReferencePanel extends StatelessWidget {
               fontSize: 20,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// โหลดการจองไม่สำเร็จและไม่มีข้อมูลเก่าให้แสดง — เดิมหน้าจะค้างอยู่ที่ skeleton
+/// ตลอดไปโดยไม่บอกอะไรเลย
+class _BookingsErrorState extends StatelessWidget {
+  final String message;
+  final Future<void> Function() onRetry;
+
+  const _BookingsErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.border(context)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppTheme.errorColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: const Icon(
+              Icons.cloud_off_rounded,
+              color: AppTheme.errorColor,
+              size: 34,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'โหลดการจองไม่สำเร็จ',
+            style: appFont(
+              color: AppTheme.onSurface(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: appFont(
+              color: AppTheme.mutedText(context),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              onRetry();
+            },
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: Text(
+              'ลองอีกครั้ง',
+              style: appFont(fontSize: 14, fontWeight: FontWeight.w800),
             ),
           ),
         ],

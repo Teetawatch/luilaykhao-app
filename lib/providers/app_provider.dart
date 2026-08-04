@@ -63,6 +63,9 @@ class AppProvider extends ChangeNotifier {
   // from the network or a cache restore. Lets screens show a skeleton on the
   // very first load instead of flashing an empty state.
   bool accountLoaded = false;
+  /// ข้อความผิดพลาดของการโหลดการจองครั้งล่าสุด (null = สำเร็จ) — ให้หน้าจอ
+  /// แสดงสถานะผิดพลาดพร้อมปุ่มลองใหม่ แทนที่จะค้างอยู่ที่ skeleton ตลอดไป
+  String? accountError;
   List<dynamic> notifications = [];
   List<dynamic> reviews = [];
   List<dynamic> recentlyViewedTrips = [];
@@ -740,7 +743,21 @@ class AppProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>> seats(int scheduleId) async {
     final response = await api.get('schedules/$scheduleId/seats');
-    return Map<String, dynamic>.from(api.data(response) ?? {});
+    final map = Map<String, dynamic>.from(api.data(response) ?? {});
+    // ตรึงเส้นตายของแต่ละล็อกไว้กับนาฬิกาเครื่อง โดยคิดจาก ttl แบบ "เหลืออีกกี่
+    // วินาที" ที่เซิร์ฟเวอร์ส่งมา (ไม่ใช่ timestamp สัมบูรณ์) — UI จึงนับถอยหลัง
+    // ต่อเองได้ทุกวินาทีโดยไม่ต้องรอ refetch และไม่เพี้ยนตามนาฬิกาที่ไม่ตรงกัน
+    // แนวเดียวกับ fetchActiveSeatLocks
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    for (final item in (map['seats'] is List ? map['seats'] as List : const [])) {
+      if (item is Map) {
+        final ttl = int.tryParse('${item['locked_ttl_seconds'] ?? ''}');
+        if (ttl != null && ttl > 0) {
+          item['client_deadline_ms'] = nowMs + ttl * 1000;
+        }
+      }
+    }
+    return map;
   }
 
   Future<List<dynamic>> fetchActiveSeatLocks() async {
@@ -1037,8 +1054,14 @@ class AppProvider extends ChangeNotifier {
     Future<dynamic> safe(Future<dynamic> f) => f.catchError((_) => null);
 
     final hasStaff = canUseStaffCheckIn;
+    // การจองเป็นข้อมูลหลักของหน้านี้ ถ้าดึงไม่สำเร็จต้องบอกผู้ใช้ให้ลองใหม่
+    // (เดิม exception หลุดออกไปก่อนตั้ง accountLoaded = ค้าง skeleton ถาวร)
+    Object? bookingsError;
     final results = await Future.wait([
-      api.get(ApiEndpoints.bookings),
+      api.get(ApiEndpoints.bookings).catchError((Object e) {
+        bookingsError = e;
+        return null;
+      }),
       safe(api.get(ApiEndpoints.notifications, query: {'per_page': 20})),
       safe(api.get(ApiEndpoints.loyaltyAccount)),
       safe(api.get(ApiEndpoints.loyaltyRewards)),
@@ -1049,7 +1072,15 @@ class AppProvider extends ChangeNotifier {
       if (hasStaff) safe(api.get(ApiEndpoints.staffSchedulesMy)),
     ]);
 
-    bookings = List<dynamic>.from(api.data(results[0]) ?? []);
+    if (bookingsError != null) {
+      // เก็บของเดิม (หรือแคช) ไว้ให้ผู้ใช้ยังเห็นได้ ไม่ล้างทิ้งเพราะเน็ตสะดุด
+      accountError = bookingsError is ApiException
+          ? (bookingsError as ApiException).message
+          : 'โหลดการจองไม่สำเร็จ กรุณาลองใหม่';
+    } else {
+      accountError = null;
+      bookings = List<dynamic>.from(api.data(results[0]) ?? []);
+    }
     if (results[1] != null) {
       notifications = List<dynamic>.from(api.data(results[1]) ?? []);
     }
