@@ -117,10 +117,10 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                     imageUrl: urls[index],
                     fit: BoxFit.cover,
                     placeholder: (_, _) => Container(
-                      color: const Color(0xFFE2E8F0),
+                      color: AppTheme.border(context),
                     ),
                     errorWidget: (_, _, _) => Container(
-                      color: const Color(0xFFE2E8F0),
+                      color: AppTheme.border(context),
                       child: const Icon(
                         Icons.image_not_supported_rounded,
                         size: 20,

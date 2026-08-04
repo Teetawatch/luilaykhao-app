@@ -135,8 +135,8 @@ class _EditableProfilePhoto extends StatelessWidget {
                 width: 112,
                 height: 112,
                 padding: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: AppTheme.surface(context),
                   shape: BoxShape.circle,
                 ),
                 child: ClipOval(

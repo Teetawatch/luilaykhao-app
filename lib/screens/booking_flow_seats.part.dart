@@ -158,7 +158,7 @@ class _VehiclePhotoPreviewState extends State<_VehiclePhotoPreview> {
                                         horizontal: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withValues(
+                                        color: AppTheme.surface(context).withValues(
                                           alpha: selected ? 0.95 : 0.55,
                                         ),
                                         borderRadius: BorderRadius.circular(
@@ -674,11 +674,11 @@ class _VehicleSeatMap extends StatelessWidget {
                   _DriverBlock(show: seatMap['show_driver'] != false),
                 ],
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: SizedBox(
                   width: 292,
-                  child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                  child: Divider(height: 1, color: AppTheme.border(context)),
                 ),
               ),
               ...rows.map((row) {
@@ -759,7 +759,7 @@ class _SeatRow extends StatelessWidget {
                     width: 2,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
+                      color: AppTheme.border(context),
                       borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                   )
@@ -982,7 +982,7 @@ class _DriverBlock extends StatelessWidget {
             width: 44,
             height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: AppTheme.subtleSurface(context),
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
             ),

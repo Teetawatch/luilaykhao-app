@@ -631,7 +631,7 @@ class _RefField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'LLK-20250409-0001',
               hintStyle: appFont(
-                color: const Color(0xFF94A3B8),
+                color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
               ),
               prefixIcon: const Icon(
@@ -695,7 +695,7 @@ class _NameField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'ชื่อ-นามสกุล ตามที่ให้ไว้กับเจ้าหน้าที่',
               hintStyle: appFont(
-                color: const Color(0xFF94A3B8),
+                color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w500,
               ),
               prefixIcon: const Icon(
@@ -777,7 +777,7 @@ class _PhoneField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: hintPlaceholder,
               hintStyle: appFont(
-                color: const Color(0xFF94A3B8),
+                color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
               ),
               prefixIcon: const Icon(
@@ -867,7 +867,7 @@ class _LookupButton extends StatelessWidget {
         height: 54,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          color: enabled ? AppTheme.primaryColor : const Color(0xFFCBD5E1),
+          color: enabled ? AppTheme.primaryColor : AppTheme.border(context),
         ),
         child: FilledButton(
           onPressed: enabled ? onPressed : null,

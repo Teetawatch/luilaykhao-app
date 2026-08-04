@@ -160,9 +160,9 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                       ],
                       if (pastSchedules.isNotEmpty) ...[
                         const SizedBox(height: 18),
-                        const _StaffGroupLabel(
+                        _StaffGroupLabel(
                           label: 'ผ่านมาแล้ว',
-                          color: Color(0xFF64748B),
+                          color: AppTheme.mutedText(context),
                         ),
                         const SizedBox(height: 8),
                         for (final s in pastSchedules.take(5)) ...[
@@ -224,7 +224,7 @@ class _StaffCheckInCta extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
+                  color: AppTheme.surface(context).withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: const Icon(
@@ -1507,7 +1507,7 @@ class _StaffScheduleStatusBadge extends StatelessWidget {
     final (label, color) = switch (status) {
       'active' => ('กำลังดำเนินการ', const Color(0xFF059669)),
       'confirmed' => ('ยืนยันแล้ว', const Color(0xFF2563EB)),
-      'completed' => ('จบแล้ว', const Color(0xFF64748B)),
+      'completed' => ('จบแล้ว', AppTheme.mutedText(context)),
       'cancelled' => ('ยกเลิก', const Color(0xFFE11D48)),
       _ => ('รอยืนยัน', const Color(0xFFD97706)),
     };

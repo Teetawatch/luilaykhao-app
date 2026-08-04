@@ -365,7 +365,7 @@ class BookingStatusChip extends StatelessWidget {
       'pending' => const Color(0xFFD97706),
       'near' => const Color(0xFF047857),
       'completed' => const Color(0xFF315A9D),
-      'cancelled' => const Color(0xFF475569),
+      'cancelled' => AppTheme.mutedText(context),
       _ => AppTheme.primaryColor,
     };
     final label = switch (key) {
@@ -416,23 +416,23 @@ class _DateBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
+        color: AppTheme.surface(context).withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       ),
       child: Column(
         children: [
           Text(
             date == null ? '--' : DateFormat('MMM', 'th_TH').format(date!),
-            style: const TextStyle(
-              color: Color(0xFF475569),
+            style: TextStyle(
+              color: AppTheme.mutedText(context),
               fontSize: AppText.sizeMicro,
               fontWeight: FontWeight.w900,
             ),
           ),
           Text(
             date == null ? '--' : DateFormat('d', 'th_TH').format(date!),
-            style: const TextStyle(
-              color: Color(0xFF0F172A),
+            style: TextStyle(
+              color: AppTheme.onSurface(context),
               fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
               height: 1,
@@ -454,15 +454,15 @@ class _CountdownPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
+        color: AppTheme.surface(context).withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
         _countdownText(booking),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Color(0xFF0F172A),
+        style: TextStyle(
+          color: AppTheme.onSurface(context),
           fontSize: AppText.sizeCaption,
           fontWeight: FontWeight.w900,
         ),

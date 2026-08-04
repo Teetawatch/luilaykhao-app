@@ -209,7 +209,7 @@ class _PointsHero extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
+                  color: AppTheme.surface(context).withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Row(

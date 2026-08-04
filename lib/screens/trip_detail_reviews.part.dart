@@ -150,13 +150,13 @@ class _ReviewSectionState extends State<ReviewSection> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
+                      color: AppTheme.subtleSurface(context),
                       borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.rate_review_outlined,
                       size: 30,
-                      color: Color(0xFF94A3B8),
+                      color: AppTheme.mutedText(context),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -185,7 +185,7 @@ class _ReviewSectionState extends State<ReviewSection> {
             // ── rating summary bar ───────────────────────────────
             _ReviewRatingSummary(trip: trip, reviews: reviews),
             const SizedBox(height: 20),
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            Divider(height: 1, color: AppTheme.subtleSurface(context)),
             const SizedBox(height: 16),
             // ── review cards ────────────────────────────────────
             ...visibleReviews.map((reviewData) {
@@ -247,7 +247,7 @@ class _ShowMoreReviewsButton extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 13),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
+            color: AppTheme.subtleSurface(context),
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: const Color(0xFFEEF2F7)),
           ),
@@ -391,7 +391,7 @@ class _ReviewRatingSummary extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: pct,
                               minHeight: 6,
-                              backgroundColor: const Color(0xFFF1F5F9),
+                              backgroundColor: AppTheme.subtleSurface(context),
                               valueColor: const AlwaysStoppedAnimation<Color>(
                                 Color(0xFFE8A117),
                               ),
@@ -463,7 +463,7 @@ class _CategoryAverageTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         border: Border.all(color: const Color(0xFFEEF2F7)),
       ),
@@ -541,7 +541,7 @@ class _ReviewCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark
               ? Colors.white.withValues(alpha: 0.04)
-              : const Color(0xFFF8FAFC),
+              : AppTheme.subtleSurface(context),
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: isDark
@@ -627,7 +627,7 @@ class _ReviewCard extends StatelessWidget {
                               size: 14,
                               color: i < rating
                                   ? const Color(0xFFF59E0B)
-                                  : const Color(0xFFCBD5E1),
+                                  : AppTheme.border(context),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -700,7 +700,7 @@ class _ReviewCard extends StatelessWidget {
                   border: Border.all(
                     color: isDark
                         ? Colors.white.withValues(alpha: 0.06)
-                        : const Color(0xFFE2E8F0),
+                        : AppTheme.border(context),
                   ),
                 ),
                 child: Text(
@@ -819,16 +819,16 @@ class _ReviewCard extends StatelessWidget {
                         placeholder: (_, _) => Container(
                           width: 76,
                           height: 76,
-                          color: const Color(0xFFF1F5F9),
+                          color: AppTheme.subtleSurface(context),
                         ),
                         errorWidget: (_, _, _) => Container(
                           width: 76,
                           height: 76,
-                          color: const Color(0xFFF1F5F9),
-                          child: const Icon(
+                          color: AppTheme.subtleSurface(context),
+                          child: Icon(
                             Icons.broken_image_rounded,
                             size: 22,
-                            color: Color(0xFF94A3B8),
+                            color: AppTheme.mutedText(context),
                           ),
                         ),
                       ),
@@ -1012,15 +1012,15 @@ class _CommunityPhotosSectionState extends State<CommunityPhotosSection> {
                           placeholder: (_, _) => Container(
                             width: 104,
                             height: 104,
-                            color: const Color(0xFFF1F5F9),
+                            color: AppTheme.subtleSurface(context),
                           ),
                           errorWidget: (_, _, _) => Container(
                             width: 104,
                             height: 104,
-                            color: const Color(0xFFF1F5F9),
-                            child: const Icon(
+                            color: AppTheme.subtleSurface(context),
+                            child: Icon(
                               Icons.broken_image_rounded,
-                              color: Color(0xFF94A3B8),
+                              color: AppTheme.mutedText(context),
                             ),
                           ),
                         ),

@@ -781,9 +781,9 @@ class ReservationCard extends StatelessWidget {
                       color: isCancelled ? Colors.grey : null,
                       colorBlendMode: isCancelled ? BlendMode.saturation : null,
                       placeholder: (_, _) =>
-                          Container(color: const Color(0xFFE2E8F0)),
+                          Container(color: AppTheme.border(context)),
                       errorWidget: (_, _, _) => Container(
-                        color: const Color(0xFFE2E8F0),
+                        color: AppTheme.border(context),
                         child: const Icon(Icons.landscape_rounded),
                       ),
                     ),
@@ -836,7 +836,7 @@ class ReservationCard extends StatelessWidget {
                             color: Colors.black.withValues(alpha: 0.45),
                             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.25),
+                              color: AppTheme.surface(context).withValues(alpha: 0.25),
                             ),
                           ),
                           child: Row(
@@ -1047,9 +1047,9 @@ class _CompactHistoryCard extends StatelessWidget {
                 fit: BoxFit.cover,
                 color: isCancelled ? Colors.grey : null,
                 colorBlendMode: isCancelled ? BlendMode.saturation : null,
-                placeholder: (_, _) => Container(color: const Color(0xFFE2E8F0)),
+                placeholder: (_, _) => Container(color: AppTheme.border(context)),
                 errorWidget: (_, _, _) => Container(
-                  color: const Color(0xFFE2E8F0),
+                  color: AppTheme.border(context),
                   child: const Icon(Icons.landscape_rounded, size: 20),
                 ),
               ),
@@ -1401,7 +1401,7 @@ class _TravelerAvatars extends StatelessWidget {
           left: shown.length * (size - overlap),
           child: _AvatarCircle(
             initial: '+$extra',
-            colors: const [Color(0xFF94A3B8), Color(0xFFCBD5E1)],
+            colors: [AppTheme.mutedText(context), AppTheme.border(context)],
             size: size,
           ),
         ),
@@ -1511,7 +1511,7 @@ class _PaymentStatusRow extends StatelessWidget {
       if (paid <= 0) return const SizedBox.shrink();
       return _SimpleStatusBar(
         icon: Icons.cancel_outlined,
-        color: const Color(0xFF64748B),
+        color: AppTheme.mutedText(context),
         label: 'ยกเลิก · ชำระไปแล้ว ${money(paid)}',
       );
     }

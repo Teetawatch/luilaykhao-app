@@ -3760,7 +3760,7 @@ class _MessageBubble extends StatelessWidget {
     final isDark = AppTheme.isDark(context);
     final neutralBg = isDark
         ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFF1F5F9);
+        : AppTheme.subtleSurface(context);
     final bg = (isMine && poll == null) ? AppTheme.primaryColor : neutralBg;
     final fg = (isMine && poll == null)
         ? Colors.white

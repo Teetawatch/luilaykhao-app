@@ -442,7 +442,7 @@ class TripFinderEntryCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
+                  color: AppTheme.surface(context).withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                 ),
                 child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 26),

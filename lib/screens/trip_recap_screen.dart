@@ -788,7 +788,7 @@ class _SummarySlide extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
+                      color: AppTheme.surface(context).withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     child: Text(
@@ -812,7 +812,7 @@ class _SummarySlide extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 15),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppTheme.surface(context),
                 borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
               child: Row(

@@ -549,9 +549,9 @@ class _SosMessageSheetState extends State<_SosMessageSheet> {
       // reachable when the "อื่น ๆ" text field is focused.
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
+        decoration: BoxDecoration(
+          color: AppTheme.surface(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
         ),
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.9,

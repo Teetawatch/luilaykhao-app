@@ -427,7 +427,7 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
           Polyline(
             points: fullLine,
             strokeWidth: 4,
-            color: const Color(0xFF94A3B8).withValues(alpha: 0.65),
+            color: AppTheme.mutedText(context).withValues(alpha: 0.65),
           ),
         );
       }
@@ -487,9 +487,9 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
             decoration: BoxDecoration(
               color: stop.completed
                   ? const Color(0xFF10B981)
-                  : const Color(0xFF475569),
+                  : AppTheme.mutedText(context),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2.5),
+              border: Border.all(color: AppTheme.surface(context), width: 2.5),
             ),
             child: stop.completed
                 ? const Icon(Icons.check_rounded, color: Colors.white, size: 13)
@@ -523,10 +523,10 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
           point: destination,
           width: 56,
           height: 64,
-          child: const _MapPin(
+          child: _MapPin(
             icon: Icons.flag_rounded,
             label: 'ปลายทาง',
-            color: Color(0xFF0F172A),
+            color: AppTheme.onSurface(context),
           ),
         ),
       if (pickup != null)
@@ -737,7 +737,7 @@ class TrackingBottomSheet extends StatelessWidget {
                     width: 42,
                     height: 5,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
+                      color: AppTheme.border(context),
                       borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
                   ),
@@ -945,7 +945,7 @@ class _VehicleMarker extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
+                  border: Border.all(color: AppTheme.surface(context), width: 4),
                 ),
                 child: const Icon(
                   Icons.navigation_rounded,
@@ -978,7 +978,7 @@ class _MapPin extends StatelessWidget {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
+            border: Border.all(color: AppTheme.surface(context), width: 3),
           ),
           child: Icon(icon, color: Colors.white, size: 18),
         ),
@@ -986,7 +986,7 @@ class _MapPin extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           ),
           child: Text(
@@ -1041,7 +1041,7 @@ class _UserMarker extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: blue,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
+                  border: Border.all(color: AppTheme.surface(context), width: 3),
                 ),
                 child: const Icon(
                   Icons.person_rounded,

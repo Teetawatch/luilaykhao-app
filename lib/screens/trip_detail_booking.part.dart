@@ -123,7 +123,7 @@ class StickyBookingBar extends StatelessWidget {
                 border: Border.all(
                   color: isDark
                       ? AppTheme.outlineDark.withValues(alpha: 0.5)
-                      : const Color(0xFFE2E8F0),
+                      : AppTheme.border(context),
                 ),
               ),
               child: Column(
@@ -528,7 +528,7 @@ class _BookingButtonState extends State<_BookingButton> {
           decoration: BoxDecoration(
             color: widget.enabled
                 ? AppTheme.primaryColor
-                : const Color(0xFFCBD5E1),
+                : AppTheme.border(context),
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           child: Row(

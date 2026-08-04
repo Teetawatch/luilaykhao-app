@@ -1248,7 +1248,7 @@ class _GlassButton extends StatelessWidget {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: AppTheme.surface(context).withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.20),

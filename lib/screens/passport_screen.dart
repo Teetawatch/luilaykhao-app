@@ -210,7 +210,7 @@ class _PassportHero extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
+                  color: AppTheme.surface(context).withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Row(
@@ -1225,7 +1225,7 @@ class _ShareCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
+                color: AppTheme.surface(context).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
               child: Row(

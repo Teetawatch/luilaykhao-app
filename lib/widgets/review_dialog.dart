@@ -624,10 +624,10 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                             height: 82,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                                colors: [const Color(0xFF1E293B), AppTheme.onSurface(context)],
                               ),
                             ),
                             child: Center(

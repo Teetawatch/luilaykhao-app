@@ -1138,7 +1138,7 @@ class _ScheduleChip extends StatelessWidget {
     } else if (isUnavailable) {
       bg = isDark
           ? Colors.white.withValues(alpha: 0.04)
-          : const Color(0xFFF8FAFC);
+          : AppTheme.subtleSurface(context);
       border = AppTheme.border(context).withValues(alpha: 0.35);
       fg = AppTheme.mutedText(context).withValues(alpha: 0.40);
       sub = AppTheme.mutedText(context).withValues(alpha: 0.30);
@@ -1548,7 +1548,7 @@ class _SheetDateRow extends StatelessWidget {
           : const Color(0xFFECFDF5);
       border = _softAccent;
     } else if (disabled) {
-      bg = isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF8FAFC);
+      bg = isDark ? Colors.white.withValues(alpha: 0.03) : AppTheme.subtleSurface(context);
       border = AppTheme.border(context).withValues(alpha: 0.4);
     } else {
       bg = isDark ? AppTheme.subtleSurface(context) : Colors.white;
@@ -1614,7 +1614,7 @@ class _SheetDateRow extends StatelessWidget {
                       ? _softAccent
                       : (isDark
                           ? Colors.white.withValues(alpha: 0.05)
-                          : const Color(0xFFF1F5F9)),
+                          : AppTheme.subtleSurface(context)),
                   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Column(

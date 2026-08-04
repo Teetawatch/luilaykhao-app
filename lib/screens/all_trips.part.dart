@@ -1509,7 +1509,7 @@ class _PromotionListCard extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: AppTheme.surface(context),
                             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                           ),
                           child: Text(
@@ -1572,7 +1572,7 @@ class _SoftCircle extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: opacity),
+        color: AppTheme.surface(context).withValues(alpha: opacity),
         shape: BoxShape.circle,
       ),
     );
@@ -1590,7 +1590,7 @@ class _ExpiryChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.22),
+        color: AppTheme.surface(context).withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
       ),

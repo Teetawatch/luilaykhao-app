@@ -329,7 +329,7 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
                 top: BorderSide(
                   color: isDark
                       ? AppTheme.outlineDark.withValues(alpha: 0.7)
-                      : const Color(0xFFE2E8F0),
+                      : AppTheme.border(context),
                   width: 1,
                 ),
               ),
@@ -488,8 +488,8 @@ class _NavItemState extends State<_NavItem>
     final activeColor =
         isDark ? AppTheme.accentColor : AppTheme.primaryColor;
     final inactiveColor = isDark
-        ? const Color(0xFF64748B)
-        : const Color(0xFF94A3B8);
+        ? AppTheme.mutedText(context)
+        : AppTheme.mutedText(context);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

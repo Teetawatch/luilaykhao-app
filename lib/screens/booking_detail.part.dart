@@ -3430,7 +3430,7 @@ class _TripDayEntryCard extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: AppTheme.surface(context).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: const Icon(

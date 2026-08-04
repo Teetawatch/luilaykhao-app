@@ -77,7 +77,7 @@ class SectionTitle extends StatelessWidget {
       style: appFont(
         fontSize: AppText.sizeTitle,
         fontWeight: FontWeight.w800,
-        color: const Color(0xFF0F172A),
+        color: AppTheme.onSurface(context),
       ),
     );
   }
@@ -163,7 +163,7 @@ class EmptyState extends StatelessWidget {
             style: appFont(
               fontWeight: FontWeight.bold,
               fontSize: AppText.sizeH2,
-              color: const Color(0xFF0F172A),
+              color: AppTheme.onSurface(context),
             ),
             textAlign: TextAlign.center,
           ),
@@ -195,7 +195,7 @@ class Skeleton extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(radius),
         ),
       ),
@@ -297,7 +297,7 @@ class GlassContainer extends StatelessWidget {
             color: color.withValues(alpha: opacity),
             borderRadius: BorderRadius.circular(radius),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: AppTheme.surface(context).withValues(alpha: 0.2),
               width: 1.5,
             ),
           ),

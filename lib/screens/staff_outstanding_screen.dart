@@ -797,13 +797,13 @@ class _PaySheetState extends State<_PaySheet> {
                       version: QrVersions.auto,
                       size: 220,
                       backgroundColor: Colors.white,
-                      eyeStyle: const QrEyeStyle(
+                      eyeStyle: QrEyeStyle(
                         eyeShape: QrEyeShape.square,
-                        color: Color(0xFF0F172A),
+                        color: AppTheme.onSurface(context),
                       ),
-                      dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleStyle: QrDataModuleStyle(
                         dataModuleShape: QrDataModuleShape.square,
-                        color: Color(0xFF0F172A),
+                        color: AppTheme.onSurface(context),
                       ),
                     ),
                   ),

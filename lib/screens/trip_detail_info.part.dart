@@ -130,7 +130,7 @@ class DestinationInfoSection extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.04)
-                    : const Color(0xFFF8FAFC),
+                    : AppTheme.subtleSurface(context),
                 borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 border: Border.all(
                   color: isDark
@@ -393,7 +393,7 @@ class PhotoGallerySection extends StatelessWidget {
                     errorWidget: (_, _, _) => Container(
                       width: 120,
                       height: 160,
-                      color: const Color(0xFFE2E8F0),
+                      color: AppTheme.border(context),
                       child: const Icon(
                         Icons.landscape_rounded,
                         color: _softAccent,
@@ -586,7 +586,7 @@ class _VideoThumbCardState extends State<_VideoThumbCard> {
                 width: playSize,
                 height: playSize,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.92),
+                  color: AppTheme.surface(context).withValues(alpha: 0.92),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

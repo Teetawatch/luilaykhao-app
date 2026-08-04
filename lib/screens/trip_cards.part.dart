@@ -328,7 +328,7 @@ class _ReferenceTripCard extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.90),
+                  color: AppTheme.surface(context).withValues(alpha: 0.90),
                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Text(
@@ -757,7 +757,7 @@ class TripCard extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.92),
+                          color: AppTheme.surface(context).withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                         ),
                         child: Text(

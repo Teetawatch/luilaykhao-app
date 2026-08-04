@@ -156,7 +156,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface(context),
         body: Stack(
           children: [
             RefreshIndicator(
@@ -524,7 +524,7 @@ class _HeroHeaderState extends State<HeroHeader> {
                         width: active ? 20 : 7,
                         height: 7,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(
+                          color: AppTheme.surface(context).withValues(
                             alpha: active ? 0.95 : 0.5,
                           ),
                           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -624,7 +624,7 @@ class _HeroTopBar extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.78 * backgroundProgress),
+            color: AppTheme.surface(context).withValues(alpha: 0.78 * backgroundProgress),
             border: Border(
               bottom: BorderSide(
                 color: AppTheme.outlineColor.withValues(
@@ -648,8 +648,8 @@ class _HeroTopBar extends StatelessWidget {
                         Container(
                           width: 44,
                           height: 44,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
+                          decoration: BoxDecoration(
+                            color: AppTheme.surface(context),
                             shape: BoxShape.circle,
                           ),
                           child: ClipOval(
@@ -751,7 +751,7 @@ class _HeroTopBar extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppTheme.errorColor,
                               borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                              border: Border.all(color: Colors.white, width: 2),
+                              border: Border.all(color: AppTheme.surface(context), width: 2),
                             ),
                             child: Text(
                               notificationCount > 99
@@ -789,9 +789,9 @@ class _HomeInspiredTopSection extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       child: Column(
         children: [
@@ -852,10 +852,10 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
-          color: _focused ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+          color: _focused ? const Color(0xFF059669) : AppTheme.border(context),
           width: _focused ? 1.5 : 1,
         ),
       ),
@@ -872,7 +872,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                   key: ValueKey(_focused),
                   color: _focused
                       ? const Color(0xFF059669)
-                      : const Color(0xFF94A3B8),
+                      : AppTheme.mutedText(context),
                   size: 18,
                 ),
               ),
@@ -887,7 +887,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
               textInputAction: TextInputAction.search,
               cursorColor: const Color(0xFF059669),
               style: appFont(
-                color: const Color(0xFF0F172A),
+                color: AppTheme.onSurface(context),
                 fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w600,
               ),
@@ -895,7 +895,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                 isDense: true,
                 hintText: 'ค้นหาทริป ปลายทาง หรือกิจกรรม',
                 hintStyle: appFont(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.42),
+                  color: AppTheme.onSurface(context).withValues(alpha: 0.42),
                   fontSize: AppText.sizeBody,
                   fontWeight: FontWeight.w500,
                 ),
@@ -919,7 +919,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.18),
+                  color: AppTheme.onSurface(context).withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -980,7 +980,7 @@ class _HeroFinderChip extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.35),
+                color: AppTheme.surface(context).withValues(alpha: 0.35),
                 width: 1,
               ),
             ),
@@ -1079,7 +1079,7 @@ class _TrustHub extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                 child: Container(
-                  color: Colors.white,
+                  color: AppTheme.surface(context),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1153,16 +1153,16 @@ class _TrustHub extends StatelessWidget {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.broken_image_outlined,
                                       size: 48,
-                                      color: Color(0xFF94A3B8),
+                                      color: AppTheme.mutedText(context),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'ไม่สามารถโหลดรูปได้',
                                       style: appFont(
-                                        color: const Color(0xFF94A3B8),
+                                        color: AppTheme.mutedText(context),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1181,7 +1181,7 @@ class _TrustHub extends StatelessWidget {
                           style: appFont(
                             fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF475569),
+                            color: AppTheme.mutedText(context),
                           ),
                         ),
                       ),
@@ -1218,7 +1218,7 @@ class _TrustHub extends StatelessWidget {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.16),
+                          color: AppTheme.surface(context).withValues(alpha: 0.16),
                           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                           border: Border.all(
                             color: Colors.white.withValues(alpha: 0.24),
@@ -1291,7 +1291,7 @@ class _TrustHub extends StatelessWidget {
                 if (statCells.isNotEmpty)
                   Container(
                     width: double.infinity,
-                    color: const Color(0xFFF8FAFC),
+                    color: AppTheme.subtleSurface(context),
                     padding: const EdgeInsets.symmetric(
                       vertical: 13,
                       horizontal: 8,
@@ -1324,7 +1324,7 @@ class _TrustHub extends StatelessWidget {
                             fontSize: AppText.sizeMicro,
                             height: 1.0,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF64748B),
+                            color: AppTheme.mutedText(context),
                           ),
                         ),
                       ],
@@ -1609,7 +1609,7 @@ class _CategoryChipsSection extends StatelessWidget {
     ];
 
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(20, 20, 0, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1681,7 +1681,7 @@ class _CategoryChip extends StatelessWidget {
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? accent : const Color(0xFFF1F5F9),
+          color: isSelected ? accent : AppTheme.subtleSurface(context),
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
             color: isSelected
@@ -1703,7 +1703,7 @@ class _CategoryChip extends StatelessWidget {
                 fontSize: AppText.sizeBody,
                 height: 1.0,
                 fontWeight: FontWeight.w700,
-                color: isSelected ? Colors.white : const Color(0xFF0F172A),
+                color: isSelected ? Colors.white : AppTheme.onSurface(context),
               ),
             ),
           ],
@@ -1732,7 +1732,7 @@ class _RecentlyViewedSection extends StatelessWidget {
     if (trips.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(24, 24, 0, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1793,7 +1793,7 @@ class _AlmostFullRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(24, 16, 0, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1857,7 +1857,7 @@ class _FlashSaleRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(24, 16, 0, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1918,7 +1918,7 @@ class _PopularTripsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(24, 0, 0, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2034,7 +2034,7 @@ class _TrustCell extends StatelessWidget {
             fontSize: AppText.sizeCaption,
             height: 1.0,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF475569),
+            color: AppTheme.mutedText(context),
           ),
         ),
       ],
@@ -2098,7 +2098,7 @@ class _UpcomingDeparturesSection extends StatelessWidget {
     final shown = entries.take(6).toList();
 
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(24, 4, 0, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2231,9 +2231,9 @@ class _DepartureCard extends StatelessWidget {
         width: 280,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: AppTheme.border(context)),
         ),
         child: Row(
           children: [
@@ -2273,7 +2273,7 @@ class _DepartureCard extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.94),
+                          color: AppTheme.surface(context).withValues(alpha: 0.94),
                           borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                         ),
                         child: Text(
@@ -2303,7 +2303,7 @@ class _DepartureCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(
-                      color: const Color(0xFF0F172A),
+                      color: AppTheme.onSurface(context),
                       fontSize: AppText.sizeBody,
                       height: 1.15,
                       fontWeight: FontWeight.w800,
@@ -2313,10 +2313,10 @@ class _DepartureCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.place_rounded,
                           size: 13,
-                          color: Color(0xFF94A3B8),
+                          color: AppTheme.mutedText(context),
                         ),
                         const SizedBox(width: 2),
                         Expanded(
@@ -2325,7 +2325,7 @@ class _DepartureCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: appFont(
-                              color: const Color(0xFF475569),
+                              color: AppTheme.mutedText(context),
                               fontSize: AppText.sizeCaption,
                               fontWeight: FontWeight.w600,
                             ),
@@ -2397,7 +2397,7 @@ class _CustomerReviewsSection extends StatelessWidget {
     final items = reviews.take(8).toList();
 
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(24, 4, 0, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2495,9 +2495,9 @@ class _HomeReviewCard extends StatelessWidget {
       width: 300,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2533,7 +2533,7 @@ class _HomeReviewCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        color: const Color(0xFF0F172A),
+                        color: AppTheme.onSurface(context),
                         fontSize: AppText.sizeBody,
                         height: 1.1,
                         fontWeight: FontWeight.w800,
@@ -2568,7 +2568,7 @@ class _HomeReviewCard extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                color: const Color(0xFF475569),
+                color: AppTheme.mutedText(context),
                 fontSize: AppText.sizeLabel,
                 height: 1.45,
                 fontWeight: FontWeight.w500,
@@ -2664,16 +2664,16 @@ class _HomeReviewThumbnails extends StatelessWidget {
                     placeholder: (_, _) => Container(
                       width: _size,
                       height: _size,
-                      color: const Color(0xFFE2E8F0),
+                      color: AppTheme.border(context),
                     ),
                     errorWidget: (_, _, _) => Container(
                       width: _size,
                       height: _size,
-                      color: const Color(0xFFE2E8F0),
-                      child: const Icon(
+                      color: AppTheme.border(context),
+                      child: Icon(
                         Icons.broken_image_rounded,
                         size: 18,
-                        color: Color(0xFF94A3B8),
+                        color: AppTheme.mutedText(context),
                       ),
                     ),
                   ),
@@ -2862,7 +2862,7 @@ class _PromotionCard extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: AppTheme.surface(context).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.4),
@@ -2963,7 +2963,7 @@ class _FlashCountdownState extends State<_FlashCountdown> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.22),
+        color: AppTheme.surface(context).withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
       ),
@@ -3011,7 +3011,7 @@ class _CodeChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: AppTheme.surface(context).withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.35),
@@ -3497,7 +3497,7 @@ class _YourTripSection extends StatelessWidget {
     final more = upcoming.length - 1;
 
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3908,7 +3908,7 @@ class _GlassPill extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.18),
+            color: AppTheme.surface(context).withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
@@ -3961,7 +3961,7 @@ class _NextTripCta extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           border: highlighted
               ? null
-              : Border.all(color: Colors.white.withValues(alpha: 0.30)),
+              : Border.all(color: AppTheme.surface(context).withValues(alpha: 0.30)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -4097,7 +4097,7 @@ class _GroupTripSectionState extends State<_GroupTripSection> {
     final hasPlans = _plans.isNotEmpty;
 
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4200,9 +4200,9 @@ class _HomeGroupCard extends StatelessWidget {
         width: 244,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: AppTheme.border(context)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4417,7 +4417,7 @@ class _PromoButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: filled ? AppTheme.primaryColor : Colors.white,
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          border: filled ? null : Border.all(color: const Color(0xFFCBD5E1)),
+          border: filled ? null : Border.all(color: AppTheme.border(context)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -4674,7 +4674,7 @@ class _ReferralBannerState extends State<_ReferralBanner> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
+                  color: AppTheme.surface(context).withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: const Icon(
@@ -4721,7 +4721,7 @@ class _ReferralBannerState extends State<_ReferralBanner> {
                     height: 38,
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.surface(context),
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     ),
                     child: Row(

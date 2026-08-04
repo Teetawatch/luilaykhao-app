@@ -278,7 +278,7 @@ class _ConquestPin extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2.5),
+                border: Border.all(color: AppTheme.surface(context), width: 2.5),
               ),
               child: const Icon(
                 Icons.flag_rounded,
@@ -299,7 +299,7 @@ class _ConquestPin extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppTheme.accentColor,
                     borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    border: Border.all(color: AppTheme.surface(context), width: 1.5),
                   ),
                   child: Text(
                     '$visits',

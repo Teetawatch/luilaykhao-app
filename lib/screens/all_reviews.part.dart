@@ -342,14 +342,14 @@ class _RatingFilterBar extends StatelessWidget {
                     ? _softAccent
                     : (isDark
                           ? Colors.white.withValues(alpha: 0.06)
-                          : const Color(0xFFF1F5F9)),
+                          : AppTheme.subtleSurface(context)),
                 borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 border: Border.all(
                   color: active
                       ? _softAccent
                       : (isDark
                             ? Colors.white.withValues(alpha: 0.08)
-                            : const Color(0xFFE2E8F0)),
+                            : AppTheme.border(context)),
                 ),
               ),
               child: Row(
@@ -391,10 +391,10 @@ class _ReviewSkeleton extends StatelessWidget {
     final isDark = AppTheme.isDark(context);
     final base = isDark
         ? Colors.white.withValues(alpha: 0.05)
-        : const Color(0xFFF1F5F9);
+        : AppTheme.subtleSurface(context);
     final block = isDark
         ? Colors.white.withValues(alpha: 0.08)
-        : const Color(0xFFE2E8F0);
+        : AppTheme.border(context);
 
     Widget bar(double w, double h) => Container(
       width: w,
@@ -474,7 +474,7 @@ class _AllReviewsMessage extends StatelessWidget {
             decoration: BoxDecoration(
               color: isDark
                   ? Colors.white.withValues(alpha: 0.05)
-                  : const Color(0xFFF1F5F9),
+                  : AppTheme.subtleSurface(context),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 32, color: _mutedText),

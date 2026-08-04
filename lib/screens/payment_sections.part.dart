@@ -349,9 +349,9 @@ class _DisabledInstallmentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,13 +364,13 @@ class _DisabledInstallmentTile extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: AppTheme.border(context),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.calendar_month_rounded,
                     size: 20,
-                    color: Color(0xFF94A3B8),
+                    color: AppTheme.mutedText(context),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -380,12 +380,12 @@ class _DisabledInstallmentTile extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          const Text(
+                          Text(
                             'ผ่อนชำระ',
                             style: TextStyle(
                               fontSize: AppText.sizeSubtitle,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF94A3B8),
+                              color: AppTheme.mutedText(context),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -408,11 +408,11 @@ class _DisabledInstallmentTile extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 2),
-                      const Text(
+                      Text(
                         'ระยะเวลาไม่เพียงพอสำหรับการผ่อน',
                         style: TextStyle(
                           fontSize: AppText.sizeCaption,
-                          color: Color(0xFFCBD5E1),
+                          color: AppTheme.border(context),
                         ),
                       ),
                     ],

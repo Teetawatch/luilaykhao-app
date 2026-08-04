@@ -20,7 +20,7 @@ class TravelerCounter extends StatelessWidget {
       decoration: BoxDecoration(
         color: _fieldBackground(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1032,7 +1032,7 @@ class StickyCheckoutBar extends StatelessWidget {
                         style: FilledButton.styleFrom(
                           backgroundColor: _softAccent,
                           foregroundColor: Colors.white,
-                          disabledBackgroundColor: const Color(0xFFCBD5E1),
+                          disabledBackgroundColor: AppTheme.border(context),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                           ),

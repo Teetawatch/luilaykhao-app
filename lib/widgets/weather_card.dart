@@ -120,7 +120,7 @@ class WeatherCard extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: AppTheme.surface(context).withValues(alpha: 0.16),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(_iconFor(code), color: Colors.white, size: 30),
@@ -178,7 +178,7 @@ class WeatherCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.16),
+                color: AppTheme.surface(context).withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               ),
               child: Row(

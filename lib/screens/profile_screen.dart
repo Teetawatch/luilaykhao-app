@@ -849,7 +849,7 @@ class _BookingsShortcutCard extends StatelessWidget {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
+                      color: AppTheme.surface(context).withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                     child: const Icon(
@@ -883,7 +883,7 @@ class _BookingsShortcutCard extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.22),
+                                  color: AppTheme.surface(context).withValues(alpha: 0.22),
                                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                                 ),
                                 child: Text(
@@ -918,7 +918,7 @@ class _BookingsShortcutCard extends StatelessWidget {
                               vertical: 5,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.18),
+                              color: AppTheme.surface(context).withValues(alpha: 0.18),
                               borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             ),
                             child: Row(
@@ -1093,6 +1093,17 @@ class SettingsMenu extends StatelessWidget {
           label: 'ภาษา',
           trailing: app.locale.languageCode == 'en' ? 'English' : 'ภาษาไทย',
           onTap: () => _showLanguagePicker(context),
+        ),
+        _MenuItem(
+          icon: app.isDarkMode
+              ? Icons.dark_mode_outlined
+              : Icons.light_mode_outlined,
+          label: 'ธีมมืด',
+          trailing: app.isDarkMode ? 'เปิด' : 'ปิด',
+          onTap: () {
+            HapticFeedback.selectionClick();
+            app.toggleThemeMode();
+          },
         ),
         _MenuItem(
           icon: Icons.notifications_none_outlined,
@@ -1293,7 +1304,7 @@ class _MenuTile extends StatelessWidget {
                 Icons.chevron_right_rounded,
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.28)
-                    : const Color(0xFFCBD5E1), // iOS tertiary label grey
+                    : AppTheme.border(context), // iOS tertiary label grey
                 size: 20,
               ),
             ],
@@ -1627,7 +1638,7 @@ class _AccountActionTile extends StatelessWidget {
                 Icons.chevron_right_rounded,
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.28)
-                    : const Color(0xFFCBD5E1),
+                    : AppTheme.border(context),
                 size: 20,
               ),
             ],

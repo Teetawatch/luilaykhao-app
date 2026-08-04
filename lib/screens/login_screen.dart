@@ -471,7 +471,7 @@ class _LoginSheet extends StatelessWidget {
                           height: 4,
                           margin: const EdgeInsets.only(bottom: 24),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFCBD5E1),
+                            color: AppTheme.border(context),
                             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                           ),
                         ),
@@ -746,9 +746,9 @@ class _SocialTile extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            border: Border.all(color: AppTheme.border(context)),
           ),
           child: Column(
             children: [
@@ -793,7 +793,7 @@ class _DividerOr extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(child: Divider(color: Color(0xFFE2E8F0), height: 1)),
+        Expanded(child: Divider(color: AppTheme.border(context), height: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -805,7 +805,7 @@ class _DividerOr extends StatelessWidget {
             ),
           ),
         ),
-        const Expanded(child: Divider(color: Color(0xFFE2E8F0), height: 1)),
+        Expanded(child: Divider(color: AppTheme.border(context), height: 1)),
       ],
     );
   }
@@ -913,12 +913,12 @@ class _FieldRowState extends State<_FieldRow> {
       duration: const Duration(milliseconds: 160),
       curve: Curves.easeOut,
       decoration: BoxDecoration(
-        color: focused ? Colors.white : const Color(0xFFF8FAFC),
+        color: focused ? Colors.white : AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: focused
               ? AppTheme.primaryColor.withValues(alpha: 0.6)
-              : const Color(0xFFE2E8F0),
+              : AppTheme.border(context),
           width: focused ? 1.5 : 1,
         ),
       ),
@@ -938,7 +938,7 @@ class _FieldRowState extends State<_FieldRow> {
         decoration: InputDecoration(
           hintText: widget.hint,
           hintStyle: appFont(
-            color: const Color(0xFF94A3B8),
+            color: AppTheme.mutedText(context),
             fontSize: AppText.sizeSubtitle,
             fontWeight: FontWeight.w500,
           ),
@@ -947,7 +947,7 @@ class _FieldRowState extends State<_FieldRow> {
             child: Icon(
               widget.icon,
               size: 20,
-              color: focused ? AppTheme.primaryColor : const Color(0xFF94A3B8),
+              color: focused ? AppTheme.primaryColor : AppTheme.mutedText(context),
             ),
           ),
           prefixIconConstraints: const BoxConstraints(minWidth: 0),
@@ -977,7 +977,7 @@ class _ToggleVisibilityButton extends StatelessWidget {
       icon: Icon(
         isVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
         size: 20,
-        color: const Color(0xFF94A3B8),
+        color: AppTheme.mutedText(context),
       ),
     );
   }
@@ -1013,7 +1013,7 @@ class _LoginButtonState extends State<_LoginButton> {
           height: 54,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            color: enabled ? AppTheme.primaryColor : const Color(0xFFCBD5E1),
+            color: enabled ? AppTheme.primaryColor : AppTheme.border(context),
           ),
           child: Center(
             child: AnimatedSwitcher(
@@ -1051,7 +1051,7 @@ class _LoginButtonState extends State<_LoginButton> {
                           style: appFont(
                             color: enabled
                                 ? Colors.white
-                                : const Color(0xFF94A3B8),
+                                : AppTheme.mutedText(context),
                             fontSize: AppText.sizeTitle,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.3,
@@ -1062,7 +1062,7 @@ class _LoginButtonState extends State<_LoginButton> {
                           Icons.arrow_forward_rounded,
                           color: enabled
                               ? Colors.white
-                              : const Color(0xFF94A3B8),
+                              : AppTheme.mutedText(context),
                           size: 20,
                         ),
                       ],
@@ -1084,7 +1084,7 @@ class _LegalNote extends StatelessWidget {
       'การเข้าสู่ระบบถือว่าคุณยอมรับนโยบายความเป็นส่วนตัวและเงื่อนไขการใช้งานของเรา',
       textAlign: TextAlign.center,
       style: appFont(
-        color: const Color(0xFF94A3B8),
+        color: AppTheme.mutedText(context),
         fontSize: AppText.sizeCaption,
         height: 1.5,
         fontWeight: FontWeight.w500,
@@ -1111,7 +1111,7 @@ class _GlassBackButton extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.22),
+              color: AppTheme.surface(context).withValues(alpha: 0.22),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white.withValues(alpha: 0.30)),
             ),
@@ -1313,7 +1313,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
         decoration: InputDecoration(
           hintText: widget.hintText,
           hintStyle: appFont(
-            color: const Color(0xFF94A3B8),
+            color: AppTheme.mutedText(context),
             fontSize: AppText.sizeSubtitle,
             fontWeight: FontWeight.w500,
           ),

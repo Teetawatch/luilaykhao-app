@@ -173,7 +173,7 @@ class _HeroCard extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              color: AppTheme.surface(context).withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: const Icon(

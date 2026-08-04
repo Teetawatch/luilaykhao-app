@@ -455,12 +455,12 @@ class _TimelineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final muted = AppTheme.mutedText(context);
     final Color dotColor = stop.isDestination
-        ? const Color(0xFF0F172A)
+        ? AppTheme.onSurface(context)
         : stop.completed
             ? const Color(0xFF10B981)
             : highlighted
                 ? AppTheme.primaryColor
-                : const Color(0xFF94A3B8);
+                : AppTheme.mutedText(context);
 
     return IntrinsicHeight(
       child: Row(

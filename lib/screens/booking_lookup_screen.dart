@@ -369,7 +369,7 @@ class HeroTrackingHeader extends StatelessWidget {
               fontSize: AppText.sizeH1,
               height: 1.16,
               fontWeight: FontWeight.w900,
-              color: const Color(0xFF0F172A),
+              color: AppTheme.onSurface(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -379,7 +379,7 @@ class HeroTrackingHeader extends StatelessWidget {
               fontSize: AppText.sizeSubtitle,
               height: 1.45,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
+              color: AppTheme.mutedText(context),
             ),
           ),
         ],
@@ -410,11 +410,11 @@ class _MiniMapPreview extends StatelessWidget {
                 icon: Icons.location_on_rounded,
               ),
             ),
-            const Positioned(
+            Positioned(
               right: 30,
               top: 24,
               child: _PreviewPin(
-                color: Color(0xFF0F172A),
+                color: AppTheme.onSurface(context),
                 icon: Icons.flag_rounded,
               ),
             ),
@@ -427,7 +427,7 @@ class _MiniMapPreview extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
+                  border: Border.all(color: AppTheme.surface(context), width: 4),
                 ),
                 child: const Icon(
                   Icons.directions_bus_filled_rounded,
@@ -493,7 +493,7 @@ class _PreviewPin extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 3),
+        border: Border.all(color: AppTheme.surface(context), width: 3),
       ),
       child: Icon(icon, color: Colors.white, size: 18),
     );
@@ -556,7 +556,7 @@ class BookingCodeField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'LLK-20250409-0001',
               hintStyle: appFont(
-                color: const Color(0xFF94A3B8),
+                color: AppTheme.mutedText(context),
                 fontWeight: FontWeight.w600,
               ),
               prefixIcon: const Icon(
@@ -616,7 +616,7 @@ class PrimaryTrackButton extends StatelessWidget {
         height: 56,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-          color: enabled ? AppTheme.primaryColor : const Color(0xFFCBD5E1),
+          color: enabled ? AppTheme.primaryColor : AppTheme.border(context),
         ),
         child: FilledButton(
           onPressed: enabled ? onPressed : null,
@@ -998,7 +998,7 @@ class EntryTrackingStatusBanner extends StatelessWidget {
         title: 'ทริปหมดแล้ว',
         body: 'ทริปนี้สิ้นสุดแล้ว คุณยังดูรายละเอียดได้จากการจองของฉัน',
         action: 'ไปที่การจอง',
-        color: const Color(0xFF64748B),
+        color: AppTheme.mutedText(context),
       ),
     };
 

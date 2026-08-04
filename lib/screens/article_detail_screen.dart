@@ -226,7 +226,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
               },
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.10),
+            color: AppTheme.surface(context).withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
           ),

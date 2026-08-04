@@ -273,7 +273,7 @@ void _openAddonImage(BuildContext context, String url) {
                           color: Colors.black.withValues(alpha: 0.62),
                           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.25),
+                            color: AppTheme.surface(context).withValues(alpha: 0.25),
                           ),
                         ),
                         child: Row(
