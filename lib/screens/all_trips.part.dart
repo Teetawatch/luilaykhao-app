@@ -1364,7 +1364,7 @@ class _NumberPageButton extends StatelessWidget {
     return InkWell(
       onTap: selected ? null : onTap,
       borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-      child: Container(
+      child: MinTapTarget(child: Container(
         width: 36,
         height: 36,
         alignment: Alignment.center,
@@ -1386,7 +1386,7 @@ class _NumberPageButton extends StatelessWidget {
             letterSpacing: -0.1,
           ),
         ),
-      ),
+      )),
     );
   }
 }

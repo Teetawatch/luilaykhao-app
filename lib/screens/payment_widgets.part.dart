@@ -540,7 +540,7 @@ class _SourceTile extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       onTap: onTap,
-      child: Container(
+      child: MinTapTarget(child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: AppTheme.fieldSurface(context),
@@ -569,7 +569,7 @@ class _SourceTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 }

@@ -825,6 +825,7 @@ class _RegisterInput extends StatelessWidget {
                   color: AppTheme.mutedText(context),
                   size: 20,
                 ),
+                tooltip: isPasswordVisible ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน',
                 onPressed: onToggleVisibility,
               )
             : null,

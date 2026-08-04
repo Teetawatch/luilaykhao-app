@@ -850,13 +850,14 @@ class _StepperButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: enabled
           ? () {
               HapticFeedback.selectionClick();
               onTap!();
             }
           : null,
-      child: Container(
+      child: MinTapTarget(child: Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
@@ -873,7 +874,7 @@ class _StepperButton extends StatelessWidget {
           size: 18,
           color: enabled ? accent : AppTheme.mutedText(context).withValues(alpha: 0.4),
         ),
-      ),
+      )),
     );
   }
 }

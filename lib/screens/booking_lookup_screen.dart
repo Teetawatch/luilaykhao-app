@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../models/tracking_model.dart';
 import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
+import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
 import 'login_screen.dart';
@@ -830,7 +831,7 @@ class _RecentBookingCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         onTap: onTrack,
-        child: Container(
+        child: MinTapTarget(child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppTheme.radiusLg),
@@ -878,7 +879,7 @@ class _RecentBookingCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
+        )),
       ),
     );
   }

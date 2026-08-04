@@ -17,6 +17,7 @@ import '../providers/wishlist_provider.dart';
 
 import '../config/api_config.dart';
 import '../services/api_client.dart';
+import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/elevation_profile_chart.dart';

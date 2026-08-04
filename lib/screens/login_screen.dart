@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
+import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import 'register_screen.dart';
 
@@ -1104,8 +1105,9 @@ class _GlassBackButton extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: onPressed,
-          child: Container(
+          child: MinTapTarget(child: Container(
             width: 42,
             height: 42,
             decoration: BoxDecoration(
@@ -1118,7 +1120,7 @@ class _GlassBackButton extends StatelessWidget {
               color: Colors.white,
               size: 20,
             ),
-          ),
+          )),
         ),
       ),
     );
@@ -1363,6 +1365,7 @@ class PasswordField extends StatelessWidget {
       onSubmitted: onSubmitted,
       suffix: IconButton(
         onPressed: onToggleVisibility,
+        tooltip: isVisible ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน',
         visualDensity: VisualDensity.compact,
         icon: Icon(
           isVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,

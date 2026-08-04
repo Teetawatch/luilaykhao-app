@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import 'login_screen.dart';
@@ -1241,8 +1242,9 @@ class _GlassButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onPressed,
-      child: Container(
+      child: MinTapTarget(child: Container(
         width: 42,
         height: 42,
         decoration: BoxDecoration(
@@ -1253,7 +1255,7 @@ class _GlassButton extends StatelessWidget {
           ),
         ),
         child: Center(child: child),
-      ),
+      )),
     );
   }
 }

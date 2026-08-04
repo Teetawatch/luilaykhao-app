@@ -907,11 +907,14 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
           ),
           if (hasText)
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () {
                 widget.controller.clear();
                 _focusNode.unfocus();
               },
-              child: Container(
+              child: MinTapTarget(
+                semanticLabel: 'ล้างคำค้นหา',
+                child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 5),
                 width: 20,
                 height: 20,
@@ -924,7 +927,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                   size: 13,
                   color: Colors.white,
                 ),
-              ),
+              )),
             ),
           const SizedBox(width: 6),
           // Tonal iOS-style filter button — same visual language as the field
@@ -932,7 +935,9 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
           GestureDetector(
             onTap: widget.onFilterTap,
             behavior: HitTestBehavior.opaque,
-            child: Container(
+            child: MinTapTarget(
+              semanticLabel: 'ตัวกรองทริป',
+              child: Container(
               margin: const EdgeInsets.all(5),
               width: 32,
               height: 32,
@@ -945,7 +950,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                 color: Color(0xFF047857),
                 size: 18,
               ),
-            ),
+            )),
           ),
         ],
       ),

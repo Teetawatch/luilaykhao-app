@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/app_provider.dart';
+import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 
 /// Resolves a contact channel from `stats.contact` (returned by the backend's
@@ -171,7 +172,7 @@ class _ShortcutTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       onTap: onTap,
       onLongPress: onLongPress,
-      child: Container(
+      child: MinTapTarget(child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
@@ -221,7 +222,7 @@ class _ShortcutTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 }

@@ -216,13 +216,14 @@ class _FloatingActionIconButtonState extends State<FloatingActionIconButton> {
     return Tooltip(
       message: widget.tooltip,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTapDown: (_) => setState(() => _isPressed = true),
         onTapCancel: () => setState(() => _isPressed = false),
         onTapUp: (_) => setState(() => _isPressed = false),
         child: AnimatedScale(
           scale: _isPressed ? 0.9 : 1,
           duration: const Duration(milliseconds: 110),
-          child: Container(
+          child: MinTapTarget(child: Container(
             width: 40,
             height: 40,
             decoration: overImage
@@ -245,7 +246,7 @@ class _FloatingActionIconButtonState extends State<FloatingActionIconButton> {
                 ),
               ),
             ),
-          ),
+          )),
         ),
       ),
     );

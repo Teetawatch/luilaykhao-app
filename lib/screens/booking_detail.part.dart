@@ -796,7 +796,7 @@ class _BookingActionCard extends StatelessWidget {
           HapticFeedback.selectionClick();
           onTap();
         },
-        child: Container(
+        child: MinTapTarget(child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.07),
@@ -845,7 +845,7 @@ class _BookingActionCard extends StatelessWidget {
               Icon(Icons.chevron_right_rounded, size: 22, color: color),
             ],
           ),
-        ),
+        )),
       ),
     );
   }

@@ -10,6 +10,7 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../services/realtime_service.dart';
+import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../services/booking_draft_store.dart';
 import '../widgets/saved_traveller_picker.dart';

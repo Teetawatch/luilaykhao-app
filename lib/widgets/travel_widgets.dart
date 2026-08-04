@@ -553,6 +553,7 @@ class _LargeTitleBackButton extends StatelessWidget {
         Navigator.maybePop(context);
       },
       icon: Icon(Icons.arrow_back_ios_new_rounded, size: 19, color: color),
+      tooltip: 'ย้อนกลับ',
       splashRadius: 22,
     );
   }

@@ -542,23 +542,29 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                           Positioned(
                             top: -6,
                             right: -6,
-                            child: GestureDetector(
-                              onTap: _submitting
-                                  ? null
-                                  : () => _removeImage(index),
-                              child: Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.errorColor,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppTheme.surface(context),
-                                    width: 1.5,
+                            // A bare glyph with no text; without a label a
+                            // screen reader announces nothing at all.
+                            child: Semantics(
+                              button: true,
+                              label: 'ลบรูปนี้',
+                              child: GestureDetector(
+                                onTap: _submitting
+                                    ? null
+                                    : () => _removeImage(index),
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.errorColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppTheme.surface(context),
+                                      width: 1.5,
+                                    ),
                                   ),
+                                  child: const Icon(Icons.close_rounded,
+                                      color: Colors.white, size: 12),
                                 ),
-                                child: const Icon(Icons.close_rounded,
-                                    color: Colors.white, size: 12),
                               ),
                             ),
                           ),
@@ -664,23 +670,27 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                           Positioned(
                             top: -6,
                             right: -6,
-                            child: GestureDetector(
-                              onTap: _submitting
-                                  ? null
-                                  : () => _removeVideo(index),
-                              child: Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.errorColor,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppTheme.surface(context),
-                                    width: 1.5,
+                            child: Semantics(
+                              button: true,
+                              label: 'ลบวิดีโอนี้',
+                              child: GestureDetector(
+                                onTap: _submitting
+                                    ? null
+                                    : () => _removeVideo(index),
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.errorColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppTheme.surface(context),
+                                      width: 1.5,
+                                    ),
                                   ),
+                                  child: const Icon(Icons.close_rounded,
+                                      color: Colors.white, size: 12),
                                 ),
-                                child: const Icon(Icons.close_rounded,
-                                    color: Colors.white, size: 12),
                               ),
                             ),
                           ),

@@ -297,11 +297,11 @@ class _VehiclePhotoNavButton extends StatelessWidget {
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onPressed,
-        child: SizedBox(
+        child: MinTapTarget(child: SizedBox(
           width: 34,
           height: 34,
           child: Icon(icon, color: Colors.white, size: 24),
-        ),
+        )),
       ),
     );
   }
