@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
+import '../widgets/skeleton.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/travel_widgets.dart';
@@ -68,10 +69,7 @@ class _RefundStatusScreenState extends State<RefundStatusScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           child: _loading && _booking == null
-              ? const Padding(
-                  padding: EdgeInsets.only(top: 64),
-                  child: Center(child: CircularProgressIndicator()),
-                )
+              ? const SkeletonDetail(showHero: false)
               : _error != null
               ? _ErrorState(message: _error!, onRetry: _load)
               : _RefundBody(booking: _booking ?? const <String, dynamic>{}),

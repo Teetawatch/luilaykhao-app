@@ -8,6 +8,7 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/skeleton.dart';
 import '../theme/app_theme.dart';
 import 'incident_list_screen.dart';
 import 'report_incident_screen.dart';
@@ -256,7 +257,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
 
   Widget _buildBody(Map<String, dynamic> summary) {
     if (_loading && _data == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonList(count: 6, padding: EdgeInsets.only(top: 8));
     }
 
     if (_error != null && _data == null) {

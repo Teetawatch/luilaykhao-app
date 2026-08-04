@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/skeleton.dart';
+import '../widgets/empty_state_view.dart';
 import '../theme/app_theme.dart';
 
 /// Read-only history of incidents logged for a schedule. Closing a case is done
@@ -76,45 +78,23 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
 
   Widget _buildBody() {
     if (_loading && _incidents.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonList(count: 5, padding: EdgeInsets.only(top: 8));
     }
     if (_error != null && _incidents.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 100),
-          Center(
-            child: Text(
-              _error!,
-              style: appFont(
-                fontWeight: FontWeight.w700,
-                color: AppTheme.mutedText(context),
-              ),
-            ),
-          ),
-        ],
+      return ScrollableEmptyState(
+        icon: Icons.cloud_off_rounded,
+        title: 'โหลดรายการไม่สำเร็จ',
+        body: _error!,
+        actionLabel: 'ลองใหม่',
+        onAction: _load,
+        accent: AppTheme.errorColor,
       );
     }
     if (_incidents.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 96),
-          Icon(
-            Icons.verified_outlined,
-            size: 48,
-            color: AppTheme.mutedText(context),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              'ยังไม่มีการแจ้งเหตุในรอบนี้',
-              style: appFont(
-                fontSize: AppText.sizeSubtitle,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.mutedText(context),
-              ),
-            ),
-          ),
-        ],
+      return const ScrollableEmptyState(
+        icon: Icons.verified_outlined,
+        title: 'ยังไม่มีการแจ้งเหตุในรอบนี้',
+        body: 'ถ้าเกิดเหตุระหว่างทาง แจ้งได้จากหน้ารายชื่อผู้เดินทาง',
       );
     }
 

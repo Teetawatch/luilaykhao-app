@@ -90,3 +90,131 @@ class TripListSkeleton extends StatelessWidget {
     );
   }
 }
+
+/// A single line of placeholder text. [widthFactor] varies the run length so a
+/// stack of these reads as prose rather than as a bar chart.
+class SkeletonLine extends StatelessWidget {
+  final double widthFactor;
+  final double height;
+
+  const SkeletonLine({super.key, this.widthFactor = 1, this.height = 12});
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      alignment: Alignment.centerLeft,
+      widthFactor: widthFactor,
+      child: SkeletonBox(
+        height: height,
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+      ),
+    );
+  }
+}
+
+/// Avatar + two lines — the silhouette shared by the chat list, the
+/// notification list and the staff roster.
+class SkeletonListTile extends StatelessWidget {
+  final bool showTrailing;
+
+  const SkeletonListTile({super.key, this.showTrailing = true});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          SkeletonBox(
+            width: 44,
+            height: 44,
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLine(widthFactor: 0.45, height: 13),
+                SizedBox(height: 8),
+                SkeletonLine(widthFactor: 0.8, height: 11),
+              ],
+            ),
+          ),
+          if (showTrailing) ...[
+            const SizedBox(width: 12),
+            const SkeletonLine(widthFactor: 1, height: 11),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// [count] repeats of [item], for a list that is still loading its first page.
+class SkeletonList extends StatelessWidget {
+  final int count;
+  final Widget item;
+  final EdgeInsetsGeometry padding;
+
+  const SkeletonList({
+    super.key,
+    this.count = 6,
+    this.item = const SkeletonListTile(),
+    this.padding = EdgeInsets.zero,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: padding,
+      physics: const NeverScrollableScrollPhysics(),
+      children: List.generate(count, (_) => item),
+    );
+  }
+}
+
+/// Hero image, title, meta row and a paragraph — the first paint of a detail
+/// screen. Shows the page's real shape while the request is in flight, which
+/// reads as faster than a spinner even at identical latency.
+class SkeletonDetail extends StatelessWidget {
+  final bool showHero;
+
+  const SkeletonDetail({super.key, this.showHero = true});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        if (showHero) ...[
+          SkeletonBox(
+            height: 180,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          ),
+          const SizedBox(height: 20),
+        ],
+        const SkeletonLine(widthFactor: 0.7, height: 20),
+        const SizedBox(height: 12),
+        const SkeletonLine(widthFactor: 0.4, height: 13),
+        const SizedBox(height: 24),
+        const SkeletonLine(height: 12),
+        const SizedBox(height: 10),
+        const SkeletonLine(widthFactor: 0.95, height: 12),
+        const SizedBox(height: 10),
+        const SkeletonLine(widthFactor: 0.6, height: 12),
+        const SizedBox(height: 28),
+        SkeletonBox(
+          height: 96,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        ),
+        const SizedBox(height: 14),
+        SkeletonBox(
+          height: 96,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        ),
+      ],
+    );
+  }
+}

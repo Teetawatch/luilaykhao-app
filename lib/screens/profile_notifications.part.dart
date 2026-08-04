@@ -221,13 +221,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ),
             if (_loading && notifications.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
+              const SliverToBoxAdapter(
+                child: SkeletonList(count: 6, padding: EdgeInsets.only(top: 8)),
               )
             else if (notifications.isEmpty)
               const SliverFillRemaining(

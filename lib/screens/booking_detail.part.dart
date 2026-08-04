@@ -29,7 +29,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
         future: _future,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonDetail(showHero: false);
           }
           final booking = snapshot.data!;
           final schedule = asMap(booking['schedule']);

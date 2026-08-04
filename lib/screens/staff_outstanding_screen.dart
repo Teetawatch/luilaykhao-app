@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/skeleton.dart';
+import '../widgets/empty_state_view.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 
@@ -103,15 +105,23 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
 
   Widget _buildBody() {
     if (_loading && _items.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonList(count: 5, padding: EdgeInsets.only(top: 8));
     }
     if (_error != null && _items.isEmpty) {
-      return _centeredMessage(Icons.error_outline_rounded, _error!);
+      return ScrollableEmptyState(
+        icon: Icons.cloud_off_rounded,
+        title: 'โหลดยอดค้างชำระไม่สำเร็จ',
+        body: _error!,
+        actionLabel: 'ลองใหม่',
+        onAction: _load,
+        accent: AppTheme.errorColor,
+      );
     }
     if (_items.isEmpty) {
-      return _centeredMessage(
-        Icons.verified_rounded,
-        'ไม่มีใครค้างชำระในรอบนี้',
+      return const ScrollableEmptyState(
+        icon: Icons.verified_rounded,
+        title: 'ไม่มีใครค้างชำระในรอบนี้',
+        body: 'ทุกคนจ่ายครบแล้ว ไม่ต้องเก็บเงินหน้างาน',
       );
     }
 
@@ -193,26 +203,6 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
     );
   }
 
-  Widget _centeredMessage(IconData icon, String message) {
-    return ListView(
-      children: [
-        const SizedBox(height: 96),
-        Icon(icon, size: 48, color: AppTheme.mutedText(context)),
-        const SizedBox(height: 12),
-        Center(
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: appFont(
-              fontSize: AppText.sizeSubtitle,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.mutedText(context),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 double _num(dynamic value) => (value as num?)?.toDouble() ?? 0;

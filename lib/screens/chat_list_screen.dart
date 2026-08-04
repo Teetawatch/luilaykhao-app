@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
+import '../widgets/skeleton.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
 import 'chat_screen.dart';
@@ -73,9 +74,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
           slivers: [
             const TravelSliverAppBar(title: 'แชท', showBackButton: false),
             if (_loading && !_loadedOnce && conversations.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
+              const SliverToBoxAdapter(
+                child: SkeletonList(count: 7, padding: EdgeInsets.only(top: 8)),
               )
             else if (conversations.isEmpty)
               SliverFillRemaining(

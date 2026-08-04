@@ -2,6 +2,51 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
+/// [EmptyStateView] inside an always-scrollable viewport.
+///
+/// A screen whose body is a `RefreshIndicator` loses pull-to-refresh the moment
+/// it shows a non-scrolling empty state — exactly when the user most wants to
+/// retry. This keeps the gesture alive by giving the indicator something that
+/// still overscrolls, while the content stays vertically centred.
+class ScrollableEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? body;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final Color? accent;
+
+  const ScrollableEmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.body,
+    this.actionLabel,
+    this.onAction,
+    this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: EmptyStateView(
+            icon: icon,
+            title: title,
+            body: body,
+            actionLabel: actionLabel,
+            onAction: onAction,
+            accent: accent,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Standard empty-state visual: tinted glyph, headline, body, optional CTA.
 ///
 /// Replaces ad-hoc Column/Text combos scattered across screens so empty

@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/skeleton.dart';
+import '../widgets/empty_state_view.dart';
 import '../theme/app_theme.dart';
 import 'staff_check_in_screen.dart' show asMap, asList, textOf;
 
@@ -134,30 +136,16 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
 
   Widget _buildBody() {
     if (_loading && _data == null) {
-      return const Center(child: CircularProgressIndicator(strokeWidth: 2.5));
+      return const SkeletonList(count: 5, padding: EdgeInsets.only(top: 8));
     }
     if (_error != null) {
-      return ListView(
-        children: [
-          const SizedBox(height: 120),
-          Icon(
-            Icons.error_outline_rounded,
-            size: 44,
-            color: AppTheme.mutedText(context),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: appFont(
-                fontSize: AppText.sizeBody,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.mutedText(context),
-              ),
-            ),
-          ),
-        ],
+      return ScrollableEmptyState(
+        icon: Icons.cloud_off_rounded,
+        title: 'โหลดใบแจกอุปกรณ์ไม่สำเร็จ',
+        body: _error!,
+        actionLabel: 'ลองใหม่',
+        onAction: _load,
+        accent: AppTheme.errorColor,
       );
     }
 
@@ -166,26 +154,10 @@ class _StaffRentalsScreenState extends State<StaffRentalsScreen> {
     var bookings = asList(_data?['bookings']).map(asMap).toList();
 
     if (bookings.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 120),
-          Icon(
-            Icons.backpack_outlined,
-            size: 48,
-            color: AppTheme.mutedText(context),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              'รอบนี้ยังไม่มีใครเช่าอุปกรณ์',
-              style: appFont(
-                fontSize: AppText.sizeSubtitle,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.mutedText(context),
-              ),
-            ),
-          ),
-        ],
+      return const ScrollableEmptyState(
+        icon: Icons.backpack_outlined,
+        title: 'รอบนี้ยังไม่มีใครเช่าอุปกรณ์',
+        body: 'ไม่ต้องขนอุปกรณ์เช่าไปหน้างาน',
       );
     }
 
