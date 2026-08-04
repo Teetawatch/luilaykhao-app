@@ -68,6 +68,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   DateTime? _lastRoomFetch;
   bool _roomFetching = false;
   static const _roomRefreshGap = Duration(seconds: 8);
+  // How long before the same person can pop a "เข้าห้องแชท" notice again.
+  static const _joinedCooldown = Duration(minutes: 3);
 
   // Pinned announcement, kept in sync with room load + chat.pinned broadcasts.
   Map<String, dynamic>? _pinned;
@@ -89,9 +91,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   Timer? _typingSweeper;
   DateTime? _lastTypingSentAt;
 
-  // Transient "X เข้าห้องแชท" notices — userId → (name, expiry), swept like typing.
-  final Map<int, ({String name, DateTime until})> _joined = {};
+  // Transient "X เข้าห้องแชท" notices — userId → (name, role, expiry), swept
+  // like typing. Staff get their own wording and colour so the room can tell
+  // "ทีมงานเข้ามาแล้ว" apart from another traveller dropping in.
+  final Map<int, ({String name, String role, DateTime until})> _joined = {};
   Timer? _joinedSweeper;
+  // Last time we showed a notice for each user — someone flipping in and out of
+  // the room shouldn't keep popping the banner at everyone else.
+  final Map<int, DateTime> _joinedShownAt = {};
 
   // Unread divider: messages with id beyond this (and not mine) are "new" since
   // we opened. Captured once from our own read marker on first room load.
@@ -874,10 +881,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void _onJoinedSignal(Map<String, dynamic> data) {
     final userId = int.tryParse('${data['user_id']}');
     if (userId == null || userId == _myUserId) return;
+
+    // Cooldown per person so re-opening the room doesn't spam everyone else.
+    final now = DateTime.now();
+    final lastShown = _joinedShownAt[userId];
+    if (lastShown != null && now.difference(lastShown) < _joinedCooldown) return;
+    _joinedShownAt[userId] = now;
+
     final name = data['name']?.toString() ?? 'สมาชิก';
+    final role = data['role']?.toString() ?? 'customer';
     _joined[userId] = (
       name: name,
-      until: DateTime.now().add(const Duration(seconds: 4)),
+      role: role,
+      until: now.add(const Duration(seconds: 4)),
     );
     _ensureJoinedSweeper();
     setState(() {});
@@ -897,11 +913,23 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   String? _joinedLabel() {
     if (_joined.isEmpty) return null;
-    final names = _joined.values.map((v) => v.name).toList();
-    if (names.length == 1) return '${names.first} เข้าห้องแชท';
+    final entries = _joined.values.toList();
+    if (entries.length == 1) {
+      final one = entries.first;
+      return _isStaffRole(one.role)
+          ? 'ทีมงาน ${one.name} เข้าห้องแชทแล้ว'
+          : '${one.name} เข้าห้องแชท';
+    }
+    final names = entries.map((v) => v.name).toList();
     if (names.length == 2) return '${names[0]} และ ${names[1]} เข้าห้องแชท';
     return '${names.length} คนเข้าห้องแชท';
   }
+
+  /// True when anyone in the current notice is crew — the banner then reads as
+  /// "ทีมงานมาแล้ว" rather than a regular traveller walking in.
+  bool _joinedHasStaff() => _joined.values.any((v) => _isStaffRole(v.role));
+
+  static bool _isStaffRole(String role) => role == 'staff' || role == 'admin';
 
   void _onReactionSignal(Map<String, dynamic> data) {
     final messageId = int.tryParse('${data['message_id']}');
@@ -1684,7 +1712,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     left: 0,
                     right: 0,
                     top: 12,
-                    child: Center(child: _JoinedBanner(label: _joinedLabel()!)),
+                    child: Center(
+                      child: _JoinedBanner(
+                        label: _joinedLabel()!,
+                        isStaff: _joinedHasStaff(),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -5480,11 +5513,14 @@ class _MentionJumpChip extends StatelessWidget {
 }
 
 /// Transient floating notice shown when a member opens the room — fades in at
-/// the top of the message area and auto-clears after a few seconds.
+/// the top of the message area and auto-clears after a few seconds. Crew get a
+/// distinct colour and icon: "ทีมงานอยู่ในห้องแล้ว" is the one arrival that
+/// changes what a traveller does next (ask now, get an answer now).
 class _JoinedBanner extends StatelessWidget {
   final String label;
+  final bool isStaff;
 
-  const _JoinedBanner({required this.label});
+  const _JoinedBanner({required this.label, this.isStaff = false});
 
   @override
   Widget build(BuildContext context) {
@@ -5496,14 +5532,18 @@ class _JoinedBanner extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withValues(alpha: 0.92),
+            // Cyan-700 matches the staff tag used on bubbles and the roster.
+            color: (isStaff ? const Color(0xFF0E7490) : AppTheme.primaryColor)
+                .withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.waving_hand_rounded,
+              Icon(
+                isStaff
+                    ? Icons.support_agent_rounded
+                    : Icons.waving_hand_rounded,
                 size: 14,
                 color: Colors.white,
               ),
