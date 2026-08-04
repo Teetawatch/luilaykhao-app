@@ -2309,6 +2309,9 @@ class AppProvider extends ChangeNotifier {
     String paymentMethod = 'promptpay',
     String? transferDate,
     String? transferTime,
+    // จำนวนงวดที่หน้าจอโชว์ไว้ — ต้องส่งไปด้วย ไม่งั้นหลังบ้านใช้จำนวนงวดของรอบ
+    // แล้วยอดงวดแรกที่เรียกเก็บจะไม่ตรงกับที่ลูกค้าเห็นบน QR
+    int? installmentCount,
     required String slipImagePath,
   }) async {
     final response = await api.postMultipart(
@@ -2320,6 +2323,8 @@ class AppProvider extends ChangeNotifier {
         'payment_method': paymentMethod,
         'transfer_date': ?transferDate,
         'transfer_time': ?transferTime,
+        if (paymentType == 'installment' && installmentCount != null)
+          'installment_count': installmentCount,
       },
       files: {'slip_image': slipImagePath},
     );

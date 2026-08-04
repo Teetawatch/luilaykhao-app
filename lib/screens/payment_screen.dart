@@ -280,6 +280,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           paymentMethod: _paymentMethod,
           transferDate: transferDateStr,
           transferTime: transferTimeStr,
+          installmentCount: paymentType == 'installment'
+              ? _installmentCount(booking)
+              : null,
           slipImagePath: _slipImage!.path,
         );
       }

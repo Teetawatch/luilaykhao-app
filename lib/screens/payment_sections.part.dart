@@ -469,6 +469,7 @@ class _DepositBreakdown extends StatelessWidget {
     final balance = _balanceAmount(booking);
     final dueText = _balanceDueDateText(booking);
     final percent = _depositPercentApprox(booking);
+    final tierDiscount = _depositTierDiscountPercent(booking);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -503,6 +504,18 @@ class _DepositBreakdown extends StatelessWidget {
             highlight: false,
             warn: true,
           ),
+          if (tierDiscount > 0) ...[
+            const SizedBox(height: 10),
+            Text(
+              'ลดมัดจำให้แล้ว $tierDiscount% ตามระดับสมาชิกของคุณ',
+              style: const TextStyle(
+                fontFamily: 'anuphan',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: _accent,
+              ),
+            ),
+          ],
         ],
       ),
     );
