@@ -1625,7 +1625,7 @@ class _PassengerPhotoView extends StatelessWidget {
         elevation: 0,
         title: name.trim().isEmpty
             ? null
-            : Text(name, style: appFont(fontWeight: FontWeight.w700)),
+            : Text(name, style: appFont(fontWeight: FontWeight.w800)),
       ),
       body: GestureDetector(
         onTap: () => Navigator.of(context).pop(),

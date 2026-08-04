@@ -410,10 +410,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         foregroundColor: AppTheme.onSurface(context),
-        title: Text(
-          'ชำระเงิน',
-          style: appFont(fontWeight: FontWeight.w900),
-        ),
+        title: const Text('ชำระเงิน'),
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _future,

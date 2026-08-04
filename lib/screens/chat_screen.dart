@@ -1619,9 +1619,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: 17,
+                  fontSize: AppTheme.appBarTitleSize,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
                 ),
               ),
               Text(

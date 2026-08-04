@@ -127,10 +127,7 @@ class _ConquestMapScreenState extends State<ConquestMapScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
-        title: const Text(
-          'แผนที่พิชิต',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-        ),
+        title: const Text('แผนที่พิชิต'),
       ),
       body: _loading
           ? const _ConquestSkeleton()

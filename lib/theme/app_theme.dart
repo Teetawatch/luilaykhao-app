@@ -177,6 +177,20 @@ class AppTheme {
   static const double radiusMedium = 24;
   static const double radiusLarge = 32;
 
+  /// ขนาดหัวข้อ AppBar มาตรฐานของทั้งแอป ใช้ที่เดียวคือ [appBarTheme]
+  /// หน้าจอทั่วไปไม่ต้องกำหนดขนาดเอง ปล่อยให้รับจากธีม
+  /// หน้าที่จำเป็นต้องกำหนดสไตล์เอง (เช่น title เป็น Column พร้อมบรรทัดรอง)
+  /// ให้ใช้ [appBarTitleStyle] เพื่อให้ได้ขนาด/น้ำหนักเดียวกัน
+  static const double appBarTitleSize = 18;
+
+  static TextStyle appBarTitleStyle(BuildContext context, {Color? color}) {
+    return appFont(
+      color: color ?? onSurface(context),
+      fontSize: appBarTitleSize,
+      fontWeight: FontWeight.w800,
+    );
+  }
+
   static bool isDark(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark;
   }
@@ -254,9 +268,10 @@ class AppTheme {
         scrolledUnderElevation: 0,
         foregroundColor: textMain,
         centerTitle: true,
+        // มาตรฐานหัวข้อ AppBar ของทั้งแอป: 18 / w800 — หน้าไหนไม่ต้องกำหนดเอง
         titleTextStyle: appFont(
           color: textMain,
-          fontSize: 20,
+          fontSize: appBarTitleSize,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -350,9 +365,10 @@ class AppTheme {
         scrolledUnderElevation: 0,
         foregroundColor: darkTextMain,
         centerTitle: true,
+        // มาตรฐานหัวข้อ AppBar ของทั้งแอป: 18 / w800 — หน้าไหนไม่ต้องกำหนดเอง
         titleTextStyle: appFont(
           color: darkTextMain,
-          fontSize: 20,
+          fontSize: appBarTitleSize,
           fontWeight: FontWeight.w800,
         ),
       ),

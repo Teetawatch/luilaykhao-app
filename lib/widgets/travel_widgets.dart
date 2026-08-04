@@ -344,11 +344,7 @@ class TravelSliverAppBar extends StatelessWidget {
       centerTitle: true,
       title: Text(
         title,
-        style: appFont(
-          color: colorScheme.onSurface,
-          fontWeight: FontWeight.w800,
-          fontSize: 18,
-        ),
+        style: AppTheme.appBarTitleStyle(context, color: colorScheme.onSurface),
       ),
       leading: showBackButton && Navigator.canPop(context)
           ? Padding(

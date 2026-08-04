@@ -57,10 +57,7 @@ class _RefundStatusScreenState extends State<RefundStatusScreen> {
         elevation: 0,
         title: Text(
           'สถานะการคืนเงิน',
-          style: appFont(
-            color: AppTheme.onSurface(context),
-            fontWeight: FontWeight.w900,
-          ),
+          style: AppTheme.appBarTitleStyle(context),
         ),
         iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
       ),

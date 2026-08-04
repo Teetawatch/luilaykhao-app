@@ -298,12 +298,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
               centerTitle: true,
               title: Text(
                 'ค้นหาการจอง',
-                style: appFont(
-                  color: AppTheme.onSurface(context),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                  letterSpacing: -0.2,
-                ),
+                style: AppTheme.appBarTitleStyle(context),
               ),
               leading: Navigator.canPop(context)
                   ? IconButton(

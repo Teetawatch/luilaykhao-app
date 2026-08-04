@@ -180,10 +180,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
         title: Text(
           'การแจ้งเตือน',
-          style: appFont(
-            color: AppTheme.onSurface(context),
-            fontWeight: FontWeight.w900,
-          ),
+          style: AppTheme.appBarTitleStyle(context),
         ),
         actions: [
           _NotificationHeaderActions(

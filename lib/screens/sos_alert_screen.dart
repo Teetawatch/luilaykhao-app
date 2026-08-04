@@ -111,10 +111,8 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
       appBar: AppBar(
         backgroundColor: _sosRed,
         foregroundColor: Colors.white,
-        title: Text(
-          'สัญญาณ SOS',
-          style: appFont(fontWeight: FontWeight.w900),
-        ),
+        // ขนาด/น้ำหนักหัวข้อรับจากธีม สีรับจาก foregroundColor ด้านบน
+        title: const Text('สัญญาณ SOS'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),

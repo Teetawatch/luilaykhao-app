@@ -26,10 +26,7 @@ class WishlistScreen extends StatelessWidget {
         iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
         title: Text(
           'ทริปที่ชอบ',
-          style: appFont(
-            color: AppTheme.onSurface(context),
-            fontWeight: FontWeight.w900,
-          ),
+          style: AppTheme.appBarTitleStyle(context),
         ),
       ),
       body: items.isEmpty
