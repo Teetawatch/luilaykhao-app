@@ -34,49 +34,41 @@ MIN_MOBILE_VERSION=1.12.1
 
 ---
 
-## What's New — ภาษาไทย (App Store / Play Store)
+## What's New — ภาษาไทย (App Store Connect: "รายการใหม่ในเวอร์ชันนี้")
 
-**แก้ปัญหาแอปเปิดแล้วไม่มีข้อมูล**
-เวอร์ชันก่อนหน้ามีปัญหาทำให้แอปเชื่อมต่อกับเซิร์ฟเวอร์ไม่ได้ ทุกหน้าจึงว่างเปล่า
-รุ่นนี้แก้แล้ว ใช้งานได้ตามปกติ ต้องขออภัยอย่างยิ่งครับ
+ช่องนี้เป็นข้อความล้วน ตัวหนาและ markdown ใด ๆ จะโผล่เป็นเครื่องหมายจริง ๆ ในสโตร์
+ก้อนข้างล่างจึงไม่มี syntax ปนและตัดขึ้นบรรทัดเฉพาะที่ตั้งใจ วางได้ทั้งก้อน (1,743 ตัวอักษร จาก 4,000)
+
+```
+แก้ปัญหาแอปเปิดแล้วไม่มีข้อมูล
+เวอร์ชันก่อนหน้ามีปัญหาทำให้แอปเชื่อมต่อกับเซิร์ฟเวอร์ไม่ได้ ทุกหน้าจึงว่างเปล่า รุ่นนี้แก้แล้ว ใช้งานได้ตามปกติ ต้องขออภัยอย่างยิ่งครับ
 
 รุ่นนี้ยังรวมของใหม่ทั้งหมดที่เตรียมไว้ในรุ่นก่อนด้วย
 
-**ธีมมืด**
-เปิดได้ที่ โปรไฟล์ → การตั้งค่า → ธีมมืด แล้วทั้งแอปเปลี่ยนตาม ไม่ใช่แค่แถบด้านบน
-ตัวหนังสือ เส้นคั่น พื้นการ์ด และพื้นหลังทุกหน้าปรับสีให้อ่านสบายตาในที่มืด
-แอปจำค่าที่เลือกไว้ให้ ไม่ต้องตั้งใหม่ทุกครั้งที่เปิด
+ธีมมืด
+เปิดได้ที่ โปรไฟล์ → การตั้งค่า → ธีมมืด แล้วทั้งแอปเปลี่ยนตาม ไม่ใช่แค่แถบด้านบน ตัวหนังสือ เส้นคั่น พื้นการ์ด และพื้นหลังทุกหน้าปรับสีให้อ่านสบายตาในที่มืด แอปจำค่าที่เลือกไว้ให้ ไม่ต้องตั้งใหม่ทุกครั้งที่เปิด
 
-**ยอดที่ต้องโอนตรงกับความจริง**
-- มัดจำแบบระบุจำนวนเงินคิดต่อคน จองเป็นกลุ่มแล้วเคยขึ้นยอดของคนเดียว ตอนนี้ขึ้นยอด
-  ของทั้งกลุ่มถูกต้อง
-- ส่วนลดมัดจำตามระดับสมาชิกแสดงในรายละเอียดแล้ว บอกชัดว่าหักไปเท่าไร
-- ทุกยอดในหน้าชำระเงินอ่านมาจากเซิร์ฟเวอร์ทางเดียว แอปไม่คำนวณเองอีกต่อไป
-  ยอดที่เห็นในแอปกับยอดที่ทีมงานตรวจสลิปจึงเป็นตัวเดียวกันเสมอ
+ยอดที่ต้องโอนตรงกับความจริง
+• มัดจำแบบระบุจำนวนเงินคิดต่อคน จองเป็นกลุ่มแล้วเคยขึ้นยอดของคนเดียว ตอนนี้ขึ้นยอดของทั้งกลุ่มถูกต้อง
+• ส่วนลดมัดจำตามระดับสมาชิกแสดงในรายละเอียดแล้ว บอกชัดว่าหักไปเท่าไร
+• ทุกยอดในหน้าชำระเงินอ่านมาจากเซิร์ฟเวอร์ทางเดียว แอปไม่คำนวณเองอีกต่อไป ยอดที่เห็นในแอปกับยอดที่ทีมงานตรวจสลิปจึงเป็นตัวเดียวกันเสมอ
 
-**แก้หน้า "การจองของฉัน" ว่างเปล่า**
-ใครที่เคยไปทริปมาแล้ว เปิดหน้าการจองของฉันแล้วเจอหน้าว่าง ตอนนี้เห็นรายการครบทั้ง
-ทริปที่กำลังจะถึงและทริปที่ผ่านมาแล้ว
+แก้หน้า "การจองของฉัน" ว่างเปล่า
+ใครที่เคยไปทริปมาแล้ว เปิดหน้าการจองของฉันแล้วเจอหน้าว่าง ตอนนี้เห็นรายการครบทั้งทริปที่กำลังจะถึงและทริปที่ผ่านมาแล้ว
 
-**ห้องแชทบอกได้ว่าใครเพิ่งเข้ามา**
-ทีมงานเข้าห้องจะขึ้นข้อความแยกสีและไอคอนจากผู้ร่วมทริปทั่วไป จะได้รู้ว่าถามตอนนี้
-มีคนตอบ และถ้าใครเข้า ๆ ออก ๆ ห้อง จะไม่เด้งข้อความซ้ำกวนทั้งห้อง
+ห้องแชทบอกได้ว่าใครเพิ่งเข้ามา
+ทีมงานเข้าห้องจะขึ้นข้อความแยกสีและไอคอนจากผู้ร่วมทริปทั่วไป จะได้รู้ว่าถามตอนนี้มีคนตอบ และถ้าใครเข้า ๆ ออก ๆ ห้อง จะไม่เด้งข้อความซ้ำกวนทั้งห้อง
 
-**หน้าจอบอกรูปร่างตั้งแต่ยังโหลดไม่เสร็จ**
-หน้าที่เคยขึ้นวงกลมหมุนเปล่า ๆ ตอนนี้ขึ้นโครงของเนื้อหาที่กำลังจะมา และถ้าไม่มีข้อมูล
-หรือโหลดไม่สำเร็จ มีปุ่มลองใหม่ให้กดตรงนั้น ไม่ต้องถอยออกแล้วเข้าใหม่
+หน้าจอบอกรูปร่างตั้งแต่ยังโหลดไม่เสร็จ
+หน้าที่เคยขึ้นวงกลมหมุนเปล่า ๆ ตอนนี้ขึ้นโครงของเนื้อหาที่กำลังจะมา และถ้าไม่มีข้อมูลหรือโหลดไม่สำเร็จ มีปุ่มลองใหม่ให้กดตรงนั้น ไม่ต้องถอยออกแล้วเข้าใหม่
 
-**ปุ่มเล็กแตะง่ายขึ้น**
-ปุ่มไอคอนขนาดเล็กหลายจุดขยายพื้นที่รับการแตะให้ถึงขนาดมาตรฐาน โดยหน้าตาเท่าเดิม
-และปุ่มที่มีแต่ไอคอนมีคำอธิบายให้โปรแกรมอ่านหน้าจอแล้ว
+ปุ่มเล็กแตะง่ายขึ้น
+ปุ่มไอคอนขนาดเล็กหลายจุดขยายพื้นที่รับการแตะให้ถึงขนาดมาตรฐาน โดยหน้าตาเท่าเดิม และปุ่มที่มีแต่ไอคอนมีคำอธิบายให้โปรแกรมอ่านหน้าจอแล้ว
 
-**หน้าตาเป็นชุดเดียวกันทั้งแอป**
-- ข้อความแจ้งผลด้านล่างจอมีรูปแบบเดียวกันทุกหน้า พร้อมไอคอนบอกว่าสำเร็จหรือผิดพลาด
-  และถ้ามีข้อความใหม่ จะแทนที่อันเก่าทันที ไม่ต้องรอคิว
-- ความโค้งมุม ขนาดตัวอักษร และชุดสีทั้งแอปยุบเหลือชุดเดียว หน้าต่าง ๆ จึงดูเป็นแอป
-  เดียวกัน ไม่เหมือนคนละแอปมาต่อกัน
-
----
+หน้าตาเป็นชุดเดียวกันทั้งแอป
+• ข้อความแจ้งผลด้านล่างจอมีรูปแบบเดียวกันทุกหน้า พร้อมไอคอนบอกว่าสำเร็จหรือผิดพลาด และถ้ามีข้อความใหม่ จะแทนที่อันเก่าทันที ไม่ต้องรอคิว
+• ความโค้งมุม ขนาดตัวอักษร และชุดสีทั้งแอปยุบเหลือชุดเดียว หน้าต่าง ๆ จึงดูเป็นแอปเดียวกัน ไม่เหมือนคนละแอปมาต่อกัน
+```
 
 ## บันทึกประจำรุ่น — Google Play (th-TH)
 
@@ -104,29 +96,32 @@ Play Console จำกัด 500 ตัวอักษรต่อภาษา �
 
 ---
 
-## App Review Notes — English
+## App Review Notes — English (App Store Connect: "Notes for Review")
 
-App Store Connect จำกัดช่อง "Notes for Review" ไว้ 4000 ตัวอักษร ตัวข้างล่างนี้
-3985 ตัวอักษร (นับตั้งแต่ "About the app" ลงไป) วางได้ทั้งก้อน
+ช่องนี้เป็นข้อความล้วนเหมือนกัน ก้อนข้างล่างจึงไม่มี markdown ปน วางได้ทั้งก้อน
+(3,956 ตัวอักษร จาก 4,000)
 
-### About the app
+> ยังมี TODO: ช่องบัญชีทดสอบสำหรับผู้ตรวจ ต้องเติมก่อนส่ง
+
+```
+About the app
 Luilaykhao books guided hiking day trips in Thailand. Customers pick a departure
 date, book seats on it, and on the travel day use the app to find their pickup point
 and track the shuttle van.
 
-### Why this build exists
+Why this build exists
 1.12.1 is a hotfix. In 1.12.0 the API base URL was mangled at build time, so the app
 could not reach our server and every screen came up empty. This build restores
 connectivity and carries the features 1.12.0 was meant to deliver.
 
-### Demo account
+Demo account
 - Phone / email: <TODO: fill in reviewer test account>
 - Password: <TODO> (no OTP required)
 
 It has one upcoming and one completed booking, so booking detail, the trip-day
 screen, group chat, Trip Recap and Passport are reachable without a purchase.
 
-### Payments — no in-app purchase, by design
+Payments — no in-app purchase, by design
 Unchanged from 1.11.0. Everything sold is a real-world physical service: a seat on a
 guided trip departing on a specific date, transport, and optional physical equipment
 rental. Under Guideline 3.1.3(e)/3.1.5 these are consumed outside the app and are not
@@ -139,7 +134,7 @@ purchase path. It fixes a display bug: a fixed-amount deposit is charged per pas
 but a group booking showed only one passenger's share. Amounts now come from the
 server's payment quote.
 
-### New in this build
+New in this build
 1. The connectivity fix described above.
 2. Dark mode. Profile -> Settings -> ธีมมืด toggles the whole app, and the choice is
    persisted locally. Page text, hairlines, card fills and backgrounds resolve through
@@ -159,7 +154,7 @@ server's payment quote.
 8. Visual consistency pass: one snackbar style, and a single radius, type and colour
    scale across the app.
 
-### Permissions (unchanged from 1.11.0)
+Permissions (unchanged from 1.11.0)
 - Location (When In Use): sort pickup points by distance and show the customer next to
   the van on the tracking map. No background location is declared; vehicle GPS is
   uploaded by our separate driver app.
@@ -171,7 +166,7 @@ server's payment quote.
 - Notifications: departure reminders, payment due dates, driver-arrival and SOS alerts,
   and group chat messages.
 
-### Account and language
+Account and language
 Sign in with Apple is offered alongside phone/email. Account deletion is in-app at
 Profile -> Settings -> ลบบัญชี (Delete account), and removes the account and personal data
 server-side. The interface is Thai only and dates use the Thai Buddhist calendar; the
@@ -182,3 +177,4 @@ demo account.
 
 The tracking screen can use the Google Maps SDK when a key is supplied at build time.
 This build ships without the key and uses the same OpenStreetMap renderer as 1.11.0.
+```
