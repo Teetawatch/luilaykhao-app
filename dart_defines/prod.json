@@ -1,0 +1,7 @@
+{
+  "API_BASE_URL": "https://luilaykhao.com/api/v1",
+  "REVERB_APP_KEY": "traildive-key",
+  "REVERB_HOST": "luilaykhao.com",
+  "REVERB_PORT": "443",
+  "REVERB_SCHEME": "wss"
+}

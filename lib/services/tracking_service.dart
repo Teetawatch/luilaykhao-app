@@ -5,14 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import '../config/api_config.dart';
 import '../models/schedule_route.dart';
 import '../models/tracking_model.dart';
 
 class TrackingService {
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://luilaykhao.com/api/v1',
-  );
+  /// ที่อยู่ API มีแหล่งเดียวคือ [ApiConfig] — ก่อนหน้านี้ไฟล์นี้อ่าน
+  /// `API_BASE_URL` เองซ้ำอีกที่ ซึ่งแปลว่าถ้าค่าที่ส่งเข้ามาเพี้ยน ตรงนี้ก็
+  /// เพี้ยนตามโดยไม่ผ่านการกรองของ ApiConfig
+  static String get baseUrl => ApiConfig.baseUrl;
 
   String? authToken;
 
