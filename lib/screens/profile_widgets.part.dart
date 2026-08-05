@@ -1112,13 +1112,20 @@ Future<void> _showLanguagePicker(BuildContext context) async {
                 ),
               ),
             ),
-            for (final option in const [('th', 'ภาษาไทย'), ('en', 'English')])
+            // English ถูกปิดไว้จนกว่าจะแปลครบ: ตอนนี้มีคำแปลอยู่ไม่กี่สิบข้อความ
+            // จากทั้งแอป กดแล้วจะได้หน้าจอที่เป็นไทยเกือบทั้งหมดปนอังกฤษ ซึ่งแย่
+            // กว่าไม่มีตัวเลือกให้กด เอาออกเมื่อ lib/l10n แปลครบแล้ว
+            for (final option in const [
+              ('th', 'ภาษาไทย', true),
+              ('en', 'English', false),
+            ])
               ListTile(
+                enabled: option.$3,
                 leading: Icon(
-                  app.locale.languageCode == option.$1
+                  app.locale.languageCode == option.$1 && option.$3
                       ? Icons.check_circle_rounded
                       : Icons.circle_outlined,
-                  color: app.locale.languageCode == option.$1
+                  color: app.locale.languageCode == option.$1 && option.$3
                       ? AppTheme.primaryColor
                       : AppTheme.mutedText(sheetContext),
                 ),
@@ -1126,7 +1133,19 @@ Future<void> _showLanguagePicker(BuildContext context) async {
                   option.$2,
                   style: appFont(fontWeight: FontWeight.w800),
                 ),
-                onTap: () => Navigator.of(sheetContext).pop(option.$1),
+                subtitle: option.$3
+                    ? null
+                    : Text(
+                        'กำลังแปลอยู่ ยังใช้ไม่ได้ตอนนี้',
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedText(sheetContext),
+                        ),
+                      ),
+                onTap: option.$3
+                    ? () => Navigator.of(sheetContext).pop(option.$1)
+                    : null,
               ),
             const SizedBox(height: 12),
           ],

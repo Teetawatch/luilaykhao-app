@@ -9,6 +9,7 @@ import '../screens/gift_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/join_booking_screen.dart';
 import '../screens/payment_screen.dart';
+import '../screens/reset_password_screen.dart';
 import '../screens/trip_feed_screen.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/schedule_announcements_screen.dart';
@@ -317,12 +318,21 @@ class NotificationNavigator {
         _openGift(segments[1]);
         return true;
       }
+      // ลิงก์ตั้งรหัสผ่านใหม่จากอีเมล — เป็นหน้าเว็บใน SPA ด้วย แต่ถ้าเปิดบน
+      // เครื่องที่มีแอปอยู่ ให้จบในแอปเลย ผู้ใช้จะได้ล็อกอินต่อได้ทันที
+      if (segments.isNotEmpty && segments.first == 'reset-password') {
+        _openResetPassword(uri);
+        return true;
+      }
       return false;
     }
 
     if (uri.scheme != 'luilaykhao') return false;
 
     switch (uri.host) {
+      case 'reset-password':
+        _openResetPassword(uri);
+        return true;
       case 'trip':
         final slug = _firstSegment(uri.pathSegments);
         if (slug == null) return false;
@@ -350,6 +360,18 @@ class NotificationNavigator {
         return true;
     }
     return false;
+  }
+
+  static void _openResetPassword(Uri uri) {
+    final token = uri.queryParameters['token']?.trim() ?? '';
+    final email = uri.queryParameters['email']?.trim() ?? '';
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => ResetPasswordScreen(token: token, email: email),
+        ),
+      ),
+    );
   }
 
   static void _openGift(String code) {

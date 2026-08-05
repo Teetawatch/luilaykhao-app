@@ -438,6 +438,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 if (textOf(booking['status']) != 'cancelled')
                   BookingPhotosSection(bookingRef: widget.bookingRef),
 
+                // ใบเสร็จที่ออกไปแล้ว — ซ่อนตัวเองถ้ายังไม่มีใบไหนออก
+                BookingReceiptsSection(bookingRef: widget.bookingRef),
+
                 // Installments section
                 if (installments.isNotEmpty) ...[
                   const SizedBox(height: 16),

@@ -9,6 +9,7 @@ import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
+import '../widgets/offline_pack_card.dart';
 import '../widgets/rally_card.dart';
 import '../widgets/sos_button.dart';
 import '../widgets/travel_widgets.dart';
@@ -136,6 +137,11 @@ class TripDayScreen extends StatelessWidget {
             TrekRecorderCard(bookingRef: textOf(booking['booking_ref'])),
             const SizedBox(height: 16),
           ],
+
+          // ชุดข้อมูลออฟไลน์ — อยู่เหนือรายการที่ต้องใช้วันนี้ เพราะเป็นสิ่งที่
+          // ต้องกดตอน "ยังมีสัญญาณ" ให้เห็นก่อนที่จะสายเกินไป
+          OfflinePackCard(booking: booking),
+          const SizedBox(height: 22),
 
           const _SectionLabel('สิ่งที่ต้องใช้วันนี้'),
           const SizedBox(height: 10),

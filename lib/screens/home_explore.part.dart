@@ -1420,6 +1420,10 @@ class _HomeTopSectionState extends State<HomeTopSection> {
           HomeHeader(user: widget.user),
           const SizedBox(height: 20),
           const TripFinderEntryCard(),
+          const SizedBox(height: 12),
+          // สองทางเข้าสำหรับคนที่ยังไม่รู้ว่าอยากไปไหน — คิดจากเดือนที่ว่าง
+          // หรือคิดจากพื้นที่ ต่างจากรายการทริปด้านล่างที่ตอบว่า "รอบไหนว่าง"
+          const _DiscoveryRow(),
           const SizedBox(height: 20),
           if (widget.app.almostFullTrips.isNotEmpty) ...[
             Row(
@@ -5128,6 +5132,110 @@ class _TravelerFeedSectionState extends State<_TravelerFeedSection> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// สองปุ่มเข้าหน้าค้นหาแบบไม่ผูกกับรอบขาย: "เที่ยวไหนดี" (คิดจากเดือน/ภาค)
+/// และ "แผนที่" (คิดจากพื้นที่) — คนที่ยังไม่มีปลายทางในหัวไม่มีอะไรให้กด
+/// บนหน้าแรกเดิมเลยนอกจากเลื่อนดูรายการทริป
+class _DiscoveryRow extends StatelessWidget {
+  const _DiscoveryRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _DiscoveryTile(
+            icon: Icons.calendar_month_rounded,
+            title: 'เที่ยวไหนดี',
+            subtitle: 'ปลายทางตามเดือนที่ว่าง',
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PlacesScreen())),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _DiscoveryTile(
+            icon: Icons.map_rounded,
+            title: 'ทริปบนแผนที่',
+            subtitle: 'ดูว่าแถวไหนมีอะไร',
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const TripMapScreen())),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _DiscoveryTile(
+            icon: Icons.photo_library_rounded,
+            title: 'รูปจากคนไปจริง',
+            subtitle: 'เดือนนั้นที่นั่นเป็นยังไง',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CommunityGalleryScreen()),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DiscoveryTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _DiscoveryTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.subtleSurface(context),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 22, color: AppTheme.primaryColor),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                style: appFont(
+                  fontSize: AppText.sizeBody,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  height: 1.35,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -11,6 +11,9 @@ class ApiEndpoints {
   static const authProfile = 'auth/profile';
   static const authAccount = 'auth/account';
   static const authAppleNative = 'auth/apple/native';
+  static const authForgotPassword = 'auth/forgot-password';
+  static const authResetPassword = 'auth/reset-password';
+  static const authResendVerification = 'auth/email/resend-verification';
   static String authSocialRedirect(String provider) =>
       'auth/$provider/redirect';
 

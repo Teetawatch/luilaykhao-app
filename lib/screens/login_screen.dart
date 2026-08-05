@@ -12,6 +12,7 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -147,11 +148,13 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _handleForgotPassword() {
-    // ยังไม่มีระบบรีเซ็ตรหัสผ่านฝั่งเซิร์ฟเวอร์ — แนะนำทางเลือกที่ใช้งานได้จริง
-    // แทนการปล่อยปุ่มให้กดแล้วไม่เกิดอะไร
-    _showSnack(
-      'ลองเข้าสู่ระบบด้วย Apple หรือ Google หากจำรหัสผ่านไม่ได้ '
-      'หรือติดต่อทีมงานเพื่อขอความช่วยเหลือ',
+    // อีเมลที่พิมพ์ค้างไว้คือคำตอบของหน้าถัดไปอยู่แล้ว — ส่งต่อไปเลย
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ForgotPasswordScreen(initialEmail: _emailController.text.trim()),
+      ),
     );
   }
 

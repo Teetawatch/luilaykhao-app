@@ -69,6 +69,21 @@
                     android:scheme="luilaykhao"
                     android:host="gift"/>
             </intent-filter>
+            <!-- ลิงก์ตั้งรหัสผ่านใหม่จากอีเมล — เปิดหน้าตั้งรหัสผ่านในแอปแทนเบราว์เซอร์
+                 (ถ้า assetlinks.json ยังไม่ผ่านการตรวจ Android จะเปิดเว็บให้ตามเดิม
+                 หน้า /reset-password ใน SPA ทำงานได้เหมือนกัน จึงไม่มีทางตัน) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="luilaykhao.com"
+                    android:pathPrefix="/reset-password"/>
+                <data
+                    android:scheme="luilaykhao"
+                    android:host="reset-password"/>
+            </intent-filter>
         </activity>
         <meta-data
             android:name="flutterEmbedding"

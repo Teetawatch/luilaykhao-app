@@ -18,6 +18,7 @@ import '../services/push_notification_service.dart';
 import '../services/rating_prompt_service.dart';
 import '../services/realtime_service.dart';
 import '../services/secure_storage.dart';
+import '../services/trip_day_pack.dart';
 import '../services/version_gate_service.dart';
 
 class AppProvider extends ChangeNotifier {
@@ -674,6 +675,34 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  /// แทร็กทั้งหมดที่เคยบันทึก (ไม่มีจุดพิกัด — payload เบา ใช้ทำรายการ).
+  Future<List<Map<String, dynamic>>> myTracks() async {
+    final response = await api.get('me/tracks');
+    final data = api.data(response);
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  /// ตั้งค่าโปรไฟล์สาธารณะของตัวเอง `{enabled, handle, bio, url}`.
+  Future<Map<String, dynamic>> publicProfileSettings() async {
+    final response = await api.get('me/public-profile');
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  Future<Map<String, dynamic>> updatePublicProfile({
+    required bool enabled,
+    String? bio,
+  }) async {
+    final response = await api.put(
+      'me/public-profile',
+      body: {'enabled': enabled, 'bio': bio},
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
   /// อัปโหลดแทร็กที่บันทึกไว้ — สถิติคำนวณใหม่ฝั่งเซิร์ฟเวอร์เสมอ.
   Future<Map<String, dynamic>> uploadMyTrack(
     String bookingRef,
@@ -942,6 +971,83 @@ class AppProvider extends ChangeNotifier {
     }
   }
 
+  /// ขอลิงก์ตั้งรหัสผ่านใหม่ทางอีเมล
+  ///
+  /// ไม่ผ่าน [_auth]/busy เพราะไม่ได้ทำให้ล็อกอิน และไม่ควรทำให้ทั้งแอปขึ้น
+  /// สถานะกำลังโหลด — หน้าจอที่เรียกจัดการ loading ของตัวเอง คืนข้อความจาก
+  /// เซิร์ฟเวอร์ตรง ๆ เพราะฝั่งนั้นตั้งใจตอบข้อความเดียวกันทั้งกรณีมีและไม่มี
+  /// บัญชี (กันการไล่เดาว่าอีเมลไหนเป็นลูกค้า)
+  Future<String> requestPasswordReset(String email) async {
+    final response = await api.post(
+      ApiEndpoints.authForgotPassword,
+      body: {'email': email},
+    );
+    return _messageOf(
+      response,
+      fallback: 'ถ้าอีเมลนี้มีบัญชีอยู่ เราได้ส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้แล้วครับ',
+    );
+  }
+
+  /// ตั้งรหัสผ่านใหม่ด้วยโทเคนจากลิงก์ในอีเมล
+  ///
+  /// เซิร์ฟเวอร์ล้าง token ทั้งหมดของบัญชีนี้ทิ้ง — รวมถึงตัวที่เครื่องนี้ถืออยู่
+  /// ถ้ากำลังล็อกอินค้างไว้ จึงต้องพากลับไปหน้าเข้าสู่ระบบเอง ไม่ปล่อยให้ใช้
+  /// token ที่ตายแล้วต่อจนไปเจอ 401 กลางทาง
+  Future<String> resetPassword({
+    required String token,
+    required String email,
+    required String password,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.authResetPassword,
+      body: {
+        'token': token,
+        'email': email,
+        'password': password,
+        'password_confirmation': password,
+      },
+    );
+    if (isLoggedIn) await logout();
+    return _messageOf(
+      response,
+      fallback: 'ตั้งรหัสผ่านใหม่เรียบร้อยแล้วครับ เข้าสู่ระบบด้วยรหัสผ่านใหม่ได้เลย',
+    );
+  }
+
+  /// ส่งลิงก์ยืนยันอีเมลอีกครั้ง แล้วดึงสถานะบัญชีใหม่ (เผื่อผู้ใช้กดยืนยัน
+  /// ไปแล้วจากอีกอุปกรณ์ — จะได้ปิดแถบเตือนทันทีแทนที่จะส่งเมลซ้ำเปล่า ๆ)
+  Future<String> resendEmailVerification() async {
+    final response = await api.post(ApiEndpoints.authResendVerification);
+    try {
+      await refreshMe();
+    } catch (_) {
+      // สถานะบัญชีดึงไม่ได้ไม่ใช่เหตุให้บอกว่าส่งเมลไม่สำเร็จ
+    }
+    return _messageOf(
+      response,
+      fallback: 'ส่งลิงก์ยืนยันไปที่อีเมลของคุณแล้วครับ',
+    );
+  }
+
+  bool get isEmailVerified => user?['email_verified'] == true;
+
+  /// บัญชีที่ตั้งรหัสผ่านเองเท่านั้นที่ต้องยืนยันอีเมล — บัญชี social ที่ระบบ
+  /// สร้างอีเมลหลอกให้ (`@social.local`) ส่งเมลไปก็ไม่มีใครได้รับ
+  bool get needsEmailVerification {
+    if (!isLoggedIn || isEmailVerified) return false;
+    final email = user?['email']?.toString().toLowerCase() ?? '';
+    if (email.isEmpty || email.endsWith('@social.local')) return false;
+    return true;
+  }
+
+  String _messageOf(dynamic response, {required String fallback}) {
+    if (response is Map) {
+      final message = response['message']?.toString().trim();
+      if (message != null && message.isNotEmpty) return message;
+    }
+    return fallback;
+  }
+
   Future<void> refreshMe() async {
     final response = await api.get(ApiEndpoints.authMe);
     user = Map<String, dynamic>.from(api.data(response) as Map);
@@ -1124,6 +1230,14 @@ class AppProvider extends ChangeNotifier {
     _syncAppIconBadge();
     accountLoaded = true;
     notifyListeners();
+
+    // เตรียมชุดข้อมูลวันเดินทางไว้ใช้ตอนไม่มีสัญญาณ — ทำเงียบ ๆ ต่อท้ายและไม่
+    // ให้เกี่ยวกับผลของ loadAccountData เพราะผู้ใช้ไม่ได้สั่งและไม่ได้รออยู่
+    unawaited(
+      TripDayPack.prefetch(this).catchError((Object e) {
+        debugPrint('TripDayPack prefetch failed: $e');
+      }),
+    );
   }
 
   Future<void> loadStaffSchedules() async {
@@ -1144,6 +1258,90 @@ class AppProvider extends ChangeNotifier {
   /// served from Cloudflare R2. Returns a list of `{id, url, sort_order, ...}`.
   Future<List<Map<String, dynamic>>> bookingPhotos(String ref) async {
     final response = await api.get('bookings/$ref/photos');
+    final data = api.data(response);
+    if (data is List) {
+      return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return const [];
+  }
+
+  // ── สถานที่ (ปลายทาง) ────────────────────────────────────────────────────
+
+  /// รายการสถานที่ + ตัวเลือกฟิลเตอร์ที่ backend รองรับ
+  ///
+  /// แคชผลของ "ทั้งหมด" (ไม่มีฟิลเตอร์) ไว้ในชั้น public เพราะเป็นเนื้อหาที่ไม่
+  /// ผูกกับบัญชี และเป็นชุดที่หน้าจอเปิดขึ้นมาเห็นก่อนเสมอ
+  Future<Map<String, dynamic>> places({int? month, String? region}) async {
+    final response = await api.get(
+      'places',
+      query: {'month': ?month?.toString(), 'region': ?region},
+    );
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+
+    if (month == null && (region == null || region.isEmpty)) {
+      OfflineCache.instance.writePublic('places', data);
+    }
+
+    return data;
+  }
+
+  Map<String, dynamic>? get cachedPlaces {
+    final cached = OfflineCache.instance.readPublic<Map>('places');
+    return cached == null ? null : Map<String, dynamic>.from(cached);
+  }
+
+  Future<Map<String, dynamic>> place(String slug) async {
+    final response = await api.get('places/$slug');
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// ทริปที่มีพิกัด สำหรับหมุดบนแผนที่ — backend แคชไว้ 10 นาทีอยู่แล้ว
+  /// ที่นี่แคชอีกชั้นในเครื่องเพื่อให้เปิดแผนที่ซ้ำแล้วหมุดขึ้นทันที
+  Future<List<Map<String, dynamic>>> tripsOnMap() async {
+    final response = await api.get('trips/map');
+    final data = api.data(response);
+    final trips = (data is List ? data : const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((trip) => trip['latitude'] != null && trip['longitude'] != null)
+        .toList();
+
+    OfflineCache.instance.writePublic('trips_map', trips);
+
+    return trips;
+  }
+
+  List<Map<String, dynamic>> get cachedTripsOnMap {
+    final cached = OfflineCache.instance.readPublic<List>('trips_map');
+    if (cached == null) return const [];
+    return cached
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  /// ลิงก์อัลบั้มสาธารณะของรอบ (null เมื่อทีมงานยังไม่ได้เปิดแชร์)
+  Future<Map<String, dynamic>> bookingAlbum(String ref) async {
+    final response = await api.get('bookings/$ref/album');
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// รูปจากรีวิวของลูกค้าทุกทริป — กำแพงรูป "คนที่ไปมาแล้วเจออะไร"
+  ///
+  /// [month] คือเดือนที่ "ไปจริง" (วันออกเดินทางของรอบ) ไม่ใช่เดือนที่เขียนรีวิว
+  /// คืน `{photos: [...], has_more: bool, total: int}` ตามที่ backend ส่งมา
+  Future<Map<String, dynamic>> communityPhotos({int? month, int page = 1}) async {
+    final response = await api.get(
+      'reviews/photos',
+      query: {'month': ?month?.toString(), 'page': page, 'per_page': 30},
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// ใบเสร็จของการจอง — เอกสารจริงอยู่บนเว็บ (หน้าตรวจสอบ + PDF) ที่นี่ได้มา
+  /// แค่รายการกับลิงก์ ยังไม่มีใบเสร็จก็คืนลิสต์ว่าง (ออกตอนยืนยันการชำระ)
+  Future<List<Map<String, dynamic>>> bookingReceipts(String ref) async {
+    final response = await api.get('bookings/$ref/receipts');
     final data = api.data(response);
     if (data is List) {
       return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();

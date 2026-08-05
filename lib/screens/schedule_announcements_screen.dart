@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
+import '../services/trip_day_pack.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 
@@ -28,6 +29,7 @@ class _ScheduleAnnouncementsScreenState
     extends State<ScheduleAnnouncementsScreen> {
   List<Map<String, dynamic>> _items = const [];
   bool _loading = true;
+  bool _fromCache = false;
   String? _error;
   VoidCallback? _unsubscribe;
 
@@ -69,6 +71,18 @@ class _ScheduleAnnouncementsScreenState
 
   Future<void> _load() async {
     final app = context.read<AppProvider>();
+
+    // ของที่เตรียมไว้ก่อนออกเดินทางขึ้นก่อน แล้วค่อยทับด้วยของสด — ประกาศมัก
+    // ถูกเปิดอ่านตอนอยู่หน้างานที่ไม่มีสัญญาณ (ดู TripDayPack)
+    final cached = TripDayPack.cachedAnnouncements(widget.scheduleId);
+    if (cached.isNotEmpty && mounted) {
+      setState(() {
+        _items = cached;
+        _loading = false;
+        _fromCache = true;
+      });
+    }
+
     try {
       final data = await app.scheduleAnnouncements(widget.scheduleId);
       final list = (data['announcements'] as List? ?? [])
@@ -79,6 +93,7 @@ class _ScheduleAnnouncementsScreenState
         _items = list;
         _loading = false;
         _error = null;
+        _fromCache = false;
       });
       // เปิดอ่านแล้ว → เคลียร์ unread ฝั่ง server
       app.markAnnouncementsRead(widget.scheduleId);
@@ -86,7 +101,8 @@ class _ScheduleAnnouncementsScreenState
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        // มีของที่บันทึกไว้แล้วก็ไม่ต้องขึ้น error — ผู้ใช้ยังอ่านประกาศได้
+        _error = _items.isEmpty ? e.toString() : null;
       });
     }
   }
@@ -118,10 +134,43 @@ class _ScheduleAnnouncementsScreenState
           ],
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        color: AppTheme.primaryColor,
-        child: _buildBody(),
+      body: Column(
+        children: [
+          // บอกตรง ๆ ว่ากำลังดูของที่บันทึกไว้ ไม่ใช่ของสด
+          if (_fromCache)
+            Container(
+              width: double.infinity,
+              color: AppTheme.subtleSurface(context),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.cloud_off_rounded,
+                    size: 15,
+                    color: AppTheme.mutedText(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'กำลังแสดงประกาศที่บันทึกไว้ (ออฟไลน์)',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _load,
+              color: AppTheme.primaryColor,
+              child: _buildBody(),
+            ),
+          ),
+        ],
       ),
     );
   }

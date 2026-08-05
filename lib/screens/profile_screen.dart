@@ -45,6 +45,9 @@ import 'trip_detail_screen.dart' show TripDetailScreen;
 import 'referral_screen.dart' show ReferralScreen;
 import 'rewards_screen.dart' show RewardsScreen;
 import 'passport_screen.dart' show PassportScreen;
+import 'my_tracks_screen.dart' show MyTracksScreen;
+import 'public_profile_settings_screen.dart'
+    show PublicProfileSettingsScreen;
 
 part 'profile_edit.part.dart';
 part 'profile_bookings.part.dart';
@@ -117,6 +120,10 @@ class ProfilePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       ProfileHeader(user: user),
+                      if (app.needsEmailVerification) ...[
+                        const SizedBox(height: 16),
+                        _VerifyEmailBanner(app: app),
+                      ],
                       if (_parseProfileBirthDate(user['birth_date']) == null) ...[
                         const SizedBox(height: 16),
                         _BirthDatePromptBanner(user: user),
@@ -256,6 +263,106 @@ class ProfileHeader extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// แถบเตือน "ยังไม่ได้ยืนยันอีเมล"
+///
+/// ไม่มีอะไรถูกล็อกไว้เพราะยังไม่ยืนยัน — จองและจ่ายได้ตามปกติ สิ่งที่การยืนยัน
+/// ซื้อคือทางกลับเข้าบัญชี: ลิงก์ตั้งรหัสผ่านใหม่ส่งไปที่อีเมลบนบัญชีเท่านั้น
+/// อีเมลที่ไม่เคยพิสูจน์ว่าเป็นของจริงจึงแปลว่าบัญชีที่กู้คืนไม่ได้ ข้อความ
+/// ตรงนี้จึงชวน ไม่ขู่
+class _VerifyEmailBanner extends StatefulWidget {
+  final AppProvider app;
+
+  const _VerifyEmailBanner({required this.app});
+
+  @override
+  State<_VerifyEmailBanner> createState() => _VerifyEmailBannerState();
+}
+
+class _VerifyEmailBannerState extends State<_VerifyEmailBanner> {
+  bool _sending = false;
+
+  Future<void> _resend() async {
+    if (_sending) return;
+    setState(() => _sending = true);
+    try {
+      final message = await widget.app.resendEmailVerification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (!mounted) return;
+      _showError(context, e);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFFB45309); // amber-700 — เตือน ไม่ใช่ผิดพลาด
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.mark_email_unread_outlined, size: 22, color: accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ยังไม่ได้ยืนยันอีเมล',
+                  style: appFont(
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'ยืนยันไว้เพื่อให้กู้รหัสผ่านได้ถ้าวันหนึ่งลืม — เรามีลิงก์'
+                  'ยืนยันส่งไปให้ตอนสมัคร กดส่งใหม่ได้ถ้าหาไม่เจอครับ',
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextButton(
+                  onPressed: _sending ? null : _resend,
+                  style: TextButton.styleFrom(
+                    foregroundColor: accent,
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    _sending ? 'กำลังส่ง...' : 'ส่งลิงก์ยืนยันอีกครั้ง',
+                    style: appFont(
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w800,
+                      color: accent,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1020,6 +1127,12 @@ class TravelMenu extends StatelessWidget {
           onTap: () => _pushPremium(context, const PassportScreen()),
         ),
         _MenuItem(
+          icon: Icons.route_rounded,
+          label: 'เส้นทางที่ฉันเดิน',
+          subtitle: 'แทร็ก GPS ที่บันทึกไว้ระหว่างทริป พร้อมระยะและความสูง',
+          onTap: () => _pushPremium(context, const MyTracksScreen()),
+        ),
+        _MenuItem(
           icon: Icons.confirmation_number_outlined,
           label: 'การจองของฉัน',
           onTap: () => _pushPremium(
@@ -1092,6 +1205,7 @@ class SettingsMenu extends StatelessWidget {
           icon: Icons.language_outlined,
           label: 'ภาษา',
           trailing: app.locale.languageCode == 'en' ? 'English' : 'ภาษาไทย',
+          subtitle: 'ตอนนี้มีภาษาไทย — ฉบับภาษาอังกฤษกำลังแปลอยู่',
           onTap: () => _showLanguagePicker(context),
         ),
         _MenuItem(
@@ -1104,6 +1218,13 @@ class SettingsMenu extends StatelessWidget {
             HapticFeedback.selectionClick();
             app.toggleThemeMode();
           },
+        ),
+        _MenuItem(
+          icon: Icons.public_outlined,
+          label: 'โปรไฟล์สาธารณะ',
+          subtitle: 'เปิดหน้าโปรไฟล์นักเดินของคุณให้คนอื่นดูสถิติและตราสะสม',
+          onTap: () =>
+              _pushPremium(context, const PublicProfileSettingsScreen()),
         ),
         _MenuItem(
           icon: Icons.notifications_none_outlined,
