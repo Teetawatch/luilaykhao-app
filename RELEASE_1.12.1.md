@@ -1,24 +1,46 @@
-# Luilaykhao 1.12.0 (41) — รุ่นที่ถอนแล้ว
+# Luilaykhao 1.12.1 (43)
 
-รุ่นก่อนหน้า: 1.11.0 (40) — ตัดรุ่นเมื่อ 2026-08-04
-เนื้อหารุ่นนี้คือทุก commit หลังจาก `252d21a` (8 commit)
+รุ่นก่อนหน้า: 1.12.0 (41) — ตัดรุ่นเมื่อ 2026-08-05 แต่ **ใช้งานไม่ได้** ดู
+[RELEASE_1.12.0.md](RELEASE_1.12.0.md)
 
-> **1.12.0 (41) ใช้งานไม่ได้ ถูกแทนที่ด้วย [1.12.1](RELEASE_1.12.1.md) แล้ว**
-> คำสั่ง build โดนกลืน `\` ท้ายบรรทัด ค่า `--dart-define` ทั้งก้อนเลยไหลไปรวมอยู่ใน
-> `API_BASE_URL` แอปจึงยิง API ไม่ออกสักเส้นและทุกหน้าว่างเปล่า เนื้อหาของรุ่นนี้
-> (ธีมมืด ยอดเงิน ฯลฯ) ถูกยกไปส่งใหม่ใน 1.12.1 ทั้งหมด เอกสารฉบับนี้เก็บไว้เป็น
-> ประวัติ อย่าใช้เป็นบันทึกประจำรุ่นที่ส่งขึ้นสโตร์
+ขึ้น patch เป็น **1.12.1** ไม่ใช่ build ใหม่ของ 1.12.0 ด้วยเหตุผลสองข้อ: App Store
+ไม่รับ build ใหม่เข้าเวอร์ชันที่ปล่อยไปแล้ว และ version gate ในแอปเทียบเฉพาะเลข
+marketing version (`VersionGateService` อ่าน `PackageInfo.version` ไม่ได้ดูเลข build)
+ถ้าตัวแก้ยังชื่อ 1.12.0 เหมือนเดิม จะบังคับคนที่ติด 1.12.0 (41) ให้อัปเดตไม่ได้เลย
 
-ขึ้น minor เป็น **1.12.0** เพราะมีของใหม่ที่ผู้ใช้เห็นและเปิดใช้เองได้ (ธีมมืดทั้งแอป)
-ไม่ใช่แค่แก้บั๊ก จึงไม่ใช่ 1.11.1 และไม่มีอะไรที่เปลี่ยนพฤติกรรมเดิมหรือทำให้ของเก่า
-ใช้ไม่ได้จนต้องขึ้น 2.0.0 ส่วนที่เหลือของรุ่นนี้คือความถูกต้องของยอดเงิน การแก้หน้าจอว่าง
-และงานขัดผิวหน้าตาทั้งแอปให้เป็นชุดเดียวกัน
+เนื้อหาสำหรับผู้ใช้เท่ากับ 1.12.0 ทุกอย่าง เพราะแทบไม่มีใครได้ใช้ของในรุ่นนั้นจริง
+บวกกับตัวแก้ให้แอปกลับมาโหลดข้อมูลได้
+
+## ตัวแก้ของรุ่นนี้
+
+`API_BASE_URL` ที่เพี้ยนทำให้ 1.12.0 ยิง API ไม่ออกสักเส้น ตอนนี้กันไว้สามชั้น:
+`ApiConfig.normalizeBaseUrl` ตัดเอาเฉพาะโทเคนแรกและถอยไปใช้ URL production ถ้าค่าที่
+เหลือไม่ใช่ URL http(s) ที่ใช้ได้, `TrackingService` เลิกอ่าน `API_BASE_URL` เองซ้ำอีก
+ที่แล้วไปใช้ `ApiConfig` แหล่งเดียว, และ `./scripts/build-release.sh` อ่านค่าจาก
+`dart_defines/prod.json` แทนการพิมพ์มือ แล้วแกะไบนารีที่ได้มาตรวจว่าค่าถูกฝังจริง
+
+## หลังปล่อยรุ่นนี้ — ตั้งค่าฝั่งเซิร์ฟเวอร์
+
+ตั้งบน prod `.env` (ทั้งคู่ยังไม่เคยตั้ง ค่าปัจจุบันจึงเป็น `0.1.0` แปลว่า gate ยังหลับ):
+
+```
+LATEST_MOBILE_VERSION=1.12.1
+MIN_MOBILE_VERSION=1.12.1
+```
+
+`MIN_MOBILE_VERSION=1.12.1` คือสิ่งที่ดันคนที่ติดอยู่บน 1.12.0 ที่พังให้เห็นหน้าบังคับ
+อัปเดต ควรตั้ง**หลัง**รุ่นนี้ผ่านรีวิวและขึ้นสโตร์แล้วเท่านั้น ไม่งั้นจะล็อกผู้ใช้ไว้กับ
+หน้าที่ยังไม่มีอะไรให้ไปอัปเดต
 
 ---
 
 ## What's New — ภาษาไทย (App Store / Play Store)
 
-รอบนี้เน้นสองเรื่อง คือธีมมืดที่ใช้ได้จริงทั้งแอป และยอดเงินที่แสดงต้องตรงกับที่ต้องโอนจริง
+**แก้ปัญหาแอปเปิดแล้วไม่มีข้อมูล**
+เวอร์ชันก่อนหน้ามีปัญหาทำให้แอปเชื่อมต่อกับเซิร์ฟเวอร์ไม่ได้ ทุกหน้าจึงว่างเปล่า
+รุ่นนี้แก้แล้ว ใช้งานได้ตามปกติ ต้องขออภัยอย่างยิ่งครับ
+
+รุ่นนี้ยังรวมของใหม่ทั้งหมดที่เตรียมไว้ในรุ่นก่อนด้วย
 
 **ธีมมืด**
 เปิดได้ที่ โปรไฟล์ → การตั้งค่า → ธีมมืด แล้วทั้งแอปเปลี่ยนตาม ไม่ใช่แค่แถบด้านบน
@@ -58,11 +80,11 @@
 
 ## บันทึกประจำรุ่น — Google Play (th-TH)
 
-Play Console จำกัด 500 ตัวอักษรต่อภาษา ฉบับนี้ 479 ตัวอักษร วางในช่อง
+Play Console จำกัด 500 ตัวอักษรต่อภาษา ฉบับนี้ 475 ตัวอักษร วางในช่อง
 `<th-TH>...</th-TH>` ของ Release notes ได้เลย
 
 ```
-รอบนี้เน้นธีมมืดที่ใช้ได้จริงทั้งแอป และยอดเงินที่ต้องตรงกับที่ต้องโอนจริง
+แก้ปัญหาเวอร์ชันก่อนหน้าที่เชื่อมต่อเซิร์ฟเวอร์ไม่ได้จนทุกหน้าว่างเปล่า ต้องขออภัยอย่างยิ่งครับ รุ่นนี้รวมของใหม่ในรุ่นก่อนทั้งหมดด้วย
 
 • ธีมมืด เปิดที่ โปรไฟล์ → การตั้งค่า → ธีมมืด แล้วเปลี่ยนทั้งแอป
 • แก้ยอดมัดจำของการจองแบบกลุ่มที่เคยแสดงน้อยกว่าความจริง
@@ -70,8 +92,7 @@ Play Console จำกัด 500 ตัวอักษรต่อภาษา �
 • แก้หน้าการจองของฉันว่างเปล่าสำหรับคนที่เคยไปทริปมาแล้ว
 • แชทบอกเมื่อทีมงานเข้าห้อง
 • หน้าจอขึ้นโครงเนื้อหาระหว่างโหลด และมีปุ่มลองใหม่เมื่อโหลดไม่สำเร็จ
-• ปุ่มไอคอนเล็ก ๆ แตะง่ายขึ้นและรองรับโปรแกรมอ่านหน้าจอ
-• ปรับหน้าตาทั้งแอปให้เป็นชุดเดียวกัน
+• ปุ่มไอคอนเล็ก ๆ แตะง่ายขึ้น
 ```
 
 ### Play Console — App access
@@ -86,12 +107,17 @@ Play Console จำกัด 500 ตัวอักษรต่อภาษา �
 ## App Review Notes — English
 
 App Store Connect จำกัดช่อง "Notes for Review" ไว้ 4000 ตัวอักษร ตัวข้างล่างนี้
-3891 ตัวอักษร (นับตั้งแต่ "About the app" ลงไป) วางได้ทั้งก้อน
+3985 ตัวอักษร (นับตั้งแต่ "About the app" ลงไป) วางได้ทั้งก้อน
 
 ### About the app
 Luilaykhao books guided hiking day trips in Thailand. Customers pick a departure
 date, book seats on it, and on the travel day use the app to find their pickup point
 and track the shuttle van.
+
+### Why this build exists
+1.12.1 is a hotfix. In 1.12.0 the API base URL was mangled at build time, so the app
+could not reach our server and every screen came up empty. This build restores
+connectivity and carries the features 1.12.0 was meant to deliver.
 
 ### Demo account
 - Phone / email: <TODO: fill in reviewer test account>
@@ -110,29 +136,28 @@ is sold anywhere in the app.
 Payment is by Thai bank transfer / PromptPay QR: the app shows a QR code, the customer
 pays in their own banking app, then uploads the transfer slip. This build adds no new
 purchase path. It fixes a display bug: a fixed-amount deposit is charged per passenger,
-but a group booking was shown only one passenger's share. Amounts now come from the
-server's payment quote rather than being recomputed on the device.
+but a group booking showed only one passenger's share. Amounts now come from the
+server's payment quote.
 
 ### New in this build
-1. Dark mode. Profile -> Settings -> ธีมมืด toggles the whole app, and the choice is
+1. The connectivity fix described above.
+2. Dark mode. Profile -> Settings -> ธีมมืด toggles the whole app, and the choice is
    persisted locally. Page text, hairlines, card fills and backgrounds resolve through
    the theme; QR code backgrounds stay light on purpose, since an inverted QR will not
    scan.
-2. Payment amounts sourced from the server, as described above, including a members'
+3. Payment amounts sourced from the server, as described above, including a members'
    tier discount line in the deposit breakdown.
-3. Fixed a blank "My bookings" screen for any account with a past trip — an unbounded
-   layout constraint in the completed-trip row took the whole list down. Widget tests
-   were added for that screen.
-4. Group chat shows a distinct notice when a staff member enters the room, so customers
-   know someone can answer right now. Repeats are suppressed for three minutes per
-   person.
-5. Loading states now show a skeleton of the content instead of a bare spinner, and
+4. Fixed a blank "My bookings" screen for any account with a past trip — an unbounded
+   layout constraint in the completed-trip row took the whole list down.
+5. Group chat shows a distinct notice when a staff member enters the room, so customers
+   know someone can answer right now.
+6. Loading states now show a skeleton of the content instead of a bare spinner, and
    empty or failed loads offer a retry action in place.
-6. Accessibility: thirteen icon-only controls that were drawn under the 44pt minimum now
+7. Accessibility: thirteen icon-only controls that were drawn under the 44pt minimum now
    have a 44pt hit area (their visual size is unchanged), and icon-only buttons carry
    accessibility labels for VoiceOver.
-7. Visual consistency pass: one snackbar style with a success/error icon, and a single
-   radius, type and colour scale across the app.
+8. Visual consistency pass: one snackbar style, and a single radius, type and colour
+   scale across the app.
 
 ### Permissions (unchanged from 1.11.0)
 - Location (When In Use): sort pickup points by distance and show the customer next to
@@ -152,8 +177,8 @@ Profile -> Settings -> ลบบัญชี (Delete account), and removes the a
 server-side. The interface is Thai only and dates use the Thai Buddhist calendar; the
 market is Thailand.
 
-Equipment handout and passenger check-in are staff-only, gated by a server-side role,
-and are not reachable with the demo account.
+Equipment handout and passenger check-in are staff-only and not reachable with the
+demo account.
 
 The tracking screen can use the Google Maps SDK when a key is supplied at build time.
 This build ships without the key and uses the same OpenStreetMap renderer as 1.11.0.
