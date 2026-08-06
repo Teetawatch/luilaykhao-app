@@ -13,6 +13,10 @@ import 'package:flutter/material.dart';
 /// with `HitTestBehavior.opaque` on a [GestureDetector] so the transparent
 /// margin around the glyph is tappable too — an [InkWell] already fills its
 /// box, and gets a correctly sized ripple as a bonus.
+///
+/// **Only for children smaller than 44dp.** The box is a hard 44×44, so a
+/// full-width row or list tile wrapped in this collapses to 44dp wide and
+/// overflows its own contents. Tiles that are already big enough need nothing.
 class MinTapTarget extends StatelessWidget {
   /// The floor both platforms agree is reachable.
   static const double minSize = 44;

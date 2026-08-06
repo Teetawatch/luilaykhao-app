@@ -540,7 +540,9 @@ class _SourceTile extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       onTap: onTap,
-      child: MinTapTarget(child: Container(
+      // Already 68dp tall and full width — no MinTapTarget, which would squeeze
+      // the row into its 44dp box.
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: AppTheme.fieldSurface(context),
@@ -559,17 +561,19 @@ class _SourceTile extends StatelessWidget {
               child: Icon(icon, color: _accent, size: 22),
             ),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: appFont(
-                fontWeight: FontWeight.w800,
-                fontSize: AppText.sizeSubtitle,
-                color: AppTheme.onSurface(context),
+            Expanded(
+              child: Text(
+                label,
+                style: appFont(
+                  fontWeight: FontWeight.w800,
+                  fontSize: AppText.sizeSubtitle,
+                  color: AppTheme.onSurface(context),
+                ),
               ),
             ),
           ],
         ),
-      )),
+      ),
     );
   }
 }

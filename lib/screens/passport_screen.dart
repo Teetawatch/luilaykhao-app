@@ -10,7 +10,6 @@ import 'package:share_plus/share_plus.dart';
 
 import '../providers/app_provider.dart';
 import '../widgets/app_snack.dart';
-import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import 'conquest_map_screen.dart';
@@ -547,7 +546,7 @@ class _ConquestMapEntry extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const ConquestMapScreen()),
           );
         },
-        child: MinTapTarget(child: Container(
+        child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.subtleSurface(context),
@@ -602,7 +601,7 @@ class _ConquestMapEntry extends StatelessWidget {
               ),
             ],
           ),
-        )),
+        ),
       ),
     );
   }

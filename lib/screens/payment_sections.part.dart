@@ -1011,7 +1011,7 @@ class _TransferTimeSection extends StatelessWidget {
 // Slip upload section
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _SlipUploadSection extends StatelessWidget {
+class _SlipUploadSection extends StatefulWidget {
   final XFile? image;
   final VoidCallback onPick;
   final VoidCallback onRemove;
@@ -1023,8 +1023,74 @@ class _SlipUploadSection extends StatelessWidget {
   });
 
   @override
+  State<_SlipUploadSection> createState() => _SlipUploadSectionState();
+}
+
+class _SlipUploadSectionState extends State<_SlipUploadSection> {
+  // Slips come in every shape (bank app screenshot, cropped photo, receipt
+  // scan). We read the real pixel size so the preview box can take the image's
+  // own aspect ratio instead of letterboxing it inside a fixed frame.
+  static const double _minPreview = 200;
+  static const double _maxPreview = 380;
+
+  String? _measuredPath;
+  double? _ratio;
+
+  @override
+  void initState() {
+    super.initState();
+    _measure();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SlipUploadSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.image?.path != oldWidget.image?.path) _measure();
+  }
+
+  Future<void> _measure() async {
+    final path = widget.image?.path;
+    if (path == _measuredPath) return;
+    _measuredPath = path;
+    _ratio = null;
+    if (path == null) return;
+    try {
+      final decoded = await decodeImageFromList(await File(path).readAsBytes());
+      if (!mounted || widget.image?.path != path) return;
+      setState(() => _ratio = decoded.width / decoded.height);
+      decoded.dispose();
+    } catch (_) {
+      // Fall back to the default frame height; the image still renders.
+    }
+  }
+
+  void _openFullScreen(String path) {
+    HapticFeedback.selectionClick();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+            elevation: 0,
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4,
+              child: Image.file(File(path), fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasImage = image != null;
+    final image = widget.image;
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1037,127 +1103,265 @@ class _SlipUploadSection extends StatelessWidget {
                   title: 'แนบรูปภาพสลิป',
                 ),
               ),
-              _RequiredBadge(done: hasImage),
+              _RequiredBadge(done: image != null),
             ],
           ),
           const SizedBox(height: 14),
-          InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            onTap: onPick,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              height: hasImage ? 280 : 160,
-              width: double.infinity,
+          if (image == null) _buildEmpty(context) else _buildPreview(context, image),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmpty(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+      onTap: widget.onPick,
+      child: Container(
+        height: 160,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppTheme.fieldSurface(context),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(color: AppTheme.border(context)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: hasImage ? Colors.black : AppTheme.fieldSurface(context),
+                color: _accent.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                border: Border.all(
-                  color: hasImage
-                      ? _accent
-                      : AppTheme.border(context),
-                  width: hasImage ? 1.5 : 1,
+                border: Border.all(color: _accent.withValues(alpha: 0.20)),
+              ),
+              child: const Icon(
+                Icons.cloud_upload_rounded,
+                color: _accent,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'แตะเพื่อแนบรูปภาพสลิป',
+              style: appFont(
+                color: AppTheme.onSurface(context),
+                fontSize: AppText.sizeBody,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              'ต้องแนบทุกครั้งก่อนยืนยันการชำระเงิน',
+              style: appFont(
+                color: AppTheme.mutedText(context),
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreview(BuildContext context, XFile image) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final ratio = _ratio;
+            final natural = ratio == null || ratio <= 0
+                ? _maxPreview
+                : constraints.maxWidth / ratio;
+            final height = natural.clamp(_minPreview, _maxPreview);
+            // A tall slip gets cropped from the top rather than shrunk into a
+            // thin strip with empty bars either side.
+            final cropped = natural > _maxPreview;
+            return GestureDetector(
+              onTap: () => _openFullScreen(image.path),
+              child: Container(
+                height: height,
+                width: double.infinity,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: AppTheme.fieldSurface(context),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                  border: Border.all(color: _accent.withValues(alpha: 0.45)),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Image.file(
+                        File(image.path),
+                        fit: cropped ? BoxFit.cover : BoxFit.contain,
+                        alignment: cropped
+                            ? Alignment.topCenter
+                            : Alignment.center,
+                        errorBuilder: (_, _, _) => Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.broken_image_rounded,
+                                size: 28,
+                                color: AppTheme.mutedText(context),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'เปิดรูปสลิปไม่ได้ ลองแนบใหม่อีกครั้ง',
+                                style: appFont(
+                                  color: AppTheme.mutedText(context),
+                                  fontSize: AppText.sizeCaption,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.slate900.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusPill,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.zoom_in_rounded,
+                              color: Colors.white,
+                              size: 15,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'ดูเต็มจอ',
+                              style: appFont(
+                                color: Colors.white,
+                                fontSize: AppText.sizeCaption,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: hasImage
-                  ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                          child: Image.file(
-                            File(image!.path),
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        Positioned(
-                          right: 10,
-                          top: 10,
-                          child: IconButton.filled(
-                            onPressed: onRemove,
-                            style: IconButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: AppTheme.errorColor,
-                            ),
-                            icon: const Icon(Icons.delete_outline_rounded),
-                          ),
-                        ),
-                        Positioned(
-                          left: 12,
-                          bottom: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _accent,
-                              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.check_circle_rounded,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'พร้อมส่งตรวจสอบ',
-                                  style: appFont(
-                                    color: Colors.white,
-                                    fontSize: AppText.sizeCaption,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: _accent.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                            border: Border.all(
-                              color: _accent.withValues(alpha: 0.20),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.cloud_upload_rounded,
-                            color: _accent,
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'แตะเพื่อแนบรูปภาพสลิป',
-                          style: appFont(
-                            color: AppTheme.onSurface(context),
-                            fontSize: AppText.sizeBody,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'ต้องแนบทุกครั้งก่อนยืนยันการชำระเงิน',
-                          style: appFont(
-                            color: AppTheme.mutedText(context),
-                            fontSize: AppText.sizeCaption,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: _accent, size: 16),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'แนบสลิปแล้ว พร้อมส่งตรวจสอบ',
+                style: appFont(
+                  color: _accent,
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _SlipAction(
+                icon: Icons.autorenew_rounded,
+                label: 'เปลี่ยนรูป',
+                onTap: widget.onPick,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _SlipAction(
+                icon: Icons.delete_outline_rounded,
+                label: 'ลบรูป',
+                danger: true,
+                onTap: widget.onRemove,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SlipAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool danger;
+  final VoidCallback onTap;
+
+  const _SlipAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.danger = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger ? AppTheme.errorColor : AppTheme.onSurface(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        height: 46,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: danger
+              ? AppTheme.dangerTint(context)
+              : AppTheme.fieldSurface(context),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(
+            color: danger
+                ? AppTheme.errorColor.withValues(alpha: 0.25)
+                : AppTheme.border(context),
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 17, color: color),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  color: color,
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

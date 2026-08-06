@@ -15,7 +15,6 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/notification_navigator.dart';
-import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/active_seat_lock_overlay.dart';
@@ -185,6 +184,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SourceTile(
                 icon: Icons.photo_library_rounded,
