@@ -23,6 +23,7 @@ import UserNotifications
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     registerBadgeChannel(with: engineBridge.pluginRegistry)
+    LiveActivityChannel.register(with: engineBridge.pluginRegistry)
   }
 
   private func registerBadgeChannel(with registry: FlutterPluginRegistry) {

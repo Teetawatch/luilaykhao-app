@@ -155,6 +155,15 @@ class ApiEndpoints {
   static String notification(int id) => 'notifications/$id';
   static const notificationsPushToken = 'notifications/push-token';
 
+  // การ์ด "วันเดินทาง" บนหน้าจอล็อก / Dynamic Island (Live Activity)
+  static const liveActivities = 'live-activities';
+  static String bookingLiveActivity(String ref) =>
+      'bookings/$ref/live-activity';
+
+  // ตำแหน่งสดของเพื่อนร่วมทริป
+  static String scheduleLiveLocation(int scheduleId) =>
+      'schedules/$scheduleId/live-location';
+
   // Trip price & availability alerts (per-trip bell)
   static const tripAlerts = 'trip-alerts';
   static String tripAlert(String slug) => 'trips/$slug/alerts';

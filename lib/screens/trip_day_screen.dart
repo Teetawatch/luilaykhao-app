@@ -21,6 +21,7 @@ import 'chat_screen.dart';
 import 'pre_trip_checklist_screen.dart';
 import 'schedule_itinerary_screen.dart';
 import 'tracking_screen.dart' show TrackingMapPage;
+import 'trip_members_map_screen.dart';
 
 /// "วันเดินทาง" — a single, focused day-of hub for one confirmed booking that
 /// pulls together the things a traveller reaches for on the trip itself:
@@ -164,6 +165,26 @@ class TripDayScreen extends StatelessWidget {
                       ),
                     ),
           ),
+          // "เพื่อนอยู่ตรงไหน" — เปิดเฉพาะช่วงทริปเหมือน SOS เพราะนอกช่วงนั้นไม่มี
+          // ใครแชร์ และหน้าจอที่เปิดมาแล้วว่างเปล่าก็แค่ทำให้สับสน
+          if (_withinSosWindow && _scheduleId > 0) ...[
+            const SizedBox(height: 10),
+            _ActionTile(
+              icon: Icons.groups_rounded,
+              color: const Color(0xFF0891B2),
+              title: 'เพื่อนร่วมทริปอยู่ตรงไหน',
+              subtitle: 'แผนที่ตำแหน่งสดของคนในรอบนี้',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TripMembersMapScreen(
+                    scheduleId: _scheduleId,
+                    tripTitle: textOf(_trip['title']),
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           _ActionTile(
             icon: Icons.forum_rounded,

@@ -18,6 +18,7 @@ import '../services/push_notification_service.dart';
 import '../services/rating_prompt_service.dart';
 import '../services/realtime_service.dart';
 import '../services/secure_storage.dart';
+import '../services/trip_activity_service.dart';
 import '../services/trip_day_pack.dart';
 import '../services/version_gate_service.dart';
 
@@ -191,6 +192,7 @@ class AppProvider extends ChangeNotifier {
     _themeMode = _themeModeFromStorage(prefs.getString(_themeModeKey));
     _locale = _localeFromStorage(prefs.getString(_localeKey));
     realtime.attachApi(api);
+    TripActivityService.instance.attachApi(api);
     unawaited(ConnectivityService.instance.initialize());
     unawaited(
       VersionGateService.instance.check(api).then((result) {
@@ -1081,6 +1083,8 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     try {
+      // เก็บการ์ดวันเดินทางออกจากหน้าจอล็อกก่อน — มันผูกกับบัญชีที่กำลังจะออก
+      await TripActivityService.instance.stop();
       await PushNotificationService.instance.unregisterToken();
       if (isLoggedIn) await api.post(ApiEndpoints.authLogout);
     } catch (_) {
@@ -1236,6 +1240,16 @@ class AppProvider extends ChangeNotifier {
     unawaited(
       TripDayPack.prefetch(this).catchError((Object e) {
         debugPrint('TripDayPack prefetch failed: $e');
+      }),
+    );
+
+    // การ์ด "วันเดินทาง" บนหน้าจอล็อก — เปิดให้เองตั้งแต่วันก่อนเดินทาง ผู้ใช้ไม่
+    // ต้องรู้ว่ามีปุ่มให้กด เพราะจังหวะที่เขาต้องการมันคือจังหวะที่เขาไม่ได้เปิดแอป
+    unawaited(
+      TripActivityService.instance.syncFromBookings(bookings).catchError((
+        Object e,
+      ) {
+        debugPrint('TripActivity sync failed: $e');
       }),
     );
   }

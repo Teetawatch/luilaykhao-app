@@ -10,6 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../config/firebase_config.dart';
 import 'api_client.dart';
 import 'sos_alarm_service.dart';
+import 'trip_activity_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -37,6 +38,16 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       try {
         await FlutterLocalNotificationsPlugin().cancel(id: 9911);
       } catch (_) {}
+      return;
+    }
+
+    // การ์ด "วันเดินทาง" บน Android มาถึงเป็น data message ล้วน ๆ และต้องวาดได้
+    // แม้แอปถูกปิดไปแล้ว — ซึ่งเป็นสถานะปกติของคนที่ยืนรอรถอยู่ตอนตี 4
+    if (message.data['type'] == 'trip_activity' &&
+        defaultTargetPlatform == TargetPlatform.android) {
+      await TripActivityService.instance.handleDataMessage(
+        Map<String, dynamic>.from(message.data),
+      );
       return;
     }
 
@@ -128,6 +139,7 @@ class PushNotificationService {
   NotificationTapCallback? _onNotificationTap;
   ForegroundNotificationCallback? _onForegroundNotification;
   Map<String, dynamic>? _pendingTapData;
+  String? _liveActivityStartToken;
 
   Future<void> initialize({
     VoidCallback? onRefreshRequested,
@@ -195,6 +207,13 @@ class PushNotificationService {
         // has no `notification` block to drive _showForegroundNotification.
         // Handle it up front so the looping siren fires regardless of platform.
         final type = message.data['type']?.toString();
+        if (type == 'trip_activity') {
+          // ไม่มีอะไรให้อ่าน — เป็นข้อมูลสำหรับ "วาด" การ์ดวันเดินทางเท่านั้น
+          TripActivityService.instance.handleDataMessage(
+            Map<String, dynamic>.from(message.data),
+          );
+          return;
+        }
         if (type == 'sos_alert') {
           final senderName =
               message.data['sos_user_name']?.toString() ?? 'เพื่อนร่วมทริป';
@@ -337,13 +356,38 @@ class PushNotificationService {
     }
   }
 
+  /// Push-to-start token ของ Live Activity (iOS 17.2+) — กุญแจที่ให้เซิร์ฟเวอร์
+  /// เปิดการ์ด "วันเดินทาง" บนหน้าจอล็อกได้เองเช้าวันเดินทาง โดยลูกค้าไม่ต้องเปิดแอป
+  ///
+  /// มันเป็น token ระดับเครื่องเหมือน FCM token จึงฝากไปด้วยกันในคำขอเดียว และ
+  /// เก็บไว้ที่นี่เพื่อแนบซ้ำทุกครั้งที่ FCM token หมุน
+  Future<void> setLiveActivityStartToken(String token) async {
+    if (token.isEmpty || token == _liveActivityStartToken) return;
+    _liveActivityStartToken = token;
+
+    if (!_firebaseReady) return;
+    try {
+      final fcmToken = await _messaging.getToken();
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        await _registerToken(fcmToken);
+      }
+    } catch (e) {
+      debugPrint('Unable to register live activity start token: $e');
+    }
+  }
+
   Future<void> _registerToken(String token) async {
     final api = _api;
     if (api == null || api.token == null || api.token!.isEmpty) return;
 
     await api.post(
       'notifications/push-token',
-      body: {'token': token, 'platform': defaultTargetPlatform.name},
+      body: {
+        'token': token,
+        'platform': defaultTargetPlatform.name,
+        if (_liveActivityStartToken != null)
+          'live_activity_start_token': _liveActivityStartToken,
+      },
     );
   }
 

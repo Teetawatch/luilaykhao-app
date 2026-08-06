@@ -66,6 +66,13 @@
 		<array>
 			<string>remote-notification</string>
 		</array>
+		<!-- การ์ด "วันเดินทาง" บนหน้าจอล็อก / Dynamic Island -->
+		<key>NSSupportsLiveActivities</key>
+		<true/>
+		<!-- ยิงอัปเดตถี่ระดับนาทีได้ ไม่โดนระบบหรี่ทิ้ง — ETA ที่ช้าไป 5 นาทีคือ ETA ที่ผิด
+		     (ผู้ใช้ปิดได้เองในตั้งค่า > แอป > Live Activities) -->
+		<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+		<true/>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>
