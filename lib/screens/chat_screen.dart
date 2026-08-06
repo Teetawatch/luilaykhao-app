@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/moderation_sheet.dart';
 import '../theme/app_theme.dart';
 import '../widgets/weather_card.dart';
 import '../widgets/tier_badge.dart';
@@ -349,7 +350,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// returns can't double-paint the message.
   void _ingest(List<Map<String, dynamic>> incoming) {
     if (!mounted || incoming.isEmpty) return;
+    final app = context.read<AppProvider>();
     final fresh = incoming.where((m) {
+      // ข้อความสดที่มาทาง Reverb ไม่ผ่านตัวกรองฝั่งเซิร์ฟเวอร์ — ต้องกันเอง
+      // ตรงนี้ ไม่งั้นบล็อกไปแล้วข้อความยังเด้งเข้ามาจนกว่าจะปิดห้อง
+      final author = m['user'];
+      if (author is Map && app.isBlocked(int.tryParse('${author['id']}'))) {
+        return false;
+      }
       final id = m['id'];
       if (id != null && _messages.any((e) => e['id'] == id)) return false;
       final token = m['client_token']?.toString();
@@ -1489,10 +1497,53 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   _deleteMessage(message);
                 },
               ),
+            // รายงาน/บล็อก มีเฉพาะข้อความของคนอื่น — รายงานตัวเองไม่มีความหมาย
+            if (!isMine)
+              ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: Text('รายงาน หรือบล็อกผู้ส่ง',
+                    style: appFont(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _openModerationSheet(message);
+                },
+              ),
             const SizedBox(height: 8),
           ],
         ),
       ),
+    );
+  }
+
+  /// รายงานข้อความ หรือบล็อกคนส่ง — เมื่อบล็อกสำเร็จให้ข้อความของเขาหายจาก
+  /// ห้องทันที ไม่ต้องรอโหลดรอบใหม่
+  void _openModerationSheet(Map<String, dynamic> message) {
+    final messageId = int.tryParse('${message['id']}') ?? 0;
+    final author = message['user'] is Map
+        ? Map<String, dynamic>.from(message['user'] as Map)
+        : <String, dynamic>{};
+    final authorId = int.tryParse('${author['id']}');
+    final authorName =
+        (author['nickname']?.toString().trim().isNotEmpty ?? false)
+            ? author['nickname'].toString()
+            : author['name']?.toString() ?? '';
+
+    ModerationSheet.open(
+      context,
+      type: ModerationSheet.typeChatMessage,
+      id: messageId,
+      authorId: authorId,
+      authorName: authorName,
+      contentLabel: 'ข้อความนี้',
+      onHidden: () {
+        if (!mounted || authorId == null) return;
+        setState(() {
+          _messages.removeWhere((m) {
+            final u = m['user'];
+            return u is Map && int.tryParse('${u['id']}') == authorId;
+          });
+        });
+      },
     );
   }
 
@@ -4973,7 +5024,44 @@ class _MemberTile extends StatelessWidget {
               ),
             ),
           ],
+          // ทีมงานบล็อกไม่ได้ (ฝั่งเซิร์ฟเวอร์ก็ปฏิเสธ) — ปุ่มจึงมีเฉพาะลูกค้าด้วยกัน
+          if (!isMe && role == 'customer') _blockButton(context, name),
         ],
+      ),
+    );
+  }
+
+  Widget _blockButton(BuildContext context, String name) {
+    final userId = int.tryParse('${member['id']}');
+    if (userId == null) return const SizedBox.shrink();
+
+    final isBlocked = member['is_blocked'] == true ||
+        context.watch<AppProvider>().isBlocked(userId);
+
+    return IconButton(
+      tooltip: isBlocked ? 'เลิกบล็อก$name' : 'บล็อก$name',
+      visualDensity: VisualDensity.compact,
+      onPressed: () async {
+        final app = context.read<AppProvider>();
+        if (isBlocked) {
+          try {
+            await app.unblockUser(userId);
+            if (context.mounted) AppSnack.show(context, 'เลิกบล็อก$nameแล้ว');
+          } catch (e) {
+            if (context.mounted) {
+              AppSnack.error(context, e.toString().replaceFirst('Exception: ', ''));
+            }
+          }
+          return;
+        }
+        await ModerationSheet.confirmBlock(context, userId: userId, name: name);
+      },
+      icon: Icon(
+        isBlocked ? Icons.block_flipped : Icons.block_rounded,
+        size: 18,
+        color: isBlocked
+            ? AppTheme.errorColor
+            : AppTheme.mutedText(context).withValues(alpha: 0.7),
       ),
     );
   }

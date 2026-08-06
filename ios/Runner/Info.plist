@@ -48,8 +48,10 @@
 		<string>ใช้ Face ID เพื่อยืนยันตัวตนในการเข้าสู่ระบบแทนรหัสผ่าน</string>
 		<key>NSCameraUsageDescription</key>
 		<string>ใช้กล้องเพื่อสแกน QR และอัปโหลดหลักฐานการชำระเงิน</string>
-		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-		<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุด ติดตามรถรับส่งระหว่างทริป และแชร์ตำแหน่งให้เพื่อนร่วมทริปรอบเดียวกันเห็นเมื่อคุณเปิดสวิตช์แชร์เอง</string>
+		<!-- ขอเฉพาะ "ขณะใช้งาน" เท่านั้น — ทุกฟีเจอร์ที่ใช้ตำแหน่ง (จุดรับ, ติดตามรถ,
+		     แชร์ตำแหน่งในรอบ, บันทึกเส้นทาง) ทำงานตอนแอปเปิดอยู่ ไม่มีที่ไหนเรียก
+		     always ถ้าวันไหนทำ background tracking จริง ต้องใส่คีย์ always กลับมา
+		     พร้อม UIBackgroundModes = location -->
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุด ติดตามรถรับส่งระหว่างทริป และแชร์ตำแหน่งให้เพื่อนร่วมทริปรอบเดียวกันเห็นเมื่อคุณเปิดสวิตช์แชร์เอง</string>
 		<key>NSPhotoLibraryUsageDescription</key>
@@ -62,6 +64,10 @@
 		<string>ใช้เพื่อเพิ่มวันเดินทางของทริปลงในปฏิทินของคุณ</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
+		<!-- แอปเข้ารหัสเฉพาะ HTTPS กับ Keychain ซึ่งเข้าข่ายยกเว้นของ Apple
+		     ประกาศไว้ตรงนี้เพื่อไม่ต้องตอบคำถาม export compliance ทุกครั้งที่อัปโหลด build -->
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>remote-notification</string>

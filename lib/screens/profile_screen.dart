@@ -18,6 +18,7 @@ import '../theme/app_theme.dart';
 import '../widgets/support_shortcuts.dart';
 import '../widgets/travel_widgets.dart';
 import 'assistant_screen.dart' show AssistantScreen;
+import 'blocked_users_screen.dart' show BlockedUsersScreen;
 import 'booking_lookup_screen.dart';
 import 'customer_app_screen.dart' show BookingDetailSheet;
 import 'document_wallet_screen.dart';
@@ -1236,6 +1237,12 @@ class SettingsMenu extends StatelessWidget {
           label: 'ตั้งค่าการแจ้งเตือน',
           onTap: () =>
               _pushPremium(context, const NotificationPreferencesScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.block_outlined,
+          label: 'ผู้ใช้ที่ถูกบล็อก',
+          subtitle: 'จัดการคนที่คุณไม่อยากเห็นเนื้อหา',
+          onTap: () => _pushPremium(context, const BlockedUsersScreen()),
         ),
       ],
     );

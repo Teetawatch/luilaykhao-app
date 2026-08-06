@@ -92,6 +92,7 @@ class AppProvider extends ChangeNotifier {
 
   bool get isLoggedIn => api.token != null && api.token!.isNotEmpty;
   String? get token => api.token;
+  int? get userId => int.tryParse('${user?['id']}');
   ThemeMode get themeMode => _themeMode;
   String? get pendingSocialError => _pendingSocialError;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
@@ -231,6 +232,7 @@ class AppProvider extends ChangeNotifier {
         await loadActiveSeatLocks();
         startActiveSeatLockPolling();
         await _bindUserChannel();
+        unawaited(preloadBlockedUsers());
       }
     } catch (e) {
       error = e.toString();
@@ -1863,6 +1865,72 @@ class AppProvider extends ChangeNotifier {
       ApiEndpoints.tripPostReport(postId),
       body: {'reason': ?reason},
     );
+  }
+
+  // ─── ดูแลเนื้อหา (รายงาน / บล็อก) ───────────────────────────────────────
+
+  /// id ของผู้ใช้ที่ถูกบล็อกไว้ — เก็บไว้ในหน่วยความจำเพื่อกรองเนื้อหาที่
+  /// มาแบบเรียลไทม์ (ข้อความแชทที่ยิงผ่าน Reverb) ซึ่งเซิร์ฟเวอร์กรองให้ไม่ได้
+  final Set<int> blockedUserIds = <int>{};
+
+  bool isBlocked(int? userId) =>
+      userId != null && blockedUserIds.contains(userId);
+
+  /// รายงานเนื้อหาชิ้นหนึ่ง — [type] ต้องตรงกับ ModerationService::TYPES
+  Future<void> reportContent({
+    required String type,
+    required int id,
+    String? reason,
+    String? note,
+  }) async {
+    await api.post(ApiEndpoints.reports, body: {
+      'type': type,
+      'id': id,
+      'reason': ?reason,
+      'note': ?note,
+    });
+  }
+
+  Future<void> blockUser(int userId) async {
+    await api.post(ApiEndpoints.myBlocks, body: {'user_id': userId});
+    blockedUserIds.add(userId);
+    notifyListeners();
+  }
+
+  Future<void> unblockUser(int userId) async {
+    await api.delete(ApiEndpoints.myBlock(userId));
+    blockedUserIds.remove(userId);
+    notifyListeners();
+  }
+
+  /// รายชื่อผู้ใช้ที่ถูกบล็อก (สำหรับหน้าจัดการ) — ถือโอกาสรีเฟรช
+  /// [blockedUserIds] ให้ตรงกับเซิร์ฟเวอร์ไปด้วย
+  Future<List<Map<String, dynamic>>> blockedUsers() async {
+    final response = await api.get(ApiEndpoints.myBlocks);
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    final blocks = (data['blocks'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+
+    blockedUserIds
+      ..clear()
+      ..addAll(blocks
+          .map((b) => int.tryParse('${b['user_id']}'))
+          .whereType<int>());
+    notifyListeners();
+
+    return blocks;
+  }
+
+  /// โหลดรายการบล็อกเงียบ ๆ ตอนเปิดแอป — ถ้าล้มเหลวก็ปล่อยผ่าน
+  /// อย่างมากคือเห็นเนื้อหาที่บล็อกไว้โผล่มาแบบเรียลไทม์จนกว่าจะรีเฟรช
+  Future<void> preloadBlockedUsers() async {
+    if (!isLoggedIn) return;
+    try {
+      await blockedUsers();
+    } catch (_) {
+      // เงียบไว้ — ไม่ใช่ข้อมูลที่ต้องมีเพื่อให้แอปทำงาน
+    }
   }
 
   // ─── Split payment (แบ่งจ่ายกลุ่ม) ──────────────────────────────────────

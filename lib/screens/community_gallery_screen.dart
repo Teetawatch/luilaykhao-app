@@ -7,6 +7,7 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state_view.dart';
+import '../widgets/moderation_sheet.dart';
 import '../widgets/skeleton.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 
@@ -277,6 +278,19 @@ class _PhotoTile extends StatelessWidget {
                   builder: (_) => TripDetailScreen(slug: slug),
                 ),
               ),
+        // รูปในกำแพงนี้มาจากรีวิวของลูกค้าคนอื่น — กดค้างเพื่อรายงาน/บล็อกเจ้าของรูป
+        onLongPress: () {
+          final reviewId = int.tryParse('${photo['review_id']}') ?? 0;
+          if (reviewId <= 0) return;
+          ModerationSheet.open(
+            context,
+            type: ModerationSheet.typeReview,
+            id: reviewId,
+            authorId: int.tryParse('${photo['user_id']}'),
+            authorName: userName,
+            contentLabel: 'รูปนี้',
+          );
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

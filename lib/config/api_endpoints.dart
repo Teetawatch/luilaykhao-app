@@ -130,6 +130,11 @@ class ApiEndpoints {
       'trip-posts/$id/comments/$commentId';
   static String tripPostReport(int id) => 'trip-posts/$id/report';
 
+  // ดูแลเนื้อหา (UGC) — รายงานเนื้อหาทุกชนิด + บล็อกผู้ใช้
+  static const reports = 'reports';
+  static const myBlocks = 'me/blocks';
+  static String myBlock(int userId) => 'me/blocks/$userId';
+
   // Split payment (แบ่งจ่ายกลุ่ม)
   static String bookingSplit(String ref) => 'bookings/$ref/split';
   static String bookingSplitSharePay(String ref, int shareId) =>

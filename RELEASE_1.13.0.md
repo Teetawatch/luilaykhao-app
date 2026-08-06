@@ -21,6 +21,21 @@ notification รับ state ก้อนเดียวกัน
 **แผนที่เพื่อนร่วมทริป** — ตำแหน่งสดของคนในรอบเดียวกัน เปิด/ปิดเองทุกครั้ง เห็นเฉพาะ
 ช่วงทริป และปิดแล้วลบข้อมูลทิ้งจริง
 
+**เครื่องมือดูแลเนื้อหา (รายงาน / บล็อก)** — เพิ่มเข้ามาเพราะ App Store Guideline 1.2
+บังคับให้แอปที่มีเนื้อหาจากผู้ใช้ต้องมีครบสี่อย่าง เดิมมีปุ่มรายงานอยู่ที่เดียวคือ
+โพสต์ในฟีด ตอนนี้:
+
+| ข้อกำหนดของ Apple | ของที่มีในรุ่นนี้ |
+|---|---|
+| กรองเนื้อหาไม่เหมาะสม | `ContentFilterService` ปฏิเสธคำหยาบตั้งแต่กดส่ง (แชท/รีวิว/โพสต์/คอมเมนต์) |
+| รายงานเนื้อหาได้ | ชีตเดียวใช้ได้ทุกที่ + คิวให้แอดมินที่ `/admin/content-reports` |
+| บล็อกผู้ใช้ที่ก่อกวน | บล็อกได้จากแชท/รีวิว/ฟีด/กำแพงรูป จัดการที่ โปรไฟล์ > ผู้ใช้ที่ถูกบล็อก |
+| มีข้อมูลติดต่อ | หน้า "ติดต่อเรา" เดิม |
+
+เนื้อหาที่ถูกรายงานครบ 5 ครั้งถูกซ่อนอัตโนมัติระหว่างรอทีมงานตรวจ การบล็อกมีผล
+สองทาง — คนที่ถูกบล็อกก็ไม่เห็นเนื้อหาของคนบล็อกเช่นกัน ไม่งั้นเขาจะยังตอบโต้
+ข้อความที่อีกฝ่ายมองไม่เห็นได้
+
 ## ก่อนส่งตรวจ — สิ่งที่ต้องเช็ค
 
 - [ ] **บัญชีทดสอบสำหรับผู้ตรวจ** ยังเป็น `<TODO>` ในโน้ตข้างล่าง ต้องเติมก่อนส่ง
@@ -79,6 +94,9 @@ MIN_MOBILE_VERSION=1.12.1
 
 ห้องแชทบอกได้ว่าใครเพิ่งเข้ามา
 ทีมงานเข้าห้องจะขึ้นข้อความแยกสีและไอคอนจากผู้ร่วมทริปทั่วไป จะได้รู้ว่าถามตอนนี้มีคนตอบ และถ้าใครเข้า ๆ ออก ๆ ห้อง จะไม่เด้งข้อความซ้ำกวนทั้งห้อง
+
+ห้องแชทและรีวิวที่คุณดูแลเองได้
+กดค้างที่ข้อความ รีวิว โพสต์ หรือรูปของคนอื่น จะมีทั้งรายงานให้ทีมงานตรวจ และบล็อกคนคนนั้น บล็อกแล้วคุณจะไม่เห็นเนื้อหาของเขา และเขาก็ไม่เห็นของคุณ เลิกบล็อกได้ที่ โปรไฟล์ ไปที่ ผู้ใช้ที่ถูกบล็อก
 
 และอีกหลายจุดที่ทำให้ใช้ง่ายขึ้น
 หน้าจอที่กำลังโหลดจะขึ้นโครงของเนื้อหาแทนวงกลมหมุนเปล่า ๆ โหลดไม่สำเร็จก็กดลองใหม่ได้ตรงนั้น ปุ่มไอคอนเล็ก ๆ ทั่วแอปกดง่ายขึ้นและอ่านออกเสียงได้ด้วย VoiceOver
@@ -152,6 +170,26 @@ The location purpose strings were updated in this build to state this use explic
 
 To see it: same Travel Day screen, "เพื่อนร่วมทริปอยู่ตรงไหน". The map is readable
 without sharing anything; the switch at the bottom controls sharing.
+
+3. User-generated content and moderation (Guideline 1.2)
+The app carries content written by customers: a group chat per departure, trip reviews
+with photos and video, a post-trip photo feed, and a public photo wall built from those
+reviews. This build adds the full set of controls for it.
+
+- Filtering: a server-side word filter rejects abusive text at submission time, across
+  chat, reviews, feed posts and comments. It cannot be bypassed from the client.
+- Reporting: every piece of user content has a report action with a reason and an
+  optional note. Long-press a chat message, or use the "..." button on a review, feed
+  post or gallery photo.
+- Automatic removal: content reaches our staff queue immediately, and anything reported
+  by five different users is hidden automatically while it waits to be reviewed, so
+  offensive material does not stay visible during the response window.
+- Blocking: any customer can block another from the same menu, and manage the list under
+  Profile > ผู้ใช้ที่ถูกบล็อก (Blocked users). A block hides content in both directions
+  and suppresses push notifications between the two people. Staff and drivers cannot be
+  blocked, because they are the safety contact during a trip.
+- Contact: Profile > ติดต่อเรา (Contact us) carries our phone, email and LINE, and
+  Profile > แชทกับทีมงาน reaches our staff directly.
 
 Payments - no in-app purchase, by design
 Unchanged from 1.11.0. Everything sold is a real-world physical service: a seat on a

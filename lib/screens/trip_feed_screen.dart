@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/moderation_sheet.dart';
 import '../widgets/travel_widgets.dart';
 import '../widgets/tier_badge.dart';
 
@@ -315,7 +316,7 @@ class _TripPostCardState extends State<_TripPostCard> {
             else
               ListTile(
                 leading: const Icon(Icons.flag_outlined),
-                title: Text('รายงานโพสต์ไม่เหมาะสม',
+                title: Text('รายงาน หรือบล็อกผู้โพสต์',
                     style: appFont(fontWeight: FontWeight.w700)),
                 onTap: () => Navigator.pop(ctx, 'report'),
               ),
@@ -343,31 +344,21 @@ class _TripPostCardState extends State<_TripPostCard> {
     }
   }
 
+  /// ชีตกลางของแอป — เลือกได้ทั้งรายงานโพสต์ (พร้อมเหตุผล) และบล็อกคนโพสต์
+  /// เมื่อบล็อกแล้วโพสต์หายจากฟีดทันทีผ่าน onChanged(null)
   Future<void> _report() async {
-    final app = context.read<AppProvider>();
-    if (!app.isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เข้าสู่ระบบเพื่อรายงานโพสต์')),
-      );
-      return;
-    }
     final id = int.tryParse(textOf(post['id'])) ?? 0;
-    try {
-      await app.reportTripPost(id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ขอบคุณสำหรับการรายงาน ทีมงานจะตรวจสอบโดยเร็ว'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-        );
-      }
-    }
+    final author = asMap(post['user']);
+
+    await ModerationSheet.open(
+      context,
+      type: ModerationSheet.typeTripPost,
+      id: id,
+      authorId: int.tryParse(textOf(author['id'])),
+      authorName: textOf(author['name']),
+      contentLabel: 'โพสต์นี้',
+      onHidden: () => widget.onChanged(null),
+    );
   }
 
   @override

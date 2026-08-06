@@ -686,6 +686,7 @@ class _ReviewCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                _ReviewModerationButton(review: review),
               ],
             ),
             if (comment.isNotEmpty) ...[
@@ -1310,6 +1311,48 @@ class _TripFeedSectionState extends State<TripFeedSection> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// ปุ่ม "…" มุมขวาของการ์ดรีวิว → รายงานรีวิว หรือบล็อกคนเขียน
+///
+/// ซ่อนตัวเองบนรีวิวของผู้ใช้เอง — รายงานรีวิวตัวเองไม่มีความหมาย และ
+/// เซิร์ฟเวอร์ก็ปฏิเสธอยู่แล้ว
+class _ReviewModerationButton extends StatelessWidget {
+  final Map<String, dynamic> review;
+
+  const _ReviewModerationButton({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    final reviewId = int.tryParse(textOf(review['id'])) ?? 0;
+    final authorId = int.tryParse(textOf(review['user_id']));
+    final app = context.watch<AppProvider>();
+
+    if (reviewId <= 0) return const SizedBox.shrink();
+    if (authorId != null && authorId == app.userId) {
+      return const SizedBox.shrink();
+    }
+
+    return IconButton(
+      tooltip: 'ตัวเลือกเพิ่มเติม',
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      onPressed: () => ModerationSheet.open(
+        context,
+        type: ModerationSheet.typeReview,
+        id: reviewId,
+        authorId: authorId,
+        authorName: textOf(asMap(review['user'])['name']),
+        contentLabel: 'รีวิวนี้',
+      ),
+      icon: Icon(
+        Icons.more_horiz_rounded,
+        size: 18,
+        color: AppTheme.mutedText(context),
       ),
     );
   }
