@@ -1,0 +1,16 @@
+// เวอร์ชันของ extension ต้องมาจากที่เดียวกับตัวแอป — pubspec.yaml
+//
+// Flutter เขียนเลขเวอร์ชันลง Flutter/Generated.xcconfig ใหม่ทุกครั้งที่บิลด์ แต่
+// ไฟล์นั้นเป็นของเป้าหมาย Runner เท่านั้น extension จึงต้องดึงเข้ามาเอง ไม่งั้น
+// CFBundleVersion/CFBundleShortVersionString จะว่าง แล้ว iOS ปฏิเสธการติดตั้งด้วย
+// ข้อความ "Invalid placeholder attributes" ซึ่งไม่ได้บอกเลยว่าขาดคีย์ไหน
+//
+// ตั้งใจไม่ include Pods-Runner.xcconfig ที่ Runner ใช้ — นั่นจะลาก Flutter.framework
+// และ pod ทั้งหมดเข้ามาใน extension ที่วาด SwiftUI ล้วน ๆ
+
+// ค่าสำรองเผื่อยังไม่เคยรัน flutter build (Generated.xcconfig ยังไม่ถูกสร้าง)
+// ต้องอยู่ "ก่อน" include เพราะบรรทัดหลังทับบรรทัดหน้าเสมอ
+FLUTTER_BUILD_NAME=1.0.0
+FLUTTER_BUILD_NUMBER=1
+
+#include? "../Flutter/Generated.xcconfig"

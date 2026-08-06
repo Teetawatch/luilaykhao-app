@@ -20,6 +20,7 @@ DEPLOYMENT_TARGET = '16.2'
 # ไฟล์นี้ต้องอยู่ในทั้งสองเป้าหมาย — Runner ใช้ตอนเปิดการ์ด วิดเจ็ตใช้ตอนวาด
 SHARED_SOURCES = ['TripActivityAttributes.swift'].freeze
 EXTENSION_SOURCES = ['TripActivityAttributes.swift', 'TripActivityWidget.swift', 'LiveActivityBundle.swift'].freeze
+XCCONFIG_NAME = 'LiveActivityExtension.xcconfig'
 
 project = Xcodeproj::Project.open(PROJECT_PATH)
 runner = project.targets.find { |t| t.name == 'Runner' } or abort 'ไม่พบเป้าหมาย Runner'
@@ -66,7 +67,11 @@ end
 
 group.new_file('Info.plist') unless group.find_file_by_path('Info.plist')
 
+# เวอร์ชันของ extension ต้องมาจาก pubspec เหมือนตัวแอป — ดูเหตุผลใน xcconfig
+xcconfig = group.find_file_by_path(XCCONFIG_NAME) || group.new_file(XCCONFIG_NAME)
+
 extension_target.build_configurations.each do |config|
+  config.base_configuration_reference = xcconfig
   settings = config.build_settings
   # ไม่มีสองบรรทัดนี้ ผลลัพธ์จะกลายเป็นไฟล์ชื่อ ".appex" เปล่า ๆ แล้ว Xcode ตีกลับ
   # ว่า "Multiple commands produce" เพราะทุก configuration ผลิตชื่อเดียวกัน
@@ -80,8 +85,10 @@ extension_target.build_configurations.each do |config|
   settings['SKIP_INSTALL'] = 'YES'
   settings['CODE_SIGN_STYLE'] = 'Automatic'
   settings['DEVELOPMENT_TEAM'] = team if team
-  settings['MARKETING_VERSION'] = '$(MARKETING_VERSION)'
-  settings['CURRENT_PROJECT_VERSION'] = '$(CURRENT_PROJECT_VERSION)'
+  # ต้องมาจาก Generated.xcconfig ที่ xcconfig ข้างบนดึงเข้ามา — เขียนเป็น
+  # $(MARKETING_VERSION) ตรง ๆ จะอ้างถึงตัวเอง ได้ค่าว่าง แล้ว iOS ปฏิเสธการติดตั้ง
+  settings['MARKETING_VERSION'] = '$(FLUTTER_BUILD_NAME)'
+  settings['CURRENT_PROJECT_VERSION'] = '$(FLUTTER_BUILD_NUMBER)'
   settings['GENERATE_INFOPLIST_FILE'] = 'NO'
   settings['ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME'] = ''
   # extension ไม่ได้ลิงก์ Flutter/Pods เลย — มันวาด SwiftUI ล้วน ๆ จากข้อมูลที่ APNs

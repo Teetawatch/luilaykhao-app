@@ -80,6 +80,7 @@
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		3C44DC9CFC2493260FD4A78C /* LiveActivityChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityChannel.swift; sourceTree = "<group>"; };
+		6AE9CC9E40548477963E0C17 /* LiveActivityExtension.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = LiveActivityExtension.xcconfig; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -230,6 +231,7 @@
 				A62826F80EE0078BF653A22A /* TripActivityWidget.swift */,
 				1EBCBF6FD3596F1E6C2E527F /* LiveActivityBundle.swift */,
 				D5237BEF4D30365E4AB6C00A /* Info.plist */,
+				6AE9CC9E40548477963E0C17 /* LiveActivityExtension.xcconfig */,
 			);
 			name = LiveActivity;
 			path = LiveActivity;
@@ -296,7 +298,7 @@
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				51654BD36477F739CAE53893 /* Upload Crashlytics dSYM */,
 				4542F73D19C83FB4FD786977 /* [CP] Copy Pods Resources */,
-				C95105C5E73345946F3E2D20 /* Strip Simulator Platform Slices */,
+				429DEC0EE0BC4B03AA187BFB /* Strip Simulator Platform Slices */,
 			);
 			buildRules = (
 			);
@@ -401,6 +403,24 @@
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
 		};
+		429DEC0EE0BC4B03AA187BFB /* Strip Simulator Platform Slices */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Strip Simulator Platform Slices";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/bash\nset -e\n# Only patch for device builds — simulator builds need IOSSIMULATOR platform markers\nif [[ \"$PLATFORM_NAME\" == *\"simulator\"* ]]; then\n  echo \"Simulator build — skipping platform patch\"\n  exit 0\nfi\nAPP=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"\nSDK=$(xcrun --sdk iphoneos --show-sdk-version)\nfind \"$APP\" -name '*.framework' -type d | while read -r FW; do\n  EXEC=$(defaults read \"$FW/Info.plist\" CFBundleExecutable 2>/dev/null || true)\n  [ -z \"$EXEC\" ] && continue\n  BIN=\"$FW/$EXEC\"\n  [ -f \"$BIN\" ] || continue\n  # Strip x86_64 (simulator-only arch) from device builds\n  if lipo -archs \"$BIN\" 2>/dev/null | grep -q \"x86_64\"; then\n    echo \"Stripping x86_64 from $EXEC\"\n    lipo -remove x86_64 \"$BIN\" -output \"${BIN}.stripped\" && mv \"${BIN}.stripped\" \"$BIN\"\n  fi\n  # Patch IOSSIMULATOR platform markers to IOS for device builds\n  if vtool -show-build \"$BIN\" 2>/dev/null | grep -q \"IOSSIMULATOR\"; then\n    MIN_OS=$(defaults read \"$FW/Info.plist\" MinimumOSVersion 2>/dev/null || echo \"${IPHONEOS_DEPLOYMENT_TARGET:-15.0}\")\n    echo \"Patching $EXEC: IOSSIMULATOR -> IOS (minos=$MIN_OS)\"\n    vtool -set-build-version ios \"$MIN_OS\" \"$SDK\" -replace -output \"${BIN}.fixed\" \"$BIN\"\n    mv \"${BIN}.fixed\" \"$BIN\"\n  fi\ndone\n";
+		};
 		4542F73D19C83FB4FD786977 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -496,24 +516,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
-		};
-		C95105C5E73345946F3E2D20 /* Strip Simulator Platform Slices */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Strip Simulator Platform Slices";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "#!/bin/bash\nset -e\n# Only patch for device builds — simulator builds need IOSSIMULATOR platform markers\nif [[ \"$PLATFORM_NAME\" == *\"simulator\"* ]]; then\n  echo \"Simulator build — skipping platform patch\"\n  exit 0\nfi\nAPP=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"\nSDK=$(xcrun --sdk iphoneos --show-sdk-version)\nfind \"$APP\" -name '*.framework' -type d | while read -r FW; do\n  EXEC=$(defaults read \"$FW/Info.plist\" CFBundleExecutable 2>/dev/null || true)\n  [ -z \"$EXEC\" ] && continue\n  BIN=\"$FW/$EXEC\"\n  [ -f \"$BIN\" ] || continue\n  # Strip x86_64 (simulator-only arch) from device builds\n  if lipo -archs \"$BIN\" 2>/dev/null | grep -q \"x86_64\"; then\n    echo \"Stripping x86_64 from $EXEC\"\n    lipo -remove x86_64 \"$BIN\" -output \"${BIN}.stripped\" && mv \"${BIN}.stripped\" \"$BIN\"\n  fi\n  # Patch IOSSIMULATOR platform markers to IOS for device builds\n  if vtool -show-build \"$BIN\" 2>/dev/null | grep -q \"IOSSIMULATOR\"; then\n    MIN_OS=$(defaults read \"$FW/Info.plist\" MinimumOSVersion 2>/dev/null || echo \"${IPHONEOS_DEPLOYMENT_TARGET:-15.0}\")\n    echo \"Patching $EXEC: IOSSIMULATOR -> IOS (minos=$MIN_OS)\"\n    vtool -set-build-version ios \"$MIN_OS\" \"$SDK\" -replace -output \"${BIN}.fixed\" \"$BIN\"\n    mv \"${BIN}.fixed\" \"$BIN\"\n  fi\ndone\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -667,11 +669,12 @@
 		};
 		2E34422BB3D87BF856CF9BE6 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6AE9CC9E40548477963E0C17 /* LiveActivityExtension.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = DLK28X88QA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = LiveActivity/Info.plist;
@@ -681,7 +684,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = "$(MARKETING_VERSION)";
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.luilaykhao.app.LiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -744,11 +747,12 @@
 		};
 		6393B3B162A45D0DE5C3FFA3 /* Profile */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6AE9CC9E40548477963E0C17 /* LiveActivityExtension.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = DLK28X88QA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = LiveActivity/Info.plist;
@@ -758,7 +762,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = "$(MARKETING_VERSION)";
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.luilaykhao.app.LiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -942,11 +946,12 @@
 		};
 		9A52CFF4AD8AF51DCEA5B18E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6AE9CC9E40548477963E0C17 /* LiveActivityExtension.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = DLK28X88QA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = LiveActivity/Info.plist;
@@ -956,7 +961,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = "$(MARKETING_VERSION)";
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.luilaykhao.app.LiveActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
