@@ -49,9 +49,9 @@
 		<key>NSCameraUsageDescription</key>
 		<string>ใช้กล้องเพื่อสแกน QR และอัปโหลดหลักฐานการชำระเงิน</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-		<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุดและติดตามรถรับส่งระหว่างทริป</string>
+		<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุด ติดตามรถรับส่งระหว่างทริป และแชร์ตำแหน่งให้เพื่อนร่วมทริปรอบเดียวกันเห็นเมื่อคุณเปิดสวิตช์แชร์เอง</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุดและติดตามรถรับส่งระหว่างทริป</string>
+		<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุด ติดตามรถรับส่งระหว่างทริป และแชร์ตำแหน่งให้เพื่อนร่วมทริปรอบเดียวกันเห็นเมื่อคุณเปิดสวิตช์แชร์เอง</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>ใช้รูปภาพเพื่ออัปโหลดโปรไฟล์หรือหลักฐานการชำระเงิน</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>
