@@ -128,96 +128,80 @@ Play ตัดที่ 500 ตัวอักษรพอดี ก้อนน
 
 ช่องนี้เป็นข้อความล้วนเหมือนกัน ก้อนข้างล่างจึงไม่มี markdown ปน วางได้ทั้งก้อน
 
-> ยังมี TODO: ช่องบัญชีทดสอบสำหรับผู้ตรวจ ต้องเติมก่อนส่ง
+> **ช่องนี้จำกัด 4,000 ตัวอักษร** ก้อนข้างล่างยาว 3,947 เหลือที่ว่าง 53 ตัวอักษร
+> ตัดหัวข้อ "ของที่ยกมาจาก 1.12.1" กับคำอธิบายเชิงเล่าเรื่องออกหมดแล้ว เหลือเฉพาะ
+> สิ่งที่เปลี่ยนผลการรีวิวจริง ๆ คือ วิธีเข้าถึงฟีเจอร์ ข้อมูลที่เก็บ และเหตุผลที่ไม่ใช้ IAP
 >
-> ตัดหัวข้อ "ของที่ยกมาจาก 1.12.1" ออกเพราะช่องนี้จำกัด 4,000 ตัวอักษร — ของเก่า
-> ไม่ได้เปลี่ยนผลการรีวิว ส่วนที่เหลือคือสิ่งที่ผู้ตรวจต้องใช้ตัดสินจริง ๆ
+> ยังมี TODO: ช่องบัญชีทดสอบสำหรับผู้ตรวจ ต้องเติมก่อนส่ง — **เติมแล้วนับใหม่ก่อนวาง**
+> เพราะที่ว่างเหลือน้อย:
+>
+> ```
+> awk '/^## App Review Notes/,0' RELEASE_1.13.0.md \
+>   | awk '/^```$/{n++; next} n==1' | python3 -c 'import sys; print(len(sys.stdin.read()))'
+> ```
 
 ```
-About the app
-Luilaykhao books guided hiking day trips in Thailand. Customers book seats on a dated
-departure, then on the travel day use the app to find their pickup point and track the
-shuttle van. Most of the interface is Thai, as our customers are. 1.12.1 was prepared
-but its submission was cancelled, so this build carries its contents plus the two
-features below.
+Luilaykhao books guided hiking day trips in Thailand: customers reserve a seat on a
+dated departure, then use the app on the travel day to find their pickup point and track
+the shuttle van. The interface is Thai.
 
 Demo account
 - Phone / email: <TODO: fill in reviewer test account>
 - Password: <TODO> (no OTP required)
-It has one upcoming and one completed booking, so booking detail, the trip-day screen,
-group chat, Trip Recap and Passport are reachable without a purchase. The upcoming
-booking departs within 18 hours, which is what makes item 1 appear.
+One upcoming and one completed booking, so booking detail, the Travel Day screen, group
+chat, Trip Recap and Passport are reachable without a purchase. The upcoming booking
+departs within 18 hours, which is what makes item 1 appear.
 
 1. Live Activity for the travel day (iOS 16.2+)
-Our customers wait for a shuttle van by the roadside, often before dawn. Rather than
-make them unlock the phone and find an app to learn how far away the van is, this build
-puts that answer on the Lock Screen and in the Dynamic Island.
-
-The card begins as a countdown the day before departure, becomes a live ETA to the
-customer's own pickup point on the morning of the trip, confirms when the van arrives,
-and ends after they board. The app starts the Activity once; every later update is
-computed on our server and delivered over APNs, so it stays correct while the app is
-closed. It shows only the customer's own trip name, pickup point and the van's ETA.
-
+The card shows a countdown before departure, then a live ETA to that customer's own
+pickup point on the morning of the trip, and ends after boarding. The app starts the
+Activity once; every later update is computed on our server and pushed over APNs, so it
+stays correct while the app is closed, showing only that customer's trip name, pickup
+point and ETA.
 To see it: sign in, open the confirmed booking, tap "วันเดินทาง" (Travel Day), then lock
-the device. Users can turn it off in Settings > Luilaykhao > Live Activities.
+the device. It can be turned off in Settings > Luilaykhao > Live Activities.
 
-2. Live location sharing between travellers on the same trip
-On a mountain trail a group spreads out over a kilometre or more, and what matters most
-is where everyone else is. Until now the app could show the van but not the people.
-This is opt-in and deliberately narrow:
-- Off by default; the user turns it on for each trip.
-- Visible only to travellers booked on the same departure plus the staff and driver
-  assigned to it. Never public, never shared with third parties.
-- Available only during the trip window; outside it the server refuses reads and writes.
-- Turning it off deletes the record on our server immediately, not hidden or archived.
-- One current position per person, never a track or history. Positions older than 30
-  minutes are not served at all.
-- Collected only in the foreground with sharing on. No background location is declared.
-The location purpose strings were updated in this build to state this use explicitly.
-
-To see it: same Travel Day screen, "เพื่อนร่วมทริปอยู่ตรงไหน". The map is readable
-without sharing anything; the switch at the bottom controls sharing.
+2. Live location sharing between travellers on the same departure
+Opt-in and deliberately narrow:
+- Off by default, turned on per trip by the user.
+- Visible only to travellers booked on the same departure plus its assigned staff and
+  driver. Never public, never shared with third parties.
+- Only during the trip window; outside it the server refuses reads and writes.
+- Turning it off deletes the record immediately - not hidden, not archived.
+- One current position per person, never a track; anything older than 30 minutes is not
+  served. Foreground only, and no background location is declared.
+To see it: same Travel Day screen, "เพื่อนร่วมทริปอยู่ตรงไหน". The switch at the bottom
+controls sharing; the map reads fine without it.
 
 3. User-generated content and moderation (Guideline 1.2)
-The app carries content written by customers: a group chat per departure, trip reviews
-with photos and video, a post-trip photo feed, and a public photo wall built from those
-reviews. This build adds the full set of controls for it.
-
-- Filtering: a server-side word filter rejects abusive text at submission time, across
-  chat, reviews, feed posts and comments. It cannot be bypassed from the client.
-- Reporting: every piece of user content has a report action with a reason and an
-  optional note. Long-press a chat message, or use the "..." button on a review, feed
-  post or gallery photo.
-- Automatic removal: content reaches our staff queue immediately, and anything reported
-  by five different users is hidden automatically while it waits to be reviewed, so
-  offensive material does not stay visible during the response window.
-- Blocking: any customer can block another from the same menu, and manage the list under
-  Profile > ผู้ใช้ที่ถูกบล็อก (Blocked users). A block hides content in both directions
-  and suppresses push notifications between the two people. Staff and drivers cannot be
-  blocked, because they are the safety contact during a trip.
-- Contact: Profile > ติดต่อเรา (Contact us) carries our phone, email and LINE, and
-  Profile > แชทกับทีมงาน reaches our staff directly.
+Customers write to each other here: a group chat per departure, reviews with photos and
+video, a post-trip photo feed, and a photo wall built from those reviews. Controls:
+- Filtering: a server-side word filter rejects abusive text at submission and on edits,
+  across chat, reviews, posts and comments. It cannot be bypassed from the client.
+- Reporting: every item has a report action with a reason. Long-press a chat message, or
+  use the "..." on a review, feed post or gallery photo.
+- Automatic removal: reports reach our staff queue at once, and anything reported by
+  five different people is hidden automatically while it waits.
+- Blocking: in the same menu and in the chat member list, managed at Profile > Blocked
+  users. A block hides content both ways and stops push between the two people. Staff
+  and drivers cannot be blocked - they are the safety contact during a trip.
+- Contact: Profile > Contact us carries our phone, email and LINE; Profile > Chat with
+  staff reaches our team directly.
 
 Payments - no in-app purchase, by design
-Unchanged from 1.11.0. Everything sold is a real-world physical service: a seat on a
-guided trip departing on a specific date, transport, and optional physical equipment
-rental. Under Guideline 3.1.3(e)/3.1.5 these are consumed outside the app and are not
-eligible for in-app purchase. No digital content, subscription or unlockable feature is
-sold anywhere, and this build adds no new purchase path. Payment is by Thai bank
-transfer / PromptPay QR: the app shows a QR code, the customer pays in their own banking
-app, then uploads the slip for our staff to verify.
+Everything sold is a real-world service consumed outside the app: a seat on a guided
+trip leaving on a given date, transport, and optional physical equipment rental. Under
+Guideline 3.1.3(e)/3.1.5 these are not eligible for in-app purchase, and no digital
+content, subscription or unlockable feature is sold anywhere. Payment is by Thai bank
+transfer / PromptPay QR: the app shows a QR code and the customer uploads the transfer
+slip for our staff to verify.
 
 Permissions
-- Location (When In Use): sort pickup points by distance, show the customer beside the
-  van on the tracking map, and - new here, opt-in only - share position with fellow
-  travellers on the same departure. No background location; vehicle GPS comes from our
-  separate driver app.
-- Camera: check-in QR scan and photographing a transfer slip.
-- Photo Library / Add: profile photo, slip image, saving trip photos and the Recap card.
-- Calendar (write-only): the "Add to calendar" button on a booking.
-- Face ID: optional unlock instead of the password.
-- Notifications: departure and payment reminders, driver-arrival and SOS alerts, group
-  chat, and Live Activity updates.
-
+- Location (When In Use): sort pickup points by distance, place the customer beside the
+  van on the tracking map, and - opt-in only - item 2 above. No background location;
+  vehicle GPS comes from our separate driver app.
+- Camera, Photo Library / Add, Calendar (write-only) and Face ID: QR check-in, slip and
+  profile images, saving trip photos, "Add to calendar", and optional unlock.
+- Notifications: departure and payment reminders, driver-arrival and SOS alerts, chat,
+  Live Activity updates.
 ```
