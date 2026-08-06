@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
@@ -25,6 +26,24 @@ class ApiException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// A response body that is not JSON — an HTML page, a proxy notice, a PHP
+/// fatal, a captive-portal login screen.
+///
+/// Held as its own type rather than as the raw String so it can never be
+/// mistaken for a payload on the way out of [ApiClient._handleResponse].
+class _UndecodableBody {
+  final String body;
+
+  const _UndecodableBody(this.body);
+
+  /// First line's worth of the body, whitespace collapsed — enough to tell an
+  /// SPA shell from a proxy page in a debug log, short enough to read.
+  String get preview {
+    final flat = body.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return flat.length <= 200 ? flat : '${flat.substring(0, 200)}…';
+  }
 }
 
 class ApiClient {
@@ -211,6 +230,7 @@ class ApiClient {
 
   dynamic _handleResponse(http.Response response) {
     final decoded = _decode(response.body);
+    if (decoded is _UndecodableBody) _logUndecodable(response, decoded);
     if (response.statusCode == 401) {
       onUnauthorized?.call();
     }
@@ -231,6 +251,24 @@ class ApiClient {
         errors: decoded is Map ? decoded['errors'] : null,
       );
     }
+    // A 2xx that is not JSON never came from a controller — the API answers
+    // JSON and nothing else. In practice it means the request was routed
+    // somewhere it should not have been: an unknown /api/v1 path falls through
+    // to the website's SPA shell and comes back as `200 text/html`, and a proxy
+    // or captive portal can do the same to any path.
+    //
+    // Returning the raw body here used to let a whole HTML page travel into
+    // `Map<String, dynamic>.from(api.data(response) as Map)` — the ~100 call
+    // sites that shape a response — where it surfaced as "type 'String' is not
+    // a subtype of type 'Map<dynamic, dynamic>' in type cast", an error that
+    // names neither the endpoint nor the cause. Failing here keeps the blame
+    // where the fault is.
+    if (decoded is _UndecodableBody) {
+      throw ApiException(
+        'เซิร์ฟเวอร์ตอบกลับในรูปแบบที่ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง',
+        statusCode: response.statusCode,
+      );
+    }
     if (decoded is Map && decoded['success'] == false) {
       throw ApiException(
         decoded['message']?.toString() ?? 'ดำเนินการไม่สำเร็จ',
@@ -239,6 +277,22 @@ class ApiClient {
       );
     }
     return decoded;
+  }
+
+  /// Names the endpoint that answered with something other than JSON.
+  ///
+  /// Debug-only: the user already gets a Thai message, but whoever is looking
+  /// at the console needs the URL and the first line of the body to tell a
+  /// misrouted path from a proxy interstitial.
+  void _logUndecodable(http.Response response, _UndecodableBody raw) {
+    assert(() {
+      debugPrint(
+        '[ApiClient] non-JSON ${response.statusCode} from '
+        '${response.request?.url} '
+        '(content-type: ${response.headers['content-type']}) — ${raw.preview}',
+      );
+      return true;
+    }());
   }
 
   dynamic data(dynamic response) {
@@ -260,7 +314,7 @@ class ApiClient {
     try {
       return jsonDecode(body);
     } catch (_) {
-      return body;
+      return _UndecodableBody(body);
     }
   }
 
@@ -270,6 +324,11 @@ class ApiClient {
           decoded['error']?.toString() ??
           decoded['errors']?.toString();
     }
+    // A non-JSON error body — an HTML 500 page, a gateway notice — holds
+    // nothing a user can act on, and several screens render this message
+    // straight into a snackbar. Let the caller fall back to the Thai default
+    // rather than putting a page of markup on screen.
+    if (decoded is _UndecodableBody) return null;
     return decoded?.toString();
   }
 }

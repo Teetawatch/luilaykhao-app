@@ -104,14 +104,17 @@ void main() {
   group('retry policy', () {
     test('a GET that fails once is retried and succeeds', () async {
       var attempt = 0;
-      final calls = await _withHandler(() async {
-        final result = await ApiClient().get('trips');
-        expect(result['success'], isTrue);
-      }, (_) {
-        attempt++;
-        if (attempt == 1) throw const SocketException('flaky');
-        return Future.value(_ok());
-      });
+      final calls = await _withHandler(
+        () async {
+          final result = await ApiClient().get('trips');
+          expect(result['success'], isTrue);
+        },
+        (_) {
+          attempt++;
+          if (attempt == 1) throw const SocketException('flaky');
+          return Future.value(_ok());
+        },
+      );
 
       expect(calls, 2);
     });
@@ -128,16 +131,19 @@ void main() {
       expect(calls, 3);
     });
 
-    test('a POST is never retried — a second try could double-charge', () async {
-      final calls = await _withHandler(() async {
-        await expectLater(
-          ApiClient().post('payments/charge', body: {'amount': 1200}),
-          throwsA(isA<ApiException>()),
-        );
-      }, (_) => throw const SocketException('down'));
+    test(
+      'a POST is never retried — a second try could double-charge',
+      () async {
+        final calls = await _withHandler(() async {
+          await expectLater(
+            ApiClient().post('payments/charge', body: {'amount': 1200}),
+            throwsA(isA<ApiException>()),
+          );
+        }, (_) => throw const SocketException('down'));
 
-      expect(calls, 1);
-    });
+        expect(calls, 1);
+      },
+    );
 
     test('PUT and DELETE are not retried either', () async {
       final puts = await _withHandler(() async {
@@ -192,6 +198,81 @@ void main() {
       }, (_) async => http.Response('Service Unavailable', 503));
 
       expect(calls, 1);
+    });
+  });
+
+  group('a non-JSON body never reaches a caller', () {
+    // An unknown /api/v1 path does not 404 on production — it falls through to
+    // the website's SPA catch-all and comes back 200 with the page shell.
+    const spaShell =
+        '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">'
+        '<title>Luilaykhao</title></head><body><div id="app"></div></body></html>';
+
+    test('a 200 HTML page is an error, not a payload', () async {
+      ApiException? caught;
+      await _withHandler(() async {
+        try {
+          await ApiClient().get('settings/app');
+        } on ApiException catch (e) {
+          caught = e;
+        }
+      }, (_) async => http.Response(spaShell, 200));
+
+      expect(
+        caught,
+        isNotNull,
+        reason: 'the HTML must not be returned as data',
+      );
+      expect(caught!.statusCode, 200);
+      expect(
+        caught!.message,
+        contains('เซิร์ฟเวอร์ตอบกลับในรูปแบบที่ไม่ถูกต้อง'),
+      );
+    });
+
+    test('it fails at the client, not later as a cast error', () async {
+      // The regression this guards: the body used to come back as a String,
+      // travel through api.data(), and blow up in a screen as "type 'String'
+      // is not a subtype of type 'Map<dynamic, dynamic>' in type cast" — with
+      // no mention of which endpoint answered wrong.
+      Object? caught;
+      await _withHandler(() async {
+        try {
+          final client = ApiClient();
+          final response = await client.get('settings/app');
+          Map<String, dynamic>.from(client.data(response) as Map);
+        } catch (e) {
+          caught = e;
+        }
+      }, (_) async => http.Response(spaShell, 200));
+
+      expect(caught, isA<ApiException>());
+      expect(caught, isNot(isA<TypeError>()));
+    });
+
+    test('an HTML error page does not become the snackbar text', () async {
+      ApiException? caught;
+      await _withHandler(
+        () async {
+          try {
+            await ApiClient().get('trips');
+          } on ApiException catch (e) {
+            caught = e;
+          }
+        },
+        (_) async =>
+            http.Response('<html><body>502 Bad Gateway</body></html>', 502),
+      );
+
+      expect(caught!.statusCode, 502);
+      expect(caught!.message, 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์');
+      expect(caught!.message, isNot(contains('<')));
+    });
+
+    test('an empty 200 body is still a legitimate null', () async {
+      await _withHandler(() async {
+        expect(await ApiClient().delete('saved-travellers/1'), isNull);
+      }, (_) async => http.Response('', 200));
     });
   });
 }
