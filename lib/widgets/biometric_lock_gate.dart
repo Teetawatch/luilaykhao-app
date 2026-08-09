@@ -55,11 +55,32 @@ class _BiometricLockGateState extends State<BiometricLockGate> {
   Future<void> _prompt() async {
     if (_authenticating) return;
     setState(() => _authenticating = true);
-    final ok = await BiometricService.instance.authenticate();
+    final outcome = await BiometricService.instance.authenticate();
     if (!mounted) return;
+
+    // เครื่องนี้ยืนยันตัวตนไม่ได้เลย — ปลดล็อกให้แล้วปิดสวิตช์ทิ้ง ไม่งั้นหน้านี้
+    // จะกลับมาดักทุกครั้งที่เปิดแอปโดยไม่มีทางผ่าน และทางออกเดียวที่เหลือคือ
+    // ล้างบัญชีตัวเองออกจากเครื่อง ซึ่งไม่ใช่ราคาที่ควรจ่ายให้ฟีเจอร์เสริม
+    if (outcome == BiometricOutcome.unavailable) {
+      await BiometricService.instance.setEnabled(false);
+      if (!mounted) return;
+      setState(() {
+        _authenticating = false;
+        _locked = false;
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'เครื่องนี้ใช้การปลดล็อกด้วยไบโอเมตริกไม่ได้ ปิดให้แล้วครับ',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _authenticating = false;
-      if (ok) _locked = false;
+      if (outcome == BiometricOutcome.success) _locked = false;
     });
   }
 
