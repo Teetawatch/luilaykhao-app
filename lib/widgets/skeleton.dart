@@ -168,6 +168,11 @@ class SkeletonList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: padding,
+      // ตัวนี้ไม่ได้เลื่อนเอง มันไปนั่งอยู่ในของที่เลื่อนอยู่แล้วเสมอ — และหลายที่
+      // เป็น SliverToBoxAdapter ซึ่งให้ความสูงมาแบบไม่จำกัด ถ้าไม่ shrinkWrap
+      // ListView จะพยายามขยายเต็มพื้นที่ที่ไม่มีที่สิ้นสุดแล้วโยน "Vertical
+      // viewport was given unbounded height" ทิ้ง ผลคือช่วงกำลังโหลดว่างเปล่า
+      shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: List.generate(count, (_) => item),
     );
