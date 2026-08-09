@@ -81,7 +81,7 @@ enum LiveActivityChannel {
       $0.attributes.bookingRef == bookingRef
     }) {
       observeToken(of: existing, bookingRef: bookingRef)
-      result(["activityId": existing.id, "pushToken": hex(existing.pushToken)])
+      result(payload(activityId: existing.id, pushToken: hex(existing.pushToken)))
       return
     }
 
@@ -92,7 +92,7 @@ enum LiveActivityChannel {
         pushType: .token
       )
       observeToken(of: activity, bookingRef: bookingRef)
-      result(["activityId": activity.id, "pushToken": hex(activity.pushToken)])
+      result(payload(activityId: activity.id, pushToken: hex(activity.pushToken)))
     } catch {
       result(FlutterError(code: "start_failed", message: error.localizedDescription, details: nil))
     }
@@ -121,17 +121,37 @@ enum LiveActivityChannel {
       return
     }
 
-    let payload = Activity<TripActivityAttributes>.activities.map { activity in
-      [
-        "bookingRef": activity.attributes.bookingRef,
-        "activityId": activity.id,
-        "pushToken": hex(activity.pushToken),
-      ]
+    let tokens = Activity<TripActivityAttributes>.activities.map { activity in
+      payload(
+        activityId: activity.id,
+        pushToken: hex(activity.pushToken),
+        bookingRef: activity.attributes.bookingRef
+      )
     }
-    result(payload)
+    result(tokens)
   }
 
   // MARK: - Tokens
+
+  /// สิ่งที่ส่งกลับไปฝั่ง Dart ต้องเป็น `[String: Any]` ที่ไม่มี Optional โผล่มาเป็น
+  /// ค่าเด็ดขาด — FlutterStandardWriter เข้ารหัส `Optional.none` (ที่ถูกห่อเป็น
+  /// `__SwiftValue`) ไม่ได้ แล้วมันไม่ได้โยน error ให้ Dart จับ แต่ abort ทั้ง
+  /// โปรเซสทิ้ง ซึ่งผู้ใช้เห็นเป็น "จองเสร็จแล้วแอปเด้ง"
+  ///
+  /// เคสที่เจอจริงคือ `pushToken` — ตอน `request()` เพิ่งคืนค่า token ยังไม่ออก
+  /// เสมอ (มันมาทีหลังทาง `pushTokenUpdates`) จึงเป็น nil แทบทุกครั้ง
+  ///
+  /// เปิดให้ internal เพื่อให้ `RunnerTests` ยืนยันได้ว่าไม่มี Optional หลุดเข้าไป
+  static func payload(
+    activityId: String,
+    pushToken: String?,
+    bookingRef: String? = nil
+  ) -> [String: Any] {
+    var payload: [String: Any] = ["activityId": activityId]
+    if let bookingRef { payload["bookingRef"] = bookingRef }
+    if let pushToken { payload["pushToken"] = pushToken }
+    return payload
+  }
 
   /// token ของ Activity ออกมาหลัง `request()` คืนค่าไปแล้วเสมอ (บางครั้งช้าเป็นวินาที)
   /// จึงต้องเฝ้าสตรีมไว้ ไม่ใช่อ่านครั้งเดียวตอนเปิด
