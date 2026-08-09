@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  sos_siren.wav ถูกอ้างด้วยชื่อเป็นสตริงเท่านั้น (RawResourceAndroidNotificationSound('sos_siren')
+  ฝั่ง Dart) ไม่มี XML หรือโค้ด Java/Kotlin ไหนอ้างถึงมัน — `shrinkResources` จึง
+  มองไม่เห็นและตัดทิ้งได้ใน release ผลคือช่องแจ้งเตือน SOS ไปหาไฟล์เสียงไม่เจอ
+  แล้วเงียบ ซึ่งเป็นความเงียบที่แพงที่สุดในแอปนี้
+-->
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/sos_siren" />
