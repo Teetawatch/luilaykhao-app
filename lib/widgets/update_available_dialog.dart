@@ -20,25 +20,39 @@ class UpdateAvailableDialog extends StatelessWidget {
   /// Shows the prompt at most once per app session, and never again for a
   /// version the user already chose to skip. Safe to call unconditionally — it
   /// no-ops when there's nothing to offer.
-  static Future<void> maybeShow(
+  ///
+  /// Returns whether the matter is **settled** — either the user answered, or
+  /// there was nothing to ask in the first place. `false` means the prompt was
+  /// owed but never reached the user, and the caller should try again once the
+  /// app is in a steadier state.
+  ///
+  /// The distinction exists because a session expiring mid-boot ends with
+  /// `pushAndRemoveUntil(..., (route) => false)`, which sweeps this dialog off
+  /// the navigator seconds after it opened. That used to count as "shown" and
+  /// the user simply never heard about the update.
+  static Future<bool> maybeShow(
     BuildContext context,
     VersionGateResult result,
   ) async {
-    if (!result.updateAvailable) return;
-    if (result.resolvedStoreUrl == null) return;
+    if (!result.updateAvailable) return true;
+    if (result.resolvedStoreUrl == null) return true;
 
     final latest = result.latestVersion;
-    if (latest == null || latest.isEmpty) return;
+    if (latest == null || latest.isEmpty) return true;
 
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getString(_dismissedVersionKey) == latest) return;
+    if (prefs.getString(_dismissedVersionKey) == latest) return true;
 
-    if (!context.mounted) return;
-    await showDialog<void>(
+    if (!context.mounted) return false;
+
+    // Both buttons pop `true`, and the barrier is inert — so a `null` result
+    // can only mean the route was removed out from under the user.
+    final answered = await showDialog<bool>(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       builder: (_) => UpdateAvailableDialog(result: result),
     );
+    return answered == true;
   }
 
   Future<void> _remindLater() async {
@@ -124,7 +138,7 @@ class UpdateAvailableDialog extends StatelessWidget {
                     Uri.parse(url),
                     mode: LaunchMode.externalApplication,
                   );
-                  if (context.mounted) Navigator.of(context).pop();
+                  if (context.mounted) Navigator.of(context).pop(true);
                 },
                 icon: const Icon(Icons.shop_rounded, color: Colors.white),
                 label: Text(
@@ -141,7 +155,7 @@ class UpdateAvailableDialog extends StatelessWidget {
             TextButton(
               onPressed: () async {
                 await _remindLater();
-                if (context.mounted) Navigator.of(context).pop();
+                if (context.mounted) Navigator.of(context).pop(true);
               },
               child: Text(
                 'ไว้ภายหลัง',

@@ -166,6 +166,7 @@ class LuilaykhaoApp extends StatelessWidget {
                   ? ForceUpdateScreen(result: app.versionGate)
                   : _UpdatePromptWatcher(
                       result: app.versionGate,
+                      ready: !app.sessionExpiring,
                       child: BiometricLockGate(
                         child: ActiveSeatLockOverlay(
                           navigatorKey: appNavigatorKey,
@@ -192,11 +193,21 @@ class LuilaykhaoApp extends StatelessWidget {
 /// (but non-mandatory) build is on the store, surfaces the dismissible
 /// [UpdateAvailableDialog] a single time. Firing is deferred to a post-frame
 /// callback so it lands on top of the ready UI via the root navigator.
+///
+/// [ready] is false while the app is mid-teardown of an expired session. The
+/// prompt has to sit that out: the teardown finishes by clearing the whole
+/// navigator, so a dialog opened during it disappears without the user ever
+/// having seen it.
 class _UpdatePromptWatcher extends StatefulWidget {
   final VersionGateResult result;
+  final bool ready;
   final Widget child;
 
-  const _UpdatePromptWatcher({required this.result, required this.child});
+  const _UpdatePromptWatcher({
+    required this.result,
+    required this.ready,
+    required this.child,
+  });
 
   @override
   State<_UpdatePromptWatcher> createState() => _UpdatePromptWatcherState();
@@ -204,6 +215,11 @@ class _UpdatePromptWatcher extends StatefulWidget {
 
 class _UpdatePromptWatcherState extends State<_UpdatePromptWatcher> {
   bool _handled = false;
+
+  /// Cap on re-attempts, so a navigator that keeps eating the dialog for some
+  /// unforeseen reason cannot turn into a prompt that reopens forever.
+  static const int _maxAttempts = 3;
+  int _attempts = 0;
 
   @override
   void initState() {
@@ -217,17 +233,29 @@ class _UpdatePromptWatcherState extends State<_UpdatePromptWatcher> {
     // The gate result arrives asynchronously after boot, so react to updates.
     if (widget.result.latestVersion != oldWidget.result.latestVersion) {
       _handled = false;
+      _attempts = 0;
     }
     _maybePrompt();
   }
 
   void _maybePrompt() {
-    if (_handled || !widget.result.updateAvailable) return;
+    if (_handled || !widget.ready || !widget.result.updateAvailable) return;
+    if (_attempts >= _maxAttempts) return;
     _handled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _attempts++;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final context = appNavigatorKey.currentContext;
-      if (context == null) return;
-      UpdateAvailableDialog.maybeShow(context, widget.result);
+      if (context == null) {
+        _handled = false;
+        return;
+      }
+      final settled = await UpdateAvailableDialog.maybeShow(
+        context,
+        widget.result,
+      );
+      // Never reached the user — leave the door open for the next rebuild,
+      // which the session teardown triggers on its way out.
+      if (!settled && mounted) _handled = false;
     });
   }
 

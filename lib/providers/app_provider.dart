@@ -156,6 +156,16 @@ class AppProvider extends ChangeNotifier {
     }
   }
 
+  /// True while an expired session is being torn down — logging out, then
+  /// bouncing to the login screen.
+  ///
+  /// Anything that puts UI on the root navigator has to wait this out. The
+  /// teardown ends in `pushAndRemoveUntil(..., (route) => false)`, which
+  /// removes *every* route, dialogs included. It is also slower than it looks:
+  /// `logout()` makes two network round trips first, so the bounce can land
+  /// seconds after the 401 that caused it — long after boot has finished.
+  bool get sessionExpiring => _handlingUnauthorized;
+
   Future<void> _handleUnauthorized() async {
     // While deleting the account the token is intentionally invalidated
     // server-side; ignore the resulting 401s so the session-expired handler
@@ -164,12 +174,14 @@ class AppProvider extends ChangeNotifier {
     if (_handlingUnauthorized) return;
     if (!isLoggedIn) return;
     _handlingUnauthorized = true;
+    notifyListeners();
     try {
       await AnalyticsService.instance.log('session_expired_auto_logout');
       await logout();
       _onSessionExpired?.call();
     } finally {
       _handlingUnauthorized = false;
+      notifyListeners();
     }
   }
 
