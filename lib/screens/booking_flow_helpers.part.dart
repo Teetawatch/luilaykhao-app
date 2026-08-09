@@ -807,6 +807,17 @@ bool _seatLockedByCurrentUser(Map<String, dynamic> seat) {
   return _asBool(seat['locked_by_current_user']);
 }
 
+/// ที่นั่งนี้อยู่ในใบจองที่ยัง active ของผู้ใช้คนนี้เอง — ต้องบอกให้รู้ ไม่งั้น
+/// เห็นแค่ "จองแล้ว" แล้วเข้าใจว่ามีคนอื่นแย่งไป ทั้งที่เป็นใบจองของตัวเอง
+bool _seatBookedByCurrentUser(Map<String, dynamic> seat) {
+  return _asBool(seat['booked_by_current_user']);
+}
+
+/// ที่นั่งที่ผู้ใช้คนนี้ถืออยู่เอง (ล็อกไว้ หรืออยู่ในใบจองของตัวเอง)
+bool _seatOwnedByCurrentUser(Map<String, dynamic> seat) {
+  return _seatLockedByCurrentUser(seat) || _seatBookedByCurrentUser(seat);
+}
+
 String _seatTooltip(
   Map<String, dynamic>? seat,
   String id, {
@@ -816,7 +827,16 @@ String _seatTooltip(
   if (selected) return '$id กำลังเลือก';
 
   final status = textOf(seat['status'], 'available');
-  if (status == 'booked') return '$id จองแล้ว';
+  if (status == 'booked') {
+    if (_seatBookedByCurrentUser(seat)) {
+      final ref = textOf(seat['booking_ref']);
+      return ref.isEmpty
+          ? '$id อยู่ในการจองของคุณ'
+          : '$id อยู่ในการจอง $ref ของคุณ';
+    }
+
+    return '$id จองแล้ว';
+  }
   if (status == 'locked') {
     final remaining = _seatLockRemainingText(seat);
     if (_seatLockedByCurrentUser(seat)) {
@@ -867,12 +887,24 @@ class _SeatVisual {
   });
 }
 
-_SeatVisual _seatVisual({required String status, required bool selected}) {
+_SeatVisual _seatVisual({
+  required String status,
+  required bool selected,
+  bool owned = false,
+}) {
   if (selected) {
     return const _SeatVisual(
       fill: _softAccent,
       glyph: Colors.white,
       badge: Colors.white,
+    );
+  }
+  // ที่นั่งที่ตัวเองถืออยู่ ใช้โทนเดียวกับที่นั่งว่าง — เพื่อไม่ให้อ่านว่า "ของคนอื่น"
+  if (owned) {
+    return const _SeatVisual(
+      fill: Color(0xFFECFDF5),
+      glyph: _softAccent,
+      badge: _softAccent,
     );
   }
   switch (status) {

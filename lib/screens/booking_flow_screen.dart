@@ -784,7 +784,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   void _toggleSeat(Map<String, dynamic> seat) {
     final id = textOf(seat['id']);
-    if (id.isEmpty || !_isSeatAvailable(seat)) return;
+    // ล็อกของตัวเองแตะเลือก/ยกเลิกได้ — ปุ่มเปิดให้แตะอยู่แล้ว ถ้ากันไว้ตรงนี้
+    // การแตะจะเงียบสนิทและที่นั่งของตัวเองกลายเป็นที่นั่งที่แตะไม่ได้
+    if (id.isEmpty || (!_isSeatAvailable(seat) && !_seatLockedByCurrentUser(seat))) {
+      return;
+    }
 
     HapticFeedback.selectionClick();
     setState(() {
@@ -837,6 +841,38 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     _lockedSeatIds
       ..clear()
       ..addAll(seatIds);
+    await _releaseStaleOwnLocks(seatIds);
+  }
+
+  /// ปล่อยที่นั่งที่ตัวเองเคยล็อกไว้ในรอบนี้แต่ไม่ได้เลือกแล้ว — คนที่เปลี่ยนใจ
+  /// จาก 8 ที่เหลือ 1 ที่ ไม่ควรแช่อีก 7 ที่ไว้จนกว่า TTL จะหมด
+  Future<void> _releaseStaleOwnLocks(List<String> keepSeatIds) async {
+    if (_scheduleId == null || _seatMap == null) return;
+
+    final keep = keepSeatIds.toSet();
+    final stale = <String>[];
+    for (final item in asList(_seatMap!['seats'])) {
+      final seat = asMap(item);
+      final id = textOf(seat['id']);
+      if (id.isEmpty || keep.contains(id)) continue;
+      if (_seatLockedByCurrentUser(seat)) stale.add(id);
+    }
+    if (stale.isEmpty || !mounted) return;
+
+    try {
+      await context.read<AppProvider>().unlockSeats(_scheduleId!, stale);
+      if (!mounted) return;
+      setState(() {
+        for (final item in asList(_seatMap!['seats'])) {
+          if (item is Map && stale.contains(textOf(item['id']))) {
+            item['status'] = 'available';
+            item['locked_by_current_user'] = false;
+          }
+        }
+      });
+    } catch (_) {
+      // ล็อกหมดอายุเองอยู่แล้ว ปล่อยไม่สำเร็จก็ไม่ควรขวางการจอง
+    }
   }
 
   Future<void> _unlockLockedSeats() async {

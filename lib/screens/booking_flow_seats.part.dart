@@ -352,6 +352,11 @@ class SeatSelectionSection extends StatelessWidget {
     final map = seatMap ?? <String, dynamic>{};
     final hasSeatMap = map['has_seat_map'] == true;
     final statusCounts = _SeatStatusCounts.from(map);
+    // ที่นั่งที่ผู้ใช้คนนี้ถืออยู่เอง — ต้องอธิบายให้ชัด ไม่งั้นอ่านว่าโดนคนอื่นจองไป
+    final ownSeatIds = <String>[
+      for (final item in asList(map['seats']))
+        if (_seatOwnedByCurrentUser(asMap(item))) textOf(asMap(item)['id']),
+    ]..sort();
 
     return _SectionShell(
       title: 'เลือกที่นั่ง',
@@ -380,7 +385,11 @@ class SeatSelectionSection extends StatelessWidget {
                     onLockExpired: onLockExpired,
                   ),
                   const SizedBox(height: 16),
-                  const Center(child: _SeatLegend()),
+                  Center(child: _SeatLegend(hasOwnSeats: ownSeatIds.isNotEmpty)),
+                  if (ownSeatIds.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _OwnSeatsNote(seatIds: ownSeatIds),
+                  ],
                   const SizedBox(height: 18),
                   _VehicleSeatMap(
                     seatMap: map,
@@ -446,6 +455,42 @@ class _SelectedSeatSummary extends StatelessWidget {
                 color: hasSelection
                     ? const Color(0xFF047857)
                     : const Color(0xFF92400E),
+                fontWeight: FontWeight.w700,
+                fontSize: AppText.sizeLabel,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ที่นั่งที่ผู้ใช้ถืออยู่เองในรอบนี้ — ล็อกค้างจากครั้งก่อน หรืออยู่ในใบจองของตัวเอง
+class _OwnSeatsNote extends StatelessWidget {
+  final List<String> seatIds;
+
+  const _OwnSeatsNote({required this.seatIds});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _softAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: _softAccent.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.how_to_reg_rounded, color: _softAccent, size: 19),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'ที่นั่ง ${seatIds.join(', ')} เป็นของคุณอยู่แล้ว ไม่ได้ถูกคนอื่นจอง',
+              style: appFont(
+                color: const Color(0xFF047857),
                 fontWeight: FontWeight.w700,
                 fontSize: AppText.sizeLabel,
                 height: 1.35,
@@ -572,7 +617,9 @@ class _SeatStatusPill extends StatelessWidget {
 }
 
 class _SeatLegend extends StatelessWidget {
-  const _SeatLegend();
+  final bool hasOwnSeats;
+
+  const _SeatLegend({this.hasOwnSeats = false});
 
   @override
   Widget build(BuildContext context) {
@@ -584,6 +631,11 @@ class _SeatLegend extends StatelessWidget {
       ),
       _SeatLegendItem(_seatVisual(status: 'locked', selected: false), 'กำลังจอง'),
       _SeatLegendItem(_seatVisual(status: 'booked', selected: false), 'จองแล้ว'),
+      if (hasOwnSeats)
+        _SeatLegendItem(
+          _seatVisual(status: 'locked', selected: false, owned: true),
+          'ที่นั่งของคุณ',
+        ),
     ];
 
     return Wrap(
@@ -790,12 +842,17 @@ class _SeatButton extends StatelessWidget {
     final id = textOf(seat?['id'] ?? seatId);
     final status = textOf(seat?['status'], 'available');
     final lockedByCurrentUser = seat != null && _seatLockedByCurrentUser(seat!);
+    final ownedByCurrentUser = seat != null && _seatOwnedByCurrentUser(seat!);
     final disabled =
         seat == null ||
         status == 'booked' ||
         (status == 'locked' && !lockedByCurrentUser);
 
-    final visual = _seatVisual(status: status, selected: selected);
+    final visual = _seatVisual(
+      status: status,
+      selected: selected,
+      owned: ownedByCurrentUser,
+    );
     // Booked seats keep their flat grey; other unavailable seats fade slightly.
     final softDisabled = disabled && status != 'booked';
     final tileFill = softDisabled
@@ -808,13 +865,15 @@ class _SeatButton extends StatelessWidget {
     IconData? badgeIcon;
     if (selected) {
       badgeIcon = Icons.check_rounded;
+    } else if (ownedByCurrentUser) {
+      badgeIcon = Icons.person_rounded;
     } else if (status == 'booked') {
       badgeIcon = Icons.lock_rounded;
     } else if (status == 'locked') {
       badgeIcon = Icons.schedule_rounded;
     }
 
-    final labelColor = selected
+    final labelColor = selected || ownedByCurrentUser
         ? _softAccent
         : status == 'locked'
         ? const Color(0xFF92400E).withValues(alpha: softDisabled ? 0.62 : 1)
