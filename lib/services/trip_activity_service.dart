@@ -54,6 +54,12 @@ class TripActivityService {
   /// เปลี่ยนไปทริปถัดไป
   String? _activeRef;
 
+  /// คู่ "ใบจอง + token" ที่เซิร์ฟเวอร์รับไปเรียบร้อยแล้ว
+  ///
+  /// เก็บไว้เพื่อไม่ให้การฝากซ้ำตอนแอปกลับมาหน้าจอกลายเป็นการยิงซ้ำเปล่า ๆ ทุกครั้ง
+  /// — และที่สำคัญกว่า: ใบที่ฝาก *ไม่* สำเร็จจะไม่ถูกใส่ในนี้ จึงถูกลองใหม่เอง
+  final Set<String> _registered = {};
+
   String? get activeBookingRef => _activeRef;
 
   void attachApi(ApiClient api) {
@@ -111,6 +117,9 @@ class TripActivityService {
   /// ปิดการ์ดทั้งบนหน้าจอล็อกและบนแถบแจ้งเตือน
   Future<void> stop() async {
     _activeRef = null;
+    // การ์ดที่ปิดไปแล้วไม่มี token ให้ฝากอีก และ `stop()` คือทางผ่านของการออกจาก
+    // ระบบด้วย — ถ้าไม่ล้าง คนที่ล็อกอินบัญชีใหม่บนเครื่องเดิมจะฝาก token ไม่ได้
+    _registered.clear();
 
     try {
       if (defaultTargetPlatform == TargetPlatform.iOS) {
@@ -228,6 +237,37 @@ class TripActivityService {
     }
   }
 
+  /// ฝาก token ของการ์ดที่ยังเปิดค้างอยู่ซ้ำอีกครั้ง — เรียกทุกครั้งที่แอปกลับมา
+  /// หน้าจอ
+  ///
+  /// การฝากครั้งแรกเงียบเมื่อล้มเหลวโดยตั้งใจ (การ์ดนี้เป็นของประดับที่ดีมาก ไม่ใช่
+  /// ระบบที่ธุรกิจแขวนอยู่) แต่ "เงียบ" กับ "ยอมแพ้ถาวร" ไม่เหมือนกัน — ถ้าเน็ตหลุด
+  /// ตอนกดจอง เซิร์ฟเวอร์จะไม่มีวันได้ token ใบนั้นเลย แล้วการ์ดก็ค้างข้อความของ
+  /// วันที่จองไว้บนหน้าจอล็อกจนกว่าจะเปิดใบใหม่ ซึ่งแย่กว่าไม่มีการ์ด
+  ///
+  /// ถามฝั่ง iOS ตรง ๆ ว่าตอนนี้มีการ์ดอะไรเปิดอยู่บ้าง ไม่ได้เดาจากรายการจอง —
+  /// การ์ดอาจถูกเปิดไว้ตั้งแต่ก่อนแอปถูกปิด และรายการจองอาจโหลดไม่สำเร็จรอบนี้
+  Future<void> reregisterActiveTokens() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+
+    final api = _api;
+    if (api == null || api.token == null || api.token!.isEmpty) return;
+
+    try {
+      final entries = await _channel.invokeListMethod<dynamic>('activeTokens');
+      for (final entry in entries ?? const []) {
+        if (entry is! Map) continue;
+        await _registerToken(
+          bookingRef: entry['bookingRef']?.toString() ?? '',
+          pushToken: entry['pushToken']?.toString() ?? '',
+          activityId: entry['activityId']?.toString(),
+        );
+      }
+    } catch (e) {
+      debugPrint('[TripActivity] reregister failed: $e');
+    }
+  }
+
   /// token ของ Activity ออกมาหลัง `start` คืนค่าไปแล้วเสมอ (บางครั้งช้าเป็นวินาที)
   /// และเปลี่ยนได้ระหว่างทาง ฝั่ง Swift จึงยิงกลับมาทางนี้ทุกครั้งที่ได้ค่าใหม่
   void _attachHandler() {
@@ -264,6 +304,9 @@ class TripActivityService {
     if (api == null || bookingRef.isEmpty || pushToken.isEmpty) return;
     if (api.token == null || api.token!.isEmpty) return;
 
+    final key = '$bookingRef:$pushToken';
+    if (_registered.contains(key)) return;
+
     try {
       await api.post(
         ApiEndpoints.liveActivities,
@@ -274,7 +317,9 @@ class TripActivityService {
           'platform': 'ios',
         },
       );
+      _registered.add(key);
     } catch (e) {
+      // ตั้งใจไม่จำว่าฝากแล้ว — ครั้งหน้าที่แอปกลับมาหน้าจอจะได้ลองใหม่
       debugPrint('[TripActivity] register token failed: $e');
     }
   }

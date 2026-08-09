@@ -22,6 +22,7 @@ import '../providers/tracking_provider.dart';
 import 'tracking_screen.dart' show TrackingMapPage;
 import '../services/notification_navigator.dart';
 import '../services/push_notification_service.dart';
+import '../services/trip_activity_service.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
@@ -135,6 +136,10 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
         // An SOS raised while this phone was off, flat, or out of signal never
         // arrived — catch up on it the moment the phone is usable again.
         unawaited(app.recoverMissedSosAlerts());
+        // การ์ด "วันเดินทาง" อัปเดตตัวเองผ่าน APNs ได้ก็ต่อเมื่อเซิร์ฟเวอร์ถือ
+        // token ของมันอยู่ ถ้าการฝากครั้งแรกล้มเหลว (เน็ตหลุดตอนกดจอง) นี่คือ
+        // จังหวะที่ได้ลองใหม่ — เงียบและไม่มีค่าใช้จ่ายเมื่อไม่มีการ์ดเปิดอยู่
+        unawaited(TripActivityService.instance.reregisterActiveTokens());
       } else {
         unawaited(PushNotificationService.instance.clearBadge());
       }
