@@ -10,6 +10,9 @@ import '../theme/app_theme.dart';
 /// แอดมินเป็นผู้สร้างข้อมูลจาก admin panel ส่วนหน้านี้แสดงเป็น timeline กรุ๊ปตามวัน
 /// (วันที่ 1 / วันที่ 2 …) แต่ละรายการมีเวลา + หัวข้อ + รายละเอียด เรียงตามที่
 /// backend ส่งมา (วัน → เวลา → ลำดับ)
+///
+/// ถ้ารอบนี้ยังไม่มีกำหนดการของตัวเอง backend จะส่งกำหนดการระดับทริปมาแทน
+/// (`source: 'trip'`) ซึ่งอ่านอย่างเดียว — ไม่มีปุ่มเช็คอินเพราะไม่ใช่จุดของรอบนี้
 class ScheduleItineraryScreen extends StatefulWidget {
   final int scheduleId;
   final String tripTitle;
@@ -31,6 +34,10 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
   bool _fromCache = false;
   String? _error;
   int? _togglingId;
+
+  /// กำหนดการที่แสดงอยู่มาจากรายละเอียดทริป ไม่ใช่ของรอบนี้โดยตรง
+  bool get _fromTrip =>
+      _items.isNotEmpty && _items.first['source'] == 'trip';
 
   @override
   void initState() {
@@ -191,6 +198,8 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
       );
     }
 
+    if (_fromTrip) return _buildTripPlan();
+
     // กรุ๊ปตามวันที่ (รายการที่ไม่ระบุวันรวมไว้กลุ่มเดียว "ไม่ระบุวัน")
     final groups = <String?, List<Map<String, dynamic>>>{};
     for (final item in _items) {
@@ -231,6 +240,82 @@ class _ScheduleItineraryScreenState extends State<ScheduleItineraryScreen> {
           if (i < keys.length - 1) const SizedBox(height: 18),
         ],
       ],
+    );
+  }
+
+  /// แผนการเดินทางจากรายละเอียดทริป — กรุ๊ปตามหัวข้อที่ backend ส่งมา (ชื่อภาค
+  /// หรือ "วันที่ N") ไม่มีความคืบหน้า/ปุ่มเช็คอิน เพราะไม่ใช่จุดของรอบนี้
+  Widget _buildTripPlan() {
+    final groups = <String, List<Map<String, dynamic>>>{};
+    for (final item in _items) {
+      final label = (item['group'] as String?)?.trim();
+      (groups[(label == null || label.isEmpty) ? 'แผนการเดินทาง' : label] ??= [])
+          .add(item);
+    }
+    final keys = groups.keys.toList();
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      children: [
+        const _TripPlanNote(),
+        const SizedBox(height: 16),
+        for (var i = 0; i < keys.length; i++) ...[
+          _DayHeader(
+            dateIso: groups[keys[i]]!.first['item_date'] as String?,
+            label: keys[i],
+          ),
+          const SizedBox(height: 10),
+          _DayTimeline(
+            items: groups[keys[i]]!,
+            nextId: null,
+            togglingId: null,
+            onToggle: _toggleReached,
+            showCheckIn: false,
+          ),
+          if (i < keys.length - 1) const SizedBox(height: 18),
+        ],
+      ],
+    );
+  }
+}
+
+/// บอกที่มาของแผน — กำหนดการระดับทริป ไม่ใช่ของรอบนี้ เวลาจริงอาจขยับได้
+class _TripPlanNote extends StatelessWidget {
+  const _TripPlanNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: AppTheme.border(context).withValues(alpha: 0.55)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.map_outlined,
+            size: 18,
+            color: AppTheme.mutedText(context),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'นี่คือแผนการเดินทางของทริปนี้ ทีมงานยังไม่ได้ลงกำหนดการเฉพาะรอบ '
+              'เวลาจริงหน้างานอาจขยับได้ตามสภาพอากาศและการจราจร',
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -327,16 +412,19 @@ class _ProgressHeader extends StatelessWidget {
 }
 
 /// หัวข้อของแต่ละวัน — "วันที่ 1 · 22 มิ.ย. 2569" (หรือ "ไม่ระบุวัน")
+/// [label] ใช้ทับเมื่อกรุ๊ปด้วยอย่างอื่น เช่นชื่อภาคของกำหนดการระดับทริป
 class _DayHeader extends StatelessWidget {
   final String? dateIso;
   final int? dayNumber;
+  final String? label;
 
-  const _DayHeader({required this.dateIso, this.dayNumber});
+  const _DayHeader({required this.dateIso, this.dayNumber, this.label});
 
   @override
   Widget build(BuildContext context) {
     final dateText = _formatThaiDate(dateIso);
-    final label = dayNumber != null ? 'วันที่ $dayNumber' : 'ไม่ระบุวัน';
+    final label =
+        this.label ?? (dayNumber != null ? 'วันที่ $dayNumber' : 'ไม่ระบุวัน');
 
     return Row(
       children: [
@@ -383,12 +471,14 @@ class _DayTimeline extends StatelessWidget {
   final int? nextId;
   final int? togglingId;
   final Future<void> Function(Map<String, dynamic>) onToggle;
+  final bool showCheckIn;
 
   const _DayTimeline({
     required this.items,
     required this.nextId,
     required this.togglingId,
     required this.onToggle,
+    this.showCheckIn = true,
   });
 
   @override
@@ -400,9 +490,10 @@ class _DayTimeline extends StatelessWidget {
             item: items[i],
             isFirst: i == 0,
             isLast: i == items.length - 1,
-            isNext: items[i]['id'] == nextId,
+            isNext: showCheckIn && items[i]['id'] == nextId,
             isToggling: items[i]['id'] == togglingId,
             onToggle: onToggle,
+            showCheckIn: showCheckIn,
           ),
       ],
     );
@@ -416,6 +507,7 @@ class _TimelineRow extends StatelessWidget {
   final bool isNext;
   final bool isToggling;
   final Future<void> Function(Map<String, dynamic>) onToggle;
+  final bool showCheckIn;
 
   const _TimelineRow({
     required this.item,
@@ -424,11 +516,19 @@ class _TimelineRow extends StatelessWidget {
     required this.isNext,
     required this.isToggling,
     required this.onToggle,
+    this.showCheckIn = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    // กำหนดการระดับทริปมักไม่มีเวลา แต่มีเลขวัน — ใช้เป็น badge แทนเวลา
+    final day = item['day'] as int?;
+    final groupLabel = (item['group'] as String?)?.trim() ?? '';
+    final dayBadge = (day != null && groupLabel != 'วันที่ $day')
+        ? 'วันที่ $day'
+        : '';
     final time = (item['time'] as String?)?.trim() ?? '';
+    final badge = time.isNotEmpty ? time : dayBadge;
     final title = (item['title'] as String?)?.trim() ?? '';
     final detail = (item['detail'] as String?)?.trim() ?? '';
     final link = (item['link'] as String?)?.trim() ?? '';
@@ -508,7 +608,7 @@ class _TimelineRow extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        if (time.isNotEmpty)
+                        if (badge.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 9,
@@ -521,14 +621,16 @@ class _TimelineRow extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
-                                  Icons.schedule_rounded,
+                                Icon(
+                                  time.isNotEmpty
+                                      ? Icons.schedule_rounded
+                                      : Icons.today_rounded,
                                   size: 13,
                                   color: AppTheme.primaryColor,
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
-                                  time,
+                                  badge,
                                   style: appFont(
                                     fontSize: AppText.sizeLabel,
                                     fontWeight: FontWeight.w800,
@@ -562,7 +664,7 @@ class _TimelineRow extends StatelessWidget {
                           ),
                       ],
                     ),
-                    if (time.isNotEmpty || (isNext && !reached))
+                    if (badge.isNotEmpty || (isNext && !reached))
                       const SizedBox(height: 8),
                     Text(
                       title.isEmpty ? 'ไม่ระบุหัวข้อ' : title,
@@ -592,14 +694,17 @@ class _TimelineRow extends StatelessWidget {
                       const SizedBox(height: 10),
                       _ItineraryLinkButton(link: link),
                     ],
-                    const SizedBox(height: 12),
-                    _CheckInButton(
-                      reached: reached,
-                      reachedAt: reachedAt,
-                      reachedBy: reachedBy,
-                      loading: isToggling,
-                      onTap: () => onToggle(item),
-                    ),
+                    // จุดของกำหนดการระดับทริปเช็คอินไม่ได้ (ไม่ใช่จุดของรอบนี้)
+                    if (showCheckIn) ...[
+                      const SizedBox(height: 12),
+                      _CheckInButton(
+                        reached: reached,
+                        reachedAt: reachedAt,
+                        reachedBy: reachedBy,
+                        loading: isToggling,
+                        onTap: () => onToggle(item),
+                      ),
+                    ],
                   ],
                 ),
               ),
