@@ -153,6 +153,11 @@ class ApiEndpoints {
   static const paymentsChargeInstallment = 'payments/charge-installment';
   static String paymentStatus(String ref) => 'payments/$ref';
 
+  // Beam Checkout — ออก QR/ลิงก์จ่าย แล้ว poll สถานะ (การจองถูกยืนยันโดย webhook
+  // ฝั่งเซิร์ฟเวอร์ ไม่ใช่โดยแอป)
+  static const beamCharge = 'payments/beam/charge';
+  static String beamPayment(int id) => 'payments/beam/$id';
+
   // Notifications
   static const notifications = 'notifications';
   static const notificationsReadAll = 'notifications/read-all';

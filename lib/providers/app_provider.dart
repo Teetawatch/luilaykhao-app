@@ -2670,6 +2670,42 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  // ── Beam Checkout ─────────────────────────────────────────────────────────
+
+  /// ออกใบชำระเงินหนึ่งใบ แล้วได้ QR (หรือลิงก์เด้งไปแอปธนาคาร) กลับมา
+  ///
+  /// ยอดคำนวณที่เซิร์ฟเวอร์ทั้งหมด แอปส่งไปแค่ "จ่ายเพื่ออะไร" — ตรงกันข้ามกับ
+  /// confirmPayment() ที่ยังต้องส่ง amount ไปให้หลังบ้านเทียบกับสลิป
+  Future<Map<String, dynamic>> createBeamCharge({
+    required String bookingRef,
+    required String purpose,
+    String paymentMethodType = 'QR_PROMPT_PAY',
+    int? installmentCount,
+    int? shareId,
+    int? installmentId,
+    String? deviceType,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.beamCharge,
+      body: {
+        'booking_ref': bookingRef,
+        'purpose': purpose,
+        'payment_method_type': paymentMethodType,
+        'installment_count': ?installmentCount,
+        'share_id': ?shareId,
+        'installment_id': ?installmentId,
+        'device_type': ?deviceType,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// สถานะของใบชำระเงิน — ใช้ poll เผื่อ websocket หลุด
+  Future<Map<String, dynamic>> beamPaymentStatus(int paymentId) async {
+    final response = await api.get(ApiEndpoints.beamPayment(paymentId));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   Future<Map<String, dynamic>> validatePromotion(
     String code,
     int tripId,

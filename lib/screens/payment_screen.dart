@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -11,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
@@ -22,6 +24,7 @@ import '../widgets/travel_widgets.dart';
 import 'booking_flow_screen.dart';
 
 part 'payment_status.part.dart';
+part 'payment_beam.part.dart';
 part 'payment_sections.part.dart';
 part 'payment_completed.part.dart';
 part 'payment_submitted.part.dart';
@@ -330,6 +333,62 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
+  // ── Beam Checkout ─────────────────────────────────────────────────────────
+
+  /// รับเงินผ่านเกตเวย์อยู่ไหม — คำตอบมาจากหลังบ้าน ไม่ใช่จากค่าคงที่ในแอป
+  /// (สลับ provider แล้วแอปที่ติดตั้งไปแล้วต้องเปลี่ยนตามทันที ไม่ต้องรออัปเดต)
+  bool _beamEnabled(Map<String, dynamic> booking) =>
+      textOf(asMap(booking['payment_gateway'])['provider']) == 'beam';
+
+  List<String> _beamMethods(Map<String, dynamic> booking) =>
+      asList(asMap(booking['payment_gateway'])['methods'])
+          .map((e) => textOf(e))
+          .where((e) => e.isNotEmpty)
+          .toList();
+
+  /// จับคู่ "โหมดของหน้าจอ" กับ purpose ที่หลังบ้านรู้จัก
+  ///
+  /// งวดแรก (installment) ต่างจากงวดที่ 2+ (installment_due) เพราะงวดแรกจ่ายพร้อม
+  /// ยืนยันที่นั่ง ส่วนงวดหลังจ่ายบนการจองที่ confirmed ไปแล้ว
+  String _beamPurpose(
+    Map<String, dynamic> booking, {
+    required bool collectingBalance,
+    required bool payingInstallment,
+    required bool payingShare,
+  }) {
+    if (payingShare) return 'split_share';
+    if (collectingBalance) return 'balance';
+    if (payingInstallment) return 'installment_due';
+    return _normalizePaymentType(booking, _paymentType);
+  }
+
+  /// เงินเข้าแล้ว — ไปหน้าสรุปชุดเดียวกับทางสลิป ลูกค้าจะได้เห็นหน้าเดิมที่คุ้นเคย
+  Future<void> _onBeamPaid({
+    required num amount,
+    required PaymentSubmissionKind kind,
+  }) async {
+    if (!mounted) return;
+    HapticFeedback.heavyImpact();
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => PaymentSubmittedScreen(
+          bookingRef: widget.bookingRef,
+          amount: amount,
+          kind: kind,
+          paymentMethod: 'promptpay',
+          transferredAt: DateTime.now(),
+          installmentNo: widget.installmentNo,
+          // เกตเวย์ยืนยันเงินเข้าจริงแล้ว ไม่มีสลิปให้ใครตรวจ
+          slipVerified: true,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    _reload();
+  }
+
   void _copy(String value, String message) {
     Clipboard.setData(ClipboardData(text: value));
     HapticFeedback.selectionClick();
@@ -530,55 +589,100 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                _PaymentMethodSection(
-                  value: _paymentMethod,
-                  amount: amountDue,
-                  qrPayload: qrPayload,
-                  qrKey: _promptPayQrKey,
-                  downloadingQr: _downloadingQr,
-                  onChanged: (v) => setState(() => _paymentMethod = v),
-                  onDownloadQr: _downloadPromptPayQr,
-                  onCopyAmount: () =>
-                      _copy(amountDue.toStringAsFixed(2), 'คัดลอกยอดชำระแล้ว'),
-                  onCopyAccount: () => _copy(
-                    _paymentMethod == 'promptpay'
-                        ? _promptPayId
-                        : _bankAccount.replaceAll('-', ''),
-                    'คัดลอกเลขบัญชีแล้ว',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _SlipUploadSection(
-                  image: _slipImage,
-                  onPick: _chooseSlipSource,
-                  onRemove: () => setState(() => _slipImage = null),
-                ),
-                const SizedBox(height: 16),
-                _TransferTimeSection(
-                  date: _transferDate,
-                  time: _transferTime,
-                  onPickDate: _pickTransferDate,
-                  onPickTime: _pickTransferTime,
-                ),
-                const SizedBox(height: 24),
-                _SubmitButton(
-                  paying: _paying,
-                  amount: amountDue,
-                  label: collectingShare
-                      ? 'ชำระส่วนของฉัน'
-                      : collectingBalance
-                          ? 'ชำระยอดส่วนที่เหลือ'
+                // โหมดเกตเวย์: QR ที่เงินเข้าแล้วระบบรู้เอง — ไม่มีสลิป ไม่มีวันเวลาโอน
+                // และไม่มีปุ่มยืนยัน เพราะการจ่ายจบที่แอปธนาคาร ไม่ใช่ที่หน้านี้
+                if (_beamEnabled(booking))
+                  _BeamPaymentSection(
+                    // key ผูกกับ "สิ่งที่กำลังจ่าย" — เปลี่ยนรูปแบบ/ยอดเมื่อไร
+                    // ต้องสร้าง section ใหม่เพื่อออก QR ใบใหม่ ไม่ใช่โชว์ใบเดิม
+                    key: ValueKey(
+                      '${_beamPurpose(booking, collectingBalance: collectingBalance, payingInstallment: payingInstallment, payingShare: payingShare)}'
+                      '-$amountDue',
+                    ),
+                    bookingRef: widget.bookingRef,
+                    purpose: _beamPurpose(
+                      booking,
+                      collectingBalance: collectingBalance,
+                      payingInstallment: payingInstallment,
+                      payingShare: payingShare,
+                    ),
+                    amount: amountDue,
+                    methods: _beamMethods(booking),
+                    shareId: payingShare ? widget.splitShareId : null,
+                    installmentId: payingInstallment
+                        ? int.tryParse(textOf(installmentRecord['id']))
+                        : null,
+                    installmentCount:
+                        !collectingBalance &&
+                            !payingInstallment &&
+                            !payingShare &&
+                            paymentType == 'installment'
+                        ? _installmentCount(booking)
+                        : null,
+                    onPaid: (_) => _onBeamPaid(
+                      amount: amountDue,
+                      kind: collectingShare
+                          ? PaymentSubmissionKind.share
+                          : collectingBalance
+                          ? PaymentSubmissionKind.balance
                           : collectingInstallment
-                              ? 'ชำระงวดที่ ${widget.installmentNo}'
-                              : null,
-                  onPressed: () => _submit(
-                    booking,
-                    payingBalance: collectingBalance,
-                    installmentNo:
-                        collectingInstallment ? widget.installmentNo : null,
-                    payingShare: collectingShare,
+                          ? PaymentSubmissionKind.installment
+                          : paymentType == 'deposit'
+                          ? PaymentSubmissionKind.deposit
+                          : PaymentSubmissionKind.initial,
+                    ),
+                  )
+                else ...[
+                  _PaymentMethodSection(
+                    value: _paymentMethod,
+                    amount: amountDue,
+                    qrPayload: qrPayload,
+                    qrKey: _promptPayQrKey,
+                    downloadingQr: _downloadingQr,
+                    onChanged: (v) => setState(() => _paymentMethod = v),
+                    onDownloadQr: _downloadPromptPayQr,
+                    onCopyAmount: () =>
+                        _copy(amountDue.toStringAsFixed(2), 'คัดลอกยอดชำระแล้ว'),
+                    onCopyAccount: () => _copy(
+                      _paymentMethod == 'promptpay'
+                          ? _promptPayId
+                          : _bankAccount.replaceAll('-', ''),
+                      'คัดลอกเลขบัญชีแล้ว',
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  _SlipUploadSection(
+                    image: _slipImage,
+                    onPick: _chooseSlipSource,
+                    onRemove: () => setState(() => _slipImage = null),
+                  ),
+                  const SizedBox(height: 16),
+                  _TransferTimeSection(
+                    date: _transferDate,
+                    time: _transferTime,
+                    onPickDate: _pickTransferDate,
+                    onPickTime: _pickTransferTime,
+                  ),
+                  const SizedBox(height: 24),
+                  _SubmitButton(
+                    paying: _paying,
+                    amount: amountDue,
+                    label: collectingShare
+                        ? 'ชำระส่วนของฉัน'
+                        : collectingBalance
+                            ? 'ชำระยอดส่วนที่เหลือ'
+                            : collectingInstallment
+                                ? 'ชำระงวดที่ ${widget.installmentNo}'
+                                : null,
+                    onPressed: () => _submit(
+                      booking,
+                      payingBalance: collectingBalance,
+                      installmentNo:
+                          collectingInstallment ? widget.installmentNo : null,
+                      payingShare: collectingShare,
+                    ),
+                  ),
+                ],
               ],
               const SizedBox(height: 12),
               _HomeButton(onPressed: _goHome),
