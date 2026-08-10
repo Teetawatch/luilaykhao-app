@@ -166,7 +166,11 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection> {
       if (!mounted) return;
 
       final status = textOf(fresh['status']);
-      if (status == 'succeeded' || textOf(fresh['booking_status']) == 'confirmed') {
+      // เชื่อสถานะของ "ใบชำระเงินใบนี้" เท่านั้น — ห้ามดูสถานะการจอง เพราะยอดคงเหลือ
+      // งวดที่ 2+ และส่วนแบ่งกลุ่ม จ่ายบนการจองที่ confirmed ไปตั้งแต่ก่อนเปิดหน้านี้
+      // แล้ว ถ้าดูจากตรงนั้นหน้าจอจะเด้งว่า "จ่ายสำเร็จ" ตั้งแต่ poll รอบแรกทั้งที่ยัง
+      // ไม่มีเงินเข้า (webhook เป็นคนตั้ง status = succeeded ก่อนแตะการจองเสมอ)
+      if (status == 'succeeded') {
         _stopTimers();
         widget.onPaid(fresh);
       } else if (status == 'failed' || status == 'expired') {
