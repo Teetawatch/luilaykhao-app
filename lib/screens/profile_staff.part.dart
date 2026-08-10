@@ -456,7 +456,7 @@ class _StaffToolbar extends StatelessWidget {
     final trip = _toMap(schedule['trip']);
     final tripTitle = _cleanText(trip['title'], fallback: 'ทริป');
 
-    // เครื่องมือของสตาฟมี 7 อย่าง — เรียงแถวเดียวป้ายจะโดนตัดจนอ่านไม่ออก
+    // เครื่องมือของสตาฟมี 8 อย่าง — เรียงแถวเดียวป้ายจะโดนตัดจนอ่านไม่ออก
     // จึงตัด 4 ช่องต่อแถวแล้วให้ล้นลงแถวถัดไปเอง
     final tools = <Widget>[
       _StaffToolTile(
@@ -493,6 +493,15 @@ class _StaffToolbar extends StatelessWidget {
         onTap: () => _pushPremium(
           context,
           StaffRentalsScreen(scheduleId: scheduleId, title: tripTitle),
+        ),
+      ),
+      _StaffToolTile(
+        icon: Icons.receipt_long_outlined,
+        label: 'บัญชีหน้างาน',
+        color: const Color(0xFF0891B2),
+        onTap: () => _pushPremium(
+          context,
+          StaffLedgerScreen(scheduleId: scheduleId, title: tripTitle),
         ),
       ),
       _StaffToolTile(

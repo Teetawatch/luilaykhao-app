@@ -1677,6 +1677,69 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// สมุดบัญชีหน้างานของรอบ — คืน `{schedule, summary, categories, items}`
+  Future<Map<String, dynamic>> loadStaffLedger(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.staffLedger(scheduleId));
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    return Map<String, dynamic>.from(data);
+  }
+
+  /// บันทึก/แก้ไขรายการหนึ่งบรรทัด — ส่ง [entryId] มาคือแก้ของเดิม
+  /// แนบสลิปเมื่อมี [slipPath] (multipart) นอกนั้นส่ง JSON ตามปกติ
+  /// คืนสมุดบัญชีชุดใหม่ทั้งก้อน จะได้ไม่ต้องโหลดซ้ำ
+  Future<Map<String, dynamic>> saveStaffLedgerEntry(
+    int scheduleId, {
+    int? entryId,
+    required String kind, // expense | income
+    required String name,
+    required double amount,
+    String? category,
+    String? note,
+    String? spentAt, // YYYY-MM-DD
+    String? slipPath,
+    bool removeSlip = false,
+  }) async {
+    final path = entryId == null
+        ? ApiEndpoints.staffLedger(scheduleId)
+        : ApiEndpoints.staffLedgerEntry(scheduleId, entryId);
+
+    final fields = <String, dynamic>{
+      'kind': kind,
+      'name': name,
+      'amount': amount,
+      'category': ?category,
+      if (note != null && note.isNotEmpty) 'note': note,
+      'spent_at': ?spentAt,
+      if (removeSlip) 'remove_slip': true,
+    };
+
+    final hasSlip = slipPath != null && slipPath.isNotEmpty;
+    final response = hasSlip
+        ? await api.postMultipart(path, fields: fields, files: {'slip': slipPath})
+        : await api.post(path, body: fields);
+
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    final map = Map<String, dynamic>.from(data);
+    // create/update ห่อไว้ใต้ ledger, ส่วน delete คืนสมุดตรงๆ
+    final ledger = map['ledger'];
+    return ledger is Map ? Map<String, dynamic>.from(ledger) : map;
+  }
+
+  /// ลบรายการที่ตัวเองบันทึกไว้ — คืนสมุดบัญชีชุดใหม่
+  Future<Map<String, dynamic>> deleteStaffLedgerEntry(
+    int scheduleId,
+    int entryId,
+  ) async {
+    final response = await api.delete(
+      ApiEndpoints.staffLedgerEntry(scheduleId, entryId),
+    );
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    return Map<String, dynamic>.from(data);
+  }
+
   /// ส่งลิงก์ชำระเงินซ้ำให้ลูกค้าที่ค้างชำระ (email / sms)
   Future<void> sendStaffPaymentLink(
     int scheduleId,

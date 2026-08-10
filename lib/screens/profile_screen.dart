@@ -32,6 +32,7 @@ import 'staff_check_in_screen.dart' show StaffCheckInScreen;
 import 'staff_manifest_screen.dart' show StaffManifestScreen;
 import 'report_incident_screen.dart' show ReportIncidentScreen;
 import 'incident_list_screen.dart' show IncidentListScreen;
+import 'staff_ledger_screen.dart' show StaffLedgerScreen;
 import 'staff_outstanding_screen.dart' show StaffOutstandingScreen;
 import 'staff_rentals_screen.dart' show StaffRentalsScreen;
 import 'schedule_itinerary_screen.dart' show ScheduleItineraryScreen;

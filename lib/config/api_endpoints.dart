@@ -220,4 +220,10 @@ class ApiEndpoints {
       'staff/schedules/$scheduleId/rentals';
   static String staffRentalMark(int scheduleId) =>
       'staff/schedules/$scheduleId/rentals/mark';
+
+  /// สมุดบัญชีหน้างาน — รายรับ/รายจ่ายของรอบเดินทาง
+  static String staffLedger(int scheduleId) =>
+      'staff/schedules/$scheduleId/ledger';
+  static String staffLedgerEntry(int scheduleId, int entryId) =>
+      'staff/schedules/$scheduleId/ledger/$entryId';
 }
