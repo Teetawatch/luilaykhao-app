@@ -219,17 +219,41 @@ class _PremiumTextField extends StatelessWidget {
 /// Tap-to-pick birth date field, styled to match [_PremiumTextField]. Backed by a
 /// [ValueNotifier] so it stays in sync when the traveler card autofills from the
 /// user's profile/wallet, and integrates with the surrounding [Form] for validation.
+/// บังคับตัวพิมพ์ใหญ่ให้ช่องที่ต้องตรงหน้าพาสปอร์ต
+///
+/// TextCapitalization เป็นแค่คำใบ้ให้คีย์บอร์ด ผู้ใช้กดปิด Caps เองได้และการ
+/// วางข้อความก็ข้ามมันไปเลย ตัวนี้จึงแปลงค่าจริงในช่องอีกชั้น
+class _UpperCaseFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(text: newValue.text.toUpperCase());
+  }
+}
+
 class _PremiumDatePicker extends StatelessWidget {
   final ValueNotifier<DateTime?> value;
   final String label;
   final IconData icon;
   final String? Function(DateTime?)? validator;
+  /// ตั้งค่าเริ่มต้นไว้เป็นวันเกิด (อดีตเท่านั้น) — วันหมดอายุพาสปอร์ตส่งค่าพวกนี้
+  /// เข้ามาเพื่อกลับทิศเป็นอนาคต โดยไม่ต้องมีวิดเจ็ตซ้ำอีกตัว
+  final bool future;
+  final DateTime? firstDate;
+  final String helpText;
+  final String hint;
 
   const _PremiumDatePicker({
     required this.value,
     required this.label,
     required this.icon,
     this.validator,
+    this.future = false,
+    this.firstDate,
+    this.helpText = 'เลือกวัน/เดือน/ปีเกิด',
+    this.hint = 'แตะเพื่อเลือกวันเกิด',
   });
 
   @override
@@ -253,13 +277,25 @@ class _PremiumDatePicker extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   onTap: () async {
                     final now = DateTime.now();
+                    final earliest = future
+                        ? (firstDate ?? now)
+                        : DateTime(now.year - 100);
+                    final latest = future
+                        ? DateTime(now.year + 20, now.month, now.day)
+                        : now;
+                    // initialDate ต้องอยู่ในช่วง ไม่งั้น showDatePicker โยน assert
+                    final preferred = current ??
+                        (future
+                            ? earliest
+                            : DateTime(now.year - 25, now.month, now.day));
                     final picked = await showDatePicker(
                       context: context,
-                      initialDate:
-                          current ?? DateTime(now.year - 25, now.month, now.day),
-                      firstDate: DateTime(now.year - 100),
-                      lastDate: now,
-                      helpText: 'เลือกวัน/เดือน/ปีเกิด',
+                      initialDate: preferred.isBefore(earliest)
+                          ? earliest
+                          : (preferred.isAfter(latest) ? latest : preferred),
+                      firstDate: earliest,
+                      lastDate: latest,
+                      helpText: helpText,
                     );
                     if (picked != null) {
                       value.value =
@@ -271,7 +307,7 @@ class _PremiumDatePicker extends StatelessWidget {
                     decoration: _fieldDecoration(
                       context: context,
                       icon: icon,
-                      hint: 'แตะเพื่อเลือกวันเกิด',
+                      hint: hint,
                     ).copyWith(
                       errorText: field.errorText,
                       suffixIcon: Icon(

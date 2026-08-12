@@ -240,6 +240,20 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     });
   }
 
+  /// ทริปต่างประเทศ — บังคับเก็บเอกสารเดินทาง และไม่มีจุดขึ้นรถให้เลือก
+  /// เพราะนัดเจอกันที่สนามบิน (backend ยกเว้นการบังคับจุดรับให้ตรงกัน)
+  bool get _isInternational => _asBool(widget.trip['is_international']);
+
+  /// วันหมดอายุพาสปอร์ตที่เร็วที่สุดที่ยังใช้เดินทางรอบนี้ได้ = วันเดินทาง + 6 เดือน
+  DateTime? get _minPassportExpiry {
+    final departure = _parseBirthDate(_selectedSchedule['departure_date']);
+    if (departure == null) return null;
+    // หดวันให้พอดีปลายเดือนแบบเดียวกับ Carbon::addMonths ฝั่ง backend
+    final target = DateTime(departure.year, departure.month + 6, 1);
+    final lastDay = DateTime(target.year, target.month + 1, 0).day;
+    return DateTime(target.year, target.month, departure.day.clamp(1, lastDay));
+  }
+
   List<_AddonOption> get _addonOptions => _addonOptionsFrom(widget.trip);
 
   _AddonOption? _addonOptionAt(int? index) {
@@ -1174,7 +1188,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             groupNotes: _groupNotes,
             isSeatSelectionMode: _hasSeatMap,
             selectedSeatIds: _hasSeatMap ? _selectedSeatList : const <String>[],
-            pickupPoints: _isJoinTrip ? const [] : _pickupPoints,
+            pickupPoints: _isInternational || _isJoinTrip ? const [] : _pickupPoints,
+            isInternational: _isInternational,
+            minPassportExpiry: _minPassportExpiry,
             onAddPassenger: _addPassenger,
             onRemovePassenger: _removePassenger,
             onUseProfile: _fillPassengerFromProfile,

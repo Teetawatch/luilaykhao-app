@@ -1021,6 +1021,10 @@ class _HeroFinderChip extends StatelessWidget {
 /// / people booked). Merging the old licence strip and stats bar into one card
 /// reads as a single "why trust us" block and saves vertical space.
 class _TrustHub extends StatelessWidget {
+  /// ค่าที่ฝังมากับแอป ใช้เมื่อยังไม่เคยโหลด /stats สำเร็จ (เปิดครั้งแรกแบบ
+  /// ออฟไลน์) — เลขจริงมาจากหน้าตั้งค่าในแอดมิน
+  static const _fallbackLicenceNo = '11/13855';
+
   final AppProvider app;
 
   const _TrustHub({required this.app});
@@ -1038,6 +1042,16 @@ class _TrustHub extends StatelessWidget {
         // travelling, so they are checkable — unlike the old cells here, which
         // summed passenger counts over whatever trips happened to be loaded on
         // this screen and therefore moved when you changed the filter.
+        // ใบอนุญาต — แอดมินแก้เลขและอัปโหลดรูปใบใหม่ได้จากหน้าตั้งค่า ไม่ต้อง
+        // ปล่อยแอปเวอร์ชันใหม่ ค่าที่ยังไม่มี (แอปเปิดออฟไลน์ครั้งแรก) ถอยไปใช้
+        // ค่าที่ฝังมากับแอปเพื่อไม่ให้การ์ดโชว์ช่องว่าง
+        final licence = asMap(app.stats?['licence']);
+        final licenceNo = textOf(licence['no'], _fallbackLicenceNo);
+        final licenceImageUrl = textOf(
+          licence['image_url'],
+          ApiConfig.mediaUrl('/images/cer.jpg'),
+        );
+
         final community = asMap(app.stats?['community']);
         final reviewCount = int.tryParse('${community['reviews_count'] ?? 0}') ?? 0;
         final avgRating = num.tryParse('${community['avg_rating'] ?? 0}') ?? 0;
@@ -1130,7 +1144,7 @@ class _TrustHub extends StatelessWidget {
                           minScale: 0.8,
                           maxScale: 4.0,
                           child: Image.network(
-                            ApiConfig.mediaUrl('/images/cer.jpg'),
+                            licenceImageUrl,
                             fit: BoxFit.contain,
                             loadingBuilder: (_, child, progress) {
                               if (progress == null) return child;
@@ -1177,7 +1191,7 @@ class _TrustHub extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                         child: Text(
-                          'เลขที่ใบอนุญาต 12/03773',
+                          'เลขที่ใบอนุญาต $licenceNo',
                           style: appFont(
                             fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w700,
@@ -1200,7 +1214,7 @@ class _TrustHub extends StatelessWidget {
         // Green header — the tappable licence claim.
         final header = Semantics(
           button: true,
-          label: 'ดูใบอนุญาตประกอบธุรกิจนำเที่ยว เลขที่ 12/03773',
+          label: 'ดูใบอนุญาตประกอบธุรกิจนำเที่ยว เลขที่ $licenceNo',
           child: Material(
             color: Colors.transparent,
             child: InkWell(
@@ -1250,7 +1264,7 @@ class _TrustHub extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'ใบอนุญาตเลขที่ 12/03773',
+                              'ใบอนุญาตเลขที่ $licenceNo',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(

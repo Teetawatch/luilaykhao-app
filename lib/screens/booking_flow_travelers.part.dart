@@ -73,6 +73,10 @@ class TravelerFormSection extends StatelessWidget {
   final ValueChanged<int> onUseWallet;
   final ValueChanged<int> onUseSavedTraveller;
   final List<dynamic> pickupPoints;
+  /// ทริปต่างประเทศเก็บเอกสารเดินทางเพิ่ม และไม่มีขั้นตอนเลือกจุดขึ้นรถ
+  final bool isInternational;
+  /// วันหมดอายุพาสปอร์ตที่เร็วที่สุดที่ยังใช้เดินทางรอบนี้ได้ (วันเดินทาง + 6 เดือน)
+  final DateTime? minPassportExpiry;
 
   const TravelerFormSection({
     super.key,
@@ -86,6 +90,8 @@ class TravelerFormSection extends StatelessWidget {
     required this.onUseWallet,
     required this.onUseSavedTraveller,
     this.pickupPoints = const [],
+    this.isInternational = false,
+    this.minPassportExpiry,
   });
 
   @override
@@ -111,6 +117,8 @@ class TravelerFormSection extends StatelessWidget {
                   ? selectedSeatIds[index]
                   : null,
               pickupPoints: pickupPoints,
+              isInternational: isInternational,
+              minPassportExpiry: minPassportExpiry,
               onUseProfile: () => onUseProfile(index),
               onUseWallet: () => onUseWallet(index),
               onUseSavedTraveller: () => onUseSavedTraveller(index),
@@ -1184,6 +1192,8 @@ class _TravelerCard extends StatelessWidget {
   final bool isLast;
   final String? seatId;
   final List<dynamic> pickupPoints;
+  final bool isInternational;
+  final DateTime? minPassportExpiry;
   final VoidCallback onUseProfile;
   final VoidCallback onUseWallet;
   final VoidCallback onUseSavedTraveller;
@@ -1194,6 +1204,8 @@ class _TravelerCard extends StatelessWidget {
     required this.isLast,
     this.seatId,
     this.pickupPoints = const [],
+    this.isInternational = false,
+    this.minPassportExpiry,
     required this.onUseProfile,
     required this.onUseWallet,
     required this.onUseSavedTraveller,
@@ -1638,6 +1650,116 @@ class _TravelerCard extends StatelessWidget {
             validator: (date) =>
                 date == null ? 'กรุณาเลือกวัน/เดือน/ปีเกิด' : null,
           ),
+          // เอกสารเดินทาง — ข้อมูลชุดนี้เอาไปออกตั๋วเครื่องบินตรง ๆ สะกดผิด
+          // แม้ตัวเดียวคือขึ้นเครื่องไม่ได้ จึงแยกกล่องให้เห็นชัดว่าคนละชุดกัน
+          if (isInternational) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7).withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                border: Border.all(color: const Color(0xFFFCD34D)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.flight_takeoff_rounded,
+                        size: 18,
+                        color: Color(0xFFB45309),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'เอกสารเดินทาง',
+                              style: appFont(
+                                fontSize: AppText.sizeLabel,
+                                fontWeight: FontWeight.w800,
+                                color: _premiumText(context),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'กรอกให้ตรงกับหน้าพาสปอร์ตทุกตัวอักษร เพราะใช้ออกตั๋วเครื่องบิน',
+                              style: appFont(
+                                fontSize: AppText.sizeCaption,
+                                color: _mutedTextColor(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _PremiumTextField(
+                    controller: controllers.nameEn,
+                    label: 'ชื่อ-สกุลภาษาอังกฤษ (ตามพาสปอร์ต)',
+                    hint: 'SOMCHAI JAIDEE',
+                    icon: Icons.badge_rounded,
+                    textCapitalization: TextCapitalization.characters,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r"[A-Za-z\s.'-]"),
+                      ),
+                      _UpperCaseFormatter(),
+                    ],
+                    validator: _requiredValidator(
+                      'กรุณากรอกชื่อ-สกุลภาษาอังกฤษตามพาสปอร์ต',
+                    ),
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 12),
+                  _PremiumTextField(
+                    controller: controllers.passportNo,
+                    label: 'เลขที่พาสปอร์ต',
+                    hint: 'AA1234567',
+                    icon: Icons.menu_book_rounded,
+                    textCapitalization: TextCapitalization.characters,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                      LengthLimitingTextInputFormatter(20),
+                      _UpperCaseFormatter(),
+                    ],
+                    validator: (value) {
+                      final text = (value ?? '').trim();
+                      if (text.isEmpty) return 'กรุณากรอกเลขที่พาสปอร์ต';
+                      if (text.length < 5) return 'เลขที่พาสปอร์ตไม่ถูกต้อง';
+                      return null;
+                    },
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 12),
+                  _PremiumDatePicker(
+                    value: controllers.passportExpiresAt,
+                    label: 'วันหมดอายุพาสปอร์ต',
+                    icon: Icons.event_available_rounded,
+                    future: true,
+                    firstDate: minPassportExpiry,
+                    helpText: 'เลือกวันหมดอายุพาสปอร์ต',
+                    hint: 'แตะเพื่อเลือกวันหมดอายุ',
+                    validator: (date) {
+                      if (date == null) {
+                        return 'กรุณาระบุวันหมดอายุพาสปอร์ต';
+                      }
+                      final minimum = minPassportExpiry;
+                      if (minimum != null && date.isBefore(minimum)) {
+                        return 'พาสปอร์ตต้องเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           _HalalFoodSelector(
             selected: controllers.halalFood,

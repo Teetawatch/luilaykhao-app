@@ -315,6 +315,10 @@ class _PassengerControllers {
   final phone = TextEditingController();
   final email = TextEditingController();
   final idCard = TextEditingController();
+  // เอกสารเดินทาง — ใช้เฉพาะทริปต่างประเทศ ทริปในประเทศปล่อยว่างไว้
+  final nameEn = TextEditingController();
+  final passportNo = TextEditingController();
+  final passportExpiresAt = ValueNotifier<DateTime?>(null);
   final birthDate = ValueNotifier<DateTime?>(null);
   final bloodGroup = TextEditingController();
   final emergencyContact = TextEditingController();
@@ -335,6 +339,12 @@ class _PassengerControllers {
     if (p.isNotEmpty) phone.text = p;
     final id = (wallet['id_card'] as String? ?? '').trim();
     if (id.isNotEmpty) idCard.text = id;
+    final ne = (wallet['name_en'] as String? ?? '').trim();
+    if (ne.isNotEmpty) nameEn.text = ne;
+    final pn = (wallet['passport_no'] as String? ?? '').trim();
+    if (pn.isNotEmpty) passportNo.text = pn;
+    final pe = _parseBirthDate(wallet['passport_expires_at']);
+    if (pe != null) passportExpiresAt.value = pe;
     final bd = _parseBirthDate(wallet['birth_date']);
     if (bd != null) birthDate.value = bd;
     final bg = (wallet['blood_group'] as String? ?? '').trim();
@@ -363,6 +373,9 @@ class _PassengerControllers {
     phone.text = textOf(user['phone']);
     email.text = textOf(user['email']);
     idCard.text = textOf(user['id_card']);
+    nameEn.text = textOf(user['name_en']);
+    passportNo.text = textOf(user['passport_no']);
+    passportExpiresAt.value = _parseBirthDate(user['passport_expires_at']);
     birthDate.value = _parseBirthDate(user['birth_date']);
     bloodGroup.text = _profileBloodGroup(user['blood_group']);
     emergencyContact.text = textOf(user['emergency_contact']);
@@ -383,6 +396,13 @@ class _PassengerControllers {
     'phone': phone.text.trim(),
     'email': email.text.trim().isEmpty ? null : email.text.trim(),
     'id_card': idCard.text.trim().isEmpty ? null : idCard.text.trim(),
+    'name_en': nameEn.text.trim().isEmpty
+        ? null
+        : nameEn.text.trim().toUpperCase(),
+    'passport_no': passportNo.text.trim().isEmpty
+        ? null
+        : passportNo.text.trim().toUpperCase(),
+    'passport_expires_at': _formatBirthDate(passportExpiresAt.value),
     'birth_date': _formatBirthDate(birthDate.value),
     'blood_group': bloodGroup.text.trim().isEmpty
         ? null
@@ -408,6 +428,9 @@ class _PassengerControllers {
     phone.dispose();
     email.dispose();
     idCard.dispose();
+    nameEn.dispose();
+    passportNo.dispose();
+    passportExpiresAt.dispose();
     birthDate.dispose();
     bloodGroup.dispose();
     emergencyContact.dispose();

@@ -1073,6 +1073,19 @@ class _AllTripCard extends StatelessWidget {
                                   foregroundColor: Colors.white,
                                 ),
                               ],
+                              // ป้ายประเทศติดเฉพาะทริปต่างประเทศ — ทริปใน
+                              // ประเทศไม่ต้องบอกว่า "ไทย"
+                              if (textOf(trip['country_label']).isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                _OverlayPill(
+                                  text: textOf(trip['country_label']),
+                                  icon: Icons.flight_takeoff_rounded,
+                                  backgroundColor: const Color(
+                                    0xFF0284C7,
+                                  ).withValues(alpha: 0.95),
+                                  foregroundColor: Colors.white,
+                                ),
+                              ],
                             ],
                           ),
                         ),
