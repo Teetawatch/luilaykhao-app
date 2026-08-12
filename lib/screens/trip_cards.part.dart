@@ -319,92 +319,51 @@ class _ReferenceTripCard extends StatelessWidget {
                 ),
               ),
             ),
+            // ป้ายหมวดหมู่กับป้ายขวา (เหลือกี่ที่ / Flash Sale) อยู่ในแถวเดียวกัน
+            // เพื่อให้แบ่งความกว้างการ์ดกันจริง — เดิมเป็น Positioned สองอันคนละ
+            // มุม การ์ดในรางกว้าง 180pt จึงทำให้ป้ายทับกันเมื่อชื่อหมวดหมู่ยาว
+            //
+            // ทั้งคู่ใช้ตัวอักษร/ระยะขอบขนาดเล็กสุด (_CardBadge) เพราะพื้นที่จริง
+            // เหลือแค่ ~150pt สองป้ายขนาดปกติใส่ไม่พอ หมวดหมู่จะถูกย่อจนหาย
             Positioned(
-              top: 14,
-              left: 14,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface(context).withValues(alpha: 0.90),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                ),
-                child: Text(
-                  _tripTypeLabel(type),
-                  style: appFont(
-                    color: const Color(0xFF059669),
-                    fontSize: AppText.sizeCaption,
-                    fontWeight: FontWeight.w900,
-                  ),
+              top: 12,
+              left: 12,
+              right: 12,
+              child: LayoutBuilder(
+                builder: (context, box) => Row(
+                  children: [
+                    Flexible(
+                      child: _CardBadge(
+                        label: _tripTypeLabel(type),
+                        background: AppTheme.surface(
+                          context,
+                        ).withValues(alpha: 0.90),
+                        foreground: const Color(0xFF059669),
+                      ),
+                    ),
+                    if (seatsLeft != null) ...[
+                      const SizedBox(width: 5),
+                      _CardBadge(
+                        label: 'เหลือ $seatsLeft ที่',
+                        icon: Icons.event_seat_rounded,
+                        background: AppTheme.errorColor,
+                        foreground: Colors.white,
+                      ),
+                    ] else if (trip['is_flash_sale'] == true) ...[
+                      const SizedBox(width: 5),
+                      _CardBadge(
+                        // การ์ดในรางแคบเกินกว่าจะใส่คำเต็ม — ตัดเหลือ "FLASH"
+                        // เพื่อให้ยังเห็นหมวดหมู่ข้าง ๆ ครบคำ
+                        label: box.maxWidth < 200 ? 'FLASH' : 'Flash Sale',
+                        icon: Icons.bolt_rounded,
+                        background: const Color(0xFFEA580C),
+                        foreground: Colors.white,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
-            if (seatsLeft != null)
-              Positioned(
-                top: 14,
-                right: 14,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorColor,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.event_seat_rounded,
-                        size: 13,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'เหลือ $seatsLeft ที่',
-                        style: appFont(
-                          color: Colors.white,
-                          fontSize: AppText.sizeCaption,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (seatsLeft == null && trip['is_flash_sale'] == true)
-              Positioned(
-                top: 14,
-                right: 14,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEA580C),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.bolt_rounded, size: 14, color: Colors.white),
-                      const SizedBox(width: 2),
-                      Text(
-                        'Flash Sale',
-                        style: appFont(
-                          color: Colors.white,
-                          fontSize: AppText.sizeCaption,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             Positioned(
               left: 14,
               right: 14,
@@ -510,6 +469,57 @@ class _ReferenceTripCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// ป้ายมุมบนของ [_ReferenceTripCard] — หมวดหมู่ / "เหลือ N ที่" / Flash Sale
+///
+/// ขนาดเล็กสุดที่ยังอ่านออก (10sp, ขอบ 8×4) เพราะการ์ดในรางแนวนอนกว้างเพียง
+/// 180pt และต้องวางสองป้ายเรียงกันในแถวเดียว ตัวอักษรย่อด้วย ellipsis เมื่อ
+/// ผู้ใช้ตั้งขนาดตัวอักษรใหญ่หรือชื่อหมวดหมู่ยาวผิดปกติ
+class _CardBadge extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final Color background;
+  final Color foreground;
+
+  const _CardBadge({
+    required this.label,
+    required this.background,
+    required this.foreground,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: foreground),
+            const SizedBox(width: 3),
+          ],
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: appFont(
+                color: foreground,
+                fontSize: AppText.sizeMicro,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

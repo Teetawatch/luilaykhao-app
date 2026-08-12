@@ -12,8 +12,24 @@ class BookingPhotosSection extends StatefulWidget {
   State<BookingPhotosSection> createState() => _BookingPhotosSectionState();
 }
 
+/// รูปหนึ่งใบ: ลิงก์ต้นฉบับสำหรับดูเต็มจอ/ดาวน์โหลด และลิงก์ thumbnail (ขอบยาว
+/// 800px ที่เซิร์ฟเวอร์ทำไว้) สำหรับตาราง — รูปเก่าที่ยังไม่มี thumbnail จะ
+/// fallback มาใช้ต้นฉบับ แต่ยังถูกจำกัดขนาด decode อยู่
+class _TripPhotoRef {
+  final String full;
+  final String thumb;
+
+  const _TripPhotoRef({required this.full, required this.thumb});
+}
+
 class _BookingPhotosSectionState extends State<BookingPhotosSection> {
   late Future<List<Map<String, dynamic>>> _future;
+
+  /// จำนวนรูปที่ตารางสร้างจริง — GridView ตัวนี้ shrinkWrap อยู่ในชีท จึงต้อง
+  /// layout ทุกใบที่ itemCount บอกพร้อมกัน (ไม่มี lazy loading) อัลบั้มหลังทริป
+  /// มีเป็นร้อยใบได้ ถ้าปล่อยหมดชุดแอปจะถูกระบบฆ่าเพราะหน่วยความจำ
+  static const _pageSize = 18;
+  int _visibleCount = _pageSize;
 
   @override
   void initState() {
@@ -23,6 +39,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
 
   void _reload() {
     setState(() {
+      _visibleCount = _pageSize;
       _future = context.read<AppProvider>().bookingPhotos(widget.bookingRef);
     });
   }
@@ -37,11 +54,17 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
         }
 
         final photos = snap.data ?? const <Map<String, dynamic>>[];
-        final urls = photos
-            .map((p) => ApiConfig.mediaUrl(p['url'] ?? p['path']))
-            .where((u) => u.isNotEmpty)
-            .toList();
-        if (urls.isEmpty) return _buildEmptyState(context);
+        final items = <_TripPhotoRef>[];
+        for (final p in photos) {
+          final full = ApiConfig.mediaUrl(p['url'] ?? p['path']);
+          if (full.isEmpty) continue;
+          final thumb = ApiConfig.mediaUrl(p['thumb_url']);
+          items.add(
+            _TripPhotoRef(full: full, thumb: thumb.isEmpty ? full : thumb),
+          );
+        }
+        if (items.isEmpty) return _buildEmptyState(context);
+        final urls = items.map((e) => e.full).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,45 +114,85 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
             ),
             _buildExpiryNotice(context, photos),
             const SizedBox(height: 10),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 6,
-                crossAxisSpacing: 6,
-              ),
-              itemCount: urls.length,
-              itemBuilder: (context, index) => GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  PageRouteBuilder(
-                    opaque: false,
-                    barrierColor: Colors.black,
-                    pageBuilder: (_, _, _) => _BookingPhotoViewer(
-                      urls: urls,
-                      initialIndex: index,
-                    ),
+            LayoutBuilder(
+              builder: (context, box) {
+                // decode ให้พอดีช่องจริง ไม่ใช่ขนาดไฟล์ — ต้นฉบับขอบยาว 2400px
+                // กินราว 15 MB ต่อใบเมื่อคลี่เป็น bitmap ทั้งที่ช่องกว้าง ~120pt
+                final dpr = MediaQuery.devicePixelRatioOf(
+                  context,
+                ).clamp(1.0, 3.0);
+                final tile = (box.maxWidth - 12) / 3;
+                final decodeWidth = (tile * dpr).round().clamp(64, 600);
+                final shown = items.length < _visibleCount
+                    ? items.length
+                    : _visibleCount;
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 6,
+                    crossAxisSpacing: 6,
                   ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                  child: CachedNetworkImage(
-                    imageUrl: urls[index],
-                    fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(
-                      color: AppTheme.border(context),
+                  itemCount: shown,
+                  itemBuilder: (context, index) => GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      PageRouteBuilder(
+                        barrierColor: Colors.black,
+                        pageBuilder: (_, _, _) => _BookingPhotoViewer(
+                          urls: urls,
+                          initialIndex: index,
+                        ),
+                      ),
                     ),
-                    errorWidget: (_, _, _) => Container(
-                      color: AppTheme.border(context),
-                      child: const Icon(
-                        Icons.image_not_supported_rounded,
-                        size: 20,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                      child: CachedNetworkImage(
+                        imageUrl: items[index].thumb,
+                        fit: BoxFit.cover,
+                        // ตั้งแค่ความกว้าง — ใส่ทั้งกว้างและสูงจะบีบสัดส่วนรูปเพี้ยน
+                        memCacheWidth: decodeWidth,
+                        maxWidthDiskCache: decodeWidth,
+                        placeholder: (_, _) => Container(
+                          color: AppTheme.border(context),
+                        ),
+                        errorWidget: (_, _, _) => Container(
+                          color: AppTheme.border(context),
+                          child: const Icon(
+                            Icons.image_not_supported_rounded,
+                            size: 20,
+                          ),
+                        ),
                       ),
                     ),
                   ),
+                );
+              },
+            ),
+            if (items.length > _visibleCount)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () => setState(
+                      () => _visibleCount += _pageSize,
+                    ),
+                    icon: const Icon(Icons.expand_more_rounded, size: 18),
+                    label: Text(
+                      'ดูรูปเพิ่ม (อีก ${items.length - _visibleCount} รูป)',
+                      style: appFont(
+                        fontSize: AppText.sizeLabel,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.accentColor,
+                    ),
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
@@ -368,6 +431,13 @@ class _BookingPhotoViewerState extends State<_BookingPhotoViewer> {
 
   @override
   Widget build(BuildContext context) {
+    // เพดานขนาด decode ของรูปเต็มจอ — เผื่อไว้ 2 เท่าของความกว้างจอเพื่อให้ซูม
+    // ยังคม แต่ไม่ปล่อยให้ไฟล์ใหญ่ผิดปกติคลี่เป็น bitmap ตามขนาดจริง
+    final dpr = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
+    final decodeWidth = (MediaQuery.sizeOf(context).width * dpr * 2)
+        .round()
+        .clamp(640, 2048);
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -384,6 +454,7 @@ class _BookingPhotoViewerState extends State<_BookingPhotoViewer> {
                   child: CachedNetworkImage(
                     imageUrl: widget.urls[i],
                     fit: BoxFit.contain,
+                    memCacheWidth: decodeWidth,
                     placeholder: (_, _) => const CircularProgressIndicator(
                       color: Colors.white,
                     ),

@@ -8,6 +8,69 @@ const List<({String type, String label, String bank})> _beamBankApps = [
   (type: 'BANGKOK_BANK_APP', label: 'Bualuang', bank: 'กรุงเทพ'),
 ];
 
+/// เครื่องหมายประจำแอปธนาคาร: สีแบรนด์ + อักษรย่อ
+///
+/// ไม่ใช่โลโก้จริงของธนาคาร — ไฟล์โลโก้เป็นเครื่องหมายการค้าที่ต้องได้รับอนุญาต
+/// ก่อนนำมาแนบในแอป ถ้าวันหนึ่งได้ไฟล์มาแล้ว เปลี่ยนเฉพาะ [_BankMark] จุดเดียว
+({Color color, Color onColor, String initials}) _bankMark(String type) {
+  return switch (type) {
+    'KPLUS' => (
+      color: const Color(0xFF138F2D),
+      onColor: Colors.white,
+      initials: 'K+',
+    ),
+    'SCB_EASY' => (
+      color: const Color(0xFF4E2A84),
+      onColor: Colors.white,
+      initials: 'SCB',
+    ),
+    'KRUNGSRI_APP' => (
+      color: const Color(0xFFFEC10E),
+      onColor: const Color(0xFF4A3000),
+      initials: 'KS',
+    ),
+    'BANGKOK_BANK_APP' => (
+      color: const Color(0xFF1E4598),
+      onColor: Colors.white,
+      initials: 'BBL',
+    ),
+    _ => (
+      color: AppTheme.accentColor,
+      onColor: Colors.white,
+      initials: '฿',
+    ),
+  };
+}
+
+class _BankMark extends StatelessWidget {
+  final String type;
+
+  const _BankMark({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final mark = _bankMark(type);
+
+    return Container(
+      width: 34,
+      height: 34,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: mark.color,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      ),
+      child: Text(
+        mark.initials,
+        style: appFont(
+          color: mark.onColor,
+          fontSize: AppText.sizeCaption,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
 /// จ่ายผ่านเกตเวย์ (Beam) — QR ที่เงินเข้าแล้วระบบรู้เอง ไม่ต้องแนบสลิป
 ///
 /// แทนที่ทั้งชุด _PaymentMethodSection + _SlipUploadSection + _TransferTimeSection
@@ -394,29 +457,44 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection> {
                           _createCharge(app.type);
                         },
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 12,
+                    ),
                     side: BorderSide(color: AppTheme.border(context)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(
-                        app.label,
-                        style: appFont(
-                          color: AppTheme.onSurface(context),
-                          fontSize: AppText.sizeBody,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Text(
-                        app.bank,
-                        style: appFont(
-                          color: AppTheme.mutedText(context),
-                          fontSize: AppText.sizeCaption,
-                          fontWeight: FontWeight.w600,
+                      _BankMark(type: app.type),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              app.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                color: AppTheme.onSurface(context),
+                                fontSize: AppText.sizeBody,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              app.bank,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                color: AppTheme.mutedText(context),
+                                fontSize: AppText.sizeCaption,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
