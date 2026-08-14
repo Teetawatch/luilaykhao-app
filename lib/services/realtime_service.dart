@@ -222,7 +222,13 @@ class RealtimeService {
   }
 
   Future<void> _resubscribeAll() async {
-    for (final sub in _subscriptions.values) {
+    // Private channels hit `broadcasting/auth` before subscribing, so the map
+    // can be mutated by subscribe()/unsubscribe() between turns — iterate a
+    // snapshot and re-check each entry is still live before sending.
+    final socketId = _socketId;
+    for (final sub in List.of(_subscriptions.values)) {
+      if (_socketId != socketId) return;
+      if (!identical(_subscriptions[sub.channel], sub)) continue;
       await _sendSubscribe(sub);
     }
   }
@@ -238,6 +244,9 @@ class RealtimeService {
       payload['auth'] = auth;
     }
 
+    // The socket may have dropped while the auth request was in flight; don't
+    // mark a subscription authenticated when nothing was actually sent.
+    if (_channel == null) return;
     _send({'event': 'pusher:subscribe', 'data': payload});
     sub.authenticated = true;
   }
