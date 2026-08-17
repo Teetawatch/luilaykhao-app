@@ -35,6 +35,28 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
           final schedule = asMap(booking['schedule']);
           final trip = asMap(schedule['trip']);
           final passengers = asList(booking['passengers']);
+          // รอบที่บินไป — ที่นั่งมาจากสายการบิน ทีมงานกรอกให้ทีหลัง ไม่ใช่ผังรถ
+          final isFlight = textOf(schedule['transport_type']) == 'flight';
+          // เลขที่นั่งเก็บอยู่ที่ booking['seats'] พร้อมชื่อคนนั่ง (ไม่ได้อยู่ในราย
+          // passenger) — จับคู่ด้วยชื่อก่อน ถ้าไม่ตรงค่อยไล่ตามลำดับเหมือนที่
+          // ฝั่งแอดมินสร้างแถวไว้
+          String seatForPassenger(Map<String, dynamic> passenger, int index) {
+            final seats = asList(booking['seats']).map(asMap).toList();
+            final name = textOf(passenger['name']);
+            if (name.isNotEmpty) {
+              for (final seat in seats) {
+                if (textOf(seat['passenger_name']) == name) {
+                  return textOf(seat['seat_id']);
+                }
+              }
+            }
+            if (seats.every((seat) => textOf(seat['passenger_name']).isEmpty) &&
+                index < seats.length) {
+              return textOf(seats[index]['seat_id']);
+            }
+            return '';
+          }
+
           final installments = asList(booking['installment_payments']);
           // Lowest unpaid installment the customer can still pay (no.1 is settled
           // at booking time, so the next payable is always >= 2).
@@ -255,12 +277,12 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   title: 'ผู้เดินทาง',
                 ),
                 const SizedBox(height: 10),
-                ...passengers.map((item) {
-                  final p = asMap(item);
+                ...passengers.asMap().entries.map((entry) {
+                  final p = asMap(entry.value);
                   final name = '${textOf(p['title'])} ${textOf(p['name'])}'
                       .trim();
                   final phone = textOf(p['phone'], 'ไม่มีเบอร์โทร');
-                  final seat = textOf(p['seat_id']);
+                  final seat = seatForPassenger(p, entry.key);
                   final halal = p['halal_food'] == true;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -317,7 +339,11 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                                     spacing: 6,
                                     children: [
                                       if (seat.isNotEmpty)
-                                        _InlineBadge('ที่นั่ง $seat'),
+                                        _InlineBadge(
+                                          isFlight
+                                              ? 'ที่นั่งบนเครื่อง $seat'
+                                              : 'ที่นั่ง $seat',
+                                        ),
                                       if (halal)
                                         const _InlineBadge('อาหารฮาลาล'),
                                     ],
@@ -356,14 +382,20 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   }
                   return <Widget>[
                     const SizedBox(height: 16),
-                    const _SheetSectionTitle(
-                      icon: Icons.event_seat_rounded,
-                      title: 'ที่นั่งของคุณในรถ',
+                    _SheetSectionTitle(
+                      icon: isFlight
+                          ? Icons.airline_seat_recline_normal_rounded
+                          : Icons.event_seat_rounded,
+                      title: isFlight
+                          ? 'ที่นั่งบนเครื่องบิน'
+                          : 'ที่นั่งของคุณในรถ',
                     ),
                     const SizedBox(height: 10),
                     _MySeatMapSection(
                       scheduleId: scheduleId,
                       mySeatIds: mySeatIds,
+                      // รอบที่บินไปไม่มีผังให้วาด — ข้ามการเรียก API ไปเลย
+                      skipMap: isFlight,
                     ),
                   ];
                 })(),
@@ -893,23 +925,40 @@ class _MySeatMapSection extends StatefulWidget {
   final int scheduleId;
   final Set<String> mySeatIds;
 
-  const _MySeatMapSection({required this.scheduleId, required this.mySeatIds});
+  /// รอบที่ไม่มีผังที่นั่งของเราเลย (เช่น บินไป — สายการบินจัดที่นั่ง) — โชว์
+  /// เลขที่นั่งเป็นชิปโดยไม่ต้องยิงขอผังที่รู้อยู่แล้วว่าว่าง
+  final bool skipMap;
+
+  const _MySeatMapSection({
+    required this.scheduleId,
+    required this.mySeatIds,
+    this.skipMap = false,
+  });
 
   @override
   State<_MySeatMapSection> createState() => _MySeatMapSectionState();
 }
 
 class _MySeatMapSectionState extends State<_MySeatMapSection> {
-  late Future<Map<String, dynamic>> _future;
+  Future<Map<String, dynamic>>? _future;
 
   @override
   void initState() {
     super.initState();
-    _future = context.read<AppProvider>().seats(widget.scheduleId);
+    if (!widget.skipMap) {
+      _future = context.read<AppProvider>().seats(widget.scheduleId);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_future == null) {
+      return _shell(
+        context,
+        _seatChips(context, note: 'สายการบินเป็นผู้จัดที่นั่งให้'),
+      );
+    }
+
     return FutureBuilder<Map<String, dynamic>>(
       future: _future,
       builder: (context, snapshot) {
@@ -4372,9 +4421,15 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
     _schedulesFuture = context.read<AppProvider>().schedules(_tripSlug);
   }
 
+  /// รอบใหม่ที่เลือกมีผังที่นั่งให้เลือกไหม — รอบที่บินไปไม่มี (สายการบินจัดให้)
+  /// ระหว่างยังโหลดไม่เสร็จถือว่ามี เพื่อไม่ให้ปุ่มยืนยันเปิดก่อนรู้คำตอบ
+  bool get _targetHasSeatMap => _seatsData?['has_seat_map'] != false;
+
+  bool get _needsSeatChoice => _isSeatBased && _targetHasSeatMap;
+
   bool get _canSubmit {
     if (_submitting || _selected == null) return false;
-    if (_isSeatBased) return _selectedSeats.length == _passengerCount;
+    if (_needsSeatChoice) return _selectedSeats.length == _passengerCount;
     return true;
   }
 
@@ -4486,7 +4541,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                   _stepLabel('1', 'เลือกรอบเดินทางใหม่'),
                   const SizedBox(height: 10),
                   _scheduleList(),
-                  if (_selected != null && _isSeatBased) ...[
+                  if (_selected != null && _needsSeatChoice) ...[
                     const SizedBox(height: 20),
                     _stepLabel(
                       '2',
@@ -4494,6 +4549,22 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                     ),
                     const SizedBox(height: 12),
                     _seatSection(),
+                  ],
+                  // รอบใหม่บินไป — ไม่มีที่นั่งให้เลือก ทีมงานแจ้งเลขให้ทีหลัง
+                  if (_selected != null &&
+                      _isSeatBased &&
+                      !_targetHasSeatMap) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      'รอบใหม่เดินทางโดยเครื่องบิน ไม่ต้องเลือกที่นั่ง — '
+                      'ทีมงานจะแจ้งเลขที่นั่งจากสายการบินให้ก่อนวันเดินทาง',
+                      style: appFont(
+                        fontSize: AppText.sizeLabel,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                        height: 1.5,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -4932,7 +5003,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
   Widget _confirmBar(BuildContext context) {
     final target = _selected;
     final targetDate = target != null ? departureText(target) : null;
-    final seatSummary = _isSeatBased && target != null
+    final seatSummary = _needsSeatChoice && target != null
         ? '${_selectedSeats.length}/$_passengerCount ที่นั่ง'
         : null;
 

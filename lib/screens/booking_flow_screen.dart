@@ -309,6 +309,12 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   bool get _usesSeatStep =>
       !_isJoinTrip && (_seatLoading || _seatMap == null || _hasSeatMap);
 
+  /// เหตุผลที่รอบนี้ไม่มีผังที่นั่งให้เลือก (รอบที่บินไป — สายการบินจัดที่นั่งเอง)
+  /// ว่างไว้เมื่อไม่มีผังด้วยเหตุอื่น เช่น จอยทริป
+  String get _seatSelectionDisabledReason => _isJoinTrip
+      ? ''
+      : textOf(_seatMap?['seat_selection_disabled_reason']);
+
   List<String> get _stepLabels => _usesSeatStep
       ? const ['จุดขึ้นรถ', 'เลือกที่นั่ง', 'ข้อมูลผู้โดยสาร']
       : const ['จุดขึ้นรถ', 'ข้อมูลผู้โดยสาร'];
@@ -1169,6 +1175,15 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     return Column(
       key: const ValueKey('passenger-step'),
       children: [
+        // รอบที่บินไปข้ามขั้นตอนเลือกที่นั่งไปเลย — บอกเหตุผลไว้ ไม่งั้นคนที่เคย
+        // จองทริปในประเทศจะนึกว่าแอปลืมถาม
+        if (_seatSelectionDisabledReason.isNotEmpty) ...[
+          _CompactNotice(
+            icon: Icons.flight_rounded,
+            text: _seatSelectionDisabledReason,
+          ),
+          const SizedBox(height: 24),
+        ],
         GiftModeSection(
           enabled: _isGift,
           onChanged: _setGiftMode,
