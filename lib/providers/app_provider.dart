@@ -1829,6 +1829,29 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  // ─── เอกสารเดินทาง (ทริปต่างประเทศ) ────────────────────────────────────
+
+  /// สถานะพาสปอร์ตของผู้เดินทางทุกคนในการจอง + เกณฑ์วันหมดอายุที่ยังรับได้
+  Future<Map<String, dynamic>> travelDocuments(String ref) async {
+    final response = await api.get(ApiEndpoints.bookingTravelDocuments(ref));
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// บันทึกพาสปอร์ตของผู้เดินทางหลายคนในครั้งเดียว
+  ///
+  /// แถวที่เว้นว่างทั้งแถวถือว่า "ยังไม่พร้อมกรอก" ฝั่งเซิร์ฟเวอร์จะข้ามให้เอง
+  /// และถ้ามีแถวใดผิด จะไม่บันทึกอะไรเลย (ทั้งใบผ่านหรือทั้งใบไม่ผ่าน)
+  Future<Map<String, dynamic>> saveTravelDocuments(
+    String ref,
+    List<Map<String, dynamic>> passengers,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.bookingTravelDocuments(ref),
+      body: {'passengers': passengers},
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
   // ─── Booking members / companion invites ───────────────────────────────
 
   /// รายชื่อสมาชิกของการจอง (เจ้าของ + เพื่อนที่ถูกเชิญ/รับแล้ว)

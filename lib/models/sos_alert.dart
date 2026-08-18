@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// An SOS emergency alert raised by a traveler during a trip.
 class SosAlert {
   final int id;
@@ -15,6 +17,12 @@ class SosAlert {
   final bool isMine;
   final DateTime? createdAt;
 
+  /// เบอร์ฉุกเฉินของประเทศที่รอบนี้ไปอยู่ [ป้าย => เบอร์] — ว่างสำหรับทริปในประเทศ
+  ///
+  /// SOS เรียกทีมงานของเราได้ แต่เรียกรถพยาบาลของประเทศนั้นแทนลูกค้าไม่ได้
+  /// หน้าจอที่เปิดอยู่ตอนเกิดเหตุจึงต้องมีเบอร์นั้นให้กดโทรด้วย
+  final Map<String, String> emergencyNumbers;
+
   const SosAlert({
     required this.id,
     required this.scheduleId,
@@ -27,6 +35,7 @@ class SosAlert {
     this.status = 'active',
     this.isMine = false,
     this.createdAt,
+    this.emergencyNumbers = const {},
   });
 
   bool get hasLocation => latitude != null && longitude != null;
@@ -46,6 +55,7 @@ class SosAlert {
       status: json['status']?.toString() ?? 'active',
       isMine: json['is_mine'] == true,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
+      emergencyNumbers: _numbersFrom(json['emergency_numbers']),
     );
   }
 
@@ -60,11 +70,35 @@ class SosAlert {
       contactPhone: _nullableString(data['contact_phone']),
       latitude: double.tryParse(data['latitude']?.toString() ?? ''),
       longitude: double.tryParse(data['longitude']?.toString() ?? ''),
+      // FCM ส่งได้แต่สตริง เบอร์ฉุกเฉินจึงมาเป็น JSON ก้อนเดียว
+      emergencyNumbers: _numbersFrom(data['emergency_numbers']),
     );
   }
 
   static String? _nullableString(dynamic value) {
     final text = value?.toString().trim() ?? '';
     return text.isEmpty ? null : text;
+  }
+
+  /// รับได้ทั้ง Map (จาก REST) และสตริง JSON (จาก FCM data message)
+  static Map<String, String> _numbersFrom(dynamic value) {
+    if (value is Map) {
+      return {
+        for (final entry in value.entries)
+          entry.key.toString(): entry.value.toString(),
+      };
+    }
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty || !text.startsWith('{')) return const {};
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is Map) {
+        return {
+          for (final entry in decoded.entries)
+            entry.key.toString(): entry.value.toString(),
+        };
+      }
+    } catch (_) {}
+    return const {};
   }
 }

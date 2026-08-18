@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -33,7 +34,14 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
   Future<void> _call() async {
     final phone = widget.alert.contactPhone;
     if (phone == null || phone.isEmpty) return;
-    final uri = Uri(scheme: 'tel', path: phone);
+    await _callNumber(phone);
+  }
+
+  /// โทรออกไปยังเบอร์ใดก็ได้ — ทั้งเบอร์ผู้แจ้งและเบอร์ฉุกเฉินท้องถิ่น
+  Future<void> _callNumber(String phone) async {
+    if (phone.trim().isEmpty) return;
+    HapticFeedback.selectionClick();
+    final uri = Uri(scheme: 'tel', path: phone.trim());
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else if (mounted) {
@@ -247,6 +255,58 @@ class _SosAlertScreenState extends State<SosAlertScreen> {
               filled: false,
               onPressed: _openMap,
             ),
+
+          // เบอร์ฉุกเฉินของประเทศที่รอบนี้ไปอยู่ — ทริปต่างประเทศเท่านั้น
+          // สิ่งที่ต้องทำต่อจาก "โทรหาผู้แจ้ง" คือเรียกรถพยาบาลของประเทศนั้น
+          // ซึ่งเราเรียกให้ไม่ได้ และ 1669 ก็ใช้ที่นั่นไม่ได้
+          if (alert.emergencyNumbers.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            _InfoCard(
+              icon: Icons.emergency_rounded,
+              label: 'เบอร์ฉุกเฉินที่ปลายทาง',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: alert.emergencyNumbers.entries
+                    .map(
+                      (entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: InkWell(
+                          onTap: () => _callNumber(entry.value),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  entry.key,
+                                  style: appFont(
+                                    fontSize: AppText.sizeBody,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.onSurface(context),
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                entry.value,
+                                style: appFont(
+                                  fontSize: AppText.sizeSubtitle,
+                                  fontWeight: FontWeight.w900,
+                                  color: _sosRed,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(
+                                Icons.call_rounded,
+                                size: 16,
+                                color: _sosRed,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           if (_resolved)
             Center(

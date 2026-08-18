@@ -111,6 +111,10 @@ class ApiEndpoints {
   static String bookingChangePickup(String ref) =>
       'bookings/$ref/change-pickup';
 
+  // เอกสารเดินทาง (พาสปอร์ต) ของทริปต่างประเทศ — กรอก/แก้หลังจองแล้ว
+  static String bookingTravelDocuments(String ref) =>
+      'bookings/$ref/travel-documents';
+
   // Booking members / companion invites (เชิญเพื่อนเข้าการจองเดียวกัน)
   static String bookingMembers(String ref) => 'bookings/$ref/members';
   static String bookingInvites(String ref) => 'bookings/$ref/invites';

@@ -152,6 +152,9 @@ enum TripActivityStyle {
     case "onboard": return "checkmark.seal.fill"
     case "enroute": return "location.fill"
     case "preparing": return "backpack.fill"
+    // ขั้นของรอบที่บินไป — ไทม์ไลน์สนามบิน ไม่ใช่รถตู้วิ่งมารับ
+    case "meetup": return "person.2.wave.2.fill"
+    case "boarding": return "airplane.departure"
     case "ended": return "flag.checkered"
     default: return "hourglass"
     }

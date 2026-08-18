@@ -924,6 +924,333 @@ class MustKnowSection extends StatelessWidget {
   }
 }
 
+/// เอกสารและข้อควรรู้ของทริปต่างประเทศ — วีซ่า พาสปอร์ต ประกัน เบอร์ฉุกเฉิน
+///
+/// "ต้องขอวีซ่าไหม" คือคำถามแรกที่ตัดสินว่าลูกค้าจองได้จริงหรือเปล่า และเป็นคำถาม
+/// ที่หน้าทริปเคยไม่ตอบเลย ทำให้ทีมงานต้องมาตอบซ้ำในแชททุกคน
+///
+/// เจตนาไม่ใช่เป็นที่ปรึกษาวีซ่า แต่บอกให้พอตัดสินใจได้ว่า "ต้องเตรียมอะไรบ้าง
+/// และมีเวลาพอไหม" — จึงต้องมีวันที่ตรวจข้อมูลกับข้อความให้ยืนยันกำกับทุกครั้ง
+///
+/// ซ่อนตัวเองทั้งใบเมื่อทริปเป็นทริปในประเทศ
+class TravelRequirementsSection extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const TravelRequirementsSection({super.key, required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    if (trip['is_international'] != true) return const SizedBox.shrink();
+
+    final visa = asMap(trip['visa']);
+    final emergency = asMap(trip['emergency_numbers']);
+    final country = textOf(trip['country_label']).trim();
+    final isDark = AppTheme.isDark(context);
+
+    final visaLabel = textOf(visa['label']).trim();
+    final visaNote = textOf(visa['note']).trim();
+    final visaDays = int.tryParse(textOf(visa['days']));
+    final checkedAt = DateTime.tryParse(textOf(visa['checked_at']));
+    final disclaimer = textOf(visa['disclaimer']).trim();
+
+    const accent = Color(0xFF2563EB); // Blue 600 — ข้อมูลเอกสาร ไม่ใช่คำเตือน
+
+    return _PremiumCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: AppTheme.border(context).withValues(alpha: 0.4),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: isDark ? 0.2 : 0.10),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    border: Border.all(color: accent.withValues(alpha: 0.3)),
+                  ),
+                  child: const Icon(
+                    Icons.badge_outlined,
+                    size: 20,
+                    color: accent,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'เอกสารและข้อควรรู้',
+                        style: appFont(
+                          fontSize: AppText.sizeSubtitle,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      Text(
+                        country.isEmpty
+                            ? 'สำหรับผู้ถือพาสปอร์ตไทย'
+                            : '$country · สำหรับผู้ถือพาสปอร์ตไทย',
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          color: AppTheme.mutedText(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (visaLabel.isNotEmpty)
+                  _FeatureRow(
+                    icon: Icons.approval_rounded,
+                    title: visaDays != null
+                        ? '$visaLabel · พำนักได้ $visaDays วัน'
+                        : visaLabel,
+                    description: visaNote.isEmpty ? null : visaNote,
+                    iconColor: accent,
+                    iconBackground: accent.withValues(alpha: 0.10),
+                  ),
+                // กฎ 6 เดือนบังคับตอนจองอยู่แล้ว แต่ลูกค้าต้องรู้ก่อนจอง ไม่ใช่
+                // ไปเจอตอนกดจองแล้วผ่านไม่ได้
+                _FeatureRow(
+                  icon: Icons.menu_book_rounded,
+                  title: 'พาสปอร์ตต้องเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง',
+                  description: 'กรอกเลขพาสปอร์ตตอนจอง หรือกรอกเพิ่มทีหลังในใบจองได้',
+                  iconColor: accent,
+                  iconBackground: accent.withValues(alpha: 0.10),
+                ),
+                _FeatureRow(
+                  icon: Icons.health_and_safety_rounded,
+                  title: 'ประกันการเดินทางต่างประเทศ',
+                  description:
+                      'ดูรายการ "สิ่งที่รวมในทริป" ว่ารอบนี้รวมประกันให้แล้วหรือยัง '
+                      'ถ้ายังไม่รวม แนะนำให้ทำก่อนเดินทาง',
+                  iconColor: accent,
+                  iconBackground: accent.withValues(alpha: 0.10),
+                ),
+                if (emergency.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  _FeatureRow(
+                    icon: Icons.emergency_rounded,
+                    title: 'เบอร์ฉุกเฉินที่ปลายทาง',
+                    description: emergency.entries
+                        .map((e) => '${e.key} ${e.value}')
+                        .join(' · '),
+                    iconColor: AppTheme.errorColor,
+                    iconBackground: AppTheme.errorColor.withValues(alpha: 0.10),
+                  ),
+                ],
+                if (disclaimer.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    checkedAt == null
+                        ? disclaimer
+                        : '$disclaimer (ข้อมูลอัปเดต ${thaiDateShort(checkedAt)})',
+                    style: appFont(
+                      fontSize: AppText.sizeMicro,
+                      color: AppTheme.mutedText(context),
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// นโยบายยกเลิก — บันไดคืนเงินตามจำนวนวันก่อนเดินทาง
+///
+/// หน้าเว็บแสดงมานานแล้ว แต่แอปไม่เคยแสดงเลย ซึ่งกลายเป็นปัญหาชัดเจนตอนเปิดขาย
+/// ทริปต่างประเทศ: ตั๋วเครื่องบินคืนเงินไม่ได้และเปลี่ยนชื่อไม่ได้ คนที่จ่ายไป
+/// ห้าหมื่นต้องรู้ตั้งแต่ก่อนกดจอง ไม่ใช่ตอนขอยกเลิก
+///
+/// เนื้อหามาจาก backend (คนละชุดสำหรับในประเทศ/ต่างประเทศ) แอปแค่วาด
+class CancellationPolicySection extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const CancellationPolicySection({super.key, required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final policy = asMap(trip['cancellation_policy']);
+    final tiers = asList(policy['tiers']).map(asMap).toList();
+    if (tiers.isEmpty) return const SizedBox.shrink();
+
+    final note = textOf(policy['note']).trim();
+
+    return _PremiumCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: AppTheme.border(context).withValues(alpha: 0.4),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.mutedText(context).withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    border: Border.all(
+                      color: AppTheme.border(context).withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.event_busy_rounded,
+                    size: 20,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'นโยบายการยกเลิก',
+                        style: appFont(
+                          fontSize: AppText.sizeSubtitle,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      Text(
+                        trip['is_international'] == true
+                            ? 'ทริปต่างประเทศ — เงื่อนไขต่างจากทริปในประเทศ'
+                            : 'คืนเงินตามระยะเวลาก่อนเดินทาง',
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          color: AppTheme.mutedText(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ...tiers.map((tier) {
+                  final percent = int.tryParse(textOf(tier['percent'])) ?? 0;
+                  final color = percent >= 100
+                      ? AppTheme.successColor
+                      : percent > 0
+                      ? AppTheme.warningColor
+                      : AppTheme.errorColor;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusPill,
+                            ),
+                          ),
+                          child: Text(
+                            'คืน $percent%',
+                            style: appFont(
+                              fontSize: AppText.sizeMicro,
+                              fontWeight: FontWeight.w900,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                textOf(tier['range']),
+                                style: appFont(
+                                  fontSize: AppText.sizeLabel,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.onSurface(context),
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                textOf(tier['detail']),
+                                style: appFont(
+                                  fontSize: AppText.sizeCaption,
+                                  color: AppTheme.mutedText(context),
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                if (note.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    note,
+                    style: appFont(
+                      fontSize: AppText.sizeMicro,
+                      color: AppTheme.mutedText(context),
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MustKnowItemRow extends StatelessWidget {
   final _MustKnowItem item;
 

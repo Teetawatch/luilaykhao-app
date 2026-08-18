@@ -15,6 +15,7 @@ import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/schedule_announcements_screen.dart';
 import '../screens/sos_alert_screen.dart';
 import '../screens/support_chat_screen.dart';
+import '../screens/travel_documents_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
 import '../screens/waitlist_screen.dart';
 import 'sos_alarm_service.dart';
@@ -45,6 +46,11 @@ class NotificationNavigator {
       case 'vehicle_approaching':
       case 'safe_travels':
         _openBookingDetail(data);
+      case 'passport_info_needed':
+      case 'passport_expiring':
+        // เอกสารเดินทางของทริปต่างประเทศ — พาไปหน้ากรอกตรง ๆ ไม่ใช่แค่แท็บการจอง
+        // เพราะสิ่งที่ต้องทำมีอย่างเดียวและต้องทำก่อนออกตั๋ว
+        _openTravelDocuments(data);
       case 'split_share_created':
       case 'split_share_reminder':
         // แบ่งจ่ายกลุ่ม: พาไปหน้าชำระส่วนของตัวเองโดยตรง
@@ -132,6 +138,21 @@ class NotificationNavigator {
       return;
     }
     _switchTab(2);
+  }
+
+  static void _openTravelDocuments(Map<String, dynamic> data) {
+    final ref = data['booking_ref']?.toString().trim() ?? '';
+    if (ref.isEmpty) {
+      _switchTab(2);
+      return;
+    }
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => TravelDocumentsScreen(bookingRef: ref),
+        ),
+      ),
+    );
   }
 
   static void _openTripFeed(Map<String, dynamic> data) {

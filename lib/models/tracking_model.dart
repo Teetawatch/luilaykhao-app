@@ -76,6 +76,19 @@ class BookingInfo {
   final String? licensePlate;
   final String? shareUrl;
 
+  /// รอบที่บินไป ('flight') ไม่มีรถให้ติดตามและไม่มีจุดขึ้นรถ — หน้าจอที่พูดถึง
+  /// "รถ" ต้องเปลี่ยนไปพูดถึงจุดนัดพบที่สนามบินแทน
+  final String transportType;
+  final String? meetingPoint;
+  final String? meetingMapUrl;
+
+  /// เวลานัดพบเต็มรูปแบบเป็นเวลาไทย ("2026-09-05 03:30:00") — backend จับวันให้แล้ว
+  /// แม้เครื่องจะออกหลังเที่ยงคืน
+  final String meetingAt;
+  final String? flightLabel;
+
+  bool get isFlight => transportType == 'flight';
+
   const BookingInfo({
     required this.bookingRef,
     required this.scheduleId,
@@ -91,6 +104,11 @@ class BookingInfo {
     this.driverPhone,
     this.licensePlate,
     this.shareUrl,
+    this.transportType = '',
+    this.meetingPoint,
+    this.meetingMapUrl,
+    this.meetingAt = '',
+    this.flightLabel,
   });
 
   factory BookingInfo.fromJson(Map<String, dynamic> json) {
@@ -127,6 +145,11 @@ class BookingInfo {
       driverPhone: json['driver_phone']?.toString(),
       licensePlate: json['license_plate']?.toString(),
       shareUrl: json['share_url']?.toString(),
+      transportType: json['transport_type']?.toString() ?? '',
+      meetingPoint: json['meeting_point']?.toString(),
+      meetingMapUrl: json['meeting_map_url']?.toString(),
+      meetingAt: json['meeting_at']?.toString() ?? '',
+      flightLabel: json['flight_label']?.toString(),
     );
   }
 }

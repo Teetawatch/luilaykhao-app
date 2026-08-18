@@ -112,9 +112,96 @@ class _RightNowCardState extends State<RightNowCard> {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
+  /// เปิดจุดนัดพบที่สนามบิน — ใช้ลิงก์แผนที่ที่ทีมงานกรอกไว้ถ้ามี ไม่งั้นค้นด้วยชื่อ
+  /// (รอบบินไม่มีพิกัดจุดรับให้ใช้เหมือนรอบรถ)
+  Future<void> _openMeetingPointInMaps() async {
+    final booking = _booking;
+    if (booking == null) return;
+    HapticFeedback.selectionClick();
+
+    final mapUrl = (booking.meetingMapUrl ?? '').trim();
+    final name = (booking.meetingPoint ?? '').trim();
+    if (mapUrl.isEmpty && name.isEmpty) return;
+
+    final uri = mapUrl.isNotEmpty
+        ? Uri.parse(mapUrl)
+        : Uri.parse(
+            'https://www.google.com/maps/search/?api=1'
+            '&query=${Uri.encodeComponent(name)}',
+          );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// การ์ดของรอบที่บินไป — ไม่มีรถให้ติดตาม สิ่งที่ต้องรู้คือ "ไปเจอกันที่ไหน กี่โมง"
+  ///
+  /// นับถอยหลังไปหาเวลานัดพบ ไม่ใช่เวลาเครื่องออก เพราะเวลาที่ลูกค้าต้องออกจากบ้าน
+  /// ถูกกำหนดด้วยเวลานัดพบ (ซึ่งทีมงานตั้งเผื่อเช็คอิน/ตม. ไว้แล้ว)
+  Widget _flightCard(BuildContext context, BookingInfo booking) {
+    final place = (booking.meetingPoint ?? '').trim().isEmpty
+        ? 'จุดนัดพบที่สนามบิน'
+        : booking.meetingPoint!.trim();
+    final flight = (booking.flightLabel ?? '').trim();
+    final meetingAt = DateTime.tryParse(booking.meetingAt);
+
+    // เวลานัดพบเป็น wall-clock ไทย ฝั่งเครื่องลูกค้าก็อยู่เขตเวลาไทย จึงเทียบกับ
+    // DateTime.now() ตรง ๆ ได้ (ทริปออกจากไทยเสมอ)
+    final minutesLeft = meetingAt?.difference(DateTime.now()).inMinutes;
+
+    final (String headline, String detail, Color tone) = switch (minutesLeft) {
+      null => (
+        'เจอกันที่สนามบิน',
+        flight.isEmpty ? place : '$place · $flight',
+        AppTheme.mutedText(context),
+      ),
+      final m when m <= 0 => (
+        'ถึงเวลาเจอทีมงานแล้ว',
+        'ทีมงานรออยู่ที่ $place',
+        AppTheme.primaryColor,
+      ),
+      final m when m <= 30 => (
+        'อีก $m นาทีเจอทีมงาน',
+        'ไปที่ $place ได้เลย${flight.isEmpty ? '' : ' · $flight'}',
+        AppTheme.errorColor,
+      ),
+      final m when m <= 180 => (
+        'อีก ${(m / 60).ceil()} ชั่วโมงเจอทีมงาน',
+        'นัดพบ ${_hhmm(meetingAt!)} น. ที่ $place',
+        AppTheme.warningColor,
+      ),
+      final m => (
+        'นัดพบ ${_hhmm(meetingAt!)} น.',
+        'อีก ${(m / 60).floor()} ชั่วโมง · $place'
+            '${flight.isEmpty ? '' : ' · $flight'}',
+        AppTheme.mutedText(context),
+      ),
+    };
+
+    return _shell(
+      tone: tone,
+      icon: Icons.flight_takeoff_rounded,
+      headline: headline,
+      detail: detail,
+      actionLabel: 'เปิดแผนที่จุดนัดพบ',
+      onAction: _openMeetingPointInMaps,
+    );
+  }
+
+  static String _hhmm(DateTime d) =>
+      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
   @override
   Widget build(BuildContext context) {
     if (!_loaded) return const SizedBox.shrink();
+
+    final booking = _booking;
+
+    // รอบที่บินไป: ไม่มีรถ ไม่มีจุดขึ้นรถ ไม่มี ETA — การ์ดเดิมจะขึ้นว่า
+    // "ยังไม่มีสัญญาณรถ / จุดขึ้นรถของคุณคือ จุดรับของคุณ" ซึ่งผิดทั้งบรรทัด
+    if (booking != null && booking.isFlight) {
+      return _flightCard(context, booking);
+    }
 
     final eta = _eta;
     final pickupName = (_booking?.departurePoint ?? '').trim().isEmpty
@@ -181,6 +268,7 @@ class _RightNowCardState extends State<RightNowCard> {
     required String detail,
     required String actionLabel,
     required VoidCallback onAction,
+    IconData icon = Icons.directions_bus_rounded,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -194,7 +282,7 @@ class _RightNowCardState extends State<RightNowCard> {
         children: [
           Row(
             children: [
-              Icon(Icons.directions_bus_rounded, size: 20, color: tone),
+              Icon(icon, size: 20, color: tone),
               const SizedBox(width: 8),
               Expanded(
                 // Announced by screen readers when the ETA changes, which is

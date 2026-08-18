@@ -121,6 +121,20 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 20),
 
+                // เอกสารเดินทางที่ยังขาด — บนสุดเหนือทุกอย่าง เพราะไม่มีพาสปอร์ต
+                // คือออกตั๋วไม่ได้ ต่างจากเรื่องอื่นในหน้านี้ที่รอได้
+                if (textOf(booking['status']) != 'cancelled') ...[
+                  _TravelDocumentsCard(
+                    bookingRef: textOf(booking['booking_ref']),
+                    passport: asMap(booking['passport']),
+                    onSaved: () => setState(() {
+                      _future = context.read<AppProvider>().booking(
+                        widget.bookingRef,
+                      );
+                    }),
+                  ),
+                ],
+
                 // สรุปการเดินทาง — ตอบ 4 คำถามที่ลูกค้าถามซ้ำที่สุด (ขึ้นรถกี่โมง /
                 // รอที่ไหน / รถทะเบียนอะไร / เบอร์ใคร) ไว้บนสุดตั้งแต่วันจอง
                 // ไม่ใช่รอให้ใกล้เดินทางแล้วค่อยโผล่
@@ -185,6 +199,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
                   ),
                   const SizedBox(height: 20),
+                  // เบอร์ตำรวจ/รถพยาบาลของประเทศปลายทาง — คู่กับปุ่ม SOS
+                  // (ซ่อนตัวเองในทริปในประเทศ)
+                  EmergencyNumbersCard(trip: trip, bottomSpacing: 20),
                 ],
 
                 // Trip title + booking ref
@@ -402,6 +419,10 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
 
                 // จุดขึ้นรถที่จองไว้ (พร้อมรูปจริง) — แสดงเสมอเมื่อมีจุดรับ
                 _BookingPickupSection(booking: booking, schedule: schedule),
+
+                // จุดนัดพบที่สนามบิน + เที่ยวบิน — สิ่งที่มาแทนจุดขึ้นรถของรอบที่บินไป
+                // (การ์ดซ่อนตัวเองเมื่อทีมงานยังไม่ได้กรอกแผนการบิน)
+                _BookingFlightSection(schedule: schedule),
 
                 // เส้นทางเดินรถของรอบ (จุดรับทุกจุด → ปลายทาง) — self-loading,
                 // ไฮไลต์จุดที่ลูกค้าจองไว้; ซ่อนตัวเองเมื่อไม่มีจุดจอด
@@ -1160,6 +1181,292 @@ class _BookingCustomerRow extends StatelessWidget {
 
 /// The pickup point the customer booked, shown with its real photo, time, notes
 /// and a map link — always visible (not just in the pre-trip window).
+/// จุดนัดพบที่สนามบิน + ขาบิน — ของรอบที่บินไป
+///
+/// รอบต่างประเทศข้ามขั้นเลือกจุดขึ้นรถ (นัดเจอกันที่สนามบิน) เดิมข้อมูลนี้ไปกอง
+/// อยู่ในกำหนดการซึ่งเป็นข้อความยาว ๆ อ่านบนมือถือไม่ทันตอนตีสาม การ์ดนี้ยกมันขึ้นมา
+/// อยู่ที่เดียวกับที่รอบรถแสดงจุดขึ้นรถ
+///
+/// ซ่อนตัวเองทั้งใบเมื่อยังไม่มีข้อมูล — รอบเปิดขายได้ก่อนที่ตั๋วจะออก
+class _BookingFlightSection extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+
+  const _BookingFlightSection({required this.schedule});
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = asMap(schedule['flight_plan']);
+    if (plan.isEmpty) return const SizedBox.shrink();
+
+    final meetingPoint = textOf(plan['meeting_point']).trim();
+    final meetingTime = textOf(plan['meeting_time']).trim();
+    final mapUrl = textOf(plan['meeting_map_url']).trim();
+    final baggage = textOf(plan['baggage_allowance']).trim();
+    final legs = asMap(plan['legs']);
+    final outbound = asList(legs['outbound']).map(asMap).toList();
+    final returning = asList(legs['return']).map(asMap).toList();
+
+    final hasAnything =
+        meetingPoint.isNotEmpty ||
+        meetingTime.isNotEmpty ||
+        baggage.isNotEmpty ||
+        outbound.isNotEmpty ||
+        returning.isNotEmpty;
+    if (!hasAnything) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const _SheetSectionTitle(
+          icon: Icons.flight_takeoff_rounded,
+          title: 'จุดนัดพบและเที่ยวบิน',
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: AppTheme.cardDecoration(
+            context,
+            radius: AppTheme.radiusMd,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (meetingPoint.isNotEmpty || meetingTime.isNotEmpty) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.groups_rounded,
+                      size: 18,
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            meetingTime.isEmpty
+                                ? 'จุดนัดพบ'
+                                : 'นัดพบ $meetingTime น.',
+                            style: appFont(
+                              fontSize: AppText.sizeBody,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.onSurface(context),
+                            ),
+                          ),
+                          if (meetingPoint.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              meetingPoint,
+                              style: appFont(
+                                fontSize: AppText.sizeCaption,
+                                color: AppTheme.mutedText(context),
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (mapUrl.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        HapticFeedback.selectionClick();
+                        final uri = Uri.parse(mapUrl);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.map_rounded, size: 16),
+                      label: Text(
+                        'เปิดแผนที่จุดนัดพบ',
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        side: BorderSide(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.4),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusSm,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+              if (outbound.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _FlightLegGroup(label: 'ขาไป', legs: outbound),
+              ],
+              if (returning.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _FlightLegGroup(label: 'ขากลับ', legs: returning),
+              ],
+              if (baggage.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.luggage_rounded,
+                      size: 16,
+                      color: AppTheme.mutedText(context),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'กระเป๋าที่รวมในทริป: $baggage',
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedText(context),
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FlightLegGroup extends StatelessWidget {
+  final String label;
+  final List<Map<String, dynamic>> legs;
+
+  const _FlightLegGroup({required this.label, required this.legs});
+
+  /// "2026-09-05 06:10:00" → "5 ก.ย. 06:10" (เวลาตามที่ทีมงานกรอก ไม่แปลงเขตเวลา)
+  String _when(String raw) {
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return '';
+    return '${thaiDateShort(parsed)} '
+        '${parsed.hour.toString().padLeft(2, '0')}:'
+        '${parsed.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: appFont(
+            fontSize: AppText.sizeLabel,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.mutedText(context),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...legs.map((leg) {
+          final airline = textOf(leg['airline']).trim();
+          final flightNo = textOf(leg['flight_no']).trim();
+          final from = textOf(leg['from']).trim();
+          final to = textOf(leg['to']).trim();
+          final departAt = _when(textOf(leg['depart_at']));
+          final arriveAt = _when(textOf(leg['arrive_at']));
+          final note = textOf(leg['note']).trim();
+          final title = [
+            airline,
+            flightNo,
+          ].where((s) => s.isNotEmpty).join(' ');
+          final route = [
+            from,
+            to,
+          ].where((s) => s.isNotEmpty).join(' → ');
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.subtleSurface(context),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.flight_rounded,
+                        size: 14,
+                        color: AppTheme.mutedText(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          [
+                            title,
+                            route,
+                          ].where((s) => s.isNotEmpty).join(' · '),
+                          style: appFont(
+                            fontSize: AppText.sizeCaption,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.onSurface(context),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (departAt.isNotEmpty || arriveAt.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        if (departAt.isNotEmpty) 'ออก $departAt',
+                        if (arriveAt.isNotEmpty) 'ถึง $arriveAt',
+                      ].join(' · '),
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                  if (note.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      note,
+                      style: appFont(
+                        fontSize: AppText.sizeMicro,
+                        color: AppTheme.mutedText(context),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
 class _BookingPickupSection extends StatelessWidget {
   final Map<String, dynamic> booking;
   final Map<String, dynamic> schedule;
@@ -3068,6 +3375,121 @@ bool _isWithinTripWindow(Map<String, dynamic> schedule) {
   final start = dep.subtract(const Duration(days: 1));
   final end = DateTime(ret.year, ret.month, ret.day).add(const Duration(days: 1));
   return !today.isBefore(start) && !today.isAfter(end);
+}
+
+/// เอกสารเดินทางที่ยังขาด — การ์ดเตือนบนสุดของใบจองทริปต่างประเทศ
+///
+/// ทริปต่างประเทศบังคับพาสปอร์ตตอนจอง แต่ลูกค้าที่จองจากแอปรุ่นก่อนหน้า (ยังไม่มี
+/// ช่องกรอก) ผ่านมาได้โดยไม่มีเอกสาร คนกลุ่มนี้เคยมีทางเดียวคือลิงก์ในอีเมล
+/// — ซึ่งคนที่ไม่เปิดอ่านก็ไม่มีใครทวงอีกเลย การ์ดนี้ทวงในที่ที่เขาเปิดอยู่แล้ว
+///
+/// ซ่อนตัวเอง (พร้อมระยะห่าง) เมื่อทริปไม่ใช่ต่างประเทศหรือเอกสารครบแล้ว
+class _TravelDocumentsCard extends StatelessWidget {
+  final String bookingRef;
+  final Map<String, dynamic> passport;
+  final VoidCallback onSaved;
+
+  const _TravelDocumentsCard({
+    required this.bookingRef,
+    required this.passport,
+    required this.onSaved,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (passport['required'] != true) return const SizedBox.shrink();
+
+    final missing = int.tryParse(textOf(passport['missing_count'], '0')) ?? 0;
+    final expiring = int.tryParse(textOf(passport['expiring_count'], '0')) ?? 0;
+    if (missing == 0 && expiring == 0) return const SizedBox.shrink();
+
+    // "ยังไม่กรอก" เร่งด่วนกว่า "ใกล้หมดอายุ" — เล่มที่ยังไม่ส่งมาคือออกตั๋วไม่ได้เลย
+    final urgent = missing > 0;
+    final accent = urgent ? AppTheme.errorColor : AppTheme.warningColor;
+    final headline = urgent
+        ? 'ยังขาดข้อมูลพาสปอร์ต $missing ท่าน'
+        : 'พาสปอร์ต $expiring ท่านใกล้หมดอายุ';
+    final detail = urgent
+        ? 'ทริปนี้เดินทางออกนอกประเทศ เราต้องใช้ข้อมูลหน้าพาสปอร์ตเพื่อออกตั๋วครับ '
+              'กรอกในแอปได้เลย ใช้เวลาไม่เกินสองนาที'
+        : 'พาสปอร์ตต้องเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง '
+              'ยังมีเวลาต่อเล่มใหม่ครับ ได้เล่มแล้วมาแก้เลขที่นี่ได้เลย';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: AppTheme.isDark(context) ? 0.16 : 0.08),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(color: accent.withValues(alpha: 0.35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.badge_rounded, size: 18, color: accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    headline,
+                    style: appFont(
+                      fontSize: AppText.sizeBody,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              detail,
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                color: AppTheme.mutedText(context),
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () async {
+                  HapticFeedback.selectionClick();
+                  final saved = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          TravelDocumentsScreen(bookingRef: bookingRef),
+                    ),
+                  );
+                  if (saved == true) onSaved();
+                },
+                icon: const Icon(Icons.edit_document, size: 18),
+                label: Text(
+                  urgent ? 'กรอกข้อมูลพาสปอร์ต' : 'อัปเดตเลขพาสปอร์ต',
+                  style: appFont(
+                    color: Colors.white,
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Prominent gateway to the consolidated "วันเดินทาง" hub, shown atop the

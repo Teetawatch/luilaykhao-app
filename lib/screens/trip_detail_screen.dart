@@ -766,6 +766,10 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       if (_detailGalleryImages(trip).isNotEmpty)
         PhotoGallerySection(trip: trip),
       if (_tripVideos(trip).isNotEmpty) VideoGallerySection(trip: trip),
+      // เอกสาร/วีซ่า/ประกัน/เบอร์ฉุกเฉิน — วางก่อน "สิ่งที่ควรรู้" เพราะ
+      // "ต้องขอวีซ่าไหม" ตัดสินได้เลยว่าลูกค้าจองรอบนี้ทันหรือไม่
+      // (ซ่อนตัวเองเมื่อเป็นทริปในประเทศ)
+      TravelRequirementsSection(trip: trip),
       if (hasMustKnow) MustKnowSection(trip: trip),
       if (_textItems(trip['preparations']).isNotEmpty)
         PreparationsSection(trip: trip),
@@ -804,6 +808,9 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
           pickupRegionLabel: _pickupRegionLabel(_selectedPickupPoint),
         ),
       if (_faqItems(trip['faqs']).isNotEmpty) FaqSection(trip: trip),
+      // นโยบายยกเลิก — เว็บแสดงมานานแล้ว แอปเพิ่งมี วางหลัง FAQ เพราะเป็นเงื่อนไข
+      // ที่คนอ่านตอนกำลังตัดสินใจจ่าย (backend ส่งชุดของทริปต่างประเทศมาให้เอง)
+      CancellationPolicySection(trip: trip),
       if (_hasCommunityPhotos)
         CommunityPhotosSection(trip: trip, reviews: widget.reviews),
       // ฟีดรูปหลังทริป — ซ่อนตัวเองเมื่อไม่มีโพสต์และผู้ดูโพสต์ไม่ได้

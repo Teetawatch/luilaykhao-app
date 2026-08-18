@@ -9,6 +9,7 @@ import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
+import '../widgets/emergency_numbers_card.dart';
 import '../widgets/offline_pack_card.dart';
 import '../widgets/rally_card.dart';
 import '../widgets/sos_button.dart';
@@ -102,6 +103,10 @@ class TripDayScreen extends StatelessWidget {
             tripTitle: textOf(_trip['title'], 'ทริปของคุณ'),
             departure: _departure,
             returnDate: _return,
+            destinationOffsetMinutes: int.tryParse(
+              textOf(_trip['destination_offset_minutes']),
+            ),
+            destinationLabel: textOf(_trip['country_label']),
           ),
           const SizedBox(height: 16),
 
@@ -119,6 +124,11 @@ class TripDayScreen extends StatelessWidget {
             SosButton(scheduleId: _scheduleId),
             const SizedBox(height: 16),
           ],
+
+          // เบอร์ฉุกเฉินท้องถิ่น — ต่อจากปุ่ม SOS เพราะเป็นทางที่สองของเรื่อง
+          // เดียวกัน: SOS เรียกทีมงานของเรา เบอร์นี้เรียกตำรวจ/รถพยาบาลของประเทศ
+          // นั้น ซึ่งเราเรียกให้ไม่ได้ (การ์ดซ่อนตัวเองในทริปในประเทศ)
+          EmergencyNumbersCard(trip: _trip, bottomSpacing: 16),
 
           // ชวนเพื่อนเติมรอบที่ยังไม่การันตีออกเดินทาง — ซ่อนตัวเองเมื่อรอบ
           // ครบแล้ว/ยังไกล/เต็มแล้ว
@@ -248,11 +258,46 @@ class _CountdownHeader extends StatelessWidget {
   final DateTime? departure;
   final DateTime? returnDate;
 
+  /// ปลายทางเวลาต่างจากไทยกี่นาที — null สำหรับทริปในประเทศ
+  final int? destinationOffsetMinutes;
+
+  /// ชื่อประเทศปลายทาง ใช้ติดป้ายนาฬิกา
+  final String destinationLabel;
+
   const _CountdownHeader({
     required this.tripTitle,
     required this.departure,
     required this.returnDate,
+    this.destinationOffsetMinutes,
+    this.destinationLabel = '',
   });
+
+  /// นาฬิกาเวลาท้องถิ่นที่ปลายทาง — "เนปาล 09:15 (ช้ากว่าไทย 1:15 ชม.)"
+  ///
+  /// ทุกเวลาที่แอปแสดงเป็นเวลาไทย ซึ่งถูกสำหรับ "รถออกกี่โมง" (ออกจากไทย) แต่
+  /// พออยู่ที่ปลายทางแล้ว การอ่านเวลาผิดชั่วโมงคือการไปสายจริง ๆ ป้ายนี้จึงบอก
+  /// ให้ชัดว่านาฬิกาที่นั่นตอนนี้กี่โมง
+  ///
+  /// คืน '' เมื่อไม่ใช่ทริปต่างประเทศหรือเวลาตรงกับไทยพอดี (ลาว/เวียดนาม/จาการ์ตา)
+  String _destinationClock() {
+    final offset = destinationOffsetMinutes;
+    if (offset == null || offset == 0) return '';
+
+    final there = DateTime.now().add(Duration(minutes: offset));
+    final time =
+        '${there.hour.toString().padLeft(2, '0')}:'
+        '${there.minute.toString().padLeft(2, '0')}';
+
+    final ahead = offset > 0;
+    final absolute = offset.abs();
+    final hours = absolute ~/ 60;
+    final minutes = absolute % 60;
+    final gap = minutes == 0 ? '$hours' : '$hours:${minutes.toString().padLeft(2, '0')}';
+    final direction = ahead ? 'เร็วกว่าไทย' : 'ช้ากว่าไทย';
+    final place = destinationLabel.isEmpty ? 'ปลายทาง' : destinationLabel;
+
+    return '$place $time น. ($direction $gap ชม.)';
+  }
 
   ({String label, IconData icon}) _countdown() {
     final dep = departure;
@@ -339,6 +384,30 @@ class _CountdownHeader extends StatelessWidget {
                     fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w600,
                     color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          // นาฬิกาปลายทาง — ซ่อนตัวเองเมื่อเป็นทริปในประเทศหรือเวลาตรงกับไทย
+          if (_destinationClock().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(
+                  Icons.schedule_rounded,
+                  color: Colors.white70,
+                  size: 15,
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    _destinationClock(),
+                    style: appFont(
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white70,
+                    ),
                   ),
                 ),
               ],
