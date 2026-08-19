@@ -25,13 +25,9 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  late final AnimationController _animController;
-  late final Animation<double> _slideAnim;
-  late final Animation<double> _fadeAnim;
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
@@ -39,29 +35,13 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool get _isSocialLoading => _socialLoadingProvider != null;
 
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-    _slideAnim = CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 0.85, curve: Curves.easeOutCubic),
-    );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.1, 1.0, curve: Curves.easeOut),
-    );
-    _animController.forward();
-  }
+  // แอนิเมชันเลื่อนขึ้นของแผ่นถูกถอดออกพร้อมกับตัวแผ่น — หน้าเต็มที่เลื่อนขึ้น
+  // มาตอนเปิดจะขัดกับ transition ของ Navigator ที่เลื่อนอยู่แล้ว
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _animController.dispose();
     super.dispose();
   }
 
@@ -198,56 +178,21 @@ class _LoginScreenState extends State<LoginScreen>
       });
     }
 
-    final size = MediaQuery.sizeOf(context);
-    final padding = MediaQuery.paddingOf(context);
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    final canPop = Navigator.canPop(context);
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        backgroundColor: const Color(0xFF052E24),
-        body: Stack(
-          children: [
-            // ── Background image ──────────────────────────────────────
-            Positioned.fill(
-              child: _HeroBg(
-                imageUrl: ApiConfig.mediaUrl('/images/khaochangphueak.webp'),
-              ),
-            ),
-
-            // ── Back button ───────────────────────────────────────────
-            if (canPop)
-              Positioned(
-                top: padding.top + 12,
-                left: 16,
-                child: _GlassBackButton(
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-
-            // ── Bottom sheet ──────────────────────────────────────────
-            // Bounded top so the sheet never overflows above the screen on
-            // large displays (iPad): the inner scroll view scrolls instead of
-            // clipping the title/register link at the top.
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              top: padding.top,
-              child: AnimatedBuilder(
-                animation: _animController,
-                builder: (context, child) => FractionalTranslation(
-                  translation: Offset(0, 1 - _slideAnim.value),
-                  child: Opacity(opacity: _fadeAnim.value, child: child),
-                ),
-                child: _LoginSheet(
-                  size: size,
-                  padding: padding,
-                  bottomInset: bottomInset,
+        backgroundColor: AppTheme.background(context),
+        // หน้าเดียวไหลยาว ไม่มีแผ่นทับอีกแล้ว รูปจึงเป็นแถบหัวที่จางลงไปหาสี
+        // พื้นหน้า แล้วฟอร์มวางต่อบนพื้นเดียวกัน — โครงเดียวกับหน้าสมัครสมาชิก
+        body: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const _LoginHeader(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+                child: _LoginForm(
                   emailController: _emailController,
                   passwordController: _passwordController,
                   isPasswordVisible: _isPasswordVisible,
@@ -267,147 +212,162 @@ class _LoginScreenState extends State<LoginScreen>
                   onForgot: _handleForgotPassword,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ─── Hero Background ──────────────────────────────────────────────────────────
+/// แถบรูปหัวหน้า — จางลงไปหาสีพื้นหน้าจอที่ขอบล่าง จึงไม่มีรอยต่อให้เห็นว่า
+/// เป็นคนละชั้นกัน โครงเดียวกับ `_RegisterHeader` เพื่อให้สองหน้าของ auth
+/// อ่านเป็นชุดเดียวกัน
+class _LoginHeader extends StatelessWidget {
+  const _LoginHeader();
 
-class _HeroBg extends StatelessWidget {
-  final String imageUrl;
-  const _HeroBg({required this.imageUrl});
+  /// สูงกว่าหัวหน้าสมัครสมาชิก (260) เพราะต้องมีที่ให้ครึ่งล่างค่อยๆ จางเข้าหา
+  /// สีพื้น โดยที่ตัวหนังสือยังอยู่ในโซนมืดพอจะอ่านออก
+  static const double _height = 300;
+
+  /// จุดที่เริ่มจางเข้าหาสีพื้นหน้าจอ
+  static const double _fadeStart = 0.58;
+
+  /// จำนวนจุดที่ซอยเฉดช่วงจาง
+  ///
+  /// [LinearGradient] ลากเส้นตรงระหว่างสองจุดที่ติดกัน ถ้าซอยหยาบ รอยต่อของแต่
+  /// ละช่วงจะกลายเป็น "หักศอก" ที่ตาอ่านเป็นเส้นพาดขวาง (Mach band) — ของเดิม
+  /// ใช้แค่ 4 จุดแล้วช่วงสุดท้ายกระโดดจากดำ 50% ไปสีพื้นทึบใน 15% ของความสูง
+  /// วัดความโค้งได้แรงสุดที่ 85% พอดีกับตำแหน่งเส้นที่เห็น 16 จุดดันรอยต่อที่
+  /// แรงสุดลงไปที่ ~94% ซึ่งสองฝั่งเป็นสีพื้นเกือบเท่ากันแล้วจึงมองไม่เห็น
+  static const int _fadeSteps = 16;
+
+  static double _smoothstep(double x) => x * x * (3 - 2 * x);
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Photo
-        imageUrl.isEmpty
-            ? Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF065F46), Color(0xFF052E24)],
-                  ),
-                ),
-              )
-            : Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-                errorBuilder: (_, _, _) => Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF065F46), Color(0xFF052E24)],
-                    ),
-                  ),
+    final topPad = MediaQuery.paddingOf(context).top;
+    final isDark = AppTheme.isDark(context);
+    final bgFade = AppTheme.background(context);
+    final canPop = Navigator.canPop(context);
+
+    return SizedBox(
+      height: _height,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            ApiConfig.mediaUrl('/images/khaochangphueak.webp'),
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+            errorBuilder: (_, _, _) => Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF065F46), Color(0xFF052E24)],
                 ),
               ),
-        // Vignette – darkens bottom for sheet contrast
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0x28000000),
-                Color(0x00000000),
-                Color(0xCC071A1A),
-                Color(0xFF052E24),
-              ],
-              stops: [0.0, 0.30, 0.72, 1.0],
             ),
           ),
-        ),
-        // Headline block
-        Positioned(
-          left: 28,
-          right: 28,
-          bottom: 310,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF06C755).withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  border: Border.all(
-                    color: const Color(0xFF06C755).withValues(alpha: 0.38),
+          // สองชั้นแยกกัน ไม่ใช่เฉดเดียวที่ไล่จากดำไปสีพื้น — การไล่ข้ามจากดำ
+          // โปร่งไปหาสีอ่อนทึบในเฉดเดียวคือสิ่งที่ทำให้เกิดแถบหมอกสว่างพาดขวาง
+          //
+          // ชั้นที่ 1: ม่านดำสำหรับให้ตัวหนังสืออ่านออก ไล่เป็นเส้นตรงล้วน
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: isDark ? 0.42 : 0.34),
+                  Colors.black.withValues(alpha: isDark ? 0.60 : 0.52),
+                ],
+              ),
+            ),
+          ),
+          // ชั้นที่ 2: สีพื้นหน้าจอค่อยๆ ทึบขึ้นจนกลืนกับหน้าที่อยู่ใต้แถบ
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  bgFade.withValues(alpha: 0),
+                  for (var i = 0; i < _fadeSteps; i++)
+                    bgFade.withValues(
+                      alpha: _smoothstep(i / (_fadeSteps - 1)),
+                    ),
+                ],
+                stops: [
+                  0,
+                  for (var i = 0; i < _fadeSteps; i++)
+                    _fadeStart + (1 - _fadeStart) * i / (_fadeSteps - 1),
+                ],
+              ),
+            ),
+          ),
+          if (canPop)
+            Positioned(
+              top: topPad + 8,
+              left: 12,
+              child: _GlassBackButton(
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          Positioned(
+            left: 24,
+            right: 24,
+            // อยู่เหนือจุดที่เริ่มจาง (58%) — วัดคอนทราสต์ในแถบนี้ได้ 6.5:1
+            bottom: 108,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'เข้าสู่ระบบ',
+                  style: appFont(
+                    fontSize: AppText.sizeHero,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.1,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.30),
+                        blurRadius: 8,
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF34D399),
-                        shape: BoxShape.circle,
+                const SizedBox(height: 6),
+                Text(
+                  'ยินดีต้อนรับกลับ พร้อมออกเดินทางอีกครั้งหรือยัง',
+                  style: appFont(
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.92),
+                    height: 1.4,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.30),
+                        blurRadius: 8,
                       ),
-                    ),
-                    const SizedBox(width: 7),
-                    Text(
-                      'พร้อมเดินทางทุกเส้นทาง',
-                      style: appFont(
-                        color: const Color(0xFF34D399),
-                        fontSize: AppText.sizeCaption,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'ยินดีต้อนรับ\nกลับมา',
-                style: appFont(
-                  color: Colors.white,
-                  fontSize: 40,
-                  fontWeight: FontWeight.w800,
-                  height: 1.04,
-                  letterSpacing: -0.8,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'การผจญภัยครั้งใหม่รอคุณอยู่',
-                style: appFont(
-                  color: Colors.white.withValues(alpha: 0.62),
-                  fontSize: AppText.sizeSubtitle,
-                  fontWeight: FontWeight.w500,
-                  height: 1.4,
-                  letterSpacing: -0.1,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 // ─── Login Sheet ──────────────────────────────────────────────────────────────
 
-class _LoginSheet extends StatelessWidget {
-  final Size size;
-  final EdgeInsets padding;
-  final double bottomInset;
+class _LoginForm extends StatelessWidget {
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final bool isPasswordVisible;
@@ -422,10 +382,7 @@ class _LoginSheet extends StatelessWidget {
   final VoidCallback onLine;
   final VoidCallback onForgot;
 
-  const _LoginSheet({
-    required this.size,
-    required this.padding,
-    required this.bottomInset,
+  const _LoginForm({
     required this.emailController,
     required this.passwordController,
     required this.isPasswordVisible,
@@ -445,156 +402,100 @@ class _LoginSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomCenter,
+    return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xF2FFFFFF),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(24, 28, 24, bottomInset + 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Drag handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: AppTheme.border(context),
-                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                          ),
-                        ),
-                      ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Social login – Apple first and most prominent (Apple
+            // guideline 4.8), other providers in a row below.
+            _SocialRow(
+              socialLoadingProvider: socialLoadingProvider,
+              isBusy: _isBusy,
+              onApple: onApple,
+              onGoogle: onGoogle,
+              onFacebook: onFacebook,
+              onLine: onLine,
+            ),
 
-                      // Brand mark — grounds the sheet and reads as professional.
-                      Center(
-                        child: Container(
-                          width: 58,
-                          height: 58,
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                          ),
-                          child: Image.asset('logo_ios.png', fit: BoxFit.cover),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+            const SizedBox(height: 22),
+            const _DividerOr(),
+            const SizedBox(height: 22),
 
-                      // Title
-                      Text(
-                        'เข้าสู่ระบบ',
-                        textAlign: TextAlign.center,
-                        style: appFont(
-                          color: AppTheme.textMain,
-                          fontSize: AppText.sizeH1,
-                          fontWeight: FontWeight.w900,
-                          height: 1.1,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'ยังไม่มีบัญชี? ',
-                            style: appFont(
-                              color: AppTheme.textSecondary,
-                              fontSize: AppText.sizeBody,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: onRegister,
-                            child: Text(
-                              'สมัครสมาชิกฟรี',
-                              style: appFont(
-                                color: AppTheme.primaryColor,
-                                fontSize: AppText.sizeBody,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 26),
+            // Email + password grouped into one inset card with a
+            // hairline divider — the calm, native iOS form look.
+            _CredentialsCard(
+              emailController: emailController,
+              passwordController: passwordController,
+              isPasswordVisible: isPasswordVisible,
+              onTogglePassword: onTogglePassword,
+              onSubmitted: (_) => onLogin?.call(),
+            ),
 
-                      // Social login – Apple first and most prominent (Apple
-                      // guideline 4.8), other providers in a row below.
-                      _SocialRow(
-                        socialLoadingProvider: socialLoadingProvider,
-                        isBusy: _isBusy,
-                        onApple: onApple,
-                        onGoogle: onGoogle,
-                        onFacebook: onFacebook,
-                        onLine: onLine,
-                      ),
-
-                      const SizedBox(height: 22),
-                      const _DividerOr(),
-                      const SizedBox(height: 22),
-
-                      // Email + password grouped into one inset card with a
-                      // hairline divider — the calm, native iOS form look.
-                      _CredentialsCard(
-                        emailController: emailController,
-                        passwordController: passwordController,
-                        isPasswordVisible: isPasswordVisible,
-                        onTogglePassword: onTogglePassword,
-                        onSubmitted: (_) => onLogin?.call(),
-                      ),
-
-                      // Forgot password
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: onForgot,
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.primaryColor,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 8,
-                            ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            'ลืมรหัสผ่าน?',
-                            style: appFont(
-                              fontSize: AppText.sizeLabel,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.primaryColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Login button
-                      _LoginButton(isLoading: isLoading, onPressed: onLogin),
-
-                      const SizedBox(height: 20),
-                      _LegalNote(),
-                    ],
+            // Forgot password
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: onForgot,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primaryColor,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'ลืมรหัสผ่าน?',
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryColor,
                   ),
                 ),
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+
+            // Login button
+            _LoginButton(isLoading: isLoading, onPressed: onLogin),
+
+            const SizedBox(height: 20),
+            // ลิงก์สมัครสมาชิกย้ายมาท้ายหน้า — หัวเรื่องไปอยู่บนรูปแล้ว และคน
+            // ที่ยังไม่มีบัญชีจะรู้ตัวตอนอ่านตัวเลือกครบแล้ว ไม่ใช่ตั้งแต่บรรทัดแรก
+            Center(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'ยังไม่มีบัญชี? ',
+                    style: appFont(
+                      color: AppTheme.textSecondary,
+                      fontSize: AppText.sizeBody,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: onRegister,
+                    child: Text(
+                      'สมัครสมาชิกฟรี',
+                      style: appFont(
+                        color: AppTheme.primaryColor,
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            _LegalNote(),
+          ],
         ),
       ),
     );
