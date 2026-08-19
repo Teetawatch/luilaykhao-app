@@ -17,8 +17,9 @@ class DestinationInfoSection extends StatelessWidget {
     final isDark = AppTheme.isDark(context);
 
     if (isLoading) {
-      return const _PremiumCard(
-        padding: EdgeInsets.all(24),
+      // โครงร่างต้องไม่มีกรอบเหมือนกัน ไม่งั้นพอโหลดเสร็จการ์ดจะหายวับ
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -46,14 +47,14 @@ class DestinationInfoSection extends StatelessWidget {
         (num.tryParse('${trip['confirmed_passengers_count'] ?? 0}') ?? 0)
             .toInt();
 
-    return _PremiumCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    // ไม่มีกรอบการ์ด — นี่คือหัวเรื่องของหน้า ไม่ใช่ section หนึ่งในหลายๆ อัน
+    // ถ้าใส่กรอบเหมือนกันหมด ชื่อทริปจะกลายเป็นแค่รายการหนึ่งในลิสต์
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
           // ── top badge row ──────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
             child: Row(
               children: [
                 _RatingSummary(trip: trip, reviews: reviews),
@@ -66,10 +67,10 @@ class DestinationInfoSection extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           // ── title ──────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
               _tripTitle(trip),
               maxLines: 3,
@@ -87,7 +88,7 @@ class DestinationInfoSection extends StatelessWidget {
           if (location.isNotEmpty) ...[
             const SizedBox(height: 10),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -124,26 +125,21 @@ class DestinationInfoSection extends StatelessWidget {
           ],
           // ── stats grid ─────────────────────────────────────────────
           if (chips.isNotEmpty) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.04)
                     : AppTheme.subtleSurface(context),
                 borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : const Color(0xFFECFDF5),
+                  color: AppTheme.border(context).withValues(alpha: 0.55),
                 ),
               ),
               child: QuickInfoChips(trip: trip),
             ),
-          ] else
-            const SizedBox(height: 24),
-        ],
-      ),
+          ],
+      ],
     );
   }
 }
@@ -213,9 +209,7 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = AppTheme.isDark(context);
-    final dividerColor = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFECFDF5);
+    final dividerColor = AppTheme.border(context).withValues(alpha: 0.5);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -231,22 +225,9 @@ class _StatTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  _softAccent.withValues(alpha: 0.18),
-                  _softAccent.withValues(alpha: 0.08),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-            ),
-            child: Icon(icon, size: 16, color: _softAccent),
-          ),
+          // แผ่นไอคอนสีกลางแบบเดียวกับหัวข้อ section — เดิมเป็นไล่เฉดเขียว
+          // ซึ่งเป็นอีกภาษาหนึ่งที่ไม่มีที่อื่นในหน้าใช้แล้ว
+          _IconPlate(icon: icon, size: _IconPlate.rowSize),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -833,91 +814,27 @@ class MustKnowSection extends StatelessWidget {
     final items = _mustKnowItems(trip);
     final remarks = textOf(asMap(trip['must_know'])['remarks']).trim();
     if (items.isEmpty && remarks.isEmpty) return const SizedBox.shrink();
-    final isDark = AppTheme.isDark(context);
 
-    return _PremiumCard(
-      padding: EdgeInsets.zero,
+    // พับได้แต่กางไว้ตั้งแต่แรก — เป็นคำเตือนที่ต้องอ่านก่อนจ่ายเงิน ถ้าพับ
+    // ไว้เท่ากับซ่อน คนกดจองได้โดยไม่เคยเห็น
+    return _SectionShell(
+      icon: Icons.info_outline_rounded,
+      title: 'สิ่งที่ควรรู้ก่อนเดินทาง',
+      subtitle: 'อ่านก่อนทำการจอง',
+      accent: const Color(0xFFD97706),
+      collapsible: true,
+      initiallyExpanded: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // header — neutral background like the other sections; the amber
-          // icon/title keep the "read before booking" warning cue
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.border(context).withValues(alpha: 0.4),
-                ),
-              ),
+          ...items.map((item) => _MustKnowItemRow(item: item)),
+          if (remarks.isNotEmpty)
+            _FeatureRow(
+              icon: Icons.notes_rounded,
+              title: remarks,
+              iconColor: const Color(0xFFD97706),
+              iconBackground: const Color(0xFFFEF3C7),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFFB45309).withValues(alpha: 0.2)
-                        : const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    border: Border.all(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.info_outline_rounded,
-                    size: 20,
-                    color: Color(0xFFD97706),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'สิ่งที่ควรรู้ก่อนเดินทาง',
-                        style: appFont(
-                          fontSize: AppText.sizeSubtitle,
-                          fontWeight: FontWeight.w800,
-                          color: isDark
-                              ? const Color(0xFFF59E0B)
-                              : const Color(0xFF92400E),
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      Text(
-                        'อ่านก่อนทำการจอง',
-                        style: appFont(
-                          fontSize: AppText.sizeCaption,
-                          color: isDark
-                              ? const Color(0xFFD97706)
-                              : const Color(0xFFB45309),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Column(
-              children: [
-                ...items.map((item) => _MustKnowItemRow(item: item)),
-                if (remarks.isNotEmpty)
-                  _FeatureRow(
-                    icon: Icons.notes_rounded,
-                    title: remarks,
-                    iconColor: const Color(0xFFD97706),
-                    iconBackground: const Color(0xFFFEF3C7),
-                  ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -945,7 +862,6 @@ class TravelRequirementsSection extends StatelessWidget {
     final visa = asMap(trip['visa']);
     final emergency = asMap(trip['emergency_numbers']);
     final country = textOf(trip['country_label']).trim();
-    final isDark = AppTheme.isDark(context);
 
     final visaLabel = textOf(visa['label']).trim();
     final visaNote = textOf(visa['note']).trim();
@@ -955,71 +871,20 @@ class TravelRequirementsSection extends StatelessWidget {
 
     const accent = Color(0xFF2563EB); // Blue 600 — ข้อมูลเอกสาร ไม่ใช่คำเตือน
 
-    return _PremiumCard(
-      padding: EdgeInsets.zero,
+    // พับได้แต่กางไว้ตั้งแต่แรก — "ต้องขอวีซ่าไหม" ตัดสินได้เลยว่าจองรอบนี้
+    // ทันหรือเปล่า พับไว้เท่ากับกลับไปเป็นปัญหาเดิมที่ทีมงานต้องตอบซ้ำในแชท
+    return _SectionShell(
+      icon: Icons.badge_outlined,
+      title: 'เอกสารและข้อควรรู้',
+      subtitle: country.isEmpty
+          ? 'สำหรับผู้ถือพาสปอร์ตไทย'
+          : '$country · สำหรับผู้ถือพาสปอร์ตไทย',
+      accent: accent,
+      collapsible: true,
+      initiallyExpanded: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.border(context).withValues(alpha: 0.4),
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: isDark ? 0.2 : 0.10),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    border: Border.all(color: accent.withValues(alpha: 0.3)),
-                  ),
-                  child: const Icon(
-                    Icons.badge_outlined,
-                    size: 20,
-                    color: accent,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'เอกสารและข้อควรรู้',
-                        style: appFont(
-                          fontSize: AppText.sizeSubtitle,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.onSurface(context),
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      Text(
-                        country.isEmpty
-                            ? 'สำหรับผู้ถือพาสปอร์ตไทย'
-                            : '$country · สำหรับผู้ถือพาสปอร์ตไทย',
-                        style: appFont(
-                          fontSize: AppText.sizeCaption,
-                          color: AppTheme.mutedText(context),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
                 if (visaLabel.isNotEmpty)
                   _FeatureRow(
                     icon: Icons.approval_rounded,
@@ -1073,9 +938,6 @@ class TravelRequirementsSection extends StatelessWidget {
                     ),
                   ),
                 ],
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -1102,73 +964,16 @@ class CancellationPolicySection extends StatelessWidget {
 
     final note = textOf(policy['note']).trim();
 
-    return _PremiumCard(
-      padding: EdgeInsets.zero,
+    return _SectionShell(
+      icon: Icons.event_busy_rounded,
+      title: 'นโยบายการยกเลิก',
+      subtitle: trip['is_international'] == true
+          ? 'ทริปต่างประเทศ — เงื่อนไขต่างจากทริปในประเทศ'
+          : 'คืนเงินตามระยะเวลาก่อนเดินทาง',
+      collapsible: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.border(context).withValues(alpha: 0.4),
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.mutedText(context).withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    border: Border.all(
-                      color: AppTheme.border(context).withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.event_busy_rounded,
-                    size: 20,
-                    color: AppTheme.mutedText(context),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'นโยบายการยกเลิก',
-                        style: appFont(
-                          fontSize: AppText.sizeSubtitle,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.onSurface(context),
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      Text(
-                        trip['is_international'] == true
-                            ? 'ทริปต่างประเทศ — เงื่อนไขต่างจากทริปในประเทศ'
-                            : 'คืนเงินตามระยะเวลาก่อนเดินทาง',
-                        style: appFont(
-                          fontSize: AppText.sizeCaption,
-                          color: AppTheme.mutedText(context),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
                 ...tiers.map((tier) {
                   final percent = int.tryParse(textOf(tier['percent'])) ?? 0;
                   final color = percent >= 100
@@ -1242,9 +1047,6 @@ class CancellationPolicySection extends StatelessWidget {
                     ),
                   ),
                 ],
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -1361,16 +1163,14 @@ class FaqSection extends StatelessWidget {
     final items = _faqItems(trip['faqs']);
     if (items.isEmpty) return const SizedBox.shrink();
 
-    return _PremiumCard(
+    return _SectionShell(
+      icon: Icons.quiz_rounded,
+      title: 'คำถามที่พบบ่อย',
+      subtitle: '${items.length} ข้อ',
+      collapsible: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeader(
-            icon: Icons.quiz_rounded,
-            title: 'คำถามที่พบบ่อย',
-            subtitle: 'ข้อสงสัยก่อนออกเดินทาง',
-          ),
-          const SizedBox(height: 8),
           for (var i = 0; i < items.length; i++)
             _FaqItem(
               question: items[i].question,
@@ -1489,16 +1289,14 @@ class PreparationsSection extends StatelessWidget {
     if (items.isEmpty) return const SizedBox.shrink();
     final isDark = AppTheme.isDark(context);
 
-    return _PremiumCard(
+    return _SectionShell(
+      icon: Icons.backpack_rounded,
+      title: 'สิ่งที่ควรเตรียม',
+      subtitle: '${items.length} รายการ',
+      collapsible: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeader(
-            icon: Icons.backpack_rounded,
-            title: 'สิ่งที่ควรเตรียม',
-            subtitle: 'เตรียมตัวก่อนออกเดินทาง',
-          ),
-          const SizedBox(height: 20),
           // checklist with sequential numbers
           ...items.asMap().entries.map((entry) {
             final i = entry.key;

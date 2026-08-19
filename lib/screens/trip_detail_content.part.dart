@@ -310,17 +310,21 @@ class IncludedSection extends StatelessWidget {
         .toList();
     if (inclusions.isEmpty) return const SizedBox.shrink();
 
-    return _PremiumCard(
+    return _SectionShell(
+      icon: Icons.verified_outlined,
+      title: 'ค่าใช้จ่ายนี้รวมอะไรบ้าง',
+      subtitle: '${inclusions.length} รายการ',
+      collapsible: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeader(
-            icon: Icons.verified_outlined,
-            title: 'ค่าใช้จ่ายนี้รวมอะไรบ้าง',
-          ),
-          const SizedBox(height: 16),
+          // เขียวตรงนี้มีความหมาย = รวมให้แล้ว คู่กับแดงในใบ "ต้องจ่ายเพิ่มเอง"
           ...inclusions.map(
-            (item) => _FeatureRow(icon: Icons.check_rounded, title: item),
+            (item) => _FeatureRow(
+              icon: Icons.check_rounded,
+              title: item,
+              iconColor: _softAccent,
+            ),
           ),
         ],
       ),
@@ -341,15 +345,14 @@ class ExcludedSection extends StatelessWidget {
         .toList();
     if (exclusions.isEmpty) return const SizedBox.shrink();
 
-    return _PremiumCard(
+    return _SectionShell(
+      icon: Icons.remove_circle_outline_rounded,
+      title: 'สิ่งที่ต้องจ่ายเพิ่มเอง',
+      subtitle: '${exclusions.length} รายการ',
+      collapsible: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeader(
-            icon: Icons.remove_circle_outline_rounded,
-            title: 'สิ่งที่ต้องจ่ายเพิ่มเอง',
-          ),
-          const SizedBox(height: 16),
           ...exclusions.map(
             (item) => _FeatureRow(
               icon: Icons.close_rounded,

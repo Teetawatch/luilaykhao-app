@@ -96,10 +96,14 @@ class TravelPlanSelectionSection extends StatelessWidget {
                 bottom: BorderSide(color: AppTheme.border(context).withValues(alpha: 0.4)),
               ),
             ),
+            // หัวข้อเดียวในหน้าที่ได้สีแบรนด์ — เป็นบล็อกที่ทั้งหน้าถูกจัดใหม่
+            // เพื่อมัน ถ้าหัวข้ออื่นเน้นด้วยก็จะกลับไปเป็นสภาพที่เน้นทุกอย่าง
+            // เท่ากับไม่ได้เน้นอะไร
             child: const _SectionHeader(
               icon: Icons.event_available_outlined,
               title: 'เลือกแผนการเดินทาง',
               subtitle: 'เลือกวันและจุดขึ้นรถที่ต้องการ',
+              accent: _softAccent,
             ),
           ),
 

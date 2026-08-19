@@ -1,11 +1,13 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollDirection;
+import 'package:flutter/rendering.dart'
+    show ScrollDirection, RenderAbstractViewport;
 import 'package:flutter/services.dart';
 import 'package:luilaykhao_app/providers/app_provider.dart';
 import 'package:provider/provider.dart';
@@ -47,7 +49,32 @@ part 'all_reviews.part.dart';
 const Color _premiumText = Color(0xFF0F172A);
 const Color _mutedText = Color(0xFF64748B);
 const Color _softAccent = Color(0xFF10B981);
-const double _contentOverlap = 28;
+/// ความสูงของขอบโค้งที่การ์ดเนื้อหากินขึ้นไปทับรูปปก และเป็นระยะที่มุมโค้ง
+/// ไล่ลงมาในแนวตั้ง
+///
+/// มากกว่า [AppTheme.radiusXl] เพราะรูปทรงนี้เป็น superellipse ไม่ใช่ส่วนโค้ง
+/// วงกลม — มันต้องการพื้นที่มากกว่าเพื่อให้ได้ความโค้งที่ตาอ่านว่าเท่ากับ
+/// รัศมี 32 แต่เข้าหาขอบตรงได้นุ่มกว่า (เทียบตัวเลขไว้ที่ [_SquircleCapPainter])
+const double _contentOverlap = 40;
+
+/// ระยะที่มุมโค้งคลี่ออกไปในแนวนอน กว้างกว่าแนวตั้งตามแบบมุมหน้าต่างของ iOS
+const double _contentCornerSpread = 48;
+
+/// ความสูงของเฉดที่ปลายรูปปกจางลงหาสีการ์ด วัดจากขอบล่างของแถบรูปขึ้นไป
+/// (รวมช่วง [_contentOverlap] ที่อยู่หลังขอบโค้ง เพื่อให้เนื้อรูปที่โผล่ตรงมุม
+/// โค้งจางเท่ากับที่อยู่เหนือมันพอดี ไม่งั้นจะเห็นรอยสว่างวาบตรงมุม)
+const double _heroVeilHeight = 112;
+
+/// ความทึบสูงสุดของเฉดนั้น ไม่ทึบสนิทเพราะยังอยากให้เห็นเนื้อรูปลอดมุมโค้ง
+const double _heroVeilOpacity = 0.62;
+
+/// แท็บนำทางในหน้าทริป เรียงตามลำดับที่คนตัดสินใจจริง — เลือกวันก่อน แล้วค่อย
+/// ดูรายละเอียด เตรียมตัว และฟังเสียงคนที่ไปมาแล้ว
+///
+/// หัวเรื่อง (ชื่อทริป/เรตติ้ง/สถิติ) อยู่เหนือจุดยึดของแท็บแรก จึงไม่มีแท็บ
+/// ของตัวเอง — เลื่อนอยู่บนสุดจะถือว่าอยู่แท็บแรก
+const List<String> _tabLabels = ['วันเดินทาง', 'รายละเอียด', 'เตรียมตัว', 'รีวิว'];
+const double _tabBarHeight = 46;
 
 // ── Apple HIG system colors (iOS) ───────────────────────────────────────────
 // Semantic status colors with the light / dark variants from Apple's system
@@ -318,6 +345,44 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
   bool _isFavorite = false;
   String? _favoriteSlug;
 
+  /// จุดยึดของแต่ละกลุ่มเนื้อหา ใช้ทั้งตอนกดแท็บ (กระโดดไป) และตอนเลื่อน
+  /// (หาว่าตอนนี้อยู่กลุ่มไหน)
+  final List<GlobalKey> _tabAnchors = List.generate(
+    _tabLabels.length,
+    (_) => GlobalKey(),
+  );
+  int _activeTab = 0;
+
+  /// กลุ่มไหนมีเนื้อหาให้ดูจริง — ทริปในประเทศที่ไม่มีสิ่งที่ควรรู้/ควรเตรียม/
+  /// สิ่งที่รวม/FAQ/นโยบาย จะไม่มีอะไรในกลุ่ม "เตรียมตัว" เลย แท็บที่กดแล้ว
+  /// กระโดดไปช่องว่างแย่กว่าไม่มีแท็บ
+  ///
+  /// ต้องคำนวณใน build() ก่อนสร้าง app bar ไม่ใช่ใน _buildSections ซึ่งถูก
+  /// เรียกทีหลังในเฟรมเดียวกัน — ไม่งั้นแท็บจะช้าไปหนึ่งเฟรม
+  List<bool> _tabHasContent = List.filled(_tabLabels.length, true);
+
+  /// อีก 3 กลุ่มมีใบที่เรนเดอร์เสมออยู่แล้ว (เลือกวัน / ไหวไหม / รีวิว)
+  /// กลุ่ม "เตรียมตัว" เป็นกลุ่มเดียวที่ทุกใบเป็น conditional หมด
+  List<bool> _computeTabContent() {
+    final trip = widget.trip;
+    return [
+      true,
+      true,
+      trip['is_international'] == true ||
+          _mustKnowItems(trip).isNotEmpty ||
+          textOf(asMap(trip['must_know'])['remarks']).trim().isNotEmpty ||
+          _textItems(trip['preparations']).isNotEmpty ||
+          asList(trip['inclusions']).any((e) => textOf(e).trim().isNotEmpty) ||
+          asList(trip['exclusions']).any((e) => textOf(e).trim().isNotEmpty) ||
+          _faqItems(trip['faqs']).isNotEmpty ||
+          asList(asMap(trip['cancellation_policy'])['tiers']).isNotEmpty,
+      true,
+    ];
+  }
+
+  /// ระหว่างเลื่อนไปตามที่กดแท็บ อย่าให้ตัวจับกลุ่มแย่งเปลี่ยนแท็บกลับ
+  bool _isJumpingToTab = false;
+
   @override
   void initState() {
     super.initState();
@@ -347,14 +412,60 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
   }
 
   void _handleScroll() {
-    final heroHeight = _heroHeight(context);
-    final shouldCollapse =
-        _scrollController.hasClients &&
-        _scrollController.offset > heroHeight - kToolbarHeight - 56;
+    if (!_scrollController.hasClients) return;
+
+    // จุดที่แถบหุบสุดจริงคือตอนที่รูปเหลือเท่าส่วนที่ถูกยึดไว้ด้านบนพอดี
+    // ห้ามใช้ตัวเลขคงที่แทน padding บน: ตอนเพิ่มแถบแท็บเข้ามา ส่วนที่ถูกยึด
+    // โตขึ้นอีก 46 แล้วค่าคงที่เดิมทำให้ธงหุบมาช้ากว่าของจริงเกือบ 50px —
+    // ช่วงนั้นแถบขาวโล่งไม่มีทั้งชื่อทริปและแท็บ
+    final collapseAt = _heroHeight(context) - _pinnedTopExtent();
+    final shouldCollapse = _scrollController.offset > collapseAt - 8;
 
     if (shouldCollapse != _isCollapsed) {
       setState(() => _isCollapsed = shouldCollapse);
     }
+    _syncActiveTab();
+  }
+
+  /// ความสูงที่ถูกแถบบนยึดไว้ตอนหุบสุด — เนื้อหาที่อยู่เหนือเส้นนี้คือส่วนที่
+  /// มองไม่เห็นแล้ว จึงใช้เป็นทั้งเส้นตัดสินว่าแถบหุบหรือยัง และว่าเลื่อนพ้น
+  /// กลุ่มไหนไปแล้ว
+  double _pinnedTopExtent() =>
+      MediaQuery.paddingOf(context).top + kToolbarHeight + _tabBarHeight;
+
+  void _syncActiveTab() {
+    if (_isJumpingToTab || !_scrollController.hasClients) return;
+
+    final current = _scrollController.offset;
+    var active = 0;
+    for (var i = 0; i < _tabAnchors.length; i++) {
+      if (!_tabHasContent[i]) continue;
+      final target = _anchorScrollOffset(i);
+      // เผื่อไว้เล็กน้อย เพื่อให้กลุ่มที่เพิ่งโผล่มาแค่หัวยังไม่ถูกนับ
+      if (target != null && current >= target - 12) active = i;
+    }
+
+    if (active != _activeTab) setState(() => _activeTab = active);
+  }
+
+  double? _anchorScrollOffset(int index) =>
+      tripSectionAnchorOffset(_tabAnchors[index], _pinnedTopExtent());
+
+  Future<void> _handleTabSelected(int index) async {
+    if (!_scrollController.hasClients) return;
+    final target = _anchorScrollOffset(index);
+    if (target == null) return;
+
+    setState(() {
+      _activeTab = index;
+      _isJumpingToTab = true;
+    });
+    await _scrollController.animateTo(
+      target.clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+    );
+    if (mounted) setState(() => _isJumpingToTab = false);
   }
 
   Map<String, dynamic>? get _selectedSchedule {
@@ -660,6 +771,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    _tabHasContent = _computeTabContent();
     final heroHeight = _heroHeight(context);
     final alertSlug = textOf(widget.trip['slug']).trim();
     final isAlertOn = alertSlug.isNotEmpty &&
@@ -689,20 +801,24 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
               onSharePressed: _handleShareTrip,
               onFavoritePressed: _handleFavoriteTap,
               onAlertPressed: _handleAlertTap,
+              // มีแท็บตั้งแต่ตอนโหลด แม้จะยังมองไม่เห็นเพราะแถบยังกางอยู่ —
+              // ถ้าเพิ่มทีหลัง minExtent ของ sliver จะโตขึ้น 46 ตอนโหลดเสร็จ
+              // แล้วเนื้อหาที่เลื่อนค้างไว้จะกระโดด (จุดยึดมีครบตั้งแต่แรก
+              // ต่อให้ section ยังเป็นโครงร่างอยู่ กดแล้วจึงไปถูกที่)
+              activeTab: _activeTab,
+              tabHasContent: _tabHasContent,
+              onTabSelected: _handleTabSelected,
             ),
+            // ขอบโค้งด้านบนของการ์ดนี้ถูกวาดไว้ใน TravelSliverAppBar (ดู
+            // _ContentTopCap) ไม่ใช่ตรงนี้ — sliver แรกถูกวาดทับ sliver ที่ตาม
+            // มา ถ้าโค้งอยู่ฝั่งเนื้อหาจะโดนรูปปกบังจนดูเป็นสี่เหลี่ยม
             SliverToBoxAdapter(
-              child: Transform.translate(
-                offset: const Offset(0, -_contentOverlap),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.background(context),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(_contentOverlap),
-                    ),
-                  ),
-                  padding: EdgeInsets.fromLTRB(16, 24, 16, bottomBarHeight + 24),
-                  child: _buildSections(context),
-                ),
+              child: Container(
+                color: AppTheme.background(context),
+                // 16 บน ไม่ใช่ 24 เพราะหัวการ์ด (_contentOverlap) กินที่เหนือ
+                // ขึ้นไปอีก 40 — รวมแล้วช่องว่างเหนือการ์ดใบแรกยังเท่าเดิม
+                padding: EdgeInsets.fromLTRB(16, 16, 16, bottomBarHeight + 24),
+                child: _buildSections(context),
               ),
             ),
           ],
@@ -744,35 +860,19 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     ).isNotEmpty;
 
     final sections = <Widget>[
+      // ── หัวเรื่อง ────────────────────────────────────────────────────
+      // ไม่มีกรอบการ์ด ตั้งใจให้เป็นหัวหน้าไม่ใช่ section หนึ่ง และอยู่เหนือ
+      // จุดยึดของแท็บแรก
       DestinationInfoSection(
         trip: trip,
         reviews: widget.reviews,
         isLoading: widget.isLoading,
       ),
-      if (hasDescription)
-        AboutSection(
-          trip: trip,
-          isLoading: widget.isLoading,
-          isExpanded: widget.isDescriptionExpanded,
-          onToggle: widget.onDescriptionToggle,
-        ),
-      // ตัวเลขเส้นทางจริง วางต่อจากคำบรรยาย — ซ่อนตัวเองถ้าทริปยังไม่มี
-      // ระยะทาง/ความสูง (ตรงกับ routeFacts บนหน้าเว็บ)
-      RouteFactsSection(trip: trip),
-      // "ทริปนี้ไหวไหม" — วางก่อนแกลเลอรี ให้เห็นความจริงก่อนโดนรูปสวยชวนซื้อ
-      // self-loading + ซ่อนตัวเองเมื่อทริปไม่มีระยะทาง/ความสูงให้เทียบ
-      if (textOf(trip['slug']).isNotEmpty)
-        TripReadinessSection(slug: textOf(trip['slug'])),
-      if (_detailGalleryImages(trip).isNotEmpty)
-        PhotoGallerySection(trip: trip),
-      if (_tripVideos(trip).isNotEmpty) VideoGallerySection(trip: trip),
-      // เอกสาร/วีซ่า/ประกัน/เบอร์ฉุกเฉิน — วางก่อน "สิ่งที่ควรรู้" เพราะ
-      // "ต้องขอวีซ่าไหม" ตัดสินได้เลยว่าลูกค้าจองรอบนี้ทันหรือไม่
-      // (ซ่อนตัวเองเมื่อเป็นทริปในประเทศ)
-      TravelRequirementsSection(trip: trip),
-      if (hasMustKnow) MustKnowSection(trip: trip),
-      if (_textItems(trip['preparations']).isNotEmpty)
-        PreparationsSection(trip: trip),
+
+      // ── แท็บ 1: วันเดินทาง ───────────────────────────────────────────
+      // ย้ายขึ้นมาจากอันดับ 10 เพราะคนเปิดหน้านี้มาตอบ 2 คำถาม: วันไหนว่าง
+      // และราคาเท่าไหร่ ให้ตอบได้ก่อนแล้วค่อยอ่านรายละเอียด
+      _TabAnchor(key: _tabAnchors[0]),
       TravelPlanSelectionSection(
         schedules: widget.schedules,
         pickupRegionKey: _effectivePickupRegionKey,
@@ -797,20 +897,53 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
             _selectedScheduleId!,
           ),
         ),
+
+      // ── แท็บ 2: รายละเอียด ───────────────────────────────────────────
+      _TabAnchor(key: _tabAnchors[1]),
+      // "ทริปนี้ไหวไหม" มาก่อนคำบรรยายและรูป ให้เจอความจริงก่อนโดนรูปสวยชวน
+      // self-loading + ซ่อนตัวเองเมื่อทริปไม่มีระยะทาง/ความสูงให้เทียบ
+      if (textOf(trip['slug']).isNotEmpty)
+        TripReadinessSection(slug: textOf(trip['slug'])),
+      if (hasDescription)
+        AboutSection(
+          trip: trip,
+          isLoading: widget.isLoading,
+          isExpanded: widget.isDescriptionExpanded,
+          onToggle: widget.onDescriptionToggle,
+        ),
+      // ตัวเลขเส้นทางจริง วางต่อจากคำบรรยาย — ซ่อนตัวเองถ้าทริปยังไม่มี
+      // ระยะทาง/ความสูง (ตรงกับ routeFacts บนหน้าเว็บ)
+      RouteFactsSection(trip: trip),
       if (_highlightItems(trip['highlights']).isNotEmpty)
         HighlightsSection(trip: trip),
-      if (hasInclusions) IncludedSection(trip: trip),
-      if (hasExclusions) ExcludedSection(trip: trip),
       if (hasItinerary)
         ItinerarySection(
           trip: trip,
           pickupRegionKey: _effectivePickupRegionKey,
           pickupRegionLabel: _pickupRegionLabel(_selectedPickupPoint),
         ),
+      if (_detailGalleryImages(trip).isNotEmpty)
+        PhotoGallerySection(trip: trip),
+      if (_tripVideos(trip).isNotEmpty) VideoGallerySection(trip: trip),
+
+      // ── แท็บ 3: เตรียมตัว ────────────────────────────────────────────
+      // ทั้งกลุ่มพับเก็บได้ ยกเว้นวีซ่ากับคำเตือน — สองอันนั้นตัดสินได้เลยว่า
+      // จองได้จริงหรือเปล่า ถ้าพับไว้เท่ากับซ่อนเรื่องที่ต้องรู้ก่อนจ่ายเงิน
+      _TabAnchor(key: _tabAnchors[2]),
+      // เอกสาร/วีซ่า/ประกัน/เบอร์ฉุกเฉิน (ซ่อนตัวเองเมื่อเป็นทริปในประเทศ)
+      TravelRequirementsSection(trip: trip),
+      if (hasMustKnow) MustKnowSection(trip: trip),
+      if (_textItems(trip['preparations']).isNotEmpty)
+        PreparationsSection(trip: trip),
+      if (hasInclusions) IncludedSection(trip: trip),
+      if (hasExclusions) ExcludedSection(trip: trip),
       if (_faqItems(trip['faqs']).isNotEmpty) FaqSection(trip: trip),
-      // นโยบายยกเลิก — เว็บแสดงมานานแล้ว แอปเพิ่งมี วางหลัง FAQ เพราะเป็นเงื่อนไข
-      // ที่คนอ่านตอนกำลังตัดสินใจจ่าย (backend ส่งชุดของทริปต่างประเทศมาให้เอง)
+      // นโยบายยกเลิก — เงื่อนไขที่คนอ่านตอนกำลังตัดสินใจจ่าย
+      // (backend ส่งชุดของทริปต่างประเทศมาให้เอง)
       CancellationPolicySection(trip: trip),
+
+      // ── แท็บ 4: รีวิว ────────────────────────────────────────────────
+      _TabAnchor(key: _tabAnchors[3]),
       if (_hasCommunityPhotos)
         CommunityPhotosSection(trip: trip, reviews: widget.reviews),
       // ฟีดรูปหลังทริป — ซ่อนตัวเองเมื่อไม่มีโพสต์และผู้ดูโพสต์ไม่ได้
@@ -823,10 +956,16 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var i = 0; i < sections.length; i++) ...[
-          if (i > 0) const SizedBox(height: 16),
-          _RevealOnScroll(child: sections[i]),
-        ],
+        for (var i = 0; i < sections.length; i++)
+          // จุดยึดแท็บไม่ผ่าน _RevealOnScroll และไม่กินระยะห่างของตัวเอง —
+          // มันต้องวัดตำแหน่งได้ตั้งแต่ยังไม่ถูกเลื่อนถึง ถ้าใส่ animation
+          // ครอบไว้ ตำแหน่งที่อ่านได้จะเป็นตำแหน่งระหว่างเคลื่อนไหว
+          if (sections[i] is _TabAnchor)
+            sections[i]
+          else ...[
+            if (i > 0) const SizedBox(height: 16),
+            _RevealOnScroll(child: sections[i]),
+          ],
       ],
     );
   }
@@ -835,6 +974,36 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     final size = MediaQuery.sizeOf(context);
     return (size.height * 0.46).clamp(320.0, 480.0);
   }
+}
+
+/// ตำแหน่ง scroll ที่ทำให้จุดยึด [key] มาหยุดใต้แถบบนที่สูง [pinnedExtent]
+/// พอดี — null เมื่อจุดยึดยังไม่ได้เรนเดอร์หรือไม่ได้อยู่ใน viewport
+///
+/// ใช้เรขาคณิตของ viewport ไม่ใช่พิกัดบนจอจาก `localToGlobal` โดยตั้งใจ:
+/// ตัวเรียกคือ scroll listener ซึ่งทำงาน**ก่อน** layout ของเฟรมใหม่ พิกัดบนจอ
+/// ที่อ่านได้ตอนนั้นจึงเป็นของเฟรมก่อนหน้าเสมอ และถ้าเป็นการกระโดดทีเดียวที่
+/// ไม่มี scroll event ตามมาอีก ค่าจะค้างผิดไปเลย — เคยทำให้แท็บค้างที่
+/// "รายละเอียด" ทั้งที่เลื่อนถึงกลุ่มรีวิวแล้ว ส่วน getOffsetToReveal คืน
+/// ตำแหน่งในเอกสาร ไม่ขึ้นกับว่าตอนนี้เลื่อนอยู่ตรงไหน
+double? tripSectionAnchorOffset(GlobalKey key, double pinnedExtent) {
+  final context = key.currentContext;
+  if (context == null) return null;
+  final box = context.findRenderObject() as RenderBox?;
+  if (box == null || !box.hasSize) return null;
+  final viewport = RenderAbstractViewport.maybeOf(box);
+  if (viewport == null) return null;
+  return viewport.getOffsetToReveal(box, 0).offset - pinnedExtent;
+}
+
+/// จุดยึดของแท็บ — กล่องเปล่าที่คั่นระหว่างกลุ่มเนื้อหา
+///
+/// มีตัวตนจริงในต้นไม้เพื่อให้ [GlobalKey] วัดตำแหน่งได้ และกินความสูงนิดหน่อย
+/// ให้รอยต่อระหว่างกลุ่มอ่านออกว่าเป็นคนละเรื่องกัน
+class _TabAnchor extends StatelessWidget {
+  const _TabAnchor({super.key});
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(height: 12);
 }
 
 /// Call-to-action that lets a customer start a group plan for the chosen
