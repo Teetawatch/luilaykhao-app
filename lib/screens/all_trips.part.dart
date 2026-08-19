@@ -37,9 +37,15 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _categories = [];
   Map<String, dynamic>? _meta;
+  // ตัวเลือกปลายทางพร้อมจำนวนทริปจริง จาก GET trips/destinations — คืนเฉพาะ
+  // ภาค/ประเทศที่มีทริปอยู่ ปุ่มทุกปุ่มจึงพาไปหน้าที่มีของเสมอ
+  Map<String, dynamic> _destinations = const {};
   bool _loading = true;
   String _selectedType = '';
   String _selectedDifficulty = '';
+  String _selectedDestination = '';
+  String _selectedCountry = '';
+  String _selectedRegion = '';
   String _sortOrder = 'popular';
   String? _error;
   Timer? _searchDebounce;
@@ -51,7 +57,10 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
       _searchController.text = widget.initialSearch!.trim();
     }
     _searchController.addListener(_handleSearchChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchTrips());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchTrips();
+      _fetchDestinations();
+    });
   }
 
   @override
@@ -107,6 +116,9 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
           'per_page': 12,
           'type': _selectedType,
           'difficulty': _selectedDifficulty,
+          'destination': _selectedDestination,
+          'country': _selectedCountry,
+          'region': _selectedRegion,
           'search': _searchController.text.trim(),
         },
       );
@@ -134,6 +146,41 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
       });
     }
   }
+
+  /// Facets are decoration, not results — a failure here must leave the trip
+  /// list working, so it fails silently and simply hides the destination row.
+  Future<void> _fetchDestinations() async {
+    try {
+      final app = context.read<AppProvider>();
+      final response = await app.api.get('trips/destinations');
+      if (!mounted) return;
+      setState(() => _destinations = asMap(app.api.data(response) ?? {}));
+    } catch (_) {
+      // เงียบไว้ — แถบเลือกปลายทางจะไม่ขึ้นเท่านั้น
+    }
+  }
+
+  Map<String, dynamic> get _domesticFacet => asMap(_destinations['domestic']);
+  Map<String, dynamic> get _internationalFacet =>
+      asMap(_destinations['international']);
+
+  int get _domesticCount =>
+      int.tryParse(textOf(_domesticFacet['count'], '0')) ?? 0;
+  int get _internationalCount =>
+      int.tryParse(textOf(_internationalFacet['count'], '0')) ?? 0;
+
+  List<Map<String, dynamic>> get _countryFacets => List<dynamic>.from(
+    _internationalFacet['countries'] ?? const [],
+  ).map(asMap).toList();
+
+  List<Map<String, dynamic>> get _regionFacets =>
+      List<dynamic>.from(_domesticFacet['regions'] ?? const [])
+          .map(asMap)
+          .toList();
+
+  /// The ในประเทศ / ต่างประเทศ row only earns its space once there is at least
+  /// one trip on each side; otherwise a tab would lead to an empty list.
+  bool get _showDestinations => _internationalCount > 0 && _domesticCount > 0;
 
   List<Map<String, dynamic>> get _sortedTrips {
     final list = [..._trips];
@@ -180,12 +227,52 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
     _fetchTrips();
   }
 
+  /// ทั้งหมด / ในประเทศ / ต่างประเทศ — ย้ายฝั่งแล้วต้องทิ้งประเทศหรือภาคที่
+  /// เลือกไว้ ไม่งั้นจะเหลือเงื่อนไขที่ไม่มีทางมีทริปตรง
+  void _selectDestination(String value) {
+    if (_selectedDestination == value) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedDestination = value;
+      _selectedCountry = '';
+      _selectedRegion = '';
+    });
+    _fetchTrips();
+  }
+
+  void _toggleCountry(String code) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedCountry = _selectedCountry == code ? '' : code;
+      if (_selectedCountry.isNotEmpty) {
+        _selectedDestination = 'international';
+        _selectedRegion = '';
+      }
+    });
+    _fetchTrips();
+  }
+
+  void _toggleRegion(String key) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedRegion = _selectedRegion == key ? '' : key;
+      if (_selectedRegion.isNotEmpty) {
+        _selectedDestination = 'domestic';
+        _selectedCountry = '';
+      }
+    });
+    _fetchTrips();
+  }
+
   void _clearFilters() {
     _searchController.clear();
     _searchDebounce?.cancel();
     setState(() {
       _selectedType = '';
       _selectedDifficulty = '';
+      _selectedDestination = '';
+      _selectedCountry = '';
+      _selectedRegion = '';
       _sortOrder = 'popular';
     });
     _fetchTrips();
@@ -205,6 +292,9 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   bool get _hasFilters =>
       _selectedType.isNotEmpty ||
       _selectedDifficulty.isNotEmpty ||
+      _selectedDestination.isNotEmpty ||
+      _selectedCountry.isNotEmpty ||
+      _selectedRegion.isNotEmpty ||
       _searchController.text.trim().isNotEmpty;
 
   @override
@@ -237,6 +327,17 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
                         selectedType: _selectedType,
                         selectedDifficulty: _selectedDifficulty,
                         difficulties: _difficulties,
+                        showDestinations: _showDestinations,
+                        domesticCount: _domesticCount,
+                        internationalCount: _internationalCount,
+                        countries: _countryFacets,
+                        regions: _regionFacets,
+                        selectedDestination: _selectedDestination,
+                        selectedCountry: _selectedCountry,
+                        selectedRegion: _selectedRegion,
+                        onSelectDestination: _selectDestination,
+                        onToggleCountry: _toggleCountry,
+                        onToggleRegion: _toggleRegion,
                         onToggleType: _toggleType,
                         onToggleDifficulty: _toggleDifficulty,
                         onSubmitSearch: _applySearch,
@@ -323,6 +424,17 @@ class _TripsFilterPanel extends StatelessWidget {
   final String selectedType;
   final String selectedDifficulty;
   final List<(String, String)> difficulties;
+  final bool showDestinations;
+  final int domesticCount;
+  final int internationalCount;
+  final List<Map<String, dynamic>> countries;
+  final List<Map<String, dynamic>> regions;
+  final String selectedDestination;
+  final String selectedCountry;
+  final String selectedRegion;
+  final ValueChanged<String> onSelectDestination;
+  final ValueChanged<String> onToggleCountry;
+  final ValueChanged<String> onToggleRegion;
   final ValueChanged<String> onToggleType;
   final ValueChanged<String> onToggleDifficulty;
   final VoidCallback onSubmitSearch;
@@ -336,6 +448,17 @@ class _TripsFilterPanel extends StatelessWidget {
     required this.selectedType,
     required this.selectedDifficulty,
     required this.difficulties,
+    required this.showDestinations,
+    required this.domesticCount,
+    required this.internationalCount,
+    required this.countries,
+    required this.regions,
+    required this.selectedDestination,
+    required this.selectedCountry,
+    required this.selectedRegion,
+    required this.onSelectDestination,
+    required this.onToggleCountry,
+    required this.onToggleRegion,
     required this.onToggleType,
     required this.onToggleDifficulty,
     required this.onSubmitSearch,
@@ -350,16 +473,76 @@ class _TripsFilterPanel extends StatelessWidget {
       for (final category in categories)
         if (textOf(category['slug']).isNotEmpty) category,
     ];
+    // แถบประเทศขึ้นทั้งบนแท็บ "ทั้งหมด" และ "ต่างประเทศ" เพราะทริปต่างประเทศ
+    // คือสิ่งที่หาเจอยากที่สุด ส่วนแถบภาคขึ้นเฉพาะฝั่งในประเทศ
+    final showCountryRail =
+        countries.isNotEmpty && selectedDestination != 'domestic';
+    final showRegionRail =
+        regions.isNotEmpty && selectedDestination == 'domestic';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (showDestinations) ...[
+          _DestinationTabs(
+            selected: selectedDestination,
+            domesticCount: domesticCount,
+            internationalCount: internationalCount,
+            onSelect: onSelectDestination,
+          ),
+          const SizedBox(height: 14),
+        ],
         _SearchField(
           controller: searchController,
           hasQuery: searchController.text.trim().isNotEmpty,
           onSubmitted: onSubmitSearch,
           onClear: onClearSearch,
         ),
+        if (showCountryRail) ...[
+          const SizedBox(height: 14),
+          _FilterRailLabel(
+            text: selectedDestination == 'international'
+                ? 'เลือกประเทศ'
+                : 'ทริปต่างประเทศ',
+          ),
+          const SizedBox(height: 8),
+          _ChipStrip(
+            children: [
+              for (final country in countries)
+                _FilterChipButton(
+                  label: _destinationChipLabel(
+                    '${textOf(country['flag'])} ${textOf(country['name'], textOf(country['code']))}'
+                        .trim(),
+                    country['count'],
+                  ),
+                  selected:
+                      selectedCountry == textOf(country['code']) &&
+                      textOf(country['code']).isNotEmpty,
+                  onTap: () => onToggleCountry(textOf(country['code'])),
+                ),
+            ],
+          ),
+        ],
+        if (showRegionRail) ...[
+          const SizedBox(height: 14),
+          const _FilterRailLabel(text: 'เลือกภาค'),
+          const SizedBox(height: 8),
+          _ChipStrip(
+            children: [
+              for (final region in regions)
+                _FilterChipButton(
+                  label: _destinationChipLabel(
+                    textOf(region['label'], textOf(region['key'])),
+                    region['count'],
+                  ),
+                  selected:
+                      selectedRegion == textOf(region['key']) &&
+                      textOf(region['key']).isNotEmpty,
+                  onTap: () => onToggleRegion(textOf(region['key'])),
+                ),
+            ],
+          ),
+        ],
         if (chipCategories.isNotEmpty) ...[
           const SizedBox(height: 14),
           _ChipStrip(
@@ -427,6 +610,145 @@ class _TripsFilterPanel extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// "ญี่ปุ่น (3)" — the count only appears when the facet actually carries one,
+/// so a chip never reads "(0)".
+String _destinationChipLabel(String label, dynamic count) {
+  final total = int.tryParse(textOf(count, '0')) ?? 0;
+  return total > 0 ? '$label ($total)' : label;
+}
+
+/// Small muted heading above a chip rail.
+class _FilterRailLabel extends StatelessWidget {
+  final String text;
+
+  const _FilterRailLabel({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: appFont(
+        color: AppTheme.mutedText(context),
+        fontSize: AppText.sizeLabel,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.1,
+      ),
+    );
+  }
+}
+
+/// ในประเทศ / ต่างประเทศ segmented row — the primary split of the catalogue,
+/// so it sits above the search box rather than among the category chips.
+class _DestinationTabs extends StatelessWidget {
+  final String selected;
+  final int domesticCount;
+  final int internationalCount;
+  final ValueChanged<String> onSelect;
+
+  const _DestinationTabs({
+    required this.selected,
+    required this.domesticCount,
+    required this.internationalCount,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = <(String, String, IconData, int)>[
+      ('', 'ทั้งหมด', Icons.apps_rounded, domesticCount + internationalCount),
+      ('domestic', 'ในประเทศ', Icons.terrain_rounded, domesticCount),
+      (
+        'international',
+        'ต่างประเทศ',
+        Icons.flight_takeoff_rounded,
+        internationalCount,
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.6),
+        ),
+      ),
+      child: Row(
+        children: [
+          for (final tab in tabs)
+            Expanded(
+              child: _DestinationTab(
+                label: tab.$2,
+                icon: tab.$3,
+                count: tab.$4,
+                selected: selected == tab.$1,
+                onTap: () => onSelect(tab.$1),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DestinationTab extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DestinationTab({
+    required this.label,
+    required this.icon,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: selected ? Colors.white : AppTheme.mutedText(context),
+            ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                count > 0 ? '$label ($count)' : label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  color: selected ? Colors.white : AppTheme.textMain,
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
