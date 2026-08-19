@@ -539,6 +539,8 @@ class _NotificationsEmptyState extends StatelessWidget {
   }
 }
 
+const _kFilterSwitchDuration = Duration(milliseconds: 180);
+
 /// ตัวกรอง ทั้งหมด / ยังไม่อ่าน แบบ segmented ตามที่หน้าอื่นในแอปใช้อยู่
 class _NotificationFilterBar extends StatelessWidget {
   final int unread;
@@ -561,18 +563,43 @@ class _NotificationFilterBar extends StatelessWidget {
           color: AppTheme.subtleSurface(context),
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         ),
-        child: Row(
+        child: Stack(
           children: [
-            _FilterSegment(
-              label: 'ทั้งหมด',
-              selected: !unreadOnly,
-              onTap: () => onChanged(false),
+            // แผ่นเดียวเลื่อนไปมา — ถ้าให้แต่ละช่องเฟดพื้นของตัวเอง ช่วงกลาง
+            // ทางจะโปร่งทั้งคู่ มองเป็นสองช่องกระพริบพร้อมกัน
+            Positioned.fill(
+              child: AnimatedAlign(
+                duration: _kFilterSwitchDuration,
+                curve: Curves.easeOut,
+                alignment: unreadOnly
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: 0.5,
+                  heightFactor: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface(context),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                    ),
+                  ),
+                ),
+              ),
             ),
-            _FilterSegment(
-              label: 'ยังไม่อ่าน',
-              badge: unread,
-              selected: unreadOnly,
-              onTap: () => onChanged(true),
+            Row(
+              children: [
+                _FilterSegment(
+                  label: 'ทั้งหมด',
+                  selected: !unreadOnly,
+                  onTap: () => onChanged(false),
+                ),
+                _FilterSegment(
+                  label: 'ยังไม่อ่าน',
+                  badge: unread,
+                  selected: unreadOnly,
+                  onTap: () => onChanged(true),
+                ),
+              ],
             ),
           ],
         ),
@@ -604,33 +631,31 @@ class _FilterSegment extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
+        // พื้นของช่องที่เลือกวาดโดยแผ่นเลื่อนใน [_NotificationFilterBar] แล้ว
+        // ที่นี่เหลือแค่ตัวหนังสือ ซึ่งต้องเปลี่ยนสีพร้อมแผ่น ไม่ใช่เปลี่ยนทันที
+        child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 9),
-          decoration: BoxDecoration(
-            // แผ่นขาวเลื่อนมาทับช่องที่เลือก แบบ segmented control ของ iOS
-            color: selected ? AppTheme.surface(context) : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
+                child: AnimatedDefaultTextStyle(
+                  duration: _kFilterSwitchDuration,
+                  curve: Curves.easeOut,
                   style: appFont(
                     fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.1,
                     color: color,
                   ),
+                  child: Text(label, overflow: TextOverflow.ellipsis),
                 ),
               ),
               if (badge > 0) ...[
                 const SizedBox(width: 6),
-                Container(
+                AnimatedContainer(
+                  duration: _kFilterSwitchDuration,
+                  curve: Curves.easeOut,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
                     vertical: 1,
@@ -641,8 +666,9 @@ class _FilterSegment extends StatelessWidget {
                         : AppTheme.mutedText(context).withValues(alpha: 0.22),
                     borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
-                  child: Text(
-                    '$badge',
+                  child: AnimatedDefaultTextStyle(
+                    duration: _kFilterSwitchDuration,
+                    curve: Curves.easeOut,
                     style: appFont(
                       fontSize: AppText.sizeMicro,
                       fontWeight: FontWeight.w900,
@@ -650,6 +676,7 @@ class _FilterSegment extends StatelessWidget {
                           ? Colors.white
                           : AppTheme.mutedText(context),
                     ),
+                    child: Text('$badge'),
                   ),
                 ),
               ],
