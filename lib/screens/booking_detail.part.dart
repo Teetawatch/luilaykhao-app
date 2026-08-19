@@ -1926,11 +1926,7 @@ class _TripRecapButton extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [Color(0xFFEA580C), Color(0xFF9333EA)],
-          ),
+          color: AppTheme.primaryColor,
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         ),
         child: Row(

@@ -94,16 +94,30 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-/// Palette แบบพระอาทิตย์ขึ้นบนภูเขา — ไล่โทนอุ่นให้แต่ละสไลด์
-const List<List<Color>> _slideGradients = [
-  [Color(0xFF047857), Color(0xFF065F46)], // teal → emerald (intro)
-  [Color(0xFFEA580C), Color(0xFFB45309)], // orange → amber (days)
-  [Color(0xFF2563EB), Color(0xFF1E3A8A)], // blue (distance)
-  [Color(0xFF9333EA), Color(0xFF6D28D9)], // purple (elevation)
-  [Color(0xFFDB2777), Color(0xFF9D174D)], // pink (difficulty/travelers)
-  [Color(0xFF0891B2), Color(0xFF0E7490)], // cyan (photos)
-  [Color(0xFFEA580C), Color(0xFF7C2D12)], // sunset (summary)
+/// สีพื้นของแต่ละสไลด์ — ใช้ตอนไม่มีรูปรีวิวให้วาง (ทริปที่ยังไม่มีใครรีวิว
+/// พร้อมรูป) และเป็นสีรองใต้รูประหว่างที่รูปยังโหลดไม่เสร็จ
+const List<Color> _slideColors = [
+  Color(0xFF065F46), // emerald (intro)
+  Color(0xFFB45309), // amber (days)
+  Color(0xFF1E3A8A), // blue (distance)
+  Color(0xFF6D28D9), // purple (elevation)
+  Color(0xFF9D174D), // pink (difficulty/travelers)
+  Color(0xFF0E7490), // cyan (photos)
+  Color(0xFF7C2D12), // sunset (summary)
 ];
+
+/// รูปหนึ่งใบจากรีวิว พร้อมชื่อคนถ่าย — ต้องให้เครดิตทุกครั้งที่เอามาแสดง
+class _ReviewPhoto {
+  final String url;
+  final String author;
+  final bool sameRound;
+
+  const _ReviewPhoto({
+    required this.url,
+    required this.author,
+    required this.sameRound,
+  });
+}
 
 class _RecapStory extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -150,6 +164,27 @@ class _RecapStoryState extends State<_RecapStory> {
           .where((e) => e.isNotEmpty)
           .toList();
 
+  /// รูปจากรีวิวของคนที่ไปทริปนี้ — รอบเดียวกันมาก่อน (จัดลำดับมาจาก API)
+  late final List<_ReviewPhoto> _reviewPhotos =
+      (widget.data['review_photos'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .map((e) => _ReviewPhoto(
+                url: ApiConfig.mediaUrl(e['url']),
+                author: _text(e['user_name'], 'เพื่อนร่วมทาง'),
+                sameRound: e['same_round'] == true,
+              ))
+          .where((e) => e.url.isNotEmpty)
+          .toList();
+
+  /// รูปพื้นหลังของสไลด์ที่ [index] — วนรูปที่มีให้แต่ละสไลด์ได้คนละใบ
+  ///
+  /// สไลด์สุดท้ายเว้นไว้เป็นพื้นสี เพราะการ์ดแชร์บนนั้นมีรูปปกของตัวเองอยู่แล้ว
+  /// ซ้อนรูปอีกชั้นจะอ่านไม่ออกและเครดิตจะไปชนปุ่มแชร์
+  _ReviewPhoto? _backdropFor(int index) {
+    if (_reviewPhotos.isEmpty || index >= _slides.length - 1) return null;
+    return _reviewPhotos[index % _reviewPhotos.length];
+  }
+
   List<Widget> _buildSlides() {
     final days = _num(widget.data['duration_days']);
     final distance = _num(widget.data['distance_km']);
@@ -195,8 +230,15 @@ class _RecapStoryState extends State<_RecapStory> {
       travelers: travelers.toInt(),
     ));
 
-    if (_photos.isNotEmpty) {
-      slides.add(_PhotosSlide(photos: _photos.take(6).toList()));
+    // ฟีดของรอบมาก่อน ถ้ารอบนี้ยังไม่มีใครโพสต์ก็ใช้รูปจากรีวิวแทน
+    final gridPhotos = _photos.isNotEmpty
+        ? _photos.take(6).toList()
+        : _reviewPhotos.map((e) => e.url).take(6).toList();
+    if (gridPhotos.isNotEmpty) {
+      slides.add(_PhotosSlide(
+        photos: gridPhotos,
+        fromReviews: _photos.isEmpty,
+      ));
     }
 
     slides.add(_SummarySlide(
@@ -283,20 +325,58 @@ class _RecapStoryState extends State<_RecapStory> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // โหลดรูปพื้นหลังไว้ล่วงหน้า ไม่งั้นสไลด์ถัดไปจะโผล่เป็นพื้นสีก่อนแล้วรูป
+    // ค่อยตามมาทีหลัง — สะดุดตาเพราะคนปัดเร็วกว่ารูปโหลด
+    for (final photo in _reviewPhotos) {
+      precacheImage(NetworkImage(photo.url), context);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final grad = _slideGradients[_index % _slideGradients.length];
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: grad,
+    final backdrop = _backdropFor(_index);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
+          color: _slideColors[_index % _slideColors.length],
         ),
-      ),
-      child: SafeArea(
-        child: Stack(
-          children: [
+        if (backdrop != null)
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            // SizedBox.expand เพราะ Stack ข้างใน AnimatedSwitcher ส่งกรอบแบบ
+            // หลวมลงมา ปล่อยไว้รูปจะกางแค่เท่าอัตราส่วนของตัวเอง ไม่เต็มจอ
+            child: SizedBox.expand(
+              key: ValueKey(backdrop.url),
+              child: Image.network(
+                backdrop.url,
+                fit: BoxFit.cover,
+                // จำกัดขนาดที่ถอดรหัส — รูปรีวิวเป็นไฟล์เต็มจากมือถือ เปิดดิบ ๆ
+                // หลายใบแล้วแอปโดนระบบฆ่าเพราะหน่วยความจำ
+                cacheWidth: _decodeWidth(context),
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        // ม่านดำทับรูปให้ตัวเลขขาวตัวใหญ่ยังอ่านออกบนรูปอะไรก็ได้
+        if (backdrop != null)
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x8C000000), Color(0x66000000), Color(0xD9000000)],
+                stops: [0, 0.42, 1],
+              ),
+            ),
+          ),
+        SafeArea(
+          child: Stack(
+            children: [
             // Tap zones: left = back, right = forward
             Positioned.fill(
               child: Row(
@@ -353,9 +433,61 @@ class _RecapStoryState extends State<_RecapStory> {
                 icon: const Icon(Icons.close_rounded, color: Colors.white),
               ),
             ),
-          ],
+            // เครดิตเจ้าของรูป — ไม่รับ touch เพราะทั้งจอเป็นปุ่มปัดสไลด์
+            if (backdrop != null)
+              Positioned(
+                left: 28,
+                right: 28,
+                bottom: 14,
+                child: IgnorePointer(
+                  child: _PhotoCredit(photo: backdrop),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
+    );
+  }
+
+  /// ความกว้างที่พอสำหรับเต็มจอ — เผื่อจอความละเอียดสูงแต่ไม่เกิน 1440
+  static int _decodeWidth(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width *
+        MediaQuery.devicePixelRatioOf(context);
+    return width.clamp(720, 1440).round();
+  }
+}
+
+class _PhotoCredit extends StatelessWidget {
+  final _ReviewPhoto photo;
+  const _PhotoCredit({required this.photo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.photo_camera_rounded,
+          size: 13,
+          color: Colors.white.withValues(alpha: 0.75),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            photo.sameRound
+                ? 'รูปจากรีวิวของ ${photo.author} · รอบเดียวกับคุณ'
+                : 'รูปจากรีวิวของ ${photo.author}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: appFont(
+              color: Colors.white.withValues(alpha: 0.75),
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -577,7 +709,11 @@ class _DifficultySlide extends StatelessWidget {
 
 class _PhotosSlide extends StatelessWidget {
   final List<String> photos;
-  const _PhotosSlide({required this.photos});
+
+  /// true = รูปมาจากรีวิว ไม่ใช่ฟีดของรอบ — คำบรรยายใต้หัวเรื่องต่างกัน
+  final bool fromReviews;
+
+  const _PhotosSlide({required this.photos, required this.fromReviews});
 
   @override
   Widget build(BuildContext context) {
@@ -598,7 +734,7 @@ class _PhotosSlide extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'จากเพื่อนร่วมทริปในฟีด',
+            fromReviews ? 'จากรีวิวของเพื่อนร่วมทาง' : 'จากเพื่อนร่วมทริปในฟีด',
             style: appFont(
               color: Colors.white.withValues(alpha: 0.85),
               fontSize: AppText.sizeBody,
@@ -617,6 +753,8 @@ class _PhotosSlide extends StatelessWidget {
                 child: Image.network(
                   url,
                   fit: BoxFit.cover,
+                  // ช่องในตารางกว้างราว 1/3 จอ ไม่ต้องถอดรหัสเต็มไฟล์
+                  cacheWidth: 480,
                   errorBuilder: (_, _, _) => Container(
                     color: Colors.white.withValues(alpha: 0.12),
                   ),
