@@ -607,6 +607,11 @@ int? _validDropdownValue(int? selected, Iterable<int> values) {
   return ids.first;
 }
 
+/// รอบนี้บินไปไหม — รอบที่บินไม่มีรถวิ่งรับ จึงไม่มีจุดขึ้นรถให้เลือก
+/// จุดนัดพบที่สนามบิน (flight_plan) มาแทน
+bool _scheduleIsFlight(Map<String, dynamic> schedule) =>
+    textOf(schedule['transport_type']) == 'flight';
+
 bool _scheduleHasPickupRegion(Map<String, dynamic> schedule, String regionKey) {
   return asList(
     schedule['pickup_points'],

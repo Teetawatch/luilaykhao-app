@@ -77,6 +77,16 @@ class TravelPlanSelectionSection extends StatelessWidget {
       pickupMaps.map((item) => int.parse(item['id'].toString())),
     );
 
+    // รอบที่บินไปไม่มีจุดขึ้นรถให้เลือก — ขั้นตอนที่สามจึงเป็นการบอกจุดนัดพบ
+    // ที่สนามบิน ไม่ใช่ช่องเลือกที่ว่างเปล่า
+    final selectedScheduleMap = scheduleValue == null
+        ? const <String, dynamic>{}
+        : scheduleMaps.firstWhere(
+            (s) => int.tryParse(s['id'].toString()) == scheduleValue,
+            orElse: () => const <String, dynamic>{},
+          );
+    final isFlight = _scheduleIsFlight(selectedScheduleMap);
+
     final showRegion = regionMap.length > 1;
     var stepNum = 1;
     final regionStep = showRegion ? stepNum++ : 0;
@@ -99,10 +109,12 @@ class TravelPlanSelectionSection extends StatelessWidget {
             // หัวข้อเดียวในหน้าที่ได้สีแบรนด์ — เป็นบล็อกที่ทั้งหน้าถูกจัดใหม่
             // เพื่อมัน ถ้าหัวข้ออื่นเน้นด้วยก็จะกลับไปเป็นสภาพที่เน้นทุกอย่าง
             // เท่ากับไม่ได้เน้นอะไร
-            child: const _SectionHeader(
+            child: _SectionHeader(
               icon: Icons.event_available_outlined,
               title: 'เลือกแผนการเดินทาง',
-              subtitle: 'เลือกวันและจุดขึ้นรถที่ต้องการ',
+              subtitle: isFlight
+                  ? 'เลือกวันเดินทาง แล้วดูจุดนัดพบที่สนามบิน'
+                  : 'เลือกวันและจุดขึ้นรถที่ต้องการ',
               accent: _softAccent,
             ),
           ),
@@ -153,12 +165,17 @@ class TravelPlanSelectionSection extends StatelessWidget {
                 // เฉพาะรอบที่อยู่ในช่วงพยากรณ์ ~6 วันข้างหน้า)
                 ..._weatherNotice(scheduleMaps, scheduleValue),
 
-                // Step 3 — Pickup point
+                // Step 3 — Pickup point (รอบที่บินไป: จุดนัดพบที่สนามบินแทน)
                 if (scheduleMaps.isNotEmpty) ...[
                   const SizedBox(height: 22),
-                  _PlanStepLabel(step: '$pickupStep', label: 'จุดขึ้นรถ'),
+                  _PlanStepLabel(
+                    step: '$pickupStep',
+                    label: isFlight ? 'จุดนัดพบ' : 'จุดขึ้นรถ',
+                  ),
                   const SizedBox(height: 10),
-                  if (pickupMaps.isEmpty)
+                  if (isFlight)
+                    _FlightMeetingNotice(schedule: selectedScheduleMap)
+                  else if (pickupMaps.isEmpty)
                     const _EmptySelectionNotice(
                       icon: Icons.place_outlined,
                       text: 'ยังไม่มีจุดขึ้นรถสำหรับรอบนี้',

@@ -27,7 +27,12 @@ class StickyBookingBar extends StatelessWidget {
     final joinTripEnabled = _asBool(selectedSchedule['join_trip_enabled']);
     final joinTripPrice = _asNum(selectedSchedule['join_trip_price']);
     final selectedRegionLabel = _pickupRegionLabel(selectedPickupPoint);
-    final priceLabel = selectedRegionLabel.isEmpty
+    // รอบที่บินไปไม่มีจุดรับ ราคาจึงไม่ผูกกับภูมิภาคใด — ไม่งั้นแถบราคาจะขึ้นว่า
+    // "ราคาสำหรับ ยังไม่ระบุภูมิภาค" ซึ่งอ่านเหมือนข้อมูลตกหล่น
+    final priceLabel =
+        selectedRegionLabel.isEmpty ||
+            selectedPickupPoint.isEmpty ||
+            _scheduleIsFlight(selectedSchedule)
         ? 'ราคาเริ่มต้น'
         : 'ราคาสำหรับ $selectedRegionLabel';
 

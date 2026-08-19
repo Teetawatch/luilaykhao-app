@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../services/realtime_service.dart';
+import '../utils/thai_date.dart';
 import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../services/booking_draft_store.dart';
@@ -244,6 +246,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   /// เพราะนัดเจอกันที่สนามบิน (backend ยกเว้นการบังคับจุดรับให้ตรงกัน)
   bool get _isInternational => _asBool(widget.trip['is_international']);
 
+  /// รอบที่เลือกบินไปไหม — ถ้าใช่ ขั้นตอน "จุดขึ้นรถ" กลายเป็น "จุดนัดพบ"
+  /// ที่สนามบิน ไม่มีจุดรับให้เลือกและไม่ต้องปักหมุดอะไรทั้งนั้น
+  bool get _isFlightSchedule => _scheduleIsFlight(_selectedSchedule);
+
   /// วันหมดอายุพาสปอร์ตที่เร็วที่สุดที่ยังใช้เดินทางรอบนี้ได้ = วันเดินทาง + 6 เดือน
   DateTime? get _minPassportExpiry {
     final departure = _parseBirthDate(_selectedSchedule['departure_date']);
@@ -315,9 +321,14 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       ? ''
       : textOf(_seatMap?['seat_selection_disabled_reason']);
 
-  List<String> get _stepLabels => _usesSeatStep
-      ? const ['จุดขึ้นรถ', 'เลือกที่นั่ง', 'ข้อมูลผู้โดยสาร']
-      : const ['จุดขึ้นรถ', 'ข้อมูลผู้โดยสาร'];
+  List<String> get _stepLabels {
+    // รอบที่บินไปไม่มีรถให้ขึ้น — ขั้นแรกคือดูจุดนัดพบที่สนามบิน
+    final firstStep = _isFlightSchedule ? 'จุดนัดพบ' : 'จุดขึ้นรถ';
+
+    return _usesSeatStep
+        ? [firstStep, 'เลือกที่นั่ง', 'ข้อมูลผู้โดยสาร']
+        : [firstStep, 'ข้อมูลผู้โดยสาร'];
+  }
 
   int get _seatStepIndex => 1;
 
@@ -536,6 +547,18 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     int? preferredPickupPointId,
     String? preferredRegion,
   }) {
+    // สลับมารอบที่บินไป = ทิ้งจุดรับทุกแบบที่เลือกไว้จากรอบรถตู้ ไม่งั้นการจอง
+    // จะพกจุดขึ้นรถของอีกรอบติดไปด้วย
+    if (_scheduleIsFlight(schedule)) {
+      _pickupPointId = null;
+      _pickupRegion = null;
+      _customPickup = null;
+      for (final p in _passengers) {
+        p.pickupPointId.value = null;
+      }
+      return;
+    }
+
     final points = asList(schedule['pickup_points']);
     if (points.isNotEmpty) {
       final point = _preferredPickupPoint(
@@ -960,6 +983,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       }
       return true;
     }
+    // รอบที่บินไปไม่มีจุดรับให้เลือกและไม่มีอะไรให้ปักหมุด — เจอกันที่สนามบิน
+    if (_isFlightSchedule) return true;
     // ปักหมุดจุดรับเองแล้ว ถือว่าเลือกจุดรับครบ ข้ามการบังคับเลือกจุดที่กำหนด
     if (_customPickup != null) return true;
     // รอบที่ไม่มีจุดขึ้นรถตายตัว → บังคับให้ปักหมุดจุดรับเอง (กันการจองที่ไม่มีจุดรับ)
@@ -1203,7 +1228,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             groupNotes: _groupNotes,
             isSeatSelectionMode: _hasSeatMap,
             selectedSeatIds: _hasSeatMap ? _selectedSeatList : const <String>[],
-            pickupPoints: _isInternational || _isJoinTrip ? const [] : _pickupPoints,
+            pickupPoints: _isInternational || _isJoinTrip || _isFlightSchedule
+                ? const []
+                : _pickupPoints,
             isInternational: _isInternational,
             minPassportExpiry: _minPassportExpiry,
             onAddPassenger: _addPassenger,
@@ -1368,9 +1395,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         );
         return;
       }
-    } else if (_customPickup == null) {
+    } else if (!_isFlightSchedule && _customPickup == null) {
       // ปักหมุดจุดรับเองแล้ว ถือว่าเลือกจุดรับครบ — ข้ามการบังคับเลือกจุดที่กำหนด
       // รอบที่ไม่มีจุดขึ้นรถตายตัว → บังคับให้ปักหมุดจุดรับเอง
+      // (รอบที่บินไปไม่เข้าเงื่อนไขนี้เลย — ไม่มีรถให้รับ)
       if (_pickupPoints.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('กรุณาปักหมุดจุดรับของคุณบนแผนที่')),
@@ -1398,7 +1426,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     }
     // Validate per-passenger pickup points (ข้ามเมื่อปักหมุดจุดรับเอง
     // หรือซื้อเป็นของขวัญ — ของขวัญใช้จุดรับระดับการจองจุดเดียว)
-    if (!_isGift && !_isJoinTrip && _customPickup == null && _pickupPoints.isNotEmpty) {
+    if (!_isGift &&
+        !_isJoinTrip &&
+        !_isFlightSchedule &&
+        _customPickup == null &&
+        _pickupPoints.isNotEmpty) {
       for (var i = 0; i < _passengers.length; i++) {
         if (_passengers[i].pickupPointId.value == null) {
           ScaffoldMessenger.of(context).showSnackBar(

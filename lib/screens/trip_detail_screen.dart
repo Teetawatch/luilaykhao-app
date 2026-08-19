@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:luilaykhao_app/providers/app_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
 import '../providers/trip_alert_provider.dart';

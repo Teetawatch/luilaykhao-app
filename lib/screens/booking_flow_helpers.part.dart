@@ -699,6 +699,14 @@ List<Map<String, dynamic>> _pickupRegionOptions(
   return options.values.toList();
 }
 
+/// รอบนี้บินไปไหม — รอบที่บินไม่มีรถวิ่งรับ จึงไม่มีจุดขึ้นรถให้เลือกและไม่มี
+/// อะไรให้ปักหมุด นัดเจอกันที่สนามบินแทน (ดู flight_plan ของรอบ)
+///
+/// แยกจาก "ทริปต่างประเทศ" โดยตั้งใจ — การบินเป็นคุณสมบัติของรอบ ทริปในประเทศ
+/// ก็บินได้ และทริปต่างประเทศบางรอบก็อาจนั่งรถข้ามชายแดน
+bool _scheduleIsFlight(Map<String, dynamic> schedule) =>
+    textOf(schedule['transport_type']) == 'flight';
+
 bool _scheduleHasPickupRegion(Map<String, dynamic> schedule, String regionKey) {
   return asList(
     schedule['pickup_points'],

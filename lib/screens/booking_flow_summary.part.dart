@@ -117,6 +117,11 @@ class TripSummaryCard extends StatelessWidget {
     final image = ApiConfig.mediaUrl(
       trip['thumbnail_image'] ?? trip['cover_image'],
     );
+    // รอบที่บินไปไม่มีภูมิภาค/จุดขึ้นรถ — จุดนัดพบที่สนามบินมาแทนสองบรรทัดนั้น
+    final isFlight = _scheduleIsFlight(schedule);
+    final flightPlan = asMap(schedule['flight_plan']);
+    final meetingPoint = textOf(flightPlan['meeting_point']).trim();
+    final meetingTime = textOf(flightPlan['meeting_time']).trim();
     final pickupRegionLabel = isJoinTrip
         ? 'Join Trip'
         : _pickupRegionLabel(pickupPoint);
@@ -187,15 +192,25 @@ class TripSummaryCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 8),
-                _SummaryMeta(
-                  icon: Icons.location_on_rounded,
-                  text: 'ภูมิภาค $pickupRegionLabel',
-                ),
-                const SizedBox(height: 8),
-                _SummaryMeta(
-                  icon: Icons.directions_bus_filled_rounded,
-                  text: 'จุดขึ้นรถ $pickupLocationLabel',
-                ),
+                if (isFlight)
+                  _SummaryMeta(
+                    icon: Icons.flight_takeoff_rounded,
+                    text: meetingPoint.isEmpty
+                        ? 'เดินทางโดยเครื่องบิน · เจอกันที่สนามบิน'
+                        : 'จุดนัดพบ $meetingPoint'
+                              '${meetingTime.isEmpty ? '' : ' · $meetingTime น.'}',
+                  )
+                else ...[
+                  _SummaryMeta(
+                    icon: Icons.location_on_rounded,
+                    text: 'ภูมิภาค $pickupRegionLabel',
+                  ),
+                  const SizedBox(height: 8),
+                  _SummaryMeta(
+                    icon: Icons.directions_bus_filled_rounded,
+                    text: 'จุดขึ้นรถ $pickupLocationLabel',
+                  ),
+                ],
                 const SizedBox(height: 8),
                 _SummaryMeta(
                   icon: Icons.payments_rounded,
@@ -309,6 +324,8 @@ class TravelInfoSection extends StatelessWidget {
     );
     final joinTripEnabled = _asBool(selectedSchedule['join_trip_enabled']);
     final joinTripPrice = _asNum(selectedSchedule['join_trip_price']);
+    // รอบที่บินไปไม่มีรถวิ่งรับ — จุดนัดพบที่สนามบินมาแทนทั้งจุดขึ้นรถและหมุดเอง
+    final isFlight = _scheduleIsFlight(selectedSchedule);
 
     return _SectionShell(
       title: 'ข้อมูลการเดินทาง',
@@ -377,7 +394,9 @@ class TravelInfoSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          if (isJoinTrip)
+          if (isFlight)
+            _FlightMeetingCard(schedule: selectedSchedule)
+          else if (isJoinTrip)
             const _CompactNotice(
               icon: Icons.groups_rounded,
               text:
@@ -475,7 +494,7 @@ class TravelInfoSection extends StatelessWidget {
                   ),
               ],
             ),
-          if (!isJoinTrip) ...[
+          if (!isJoinTrip && !isFlight) ...[
             const SizedBox(height: 12),
             _CustomPickupTile(
               customPickup: customPickup,
@@ -487,9 +506,237 @@ class TravelInfoSection extends StatelessWidget {
               onClear: onCustomPickupClear,
             ),
           ],
-          if (!isJoinTrip && selectedVehicle.isNotEmpty) ...[
+          // รอบที่บินไปอาจผูกรถไว้ในระบบเพื่องานอื่น แต่ลูกค้าไม่ได้ขึ้นคันนั้น
+          if (!isJoinTrip && !isFlight && selectedVehicle.isNotEmpty) ...[
             const SizedBox(height: 16),
             _VehiclePhotoPreview(vehicle: selectedVehicle),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// สิ่งที่มาแทนขั้นตอน "เลือกจุดขึ้นรถ" ในรอบที่บินไป — บอกว่าเจอกันที่ไหน
+/// กี่โมง แทนที่จะขอให้ลูกค้าปักหมุดจุดรับซึ่งไม่มีรถไปรับอยู่แล้ว
+///
+/// รอบเปิดขายได้ก่อนที่ตั๋วจะออก จุดนัดพบ/ขาบินจึงอาจยังว่าง — กรณีนั้นยังต้อง
+/// บอกให้ชัดว่ารอบนี้บิน ไม่ใช่เงียบไปเฉย ๆ จนลูกค้าเดาเอง
+class _FlightMeetingCard extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+
+  const _FlightMeetingCard({required this.schedule});
+
+  /// "2026-09-05 06:10:00" → "5 ก.ย. 06:10" (เวลาตามที่ทีมงานกรอก ไม่แปลงเขตเวลา)
+  String _legTime(String raw) {
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return '';
+    return '${thaiDateShort(parsed)} '
+        '${parsed.hour.toString().padLeft(2, '0')}:'
+        '${parsed.minute.toString().padLeft(2, '0')}';
+  }
+
+  List<Widget> _legLines(BuildContext context, String label, List<dynamic> raw) {
+    final legs = raw.map(asMap).toList();
+    if (legs.isEmpty) return const [];
+
+    return [
+      const SizedBox(height: 12),
+      Text(
+        label,
+        style: appFont(
+          fontSize: AppText.sizeLabel,
+          fontWeight: FontWeight.w700,
+          color: _mutedTextColor(context),
+        ),
+      ),
+      ...legs.map((leg) {
+        final title = [
+          textOf(leg['airline']).trim(),
+          textOf(leg['flight_no']).trim(),
+        ].where((s) => s.isNotEmpty).join(' ');
+        final route = [
+          textOf(leg['from']).trim(),
+          textOf(leg['to']).trim(),
+        ].where((s) => s.isNotEmpty).join(' → ');
+        final times = [
+          if (_legTime(textOf(leg['depart_at'])).isNotEmpty)
+            'ออก ${_legTime(textOf(leg['depart_at']))}',
+          if (_legTime(textOf(leg['arrive_at'])).isNotEmpty)
+            'ถึง ${_legTime(textOf(leg['arrive_at']))}',
+        ].join(' · ');
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.flight_rounded,
+                size: 14,
+                color: _mutedTextColor(context),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      [title, route].where((s) => s.isNotEmpty).join(' · '),
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w800,
+                        color: _premiumText(context),
+                      ),
+                    ),
+                    if (times.isNotEmpty)
+                      Text(
+                        times,
+                        style: appFont(
+                          fontSize: AppText.sizeLabel,
+                          fontWeight: FontWeight.w600,
+                          color: _mutedTextColor(context),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = asMap(schedule['flight_plan']);
+    final meetingPoint = textOf(plan['meeting_point']).trim();
+    final meetingTime = textOf(plan['meeting_time']).trim();
+    final mapUrl = textOf(plan['meeting_map_url']).trim();
+    final baggage = textOf(plan['baggage_allowance']).trim();
+    final legs = asMap(plan['legs']);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _fieldBackground(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: _cardBorder(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.flight_takeoff_rounded,
+                size: 18,
+                color: _softAccent,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      meetingTime.isEmpty
+                          ? 'รอบนี้เดินทางโดยเครื่องบิน'
+                          : 'นัดพบ $meetingTime น.',
+                      style: appFont(
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w900,
+                        color: _premiumText(context),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      meetingPoint.isNotEmpty
+                          ? meetingPoint
+                          : 'ไม่มีจุดขึ้นรถให้เลือก — ทีมงานจะแจ้งจุดนัดพบและ'
+                                'เวลาที่สนามบินให้ก่อนวันเดินทาง',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        color: _mutedTextColor(context),
+                        height: 1.5,
+                      ),
+                    ),
+                    if (meetingPoint.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        'รอบนี้บินไป จึงไม่มีจุดขึ้นรถให้เลือก',
+                        style: appFont(
+                          fontSize: AppText.sizeLabel,
+                          fontWeight: FontWeight.w600,
+                          color: _mutedTextColor(context),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (mapUrl.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  HapticFeedback.selectionClick();
+                  final uri = Uri.tryParse(mapUrl);
+                  if (uri == null) return;
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(Icons.map_rounded, size: 16),
+                label: Text(
+                  'เปิดแผนที่จุดนัดพบ',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _softAccent,
+                  side: BorderSide(color: _softAccent.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          ..._legLines(context, 'ขาไป', asList(legs['outbound'])),
+          ..._legLines(context, 'ขากลับ', asList(legs['return'])),
+          if (baggage.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.luggage_rounded,
+                  size: 15,
+                  color: _mutedTextColor(context),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'กระเป๋าที่รวมในทริป: $baggage',
+                    style: appFont(
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w600,
+                      color: _mutedTextColor(context),
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),

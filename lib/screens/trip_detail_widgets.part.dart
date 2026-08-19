@@ -430,6 +430,128 @@ class _EmptySelectionNotice extends StatelessWidget {
   }
 }
 
+/// จุดนัดพบของรอบที่บินไป — ยืนแทนช่อง "เลือกจุดขึ้นรถ" ซึ่งรอบแบบนี้ไม่มี
+///
+/// รอบเปิดขายได้ก่อนที่ตั๋วจะออก จุดนัดพบจึงอาจยังว่างอยู่ — ยังต้องบอกให้ชัด
+/// ว่ารอบนี้บิน ไม่ใช่ปล่อยให้เห็นแค่ช่องว่าง
+class _FlightMeetingNotice extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+
+  const _FlightMeetingNotice({required this.schedule});
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = asMap(schedule['flight_plan']);
+    final meetingPoint = textOf(plan['meeting_point']).trim();
+    final meetingTime = textOf(plan['meeting_time']).trim();
+    final mapUrl = textOf(plan['meeting_map_url']).trim();
+    final baggage = textOf(plan['baggage_allowance']).trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.flight_takeoff_rounded,
+                color: AppTheme.mutedText(context),
+                size: 19,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      meetingTime.isEmpty
+                          ? 'รอบนี้เดินทางโดยเครื่องบิน'
+                          : 'นัดพบ $meetingTime น.',
+                      style: appFont(
+                        color: AppTheme.onSurface(context),
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      meetingPoint.isNotEmpty
+                          ? meetingPoint
+                          : 'ไม่มีจุดขึ้นรถ — ทีมงานจะแจ้งจุดนัดพบและเวลาที่'
+                                'สนามบินให้ก่อนวันเดินทาง',
+                      style: appFont(
+                        color: AppTheme.mutedText(context),
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        height: 1.5,
+                      ),
+                    ),
+                    if (baggage.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        'กระเป๋าที่รวมในทริป: $baggage',
+                        style: appFont(
+                          color: AppTheme.mutedText(context),
+                          fontSize: AppText.sizeLabel,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (mapUrl.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  HapticFeedback.selectionClick();
+                  final uri = Uri.tryParse(mapUrl);
+                  if (uri == null) return;
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(Icons.map_rounded, size: 16),
+                label: Text(
+                  'เปิดแผนที่จุดนัดพบ',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryColor,
+                  side: BorderSide(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.4),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _RatingSummary extends StatelessWidget {
   final Map<String, dynamic> trip;
   final List<dynamic> reviews;
