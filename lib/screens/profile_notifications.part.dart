@@ -11,6 +11,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _loading = false;
   bool _saving = false;
   bool _clearing = false;
+  bool _unreadOnly = false;
   final Set<int> _busyIds = <int>{};
 
   @override
@@ -169,7 +170,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final unread = notifications
         .where((item) => item['is_read'] != true)
         .length;
-    final groups = _groupNotifications(notifications);
+    final visible = _unreadOnly
+        ? notifications.where((item) => item['is_read'] != true).toList()
+        : notifications;
+    final groups = _groupNotifications(visible);
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
@@ -200,24 +204,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // Unread-count strip under the app bar (the count used to live in
-            // the large-title subtitle).
+            // ตัวกรองแทนบรรทัด "N รายการที่ยังไม่ได้อ่าน" ที่เดิมเป็นแค่ข้อความ
+            // บอกจำนวนเฉยๆ — ที่ว่างเท่ากันแต่กดใช้งานได้
             if (notifications.isNotEmpty)
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Text(
-                    unread > 0
-                        ? '$unread รายการที่ยังไม่ได้อ่าน'
-                        : 'อ่านครบทุกรายการแล้ว',
-                    style: appFont(
-                      fontSize: AppText.sizeLabel,
-                      fontWeight: FontWeight.w600,
-                      color: unread > 0
-                          ? AppTheme.primaryColor
-                          : AppTheme.mutedText(context),
-                    ),
-                  ),
+                child: _NotificationFilterBar(
+                  unread: unread,
+                  unreadOnly: _unreadOnly,
+                  onChanged: (value) {
+                    HapticFeedback.selectionClick();
+                    setState(() => _unreadOnly = value);
+                  },
                 ),
               ),
             if (_loading && notifications.isEmpty)
@@ -229,9 +226,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 hasScrollBody: false,
                 child: _NotificationsEmptyState(),
               )
+            else if (groups.isEmpty)
+              // กรองแล้วไม่เหลืออะไร — คนละเรื่องกับ "ยังไม่มีการแจ้งเตือน"
+              const SliverToBoxAdapter(child: _AllCaughtUpNote())
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
                 sliver: SliverList.builder(
                   itemCount: groups.length,
                   itemBuilder: (context, index) {
@@ -239,24 +239,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (index > 0) const SizedBox(height: 18),
+                        if (index > 0) const SizedBox(height: 22),
                         _NotificationSectionHeader(
                           label: group.label,
                           count: group.items.length,
                         ),
                         const SizedBox(height: 10),
-                        for (final notification in group.items) ...[
-                          _SwipableNotificationCard(
-                            key: ValueKey(notification['id']),
-                            notification: notification,
-                            busy: _busyIds.contains(
-                              int.tryParse(_cleanText(notification['id'])),
-                            ),
-                            onTap: () => _openNotification(notification),
-                            onDelete: () => _deleteNotification(notification),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
+                        _NotificationGroupCard(
+                          items: group.items,
+                          busyIds: _busyIds,
+                          onTap: _openNotification,
+                          onDelete: _deleteNotification,
+                        ),
                       ],
                     );
                   },
@@ -545,13 +539,223 @@ class _NotificationsEmptyState extends StatelessWidget {
   }
 }
 
-class _SwipableNotificationCard extends StatelessWidget {
+/// ตัวกรอง ทั้งหมด / ยังไม่อ่าน แบบ segmented ตามที่หน้าอื่นในแอปใช้อยู่
+class _NotificationFilterBar extends StatelessWidget {
+  final int unread;
+  final bool unreadOnly;
+  final ValueChanged<bool> onChanged;
+
+  const _NotificationFilterBar({
+    required this.unread,
+    required this.unreadOnly,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: AppTheme.subtleSurface(context),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        ),
+        child: Row(
+          children: [
+            _FilterSegment(
+              label: 'ทั้งหมด',
+              selected: !unreadOnly,
+              onTap: () => onChanged(false),
+            ),
+            _FilterSegment(
+              label: 'ยังไม่อ่าน',
+              badge: unread,
+              selected: unreadOnly,
+              onTap: () => onChanged(true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterSegment extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final int badge;
+  final VoidCallback onTap;
+
+  const _FilterSegment({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.badge = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected
+        ? AppTheme.primaryColor
+        : AppTheme.mutedText(context);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            // แผ่นขาวเลื่อนมาทับช่องที่เลือก แบบ segmented control ของ iOS
+            color: selected ? AppTheme.surface(context) : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.1,
+                    color: color,
+                  ),
+                ),
+              ),
+              if (badge > 0) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppTheme.primaryColor
+                        : AppTheme.mutedText(context).withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  ),
+                  child: Text(
+                    '$badge',
+                    style: appFont(
+                      fontSize: AppText.sizeMicro,
+                      fontWeight: FontWeight.w900,
+                      color: selected
+                          ? Colors.white
+                          : AppTheme.mutedText(context),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ข้อความตอนกรอง "ยังไม่อ่าน" แล้วไม่เหลืออะไร — ไม่ใช้ [_NotificationsEmptyState]
+/// เพราะอันนั้นบอกว่า "ยังไม่มีการแจ้งเตือน" ซึ่งไม่จริงในกรณีนี้
+class _AllCaughtUpNote extends StatelessWidget {
+  const _AllCaughtUpNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+      child: Column(
+        children: [
+          Icon(
+            Icons.done_all_rounded,
+            size: 36,
+            color: AppTheme.mutedText(context),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'อ่านครบทุกรายการแล้ว',
+            style: appFont(
+              fontSize: AppText.sizeBody,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// การ์ดเดียวต่อกลุ่มวัน โดยแต่ละรายการเป็นแถวข้างในคั่นด้วยเส้นบาง
+///
+/// เดิมทุกรายการเป็นการ์ดของตัวเองที่มีขอบและพื้นสีตามประเภท เลื่อนดูแล้วเป็น
+/// สายรุ้ง — พอรวมเป็นการ์ดเดียว กรอบกับพื้นสีต่อแถวหายไปเอง เหลือสีอยู่ที่
+/// ไอคอนกับป้ายหมวดซึ่งยังบอกประเภทได้เหมือนเดิม
+class _NotificationGroupCard extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+  final Set<int> busyIds;
+  final ValueChanged<Map<String, dynamic>> onTap;
+  final ValueChanged<Map<String, dynamic>> onDelete;
+
+  const _NotificationGroupCard({
+    required this.items,
+    required this.busyIds,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.surface(context),
+      // ตัดขอบให้พื้นแดงตอนปัดลบโค้งตามการ์ด ไม่โผล่เป็นสี่เหลี่ยมทับมุม
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        side: BorderSide(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                // เยื้องให้เริ่มตรงกับตัวหนังสือ ไม่ตัดผ่านแผ่นไอคอน
+                indent: 85,
+                color: AppTheme.border(context).withValues(alpha: 0.5),
+              ),
+            _SwipableNotificationRow(
+              key: ValueKey(items[i]['id']),
+              notification: items[i],
+              busy: busyIds.contains(
+                int.tryParse(_cleanText(items[i]['id'])),
+              ),
+              onTap: () => onTap(items[i]),
+              onDelete: () => onDelete(items[i]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SwipableNotificationRow extends StatelessWidget {
   final Map<String, dynamic> notification;
   final bool busy;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
-  const _SwipableNotificationCard({
+  const _SwipableNotificationRow({
     super.key,
     required this.notification,
     required this.busy,
@@ -568,38 +772,39 @@ class _SwipableNotificationCard extends StatelessWidget {
       onDismissed: (_) => onDelete(),
       background: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 26),
-        decoration: BoxDecoration(
-          color: AppTheme.errorColor,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        padding: const EdgeInsets.only(right: 24),
+        color: AppTheme.errorColor,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.delete_rounded, color: Colors.white, size: 24),
-            const SizedBox(height: 3),
+            const Icon(Icons.delete_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 6),
             Text(
               'ลบ',
               style: appFont(
                 color: Colors.white,
-                fontSize: AppText.sizeCaption,
+                fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w800,
               ),
             ),
           ],
         ),
       ),
-      child: _NotificationCard(notification: notification, busy: busy, onTap: onTap),
+      child: _NotificationRow(
+        notification: notification,
+        busy: busy,
+        onTap: onTap,
+      ),
     );
   }
 }
 
-class _NotificationCard extends StatelessWidget {
+class _NotificationRow extends StatelessWidget {
   final Map<String, dynamic> notification;
   final bool busy;
   final VoidCallback onTap;
 
-  const _NotificationCard({
+  const _NotificationRow({
     required this.notification,
     required this.busy,
     required this.onTap,
@@ -616,26 +821,18 @@ class _NotificationCard extends StatelessWidget {
     final isDark = AppTheme.isDark(context);
 
     return Material(
-      color: Colors.transparent,
+      // พื้นของแถวที่ยังไม่อ่านเป็นสีกลาง ไม่ใช่สีตามประเภท — ในการ์ดใบเดียว
+      // พื้นสีต่อแถวจะอ่านเป็นแถบลายพาดขวาง สีประจำประเภทยังอยู่ที่จุด ไอคอน
+      // และป้ายหมวดเหมือนเดิม
+      color: unread
+          ? (isDark
+                ? Colors.white.withValues(alpha: 0.04)
+                : AppTheme.subtleSurface(context))
+          : AppTheme.surface(context),
       child: InkWell(
         onTap: busy ? null : onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-        child: Ink(
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
-          decoration: BoxDecoration(
-            color: unread
-                ? Color.alphaBlend(
-                    accent.withValues(alpha: isDark ? 0.10 : 0.045),
-                    AppTheme.surface(context),
-                  )
-                : AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            border: Border.all(
-              color: unread
-                  ? accent.withValues(alpha: isDark ? 0.30 : 0.18)
-                  : AppTheme.border(context).withValues(alpha: 0.6),
-            ),
-          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
