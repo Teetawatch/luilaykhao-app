@@ -111,6 +111,17 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
   String _cleanError(Object e) =>
       e.toString().replaceFirst('Exception: ', '').trim();
 
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim() ?? '';
+    if (text.isEmpty) {
+      if (mounted) setState(() => _error = 'ยังไม่มีอะไรอยู่ในคลิปบอร์ด');
+      return;
+    }
+    _controller.text = text;
+    _lookup();
+  }
+
   @override
   Widget build(BuildContext context) {
     final preview = _preview;
@@ -125,27 +136,68 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
           children: [
-            Text(
-              'มีเพื่อนเชิญเข้าทริปไหม?',
-              style: appFont(
-                fontSize: AppText.sizeH2,
-                fontWeight: FontWeight.w900,
-                color: AppTheme.onSurface(context),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppTheme.selectedTint(context),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.20),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface(context),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    ),
+                    child: const Icon(
+                      Icons.mark_email_read_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'มีเพื่อนเชิญเข้าทริปไหม?',
+                    style: appFont(
+                      fontSize: AppText.sizeH2,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'วางลิงก์หรือรหัสคำเชิญที่เจ้าของการจองส่งมา แล้วคุณจะเข้า '
+                    'กลุ่มแชท ดูกำหนดการ และติดตามรถได้จากบัญชีของตัวเอง '
+                    'โดยไม่ต้องจองใหม่',
+                    style: appFont(
+                      fontSize: AppText.sizeLabel,
+                      color: AppTheme.mutedText(context),
+                      height: 1.55,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 22),
             Text(
-              'วางลิงก์หรือรหัสคำเชิญที่เจ้าของการจองส่งมา เพื่อเข้ากลุ่มแชท '
-              'และติดตามสถานะรถได้จากบัญชีของคุณเอง',
+              'ลิงก์หรือรหัสคำเชิญ',
               style: appFont(
-                fontSize: AppText.sizeBody,
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w700,
                 color: AppTheme.mutedText(context),
-                height: 1.5,
+                letterSpacing: 0.2,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             TextField(
               controller: _controller,
               minLines: 1,
@@ -156,18 +208,12 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
               decoration: InputDecoration(
                 hintText: 'วางลิงก์หรือรหัสคำเชิญที่นี่',
                 filled: true,
-                fillColor: AppTheme.subtleSurface(context),
+                fillColor: AppTheme.fieldSurface(context),
+                prefixIcon: const Icon(Icons.link_rounded),
                 suffixIcon: IconButton(
                   tooltip: 'วางจากคลิปบอร์ด',
                   icon: const Icon(Icons.content_paste_rounded),
-                  onPressed: () async {
-                    final data = await Clipboard.getData(Clipboard.kTextPlain);
-                    final text = data?.text?.trim() ?? '';
-                    if (text.isNotEmpty) {
-                      _controller.text = text;
-                      _lookup();
-                    }
-                  },
+                  onPressed: _pasteFromClipboard,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -176,21 +222,33 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _loading ? null : _lookup,
-              icon: _loading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.search_rounded),
-              label: const Text('ตรวจสอบคำเชิญ'),
+            SizedBox(
+              height: 50,
+              child: FilledButton.icon(
+                onPressed: _loading ? null : _lookup,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.search_rounded, size: 18),
+                label: Text(
+                  _loading ? 'กำลังตรวจสอบ...' : 'ตรวจสอบคำเชิญ',
+                  style: appFont(
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 16),
               _InfoBanner(
-                color: Colors.red,
+                color: AppTheme.dangerColor,
                 icon: Icons.error_outline_rounded,
                 text: _error!,
               ),
@@ -198,10 +256,10 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
             if (preview != null) ...[
               const SizedBox(height: 20),
               _InvitePreviewCard(preview: preview),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               if (alreadyMember)
                 const _InfoBanner(
-                  color: Colors.green,
+                  color: AppTheme.successColor,
                   icon: Icons.check_circle_outline_rounded,
                   text: 'คุณเข้าร่วมการจองนี้อยู่แล้ว ดูได้ในการจองของฉัน',
                 )
@@ -211,6 +269,20 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
                   icon: Icons.group_add_rounded,
                   onPressed: _joining ? null : _join,
                 ),
+            ],
+            if (preview == null && _error == null) ...[
+              const SizedBox(height: 28),
+              Text(
+                'หาลิงก์คำเชิญไม่เจอ?',
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.mutedText(context),
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const _HintCard(),
             ],
           ],
         ),
@@ -235,31 +307,53 @@ class _InvitePreviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.subtleSurface(context),
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.25),
+          color: AppTheme.primaryColor.withValues(alpha: 0.30),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (invitedBy.isNotEmpty)
-            Text(
-              '$invitedBy เชิญคุณเข้าร่วม',
-              style: appFont(
-                fontSize: AppText.sizeLabel,
-                color: AppTheme.mutedText(context),
-                fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.selectedTint(context),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.card_travel_rounded,
+                  size: 19,
+                  color: AppTheme.primaryColor,
+                ),
               ),
-            ),
-          const SizedBox(height: 4),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  invitedBy.isNotEmpty
+                      ? '$invitedBy เชิญคุณเข้าร่วม'
+                      : 'คำเชิญเข้าร่วมการจอง',
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    color: AppTheme.mutedText(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
             tripTitle,
             style: appFont(
               fontSize: AppText.sizeTitle,
               fontWeight: FontWeight.w900,
               color: AppTheme.onSurface(context),
+              height: 1.25,
             ),
           ),
           const SizedBox(height: 10),
@@ -267,6 +361,89 @@ class _InvitePreviewCard extends StatelessWidget {
             _PreviewRow(icon: Icons.event_rounded, text: 'เดินทาง $date'),
           if (ref.isNotEmpty)
             _PreviewRow(icon: Icons.confirmation_number_rounded, text: ref),
+          const SizedBox(height: 12),
+          Divider(
+            height: 1,
+            color: AppTheme.border(context).withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'เมื่อเข้าร่วมแล้ว คุณจะเห็นแชทกลุ่ม กำหนดการ จุดขึ้นรถ '
+            'และติดตามรถได้ในวันเดินทาง — การจองและยอดเงินยังเป็นของเจ้าของคนเดิม',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              color: AppTheme.mutedText(context),
+              fontWeight: FontWeight.w500,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// สำหรับคนที่เปิดหน้านี้มาแล้วไม่รู้ว่าต้องเอารหัสมาจากไหน
+class _HintCard extends StatelessWidget {
+  const _HintCard();
+
+  static const _lines = <String>[
+    'ให้เพื่อนเจ้าของการจองเปิดแอป > การจองของฉัน > เชิญเพื่อนร่วมทริป',
+    'เพื่อนกด "สร้างลิงก์คำเชิญ" แล้วส่งลิงก์มาให้คุณ',
+    'คัดลอกลิงก์นั้นมาวางที่ช่องด้านบน แล้วกดตรวจสอบคำเชิญ',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.6),
+        ),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < _lines.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppTheme.selectedTint(context),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${i + 1}',
+                      style: appFont(
+                        fontSize: AppText.sizeMicro,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _lines[i],
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                        fontWeight: FontWeight.w600,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

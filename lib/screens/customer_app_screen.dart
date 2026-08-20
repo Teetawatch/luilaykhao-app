@@ -47,6 +47,7 @@ import 'profile_screen.dart'
 import 'guest_booking_lookup_screen.dart';
 import 'chat_list_screen.dart';
 import 'join_booking_screen.dart';
+import 'invite_friends_screen.dart';
 import 'pre_trip_checklist_screen.dart';
 import 'schedule_announcements_screen.dart';
 import 'article_list_screen.dart';

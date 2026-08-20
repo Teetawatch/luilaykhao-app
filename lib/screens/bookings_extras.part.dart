@@ -546,8 +546,8 @@ class _ActionChipButton extends StatelessWidget {
   }
 }
 
-/// "สมาชิกในการจอง" — เจ้าของเชิญเพื่อนเข้าการจองเดียวกันเพื่อให้เพื่อนเข้า
-/// กลุ่มแชทและติดตามรถได้จากบัญชีของตัวเอง โดยไม่ต้องแยกการจอง/แยกจ่ายเงิน
+/// "เพื่อนร่วมเดินทาง" — ใครอยู่ในการจองนี้บ้าง พร้อมทางเข้าหน้าเชิญเพื่อน
+/// (การสร้าง/ส่งซ้ำ/ยกเลิกคำเชิญอยู่ใน [InviteFriendsScreen] ที่เดียว)
 class _BookingMembersSection extends StatefulWidget {
   final Map<String, dynamic> booking;
 
@@ -559,7 +559,6 @@ class _BookingMembersSection extends StatefulWidget {
 
 class _BookingMembersSectionState extends State<_BookingMembersSection> {
   bool _loading = true;
-  bool _busy = false;
   Map<String, dynamic>? _roster;
 
   String get _ref => textOf(widget.booking['booking_ref']);
@@ -584,100 +583,17 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
     }
   }
 
-  Future<void> _invite() async {
-    final label = await _askLabel();
-    if (label == null || !mounted) return; // ยกเลิก
-    setState(() => _busy = true);
-    try {
-      final data = await context.read<AppProvider>().createBookingInvite(
-        _ref,
-        label: label.isEmpty ? null : label,
-      );
-      await _shareInvite(data);
-      await _load();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceFirst('Exception: ', '')),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<String?> _askLabel() {
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('เชิญเพื่อน', style: appFont(fontWeight: FontWeight.w800)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ตั้งชื่อเล่นให้คำเชิญนี้ (ไม่บังคับ) แล้วส่งลิงก์ให้เพื่อน '
-              'เพื่อนกดเข้าร่วมด้วยบัญชีของตัวเองได้ทุกวิธีล็อกอิน',
-              style: appFont(fontSize: AppText.sizeLabel, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: const InputDecoration(
-                hintText: 'เช่น บอม, พี่หนึ่ง',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('สร้างลิงก์เชิญ'),
-          ),
-        ],
+  /// จัดการคำเชิญทั้งหมดอยู่ในหน้า "เชิญเพื่อนร่วมทริป" ที่เดียว — ชีตนี้แค่บอก
+  /// ว่าตอนนี้ใครอยู่ในการจองบ้าง แล้วพาไปหน้านั้น
+  Future<void> _openInviteScreen() async {
+    HapticFeedback.selectionClick();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InviteFriendsScreen(booking: widget.booking),
       ),
     );
-  }
-
-  Future<void> _shareInvite(Map<String, dynamic> data) async {
-    final schedule = asMap(widget.booking['schedule']);
-    final trip = asMap(schedule['trip']);
-    final title = textOf(trip['title'], 'ทริป');
-    final token = textOf(data['invite_token']);
-    final url = textOf(data['invite_url']);
-    final text =
-        'มาลุยทริป "$title" ด้วยกัน! 🏞️\n'
-        'เปิดแอปลุยเลเขา > การจองของฉัน > ปุ่มเข้าร่วม แล้ววางรหัสนี้:\n$token'
-        '${url.isEmpty ? '' : '\n\nหรือลิงก์: $url'}';
-    try {
-      await SharePlus.instance.share(ShareParams(text: text, subject: title));
-    } catch (_) {
-      await Clipboard.setData(ClipboardData(text: text));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('คัดลอกลิงก์ชวนเพื่อนแล้ว')),
-        );
-      }
-    }
-  }
-
-  Future<void> _revoke(int memberId) async {
-    setState(() => _busy = true);
-    try {
-      await context.read<AppProvider>().revokeBookingMember(_ref, memberId);
-      await _load();
-    } catch (_) {
-      if (mounted) setState(() => _busy = false);
-    }
+    if (mounted) _load();
   }
 
   @override
@@ -686,18 +602,21 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
     final members = roster == null ? const [] : asList(roster['members']);
     final canInviteMore = roster?['can_invite_more'] == true;
     final owner = roster == null ? null : asMap(roster['owner']);
+    final joined = members
+        .where((m) => textOf(asMap(m)['status']) == 'active')
+        .length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SheetSectionTitle(
           icon: Icons.diversity_3_rounded,
-          title: 'สมาชิกในการจอง',
+          title: 'เพื่อนร่วมเดินทาง',
         ),
         const SizedBox(height: 6),
         Text(
-          'เชิญเพื่อนร่วมเดินทางเข้าการจองนี้ เพื่อนจะเข้ากลุ่มแชทและติดตามรถ '
-          'ได้จากบัญชีของตัวเอง (ใช้การจองและการชำระเงินใบเดียวกัน)',
+          'เชิญเพื่อนเข้าการจองใบเดียวกันได้ เพื่อนจะเข้ากลุ่มแชท ดูกำหนดการ '
+          'และติดตามรถได้จากบัญชีของตัวเอง โดยไม่ต้องจองใหม่หรือจ่ายเพิ่ม',
           style: appFont(
             fontSize: AppText.sizeLabel,
             color: AppTheme.mutedText(context),
@@ -738,35 +657,112 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
                 : textOf(member['passenger_name'], 'เพื่อนที่ถูกเชิญ');
             return _MemberTile(
               name: name,
-              subtitle: isActive ? 'เข้าร่วมแล้ว' : 'รอเข้าร่วม',
-              statusColor: isActive ? Colors.green : Colors.orange,
-              onRemove: _isOwner && !_busy
-                  ? () => _revoke(int.tryParse(textOf(member['id'])) ?? 0)
-                  : null,
+              subtitle: isActive ? 'เข้าร่วมแล้ว' : 'รอเพื่อนกดเข้าร่วม',
+              statusColor: isActive
+                  ? AppTheme.successColor
+                  : AppTheme.warningColor,
             );
           }),
           if (_isOwner) ...[
             const SizedBox(height: 8),
-            if (canInviteMore)
-              OutlinedButton.icon(
-                onPressed: _busy ? null : _invite,
-                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                label: const Text('เชิญเพื่อน'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(46),
-                ),
-              )
-            else
-              Text(
-                'เชิญสมาชิกครบตามจำนวนผู้เดินทางแล้ว',
-                style: appFont(
-                  fontSize: AppText.sizeCaption,
-                  color: AppTheme.mutedText(context),
-                ),
-              ),
+            _InviteFriendsEntryCard(
+              onTap: _openInviteScreen,
+              subtitle: canInviteMore
+                  ? (members.isEmpty
+                        ? 'สร้างลิงก์คำเชิญแล้วส่งให้เพื่อนได้เลย'
+                        : 'ส่งลิงก์ซ้ำ จัดการสมาชิก หรือเชิญเพิ่ม')
+                  : 'เชิญครบแล้ว ($joined คนเข้าร่วม) — แตะเพื่อจัดการสมาชิก',
+            ),
           ],
         ],
       ],
+    );
+  }
+}
+
+/// ทางเข้าหน้าเชิญเพื่อน — วางไว้ทั้งในชีตรายละเอียดและบนการ์ดการจอง เพราะเดิม
+/// เป็นแค่ปุ่มเล็ก ๆ ท้ายชีต คนส่วนใหญ่จึงไม่รู้ว่าเชิญเพื่อนเข้าการจองได้
+class _InviteFriendsEntryCard extends StatelessWidget {
+  final VoidCallback onTap;
+  final String subtitle;
+
+  const _InviteFriendsEntryCard({required this.onTap, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(
+              color: AppTheme.primaryColor.withValues(alpha: 0.30),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.person_add_alt_1_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'เชิญเพื่อนร่วมทริป',
+                      style: appFont(
+                        color: AppTheme.onSurface(context),
+                        fontSize: AppText.sizeSubtitle,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: appFont(
+                        color: AppTheme.mutedText(context),
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -775,13 +771,11 @@ class _MemberTile extends StatelessWidget {
   final String name;
   final String subtitle;
   final Color statusColor;
-  final VoidCallback? onRemove;
 
   const _MemberTile({
     required this.name,
     required this.subtitle,
     required this.statusColor,
-    this.onRemove,
   });
 
   @override
@@ -829,17 +823,6 @@ class _MemberTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (onRemove != null)
-              IconButton(
-                tooltip: 'นำออก',
-                visualDensity: VisualDensity.compact,
-                icon: Icon(
-                  Icons.close_rounded,
-                  size: 18,
-                  color: AppTheme.mutedText(context),
-                ),
-                onPressed: onRemove,
-              ),
           ],
         ),
       ),
@@ -867,8 +850,29 @@ class _BookingActionDeck extends StatelessWidget {
 
     final showTracking = confirmed && _isUpcomingBooking(booking);
 
+    // เชิญเพื่อน — เฉพาะเจ้าของการจองที่ยังเดินทางไม่ถึง และมีที่นั่งมากกว่าหนึ่ง
+    // (การจองคนเดียวเชิญใครไม่ได้ เพราะโควตาสมาชิก = จำนวนผู้เดินทาง)
+    final showInvite =
+        booking['viewer_is_owner'] == true &&
+        (status == 'pending' || status == 'confirmed') &&
+        _isUpcomingBooking(booking) &&
+        asList(booking['passengers']).length > 1;
+
     final items = <Widget>[
       if (showTracking) _TrackVehicleButton(booking: booking),
+      if (showInvite)
+        _InviteFriendsEntryCard(
+          subtitle: 'ให้เพื่อนเข้าแชทกลุ่มและติดตามรถได้ ไม่ต้องจองใหม่',
+          onTap: () {
+            HapticFeedback.selectionClick();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => InviteFriendsScreen(booking: booking),
+              ),
+            );
+          },
+        ),
       if (showSos)
         SosButton(scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0),
       if (_chipActions(

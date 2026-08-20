@@ -86,13 +86,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
               surfaceTintColor: Colors.transparent,
               title: const Text('การจองของฉัน'),
               actions: [
-                IconButton(
-                  tooltip: 'เข้าร่วมการจองของเพื่อน',
-                  icon: const Icon(Icons.group_add_rounded),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const JoinBookingScreen(),
+                // ไอคอนเปล่า ๆ อ่านไม่ออกว่าทำอะไร (หลายคนเข้าใจว่าเป็นปุ่มเชิญเพื่อน)
+                // จึงติดป้ายบอกตรง ๆ ว่าเป็นช่องใส่รหัสคำเชิญที่เพื่อนส่งมา
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _JoinBookingAction(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const JoinBookingScreen(),
+                      ),
                     ),
                   ),
                 ),
@@ -274,6 +277,57 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     return result;
   }
 
+}
+
+/// ปุ่มมุมขวาบนของ "การจองของฉัน" — สำหรับคนที่ *ได้รับ* คำเชิญมา
+/// (การ *ส่ง* คำเชิญอยู่บนการ์ดการจองของตัวเอง)
+class _JoinBookingAction extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _JoinBookingAction({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'มีเพื่อนส่งรหัสคำเชิญมาให้? ใส่รหัสที่นี่',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onPressed();
+          },
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.selectedTint(context),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.add_link_rounded,
+                  size: 18,
+                  color: AppTheme.primaryColor,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'ใส่รหัสคำเชิญ',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

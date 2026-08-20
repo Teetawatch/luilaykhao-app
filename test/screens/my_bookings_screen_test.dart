@@ -18,11 +18,14 @@ void main() {
     String? slipOcrStatus,
     String? expiresAt,
     String departureDate = '2099-01-10',
+    int passengerCount = 1,
+    bool viewerIsOwner = false,
   }) {
     return {
       'id': 1,
       'booking_ref': 'LLK-20990110-0001',
       'status': status,
+      'viewer_is_owner': viewerIsOwner,
       'slip_ocr_status': slipOcrStatus,
       'expires_at': expiresAt,
       'payment_type': 'full',
@@ -30,7 +33,8 @@ void main() {
       'paid_amount': status == 'confirmed' ? 3500 : 0,
       'created_at': '2026-08-04T10:00:00.000000Z',
       'passengers': [
-        {'name': 'ผู้เดินทาง', 'nickname': 'ต้น'},
+        for (var i = 0; i < passengerCount; i++)
+          {'name': 'ผู้เดินทาง ${i + 1}', 'nickname': 'ต้น'},
       ],
       'schedule': {
         'id': 5,
@@ -137,6 +141,46 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.textContaining('แบ่งจ่าย 2/4 คน'), findsOneWidget);
     expect(find.textContaining('จุดรับที่ขอไว้ถูกปฏิเสธ'), findsOneWidget);
+  });
+
+  // การเชิญเพื่อนเคยซ่อนอยู่ท้ายชีตรายละเอียด คนส่วนใหญ่จึงไม่รู้ว่ามี —
+  // ตอนนี้มีทางเข้าพร้อมคำอธิบายอยู่บนการ์ดการจองของเจ้าของเอง
+  testWidgets('เจ้าของการจองแบบหลายคนเห็นทางเข้า "เชิญเพื่อนร่วมทริป"', (
+    tester,
+  ) async {
+    await pump(tester, [
+      booking(status: 'confirmed', passengerCount: 2, viewerIsOwner: true),
+    ]);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('เชิญเพื่อนร่วมทริป'), findsOneWidget);
+    expect(
+      find.text('ให้เพื่อนเข้าแชทกลุ่มและติดตามรถได้ ไม่ต้องจองใหม่'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('การจองที่นั่งเดียว/ไม่ใช่เจ้าของ ไม่ขึ้นทางเข้าเชิญเพื่อน', (
+    tester,
+  ) async {
+    await pump(tester, [
+      booking(status: 'confirmed', passengerCount: 1, viewerIsOwner: true),
+    ]);
+    expect(find.text('เชิญเพื่อนร่วมทริป'), findsNothing);
+
+    await pump(tester, [
+      booking(status: 'confirmed', passengerCount: 3, viewerIsOwner: false),
+    ]);
+    expect(find.text('เชิญเพื่อนร่วมทริป'), findsNothing);
+  });
+
+  testWidgets('ปุ่มมุมขวาบนบอกชัดว่าใช้ใส่รหัสคำเชิญที่เพื่อนส่งมา', (
+    tester,
+  ) async {
+    await pump(tester, [booking(status: 'confirmed')]);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('ใส่รหัสคำเชิญ'), findsOneWidget);
   });
 
   testWidgets('renders the empty state for someone with no bookings', (
