@@ -24,6 +24,7 @@ import UserNotifications
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     registerBadgeChannel(with: engineBridge.pluginRegistry)
     LiveActivityChannel.register(with: engineBridge.pluginRegistry)
+    HomeWidgetChannel.register(with: engineBridge.pluginRegistry)
   }
 
   private func registerBadgeChannel(with registry: FlutterPluginRegistry) {

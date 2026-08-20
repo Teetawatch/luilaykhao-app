@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- วิดเจ็ตอยู่คนละ sandbox กับแอป กลุ่มนี้คือทางเดียวที่มันอ่าน snapshot ที่แอป
+	     เขียนไว้ได้ ต้องเป็นชื่อเดียวกับใน Runner/Runner.entitlements และกับ
+	     HomeWidgetStore.appGroup ฝั่ง Swift เป๊ะ ๆ
+
+	     Live Activity ไม่ได้ใช้กลุ่มนี้ (มันรับข้อมูลจาก APNs ตรง ๆ) แต่ต้องอยู่ใน
+	     ไฟล์เดียวกันเพราะทั้งสองอย่างเป็นเป้าหมายเดียวกัน -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.luilaykhao.app</string>
+	</array>
+</dict>
+</plist>

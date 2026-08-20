@@ -12,6 +12,7 @@ import '../services/analytics_service.dart';
 import '../services/api_client.dart';
 import '../services/booking_draft_store.dart';
 import '../services/connectivity_service.dart';
+import '../services/home_widget_service.dart';
 import '../services/notification_navigator.dart';
 import '../services/offline_cache.dart';
 import '../services/push_notification_service.dart';
@@ -206,6 +207,7 @@ class AppProvider extends ChangeNotifier {
     _locale = _localeFromStorage(prefs.getString(_localeKey));
     realtime.attachApi(api);
     TripActivityService.instance.attachApi(api);
+    HomeWidgetService.instance.attachApi(api);
     unawaited(ConnectivityService.instance.initialize());
     unawaited(
       VersionGateService.instance.check(api).then((result) {
@@ -1149,6 +1151,9 @@ class AppProvider extends ChangeNotifier {
     api.token = null;
     user = null;
     await OfflineCache.instance.clearAccount();
+    // ทริปของบัญชีที่ออกไปต้องไม่ค้างอยู่บนหน้าโฮมให้คนถัดไปที่หยิบเครื่องขึ้นมา
+    // เห็น — วางไว้ที่นี่ ไม่ใช่ใน logout() เพราะการลบบัญชีก็ผ่านทางนี้เหมือนกัน
+    await HomeWidgetService.instance.clear();
     // Drafts hold ID numbers and health notes belonging to this account.
     await BookingDraftStore.clearAll();
     await _unbindUserChannel();
@@ -1266,6 +1271,9 @@ class AppProvider extends ChangeNotifier {
         debugPrint('TripActivity sync failed: $e');
       }),
     );
+
+    // วิดเจ็ตหน้าโฮม — เพิ่งได้รายการจองชุดใหม่มา ถ้ามีอะไรเปลี่ยนก็เปลี่ยนตอนนี้
+    unawaited(HomeWidgetService.instance.refresh(force: true));
   }
 
   Future<void> loadStaffSchedules() async {

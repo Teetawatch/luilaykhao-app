@@ -84,7 +84,33 @@
                     android:scheme="luilaykhao"
                     android:host="reset-password"/>
             </intent-filter>
+            <!-- แตะวิดเจ็ตหน้าโฮมแล้วเปิดหน้าการจอง — วิดเจ็ตยิง explicit intent มา
+                 ตรง ๆ อยู่แล้ว แต่ตัวกรองนี้ทำให้ลิงก์ luilaykhao://booking/REF ที่มา
+                 จากที่อื่น (อีเมล, ข้อความ) เปิดในแอปด้วย ฝั่ง Dart รองรับ host นี้อยู่
+                 แล้วใน NotificationNavigator.handleDeepLink -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="luilaykhao"
+                    android:host="booking"/>
+            </intent-filter>
         </activity>
+
+        <!-- วิดเจ็ตนับถอยหลังทริปบนหน้าโฮม (ดู TripCountdownWidget.kt)
+             ต้อง exported=true เพราะ launcher เป็นคนส่ง broadcast มาให้ -->
+        <receiver
+            android:name=".TripCountdownWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_trip_countdown_info" />
+        </receiver>
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

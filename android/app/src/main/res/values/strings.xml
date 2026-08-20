@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ป้ายชื่อของวิดเจ็ตหน้าโฮม — เห็นในหน้าเลือกวิดเจ็ตของ launcher เท่านั้น
+
+  ข้อความที่แสดง "ในตัว" วิดเจ็ตไม่ได้อยู่ที่นี่ ส่วนใหญ่มาจาก HomeWidgetService
+  ฝั่ง Laravel ที่เหลืออยู่ใน HomeWidgetCopy.kt คู่กับตรรกะที่ใช้มัน
+-->
+<resources>
+    <string name="widget_trip_countdown_name">ลุยเลเขา</string>
+    <string name="widget_trip_countdown_description">นับถอยหลังทริปที่จองไว้ และยอดที่ต้องจ่ายงวดหน้า</string>
+</resources>

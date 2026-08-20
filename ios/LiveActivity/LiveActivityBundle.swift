@@ -1,13 +1,18 @@
 import SwiftUI
 import WidgetKit
 
-/// จุดเข้าของ widget extension
+/// จุดเข้าของ widget extension (deployment target 16.2)
 ///
-/// เป้าหมายนี้มีอยู่เพื่อ Live Activity อย่างเดียว (deployment target 16.2) — ยัง
-/// ไม่มีวิดเจ็ตหน้าโฮม ถ้าจะเพิ่มทีหลังก็มาต่อในบันเดิลนี้ ไม่ต้องสร้างเป้าหมายใหม่
+/// สองอย่างที่คนละหน้าจอกัน แต่อยู่เป้าหมายเดียวกันเพราะเป็น widget extension ทั้งคู่:
+///
+///   [TripActivityWidget]  การ์ด "วันเดินทาง" บนหน้าจอล็อก/Dynamic Island — อัปเดต
+///                         จาก APNs ตรง ๆ ระหว่างวันเดินทาง
+///   [TripCountdownWidget] วิดเจ็ตนับถอยหลังบนหน้าโฮม — อ่าน snapshot ที่แอปเขียน
+///                         ไว้ใน App Group ทำงานทุกวันที่ไม่ใช่วันเดินทาง
 @main
 struct LiveActivityBundle: WidgetBundle {
   var body: some Widget {
     TripActivityWidget()
+    TripCountdownWidget()
   }
 }

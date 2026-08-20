@@ -174,6 +174,9 @@ class ApiEndpoints {
   static String bookingLiveActivity(String ref) =>
       'bookings/$ref/live-activity';
 
+  // วิดเจ็ตหน้าโฮม — ทริปถัดไป + ยอดที่ต้องจ่ายงวดหน้า
+  static const homeWidget = 'me/home-widget';
+
   // ตำแหน่งสดของเพื่อนร่วมทริป
   static String scheduleLiveLocation(int scheduleId) =>
       'schedules/$scheduleId/live-location';

@@ -14,5 +14,12 @@
 	<array>
 		<string>applinks:luilaykhao.com</string>
 	</array>
+	<!-- ทางเดียวที่วิดเจ็ตหน้าโฮมอ่านข้อมูลของแอปได้ — วิดเจ็ตอยู่คนละ sandbox
+	     ต้องประกาศกลุ่มเดียวกันทั้งที่นี่และใน LiveActivity/LiveActivityExtension.entitlements
+	     และต้องเปิด App Group นี้ไว้ใน Apple Developer portal ให้ทั้งสอง bundle id -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.luilaykhao.app</string>
+	</array>
 </dict>
 </plist>

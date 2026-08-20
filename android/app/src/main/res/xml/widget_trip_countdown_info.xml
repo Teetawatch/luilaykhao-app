@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ขนาดตั้งต้น 4x2 ช่อง ย่อได้ถึงประมาณ 3x2 — เล็กกว่านั้นคอลัมน์ยอดค้างจะถูกซ่อน
+  อัตโนมัติจากโค้ด (ดู TripCountdownWidget.isWide)
+
+  updatePeriodMillis = 6 ชม.: Android ไม่มีไทม์ไลน์ล่วงหน้าแบบ WidgetKit ตัวเลขนับ
+  ถอยหลังจึงต้องถูกคำนวณใหม่เป็นระยะ ระบบไม่ปลุกเครื่องเพื่อทำสิ่งนี้ (ยิงตอนเครื่อง
+  ตื่นอยู่แล้ว) และการวาดหนึ่งครั้งคือการอ่าน SharedPreferences ครั้งเดียว จึงถูกมาก
+  ส่วนตอนที่ข้อมูลเปลี่ยนจริง แอปสั่งวาดใหม่เองทันทีอยู่แล้ว
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="21600000"
+    android:initialLayout="@layout/widget_trip_countdown"
+    android:previewLayout="@layout/widget_trip_countdown"
+    android:description="@string/widget_trip_countdown_description"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

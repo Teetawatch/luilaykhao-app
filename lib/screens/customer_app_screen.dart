@@ -20,6 +20,7 @@ import '../providers/app_provider.dart';
 import '../providers/article_provider.dart';
 import '../providers/tracking_provider.dart';
 import 'tracking_screen.dart' show TrackingMapPage;
+import '../services/home_widget_service.dart';
 import '../services/notification_navigator.dart';
 import '../services/push_notification_service.dart';
 import '../services/trip_activity_service.dart';
@@ -142,6 +143,10 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
         // token ของมันอยู่ ถ้าการฝากครั้งแรกล้มเหลว (เน็ตหลุดตอนกดจอง) นี่คือ
         // จังหวะที่ได้ลองใหม่ — เงียบและไม่มีค่าใช้จ่ายเมื่อไม่มีการ์ดเปิดอยู่
         unawaited(TripActivityService.instance.reregisterActiveTokens());
+        // วิดเจ็ตหน้าโฮมอ่านแต่ไฟล์ที่แอปเขียนไว้ ไม่ได้ต่อเน็ตเอง จังหวะที่แอป
+        // กลับมาหน้าจอจึงเป็นจังหวะเดียวที่มันได้ข้อมูลใหม่ (มีตัวหน่วงในตัวอยู่
+        // แล้ว การสลับแอปไปมาไม่ทำให้ยิงซ้ำ)
+        unawaited(HomeWidgetService.instance.refresh());
       } else {
         unawaited(PushNotificationService.instance.clearBadge());
       }
