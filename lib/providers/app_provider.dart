@@ -2795,8 +2795,18 @@ class AppProvider extends ChangeNotifier {
   }
 
   /// สถานะของใบชำระเงิน — ใช้ poll เผื่อ websocket หลุด
-  Future<Map<String, dynamic>> beamPaymentStatus(int paymentId) async {
-    final response = await api.get(ApiEndpoints.beamPayment(paymentId));
+  /// สถานะของใบชำระเงินใบหนึ่ง
+  ///
+  /// [sync] = "ลูกค้าบอกว่าจ่ายไปแล้วและกำลังนั่งดูหน้าจอรออยู่" ให้เซิร์ฟเวอร์ถาม Beam
+  /// ตรงๆ แทนที่จะรอ webhook — ฝั่งเซิร์ฟเวอร์คุมจังหวะไว้ที่ 1 ครั้ง/5 วินาที/ใบแล้ว
+  Future<Map<String, dynamic>> beamPaymentStatus(
+    int paymentId, {
+    bool sync = false,
+  }) async {
+    final response = await api.get(
+      ApiEndpoints.beamPayment(paymentId),
+      query: sync ? {'sync': 1} : null,
+    );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
