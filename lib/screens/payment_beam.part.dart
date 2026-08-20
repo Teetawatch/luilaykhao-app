@@ -122,6 +122,9 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection>
   /// รอเกินกี่วินาทีถึงจะเปลี่ยนคำพูดเป็น "ช้ากว่าปกติ" แทนที่จะปล่อยให้ลูกค้าเดาเอง
   static const _slowAfterSeconds = 45;
 
+  /// ออกจากแอปไปนานแค่ไหนถึงจะนับว่า "ไปจ่ายมา" ตอนกลับเข้ามา
+  static const _awayLongEnough = Duration(seconds: 3);
+
   Map<String, dynamic>? _payment;
   Uint8List? _qrBytes;
   bool _loading = false;
@@ -133,6 +136,9 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection>
   /// ต้องจ่ายซ้ำไหม จับแยกไว้เพื่อให้มีอะไรให้ดู และเพื่อเร่งจังหวะถาม
   bool _settling = false;
   int _settlingSeconds = 0;
+
+  /// ตอนที่แอปถูกพักไป — ใช้วัดว่าออกไปนานพอที่จะเป็นการไปจ่ายเงินมาหรือเปล่า
+  DateTime? _awayAt;
 
   Timer? _tickTimer;
   Timer? _pollTimer;
@@ -161,12 +167,33 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection>
     super.dispose();
   }
 
-  /// กลับเข้าแอปมา = เพิ่งออกจากแอปธนาคาร/แอปสแกน QR — ถามผลทันที ไม่ต้องรอครบรอบ
+  /// ออกจากแอปไปนานพอ = ไปเปิดแอปธนาคารมา ขากลับคือสัญญาณที่ดีที่สุดที่เรามีว่าลูกค้า
+  /// เพิ่งจ่ายมา จึงไม่ต้องมีปุ่ม "จ่ายเงินแล้ว" ให้กด — สลับเป็นโหมดรอผลให้เอง
+  ///
+  /// 3 วินาทีเป็นเกณฑ์ที่การปัดดู notification แวบเดียวไม่ไปสลับหน้าจอเขา
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _payment != null) {
-      _pollStatus();
+    if (_payment == null) return;
+
+    if (state == AppLifecycleState.paused) {
+      _awayAt = DateTime.now();
+      return;
     }
+
+    if (state != AppLifecycleState.resumed) return;
+
+    final awayAt = _awayAt;
+    _awayAt = null;
+
+    if (awayAt != null &&
+        DateTime.now().difference(awayAt) >= _awayLongEnough &&
+        !_expired) {
+      _markSettling();
+      return;
+    }
+
+    // ไม่ได้ออกไปนาน แต่กลับมาดูก็ถามผลให้เลย ไม่ต้องรอครบรอบ
+    _pollStatus();
   }
 
   void _stopTimers() {
@@ -360,31 +387,23 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection>
               Center(child: _buildQrArea(context)),
               const SizedBox(height: 14),
               _buildAmountRow(context),
-              // เราไม่มีทางรู้เองว่าลูกค้าสแกนไปแล้วหรือยัง ปุ่มนี้คือสัญญาณเดียวที่บอกได้
+              // ขั้นตอนอยู่ตรงนี้ตั้งแต่ยังไม่จ่าย ไม่ต้องรอให้ใครกดปุ่มก่อน แถวที่กำลัง
+              // ทำงานอยู่หมุนตลอด หน้าจอจึงไม่มีวินาทีไหนที่ดูเหมือนค้าง
               if (_payment != null && !_expired) ...[
                 const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: () {
-                    HapticFeedback.selectionClick();
-                    _markSettling();
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    ),
-                  ),
-                  icon: const Icon(Icons.task_alt_rounded, size: 18),
-                  label: Text(
-                    'จ่ายเงินแล้ว · ตรวจสอบให้ฉัน',
-                    style: appFont(
-                      color: Colors.white,
-                      fontSize: AppText.sizeBody,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                const _SettlingStep(
+                  state: _StepState.now,
+                  label: 'สแกน QR ด้วยแอปธนาคาร',
+                ),
+                const SizedBox(height: 8),
+                const _SettlingStep(
+                  state: _StepState.todo,
+                  label: 'รอธนาคารยืนยันว่าเงินเข้า',
+                ),
+                const SizedBox(height: 8),
+                const _SettlingStep(
+                  state: _StepState.todo,
+                  label: 'บันทึกยอดที่ชำระให้อัตโนมัติ',
                 ),
               ],
               if (_error != null) ...[
