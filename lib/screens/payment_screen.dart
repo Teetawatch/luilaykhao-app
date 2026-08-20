@@ -127,9 +127,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final currentType = textOf(booking['payment_type'], 'full');
     // If booking already has a confirmed payment_type, respect it.
     // Otherwise keep the user-selected choice and let normalize fall back to 'full' if unsupported.
-    final preferred = (currentType == 'installment' || currentType == 'deposit')
-        ? currentType
-        : _paymentType;
+    //
+    // ยกเว้นการแบ่งจ่ายกลุ่ม ซึ่งยืม payment_type = 'deposit' ไปใช้ — ถ้าอ่านตรงๆ
+    // หน้านี้จะเด้งกลับไปโหมด "จ่ายมัดจำ" แล้วโชว์ยอดมัดจำให้คนที่ตั้งใจจ่ายส่วนแบ่ง
+    final splitEnabled = _asBool(asMap(booking['split'])['enabled']);
+    final restorable =
+        currentType == 'installment' ||
+        (currentType == 'deposit' && !splitEnabled);
+    final preferred = restorable ? currentType : _paymentType;
     _paymentType = _normalizePaymentType(booking, preferred);
     return booking;
   }
@@ -526,6 +531,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   : payingInstallment
                       ? _asNum(installmentRecord['amount'])
                       : _amountDue(booking, paymentType);
+          // สลิปเข้ามาแล้วแต่ยังไม่ confirmed — หลังบ้านกันไว้ให้แอดมินตรวจ และ
+          // ส่ง expires_at เป็น null เพราะที่นั่งถูกถือไว้แล้ว ไม่มีเส้นตายอีก
+          final slipUnderReview =
+              status == 'pending' &&
+              textOf(booking['slip_ocr_status']).isNotEmpty;
           final qrPayload = _buildPromptPayPayload(_promptPayId, amountDue);
           final pendingFormVisible = status == 'pending' ||
               collectingBalance ||
@@ -538,9 +548,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
               _PaymentProgress(status: status),
               const SizedBox(height: 20),
               if (status == 'pending') ...[
-                const _PaymentNotice(),
-                const SizedBox(height: 10),
-                _PaymentCountdownBanner(booking: booking),
+                // ส่งสลิปแล้ว = ระบบไม่ตัดใบนี้ทิ้งแล้ว บอกสถานะจริงแทนการเร่งเวลา
+                if (slipUnderReview)
+                  const _SlipUnderReviewNotice()
+                else ...[
+                  const _PaymentNotice(),
+                  const SizedBox(height: 10),
+                  _PaymentCountdownBanner(booking: booking),
+                ],
                 const SizedBox(height: 16),
               ],
               if (collectingBalance) ...[

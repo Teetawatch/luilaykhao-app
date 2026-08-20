@@ -493,24 +493,90 @@ class _InstallmentBanner extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Slip under review
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// แทนที่คำเตือน + นาฬิกา เมื่อสลิปเข้ามาแล้วแต่ยอดไม่ตรงจนถูกกันไว้ให้แอดมินตรวจ
+///
+/// ใบแบบนี้ยัง status = pending อยู่ แต่ระบบไม่ตัดทิ้งแล้ว การขึ้นนาฬิกาต่อจึงเป็น
+/// การไล่ลูกค้าที่ทำครบแล้วออกจากหน้า ทั้งที่ที่นั่งของเขาถูกถือไว้เรียบร้อย และถ้า
+/// สลิปไม่ผ่าน เขาต้องส่งใบใหม่จากหน้านี้ ไม่ใช่ถูกบอกว่าหมดเวลา
+class _SlipUnderReviewNotice extends StatelessWidget {
+  const _SlipUnderReviewNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.infoTint(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: AppTheme.infoColor.withValues(alpha: 0.30),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.infoColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            ),
+            child: const Icon(
+              Icons.hourglass_top_rounded,
+              color: AppTheme.infoColor,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ได้รับสลิปแล้ว · รอทีมงานตรวจสอบ',
+                  style: appFont(
+                    color: AppTheme.onSurface(context),
+                    fontWeight: FontWeight.w900,
+                    fontSize: AppText.sizeBody,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'ที่นั่งถูกถือไว้ให้ระหว่างตรวจสอบ ไม่มีการนับถอยหลัง '
+                  'หากยอดไม่ตรง ส่งสลิปใหม่จากหน้านี้ได้เลย',
+                  style: appFont(
+                    color: AppTheme.mutedText(context),
+                    fontWeight: FontWeight.w600,
+                    fontSize: AppText.sizeCaption,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Countdown banner
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PaymentCountdownBanner extends StatelessWidget {
   final Map<String, dynamic> booking;
 
-  static const _kDeadlineMinutes = 10;
-
   const _PaymentCountdownBanner({required this.booking});
 
   @override
   Widget build(BuildContext context) {
-    final createdAt = DateTime.tryParse(
-      textOf(booking['created_at']),
-    )?.toLocal();
-    if (createdAt == null) return const SizedBox.shrink();
+    final deadline = paymentDeadline(booking);
+    if (deadline == null) return const SizedBox.shrink();
 
-    final deadline = createdAt.add(const Duration(minutes: _kDeadlineMinutes));
     final remaining = deadline.difference(DateTime.now());
     final expired = remaining.isNegative || remaining.inSeconds <= 0;
     final isUrgent = !expired && remaining.inSeconds <= 120;
@@ -568,7 +634,7 @@ class _PaymentCountdownBanner extends StatelessWidget {
                 Text(
                   expired
                       ? 'กรุณาติดต่อเจ้าหน้าที่หากต้องการจองใหม่'
-                      : 'การจองจะถูกยกเลิกอัตโนมัติหากไม่ชำระภายใน $_kDeadlineMinutes นาทีจากการจอง',
+                      : 'การจองจะถูกยกเลิกอัตโนมัติหากไม่ชำระภายใน ${paymentWindowMinutes(booking, deadline)} นาทีจากการจอง',
                   style: appFont(
                     color: AppTheme.mutedText(context),
                     fontWeight: FontWeight.w600,

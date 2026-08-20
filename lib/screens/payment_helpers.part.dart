@@ -16,6 +16,37 @@ class _InstallmentPreview {
 // Pure helper functions
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// ทางถอยเมื่อ payload เก่าไม่มี expires_at — ต้องตรงกับ Booking::PENDING_TTL_MINUTES
+const int kPaymentWindowFallbackMinutes = 10;
+
+/// เส้นตายที่ระบบจะยกเลิกใบนี้เพื่อคืนที่นั่ง — null เมื่อไม่มีเส้นตายให้นับ
+///
+/// เดินตาม expires_at ที่ BookingResource ส่งมา ไม่ตั้งนาฬิกาของตัวเอง:
+/// ExpirePendingBookingsJob ตัดที่ PENDING_TTL_MINUTES นับจาก created_at เท่ากันทุกใบ
+/// ไม่ได้ยาวขึ้นตามจำนวนผู้เดินทาง และหยุดตัดทันทีที่สลิปเข้ามา — ตอนนั้นที่นั่งถูกถือ
+/// ไว้รอแอดมินตรวจ หลังบ้านจึงส่ง expires_at = null มา แอปต้องไม่นับถอยหลังต่อแล้ว
+/// บอกลูกค้าว่าหมดเวลาทั้งที่เขาจ่ายมาแล้ว
+DateTime? paymentDeadline(Map<String, dynamic> booking) {
+  if (textOf(booking['slip_ocr_status']).isNotEmpty) return null;
+
+  final expiresAt = DateTime.tryParse(textOf(booking['expires_at']))?.toLocal();
+  if (expiresAt != null) return expiresAt;
+
+  final createdAt = DateTime.tryParse(textOf(booking['created_at']))?.toLocal();
+  return createdAt?.add(
+    const Duration(minutes: kPaymentWindowFallbackMinutes),
+  );
+}
+
+/// ความยาวเต็มของหน้าต่างชำระเงิน (created_at → เส้นตาย) ใช้กับข้อความอธิบาย
+int paymentWindowMinutes(Map<String, dynamic> booking, DateTime deadline) {
+  final createdAt = DateTime.tryParse(textOf(booking['created_at']))?.toLocal();
+  if (createdAt == null) return kPaymentWindowFallbackMinutes;
+
+  final minutes = (deadline.difference(createdAt).inSeconds / 60).round();
+  return minutes > 0 ? minutes : kPaymentWindowFallbackMinutes;
+}
+
 /// ยอดที่ต้องโอนของแต่ละรูปแบบ คำนวณมาจากหลังบ้าน (booking.payment_options)
 ///
 /// เดิมแอปคำนวณเอง แล้วสูตรไม่ตรงกับหลังบ้าน: มัดจำแบบยอดคงที่ถูกคิดเป็น "ต่อการ
