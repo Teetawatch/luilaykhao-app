@@ -1860,6 +1860,44 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) ?? const {});
   }
 
+  // ─── ไฟล์เอกสารแนบที่ทริปขอ ─────────────────────────────────────────────
+  // รายการที่ต้องแนบมาจากทริป (แอดมินตั้งเอง) ไฟล์ผูกกับผู้เดินทางรายคน
+
+  Future<Map<String, dynamic>> bookingDocuments(String ref) async {
+    final response = await api.get(ApiEndpoints.bookingDocuments(ref));
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// แนบไฟล์หนึ่งใบให้ผู้เดินทางหนึ่งคน — คืนผังเอกสารชุดใหม่ทั้งการจอง
+  Future<Map<String, dynamic>> uploadBookingDocument({
+    required String ref,
+    required int passengerId,
+    required String requirementKey,
+    required String filePath,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.bookingDocuments(ref),
+      fields: {
+        'passenger_id': passengerId,
+        'requirement_key': requirementKey,
+      },
+      files: {'file': filePath},
+    );
+    final data = api.data(response);
+    final documents = data is Map ? data['documents'] : null;
+    return documents is Map
+        ? Map<String, dynamic>.from(documents)
+        : <String, dynamic>{};
+  }
+
+  Future<Map<String, dynamic>> deleteBookingDocument(
+    String ref,
+    int documentId,
+  ) async {
+    final response = await api.delete(ApiEndpoints.bookingDocument(ref, documentId));
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
   // ─── Booking members / companion invites ───────────────────────────────
 
   /// รายชื่อสมาชิกของการจอง (เจ้าของ + เพื่อนที่ถูกเชิญ/รับแล้ว)

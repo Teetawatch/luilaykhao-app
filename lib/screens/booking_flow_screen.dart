@@ -12,6 +12,8 @@ import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../services/realtime_service.dart';
 import '../utils/thai_date.dart';
+import '../widgets/app_snack.dart';
+import '../widgets/document_attach_field.dart';
 import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../services/booking_draft_store.dart';
@@ -245,6 +247,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   /// ทริปต่างประเทศ — บังคับเก็บเอกสารเดินทาง และไม่มีจุดขึ้นรถให้เลือก
   /// เพราะนัดเจอกันที่สนามบิน (backend ยกเว้นการบังคับจุดรับให้ตรงกัน)
   bool get _isInternational => _asBool(widget.trip['is_international']);
+
+  /// เอกสารที่ทริปนี้ขอให้แนบ — แอดมินกำหนดเองต่อทริป ว่างคือไม่ต้องแนบอะไร
+  List<dynamic> get _documentRequirements =>
+      _isGift ? const [] : asList(widget.trip['document_requirements']);
 
   /// รอบที่เลือกบินไปไหม — ถ้าใช่ ขั้นตอน "จุดขึ้นรถ" กลายเป็น "จุดนัดพบ"
   /// ที่สนามบิน ไม่มีจุดรับให้เลือกและไม่ต้องปักหมุดอะไรทั้งนั้น
@@ -1233,6 +1239,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
                 : _pickupPoints,
             isInternational: _isInternational,
             minPassportExpiry: _minPassportExpiry,
+            documentRequirements: _documentRequirements,
             onAddPassenger: _addPassenger,
             onRemovePassenger: _removePassenger,
             onUseProfile: _fillPassengerFromProfile,
@@ -1380,6 +1387,74 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     );
   }
 
+  /// ข้อความบอกว่าใครยังไม่ได้แนบเอกสารที่บังคับ — null เมื่อครบทุกคน
+  String? _missingDocumentMessage() {
+    final requirements = _documentRequirements;
+    if (requirements.isEmpty) return null;
+
+    for (var i = 0; i < _passengers.length; i++) {
+      final picked = _passengers[i].documents.value;
+      for (final raw in requirements) {
+        final requirement = asMap(raw);
+        if (requirement['required'] != true) continue;
+        final files = picked[textOf(requirement['key'])] ?? const <String>[];
+        if (files.isEmpty) {
+          return 'กรุณาแนบ${textOf(requirement['label'])}'
+              'ของผู้เดินทางคนที่ ${i + 1}';
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// ส่งไฟล์ที่เลือกไว้ขึ้นหลังการจองถูกสร้างแล้ว
+  ///
+  /// ล้มเหลวแล้วไม่ย้อนการจอง — เน็ตหลุดตอนอัปโหลดไม่ควรทำให้ที่นั่งที่จองได้
+  /// หลุดมือ ตามไปแนบใหม่ได้จากหน้ารายละเอียดการจอง
+  Future<void> _uploadDocuments(
+    String bookingRef,
+    List<dynamic> createdPassengers,
+  ) async {
+    final requirements = _documentRequirements;
+    if (requirements.isEmpty || bookingRef.isEmpty) return;
+
+    final app = context.read<AppProvider>();
+    var failed = 0;
+
+    for (var i = 0; i < _passengers.length; i++) {
+      if (i >= createdPassengers.length) break;
+      final passengerId = int.tryParse(
+        asMap(createdPassengers[i])['id'].toString(),
+      );
+      if (passengerId == null) continue;
+
+      final picked = _passengers[i].documents.value;
+      for (final raw in requirements) {
+        final key = textOf(asMap(raw)['key']);
+        for (final path in picked[key] ?? const <String>[]) {
+          try {
+            await app.uploadBookingDocument(
+              ref: bookingRef,
+              passengerId: passengerId,
+              requirementKey: key,
+              filePath: path,
+            );
+          } catch (_) {
+            failed++;
+          }
+        }
+      }
+    }
+
+    if (failed > 0 && mounted) {
+      AppSnack.error(
+        context,
+        'แนบเอกสารไม่สำเร็จ $failed ไฟล์ — แนบใหม่ได้ที่หน้ารายละเอียดการจอง',
+      );
+    }
+  }
+
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (_scheduleId == null) {
@@ -1439,6 +1514,15 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           return;
         }
       }
+    }
+    // เอกสารที่แอดมินตั้งว่า "บังคับแนบ" — ตรวจแยกจาก Form เพราะช่องแนบไฟล์
+    // ไม่ใช่ FormField จึงไม่เข้า validate() ของฟอร์ม
+    final missingDocument = _missingDocumentMessage();
+    if (missingDocument != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(missingDocument)));
+      return;
     }
     if (!_formKey.currentState!.validate()) {
       final ctx = _travelerFormKey.currentContext;
@@ -1514,6 +1598,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
               })
             : _passengers.map((p) => p.payload()).toList(),
       });
+      // ไฟล์เอกสารต้องมี booking_ref ก่อน จึงส่งตามหลังการจอง
+      await _uploadDocuments(
+        textOf(booking['booking_ref']),
+        asList(booking['passengers']),
+      );
       // The booking exists now; the draft has nothing left to protect and
       // carries ID numbers, so it goes immediately.
       await BookingDraftStore.clear(_draftSlug);

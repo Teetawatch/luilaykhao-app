@@ -56,6 +56,7 @@ import 'community_gallery_screen.dart' show CommunityGalleryScreen;
 import 'places_screen.dart' show PlacesScreen;
 import 'trip_map_screen.dart' show TripMapScreen;
 import 'trip_detail_screen.dart' show TripDetailScreen, AllReviewsScreen;
+import 'booking_documents_screen.dart';
 import 'travel_documents_screen.dart';
 import 'trip_day_screen.dart';
 import 'trip_feed_screen.dart';

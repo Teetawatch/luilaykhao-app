@@ -115,6 +115,11 @@ class ApiEndpoints {
   static String bookingTravelDocuments(String ref) =>
       'bookings/$ref/travel-documents';
 
+  // ไฟล์เอกสารแนบที่ทริปขอ (แอดมินกำหนดรายการเองต่อทริป)
+  static String bookingDocuments(String ref) => 'bookings/$ref/documents';
+  static String bookingDocument(String ref, int id) =>
+      'bookings/$ref/documents/$id';
+
   // Booking members / companion invites (เชิญเพื่อนเข้าการจองเดียวกัน)
   static String bookingMembers(String ref) => 'bookings/$ref/members';
   static String bookingInvites(String ref) => 'bookings/$ref/invites';

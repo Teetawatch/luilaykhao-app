@@ -327,6 +327,12 @@ class _PassengerControllers {
   final healthNotes = TextEditingController();
   final halalFood = ValueNotifier<bool>(false);
   final pickupPointId = ValueNotifier<int?>(null);
+  // เอกสารแนบที่ทริปขอ: requirement key → path ไฟล์ในเครื่องที่เลือกไว้
+  // ยังไม่ได้อัปโหลด ณ จุดนี้ — ตอนกรอกฟอร์มยังไม่มี booking_ref ให้ผูกไฟล์ด้วย
+  // และไม่เข้าร่างการจอง (path ในเครื่องหมดอายุเร็วกว่าร่าง)
+  final documents = ValueNotifier<Map<String, List<String>>>(
+    <String, List<String>>{},
+  );
 
   void applyWallet(Map<String, dynamic> wallet) {
     final t = (wallet['title'] as String? ?? '').trim();
@@ -439,6 +445,7 @@ class _PassengerControllers {
     healthNotes.dispose();
     halalFood.dispose();
     pickupPointId.dispose();
+    documents.dispose();
   }
 }
 

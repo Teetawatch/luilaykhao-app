@@ -133,6 +133,16 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                       );
                     }),
                   ),
+                  // เอกสารแนบที่ทริปขอ — ซ่อนตัวเองเมื่อทริปไม่ได้ขออะไร
+                  _BookingDocumentsCard(
+                    bookingRef: textOf(booking['booking_ref']),
+                    documents: asMap(booking['documents']),
+                    onChanged: () => setState(() {
+                      _future = context.read<AppProvider>().booking(
+                        widget.bookingRef,
+                      );
+                    }),
+                  ),
                 ],
 
                 // สรุปการเดินทาง — ตอบ 4 คำถามที่ลูกค้าถามซ้ำที่สุด (ขึ้นรถกี่โมง /
@@ -3485,6 +3495,130 @@ class _TravelDocumentsCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// เอกสารแนบที่ทริปขอ — ทางเข้าหน้าแนบไฟล์ บนใบจอง
+///
+/// ซ่อนตัวเอง (พร้อมระยะห่าง) เมื่อทริปนี้ไม่ได้ขอเอกสารอะไร ซึ่งเป็นกรณีส่วนใหญ่
+/// เมื่อยังขาดของที่บังคับ การ์ดจะเป็นสีเตือน เพราะเอกสารที่มาไม่ทันคือปัญหา
+/// ที่หน้างานแก้ไม่ได้ — ต่างจากเรื่องอื่นบนใบจองที่รอได้
+class _BookingDocumentsCard extends StatelessWidget {
+  final String bookingRef;
+  final Map<String, dynamic> documents;
+  final VoidCallback onChanged;
+
+  const _BookingDocumentsCard({
+    required this.bookingRef,
+    required this.documents,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final requirements = asList(documents['requirements']);
+    if (requirements.isEmpty) return const SizedBox.shrink();
+
+    final hasMissing = documents['has_missing'] == true;
+    final accent = hasMissing ? AppTheme.warningColor : AppTheme.primaryColor;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: accent.withValues(
+            alpha: AppTheme.isDark(context) ? 0.16 : 0.08,
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(color: accent.withValues(alpha: 0.35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.attach_file_rounded, size: 18, color: accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    hasMissing ? 'ยังขาดเอกสารแนบ' : 'เอกสารแนบ',
+                    style: appFont(
+                      fontSize: AppText.sizeBody,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasMissing
+                  ? 'ทริปนี้ต้องใช้เอกสารของผู้เดินทางทุกท่านครับ '
+                        'ถ่ายรูปเอกสารหรือแนบไฟล์ PDF ก็ได้ ใช้เวลาไม่นาน'
+                  : 'ดูเอกสารที่แนบไว้ หรือแนบเพิ่ม/แก้ไฟล์ที่แนบผิดได้ที่นี่',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                color: AppTheme.mutedText(context),
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: hasMissing
+                  ? FilledButton.icon(
+                      onPressed: () => _open(context),
+                      icon: const Icon(Icons.upload_file_rounded, size: 18),
+                      label: Text(
+                        'แนบเอกสาร',
+                        style: appFont(
+                          color: Colors.white,
+                          fontSize: AppText.sizeBody,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusMd,
+                          ),
+                        ),
+                      ),
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: () => _open(context),
+                      icon: const Icon(Icons.folder_open_rounded, size: 18),
+                      label: Text(
+                        'ดูเอกสารที่แนบไว้',
+                        style: appFont(
+                          fontSize: AppText.sizeBody,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _open(BuildContext context) async {
+    HapticFeedback.selectionClick();
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => BookingDocumentsScreen(bookingRef: bookingRef),
+      ),
+    );
+    if (changed == true) onChanged();
   }
 }
 

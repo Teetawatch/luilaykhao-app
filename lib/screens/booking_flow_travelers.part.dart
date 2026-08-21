@@ -77,6 +77,8 @@ class TravelerFormSection extends StatelessWidget {
   final bool isInternational;
   /// วันหมดอายุพาสปอร์ตที่เร็วที่สุดที่ยังใช้เดินทางรอบนี้ได้ (วันเดินทาง + 6 เดือน)
   final DateTime? minPassportExpiry;
+  /// เอกสารที่ทริปนี้ขอให้แนบ — แอดมินตั้งไว้บนทริป ว่างได้ (ไม่ต้องแนบอะไร)
+  final List<dynamic> documentRequirements;
 
   const TravelerFormSection({
     super.key,
@@ -92,6 +94,7 @@ class TravelerFormSection extends StatelessWidget {
     this.pickupPoints = const [],
     this.isInternational = false,
     this.minPassportExpiry,
+    this.documentRequirements = const [],
   });
 
   @override
@@ -119,6 +122,7 @@ class TravelerFormSection extends StatelessWidget {
               pickupPoints: pickupPoints,
               isInternational: isInternational,
               minPassportExpiry: minPassportExpiry,
+              documentRequirements: documentRequirements,
               onUseProfile: () => onUseProfile(index),
               onUseWallet: () => onUseWallet(index),
               onUseSavedTraveller: () => onUseSavedTraveller(index),
@@ -796,6 +800,111 @@ class RentalSelectionSection extends StatelessWidget {
 }
 
 /// Compact − [n] + control used by the rental picker.
+/// กล่อง "เอกสารที่ต้องแนบ" ของผู้เดินทางหนึ่งคน
+///
+/// เก็บแค่ path ในเครื่อง — ยังไม่มี booking_ref ให้ผูกไฟล์ด้วยจนกว่าการจอง
+/// จะถูกสร้าง [_BookingCheckoutPageState._uploadDocuments] เป็นคนส่งขึ้นทีหลัง
+class _TravelerDocumentBox extends StatelessWidget {
+  final List<dynamic> requirements;
+  final ValueNotifier<Map<String, List<String>>> documents;
+
+  const _TravelerDocumentBox({
+    required this.requirements,
+    required this.documents,
+  });
+
+  void _add(String key, String path) {
+    final next = Map<String, List<String>>.from(documents.value);
+    next[key] = [...(next[key] ?? const []), path];
+    documents.value = next;
+  }
+
+  void _remove(String key, int index) {
+    final next = Map<String, List<String>>.from(documents.value);
+    final files = [...(next[key] ?? const <String>[])];
+    if (index < 0 || index >= files.length) return;
+    files.removeAt(index);
+    next[key] = files;
+    documents.value = next;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: _cardBorder(context)),
+      ),
+      child: ValueListenableBuilder<Map<String, List<String>>>(
+        valueListenable: documents,
+        builder: (context, picked, _) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.attach_file_rounded,
+                    size: 18,
+                    color: AppTheme.primaryColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'เอกสารที่ต้องแนบ',
+                          style: appFont(
+                            fontSize: AppText.sizeLabel,
+                            fontWeight: FontWeight.w800,
+                            color: _premiumText(context),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'แนบเป็นรูปถ่ายหรือไฟล์ PDF ก็ได้ '
+                          'ไม่เกิน ${DocumentAttachField.maxSizeMb} MB ต่อไฟล์',
+                          style: appFont(
+                            fontSize: AppText.sizeCaption,
+                            color: _mutedTextColor(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              for (final raw in requirements) ...[
+                const SizedBox(height: 14),
+                Builder(
+                  builder: (context) {
+                    final requirement = asMap(raw);
+                    final key = textOf(requirement['key']);
+                    final files = picked[key] ?? const <String>[];
+
+                    return DocumentAttachField(
+                      requirement: requirement,
+                      fileNames: files
+                          .map((path) => path.split('/').last)
+                          .toList(),
+                      onPicked: (path) => _add(key, path),
+                      onRemove: (index) => _remove(key, index),
+                    );
+                  },
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _QuantityStepper extends StatelessWidget {
   final int quantity;
   final Color accent;
@@ -1194,6 +1303,7 @@ class _TravelerCard extends StatelessWidget {
   final List<dynamic> pickupPoints;
   final bool isInternational;
   final DateTime? minPassportExpiry;
+  final List<dynamic> documentRequirements;
   final VoidCallback onUseProfile;
   final VoidCallback onUseWallet;
   final VoidCallback onUseSavedTraveller;
@@ -1206,6 +1316,7 @@ class _TravelerCard extends StatelessWidget {
     this.pickupPoints = const [],
     this.isInternational = false,
     this.minPassportExpiry,
+    this.documentRequirements = const [],
     required this.onUseProfile,
     required this.onUseWallet,
     required this.onUseSavedTraveller,
@@ -1783,6 +1894,15 @@ class _TravelerCard extends StatelessWidget {
             maxLines: 2,
             textInputAction: TextInputAction.newline,
           ),
+          // เอกสารแนบที่ทริปขอ — รายการและข้อความ "ใช้สำหรับ..." มาจากที่แอดมิน
+          // ตั้งไว้บนทริป ไฟล์ถูกเก็บไว้ในหน้าจอก่อน แล้วส่งขึ้นหลังสร้างการจอง
+          if (documentRequirements.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _TravelerDocumentBox(
+              requirements: documentRequirements,
+              documents: controllers.documents,
+            ),
+          ],
           const SizedBox(height: 16),
           Text(
             'ผู้ติดต่อฉุกเฉิน',
