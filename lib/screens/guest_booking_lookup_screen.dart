@@ -1,15 +1,20 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/api_config.dart';
 import '../config/api_endpoints.dart';
 import '../models/tracking_model.dart';
 import '../providers/tracking_provider.dart';
 import '../services/api_client.dart';
+import '../utils/thai_date.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/travel_widgets.dart';
 import '../theme/app_theme.dart';
 import 'tracking_screen.dart';
 
@@ -389,6 +394,8 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
                               child: _GuestBookingResultCard(
                                 data: item,
                                 showSensitiveInfo: false,
+                                // เจอหลายรอบพร้อมกัน — เริ่มแบบย่อ กางทีละใบเอง
+                                expandedByDefault: _nameResults!.length == 1,
                                 onTrack: () => _openTracking(item),
                                 onReset: i == _nameResults!.length - 1
                                     ? _resetResults
@@ -918,269 +925,103 @@ class _LookupButton extends StatelessWidget {
 
 // ─── Result Card ──────────────────────────────────────────────────────────────
 
-class _GuestBookingResultCard extends StatelessWidget {
+/// การ์ดผลการค้นหา — คนที่ค้นเจอต้องได้ข้อมูลชุดเดียวกับที่เปิดในแอปตอนล็อกอิน
+/// (จุดขึ้นรถ เวลา ผู้เดินทาง ที่นั่ง ยอดเงิน กำหนดการ ทีมงาน) ไม่ใช่แค่ชื่อทริป
+///
+/// ผลจากการค้นด้วยชื่อ+เบอร์ ([showSensitiveInfo] = false) หลังบ้านตัดรหัสการจอง
+/// QR ลิงก์แชร์ และตัวเลขเงินออกให้แล้ว การ์ดจึงวาดเท่าที่มีมาโดยไม่ต้องรู้กติกาซ้ำ
+class _GuestBookingResultCard extends StatefulWidget {
   final Map<String, dynamic> data;
   final bool showSensitiveInfo;
   final VoidCallback onTrack;
   final VoidCallback? onReset;
+
+  /// ผลเดี่ยว (ค้นด้วยรหัส) กางทุกหัวข้อไว้เลย ส่วนผลหลายรายการจากการค้นด้วยชื่อ
+  /// เริ่มแบบย่อ ไม่งั้นเลื่อนหาการจองที่ต้องการไม่เจอ
+  final bool expandedByDefault;
 
   const _GuestBookingResultCard({
     required this.data,
     required this.showSensitiveInfo,
     required this.onTrack,
     this.onReset,
+    this.expandedByDefault = true,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final ref = data['booking_ref']?.toString() ?? '-';
-    final status = data['status']?.toString() ?? '';
-    final qrCode = data['qr_code']?.toString() ?? '';
-    final tripTitle = data['trip_title']?.toString() ?? 'ทริปของคุณ';
-    final departsAtRaw = data['departs_at']?.toString() ?? '';
-    final departureDate = departsAtRaw.isNotEmpty
-        ? departsAtRaw
-        : data['departure_date']?.toString() ?? '';
-    final driverName = data['driver_name']?.toString();
-    final licensePlate = data['license_plate']?.toString();
-    final shareUrl = data['share_url']?.toString();
-    final hasVehicle = data['vehicle_id'] != null;
-    final isConfirmed = status == 'confirmed';
-    final isDark = AppTheme.isDark(context);
+  State<_GuestBookingResultCard> createState() =>
+      _GuestBookingResultCardState();
+}
 
-    String formattedDate = departureDate;
-    final parsed = DateTime.tryParse(departureDate);
-    if (parsed != null) {
-      final months = [
-        '',
-        'ม.ค.',
-        'ก.พ.',
-        'มี.ค.',
-        'เม.ย.',
-        'พ.ค.',
-        'มิ.ย.',
-        'ก.ค.',
-        'ส.ค.',
-        'ก.ย.',
-        'ต.ค.',
-        'พ.ย.',
-        'ธ.ค.',
-      ];
-      formattedDate =
-          '${parsed.day} ${months[parsed.month]} ${parsed.year + 543}';
-      // แสดงเวลาออกรถด้วยเมื่อรอบนั้นกำหนดเวลาออกรถจริงไว้
-      if (departsAtRaw.isNotEmpty) {
-        final hh = parsed.hour.toString().padLeft(2, '0');
-        final mm = parsed.minute.toString().padLeft(2, '0');
-        formattedDate = '$formattedDate $hh:$mm น.';
-      }
+class _GuestBookingResultCardState extends State<_GuestBookingResultCard> {
+  late bool _expanded = widget.expandedByDefault;
+
+  Map<String, dynamic> get _data => widget.data;
+
+  Future<void> _call(String phone) async {
+    final uri = Uri.parse('tel:${phone.replaceAll(RegExp(r'[^0-9+]'), '')}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
     }
+  }
+
+  Future<void> _openMap({String? url, dynamic lat, dynamic lng}) async {
+    final target = (url != null && url.isNotEmpty)
+        ? url
+        : (lat != null && lng != null)
+        ? 'https://www.google.com/maps/search/?api=1&query=$lat,$lng'
+        : '';
+    if (target.isEmpty) return;
+    final uri = Uri.parse(target);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = textOf(_data['status']);
+    final isConfirmed = status == 'confirmed';
+    final qrCode = textOf(_data['qr_code']);
+    final shareUrl = textOf(_data['share_url']);
+    final hasVehicle = _data['vehicle_id'] != null;
+    final passengers = asList(_data['passengers']);
+    final itinerary = asList(_data['itinerary']);
+    final staff = asList(_data['staff']);
+    final payment = asMap(_data['payment']);
+    final vehicle = asMap(_data['vehicle']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Trip info card
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: AppTheme.surface(context),
-            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            border: Border.all(
-              color: AppTheme.border(context).withValues(alpha: 0.55),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      tripTitle,
-                      style: appFont(
-                        fontSize: AppText.sizeTitle,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.primaryColor,
-                        height: 1.25,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _StatusChip(status: status),
-                ],
-              ),
-              if (showSensitiveInfo) ...[
-                const SizedBox(height: 6),
-                Text(
-                  ref,
-                  style: appFont(
-                    fontSize: AppText.sizeLabel,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.mutedText(context),
-                  ),
-                ),
-              ],
-              if (formattedDate.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 15,
-                      color: AppTheme.mutedText(context),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'เดินทาง $formattedDate',
-                      style: appFont(
-                        fontSize: AppText.sizeLabel,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.mutedText(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              if (driverName != null || licensePlate != null) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.directions_bus_outlined,
-                      size: 15,
-                      color: AppTheme.mutedText(context),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      [
-                        if (driverName != null && driverName.isNotEmpty)
-                          driverName,
-                        if (licensePlate != null && licensePlate.isNotEmpty)
-                          licensePlate,
-                      ].join(' • '),
-                      style: appFont(
-                        fontSize: AppText.sizeLabel,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.mutedText(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
+        _GuestTripHeader(data: _data, showRef: widget.showSensitiveInfo),
+
+        // จุดขึ้นรถ/จุดนัดพบ — สิ่งเดียวที่คนเปิดหน้านี้ตอนเช้าวันเดินทางต้องการ
+        _GuestPickupSection(
+          pickup: asMap(_data['pickup']),
+          schedule: asMap(_data['schedule']),
+          onOpenMap: _openMap,
         ),
 
-        // QR check-in card (only for ref lookup + confirmed)
-        if (showSensitiveInfo && isConfirmed && qrCode.isNotEmpty) ...[
+        // QR เช็คอิน (เฉพาะค้นด้วยรหัสการจอง + ยืนยันแล้ว)
+        if (widget.showSensitiveInfo && isConfirmed && qrCode.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppTheme.primaryColor.withValues(alpha: 0.14)
-                  : AppTheme.primaryColor.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-              border: Border.all(
-                color: AppTheme.primaryColor.withValues(alpha: 0.16),
-              ),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.how_to_reg_rounded,
-                    color: AppTheme.primaryColor,
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.verified_rounded,
-                      size: 16,
-                      color: AppTheme.primaryColor,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'พร้อมสำหรับเช็คอิน',
-                      style: appFont(
-                        color: AppTheme.onSurface(context),
-                        fontSize: AppText.sizeSubtitle,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'โปรดแสดงรหัสนี้แก่เจ้าหน้าที่เมื่อถึงจุดนัดหมาย',
-                  textAlign: TextAlign.center,
-                  style: appFont(
-                    color: AppTheme.mutedText(context),
-                    fontSize: AppText.sizeCaption,
-                    height: 1.4,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    border: Border.all(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.14),
-                    ),
-                  ),
-                  child: QrImageView(
-                    data: qrCode,
-                    version: QrVersions.auto,
-                    size: 180,
-                    backgroundColor: Colors.white,
-                    errorCorrectionLevel: QrErrorCorrectLevel.M,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SelectableText(
-                  ref,
-                  style: appFont(
-                    color: AppTheme.primaryColor,
-                    fontSize: AppText.sizeSubtitle,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
-            ),
+          _GuestCheckInCard(
+            qrCode: qrCode,
+            bookingRef: textOf(_data['booking_ref'], '-'),
+            checkedIn: _data['checked_in'] == true,
+            checkedInAt: textOf(_data['checked_in_at']),
           ),
         ],
 
-        // Track button
         if (hasVehicle && isConfirmed) ...[
           const SizedBox(height: 16),
-          Container(
+          SizedBox(
             height: 54,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              color: AppTheme.primaryColor,
-            ),
             child: FilledButton.icon(
-              onPressed: onTrack,
+              onPressed: widget.onTrack,
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
+                backgroundColor: AppTheme.primaryColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
@@ -1198,11 +1039,7 @@ class _GuestBookingResultCard extends StatelessWidget {
           ),
         ],
 
-        // Share link (ref lookup only)
-        if (showSensitiveInfo &&
-            shareUrl != null &&
-            shareUrl.isNotEmpty &&
-            isConfirmed) ...[
+        if (widget.showSensitiveInfo && shareUrl.isNotEmpty && isConfirmed) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () {
@@ -1210,7 +1047,8 @@ class _GuestBookingResultCard extends StatelessWidget {
               SharePlus.instance.share(
                 ShareParams(
                   text:
-                      'ติดตามตำแหน่งรถ "$tripTitle" แบบเรียลไทม์ได้ที่นี่เลย\n$shareUrl',
+                      'ติดตามตำแหน่งรถ "${textOf(_data['trip_title'], 'ทริป')}" '
+                      'แบบเรียลไทม์ได้ที่นี่เลย\n$shareUrl',
                   subject: 'ติดตามรถ - ลุยเลเขา',
                 ),
               );
@@ -1231,10 +1069,47 @@ class _GuestBookingResultCard extends StatelessWidget {
           ),
         ],
 
-        if (onReset != null) ...[
+        // ── รายละเอียดที่เหลือ ──
+        if (!_expanded) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: onReset,
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              setState(() => _expanded = true);
+            },
+            icon: const Icon(Icons.expand_more_rounded, size: 18),
+            label: Text(
+              'ดูรายละเอียดทั้งหมด',
+              style: appFont(fontWeight: FontWeight.w800),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: BorderSide(color: AppTheme.border(context)),
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+              ),
+            ),
+          ),
+        ] else ...[
+          _GuestPaymentSection(
+            payment: payment,
+            status: status,
+            refundStatus: textOf(payment['refund_status']),
+          ),
+          _GuestPassengersSection(passengers: passengers),
+          _GuestVehicleSection(
+            vehicle: vehicle,
+            staff: staff,
+            onCall: _call,
+          ),
+          _GuestItinerarySection(items: itinerary),
+        ],
+
+        if (widget.onReset != null) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: widget.onReset,
             icon: const Icon(Icons.search_rounded, size: 18),
             label: Text(
               'ค้นหาการจองอื่น',
@@ -1253,6 +1128,1160 @@ class _GuestBookingResultCard extends StatelessWidget {
       ],
     );
   }
+}
+
+// ─── Result sections ──────────────────────────────────────────────────────────
+
+/// หัวการ์ด: รูปทริป ชื่อ สถานะ รหัส วันเดินทาง–วันกลับ และข้อมูลรอบสั้น ๆ
+class _GuestTripHeader extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final bool showRef;
+
+  const _GuestTripHeader({required this.data, required this.showRef});
+
+  @override
+  Widget build(BuildContext context) {
+    final trip = asMap(data['trip']);
+    final schedule = asMap(data['schedule']);
+    final cover = textOf(trip['thumbnail_image'], textOf(trip['cover_image']));
+    final ref = textOf(data['booking_ref']);
+    final departsAt = textOf(schedule['departs_at'], textOf(data['departs_at']));
+    final departureDate = textOf(
+      schedule['departure_date'],
+      textOf(data['departure_date']),
+    );
+    final returnDate = textOf(schedule['return_date']);
+    final checkedIn = data['checked_in'] == true;
+
+    final travelLine = _travelLine(departureDate, returnDate, departsAt);
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.55),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (cover.isNotEmpty)
+            SizedBox(
+              height: 130,
+              width: double.infinity,
+              child: CachedNetworkImage(
+                imageUrl: ApiConfig.mediaUrl(cover),
+                fit: BoxFit.cover,
+                memCacheWidth: 900,
+                placeholder: (_, _) =>
+                    Container(color: AppTheme.subtleSurface(context)),
+                errorWidget: (_, _, _) =>
+                    Container(color: AppTheme.subtleSurface(context)),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        textOf(data['trip_title'], 'ทริปของคุณ'),
+                        style: appFont(
+                          fontSize: AppText.sizeTitle,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                          height: 1.25,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _StatusChip(status: textOf(data['status'])),
+                  ],
+                ),
+                if (showRef && ref.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  SelectableText(
+                    ref,
+                    style: appFont(
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                if (travelLine.isNotEmpty)
+                  _GuestInfoRow(
+                    icon: Icons.calendar_today_rounded,
+                    label: 'วันเดินทาง',
+                    value: travelLine,
+                  ),
+                if (textOf(trip['location']).isNotEmpty)
+                  _GuestInfoRow(
+                    icon: Icons.place_rounded,
+                    label: 'จุดหมาย',
+                    value: textOf(trip['location']),
+                  ),
+                if (trip['duration_days'] != null)
+                  _GuestInfoRow(
+                    icon: Icons.schedule_rounded,
+                    label: 'ระยะเวลา',
+                    value: '${trip['duration_days']} วัน',
+                  ),
+                if (textOf(data['group_name']).isNotEmpty)
+                  _GuestInfoRow(
+                    icon: Icons.groups_rounded,
+                    label: 'ชื่อกลุ่ม',
+                    value: textOf(data['group_name']),
+                  ),
+                if (textOf(data['booked_at']).isNotEmpty)
+                  _GuestInfoRow(
+                    icon: Icons.receipt_long_rounded,
+                    label: 'จองเมื่อ',
+                    value: _dateOnly(textOf(data['booked_at'])),
+                  ),
+                if (checkedIn) ...[
+                  const SizedBox(height: 10),
+                  const _GuestNoticePill(
+                    icon: Icons.how_to_reg_rounded,
+                    color: AppTheme.successColor,
+                    text: 'เช็คอินแล้ว',
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _travelLine(String departureDate, String returnDate, String departsAt) {
+    final start = DateTime.tryParse(
+      departsAt.isNotEmpty ? departsAt : departureDate,
+    );
+    if (start == null) return '';
+
+    final base = departsAt.isNotEmpty
+        ? '${thaiDateShort(start)} ${DateFormat('HH:mm').format(start)} น.'
+        : thaiDateShort(start);
+
+    final end = DateTime.tryParse(returnDate);
+    final tripDay = DateTime.tryParse(departureDate);
+    if (end != null && tripDay != null && !_sameDay(end, tripDay)) {
+      return '$base – ${thaiDateShort(end)}';
+    }
+    return base;
+  }
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+/// จุดขึ้นรถของการจองนี้ — รวมเวลานัด หมายเหตุ และปุ่มเปิดแผนที่
+class _GuestPickupSection extends StatelessWidget {
+  final Map<String, dynamic> pickup;
+  final Map<String, dynamic> schedule;
+  final Future<void> Function({String? url, dynamic lat, dynamic lng}) onOpenMap;
+
+  const _GuestPickupSection({
+    required this.pickup,
+    required this.schedule,
+    required this.onOpenMap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // รอบที่บินไปไม่มีจุดรับ มีจุดนัดพบที่สนามบินแทน
+    final isFlight = textOf(schedule['transport_type']) == 'flight';
+    final meetingPoint = textOf(schedule['meeting_point']);
+
+    if (isFlight && meetingPoint.isNotEmpty) {
+      return _GuestSection(
+        icon: Icons.flight_takeoff_rounded,
+        title: 'จุดนัดพบ',
+        children: [
+          _GuestInfoRow(
+            icon: Icons.place_rounded,
+            label: 'สถานที่',
+            value: meetingPoint,
+          ),
+          if (textOf(schedule['meeting_time']).isNotEmpty)
+            _GuestInfoRow(
+              icon: Icons.schedule_rounded,
+              label: 'เวลานัดพบ',
+              value: '${textOf(schedule['meeting_time'])} น.',
+            ),
+          if (textOf(schedule['baggage_allowance']).isNotEmpty)
+            _GuestInfoRow(
+              icon: Icons.luggage_rounded,
+              label: 'น้ำหนักกระเป๋า',
+              value: textOf(schedule['baggage_allowance']),
+            ),
+          if (textOf(schedule['meeting_map_url']).isNotEmpty)
+            _GuestMapButton(
+              onTap: () => onOpenMap(url: textOf(schedule['meeting_map_url'])),
+            ),
+        ],
+      );
+    }
+
+    if (pickup.isEmpty) return const SizedBox.shrink();
+
+    final kind = textOf(pickup['kind']);
+    final location = textOf(
+      pickup['location'],
+      textOf(pickup['region_label'], textOf(pickup['region'])),
+    );
+    if (location.isEmpty) return const SizedBox.shrink();
+
+    final customStatus = textOf(pickup['status']);
+
+    return _GuestSection(
+      icon: Icons.directions_bus_rounded,
+      title: 'จุดขึ้นรถ',
+      children: [
+        _GuestInfoRow(
+          icon: Icons.place_rounded,
+          label: kind == 'custom' ? 'จุดที่ปักหมุดไว้' : 'สถานที่',
+          value: location,
+        ),
+        if (textOf(pickup['pickup_time']).isNotEmpty)
+          _GuestInfoRow(
+            icon: Icons.schedule_rounded,
+            label: 'เวลานัด',
+            value: '${textOf(pickup['pickup_time'])} น.',
+          ),
+        if (textOf(pickup['region_label']).isNotEmpty && kind == 'point')
+          _GuestInfoRow(
+            icon: Icons.map_rounded,
+            label: 'โซน',
+            value: textOf(pickup['region_label']),
+          ),
+        if (textOf(pickup['notes']).isNotEmpty)
+          _GuestInfoRow(
+            icon: Icons.sticky_note_2_rounded,
+            label: 'หมายเหตุ',
+            value: textOf(pickup['notes']),
+          ),
+        if (kind == 'custom' && customStatus.isNotEmpty)
+          _GuestNoticePill(
+            icon: customStatus == 'approved'
+                ? Icons.check_circle_rounded
+                : customStatus == 'rejected'
+                ? Icons.cancel_rounded
+                : Icons.hourglass_top_rounded,
+            color: customStatus == 'approved'
+                ? AppTheme.successColor
+                : customStatus == 'rejected'
+                ? AppTheme.errorColor
+                : AppTheme.warningColor,
+            text: switch (customStatus) {
+              'approved' => 'ทีมงานอนุมัติจุดรับนี้แล้ว',
+              'rejected' =>
+                'จุดรับนี้ถูกปฏิเสธ${textOf(pickup['reject_reason']).isEmpty ? '' : ' — ${textOf(pickup['reject_reason'])}'}',
+              _ => 'รอทีมงานยืนยันจุดรับ',
+            },
+          ),
+        if (textOf(pickup['map_url']).isNotEmpty ||
+            (pickup['latitude'] != null && pickup['longitude'] != null))
+          _GuestMapButton(
+            onTap: () => onOpenMap(
+              url: textOf(pickup['map_url']),
+              lat: pickup['latitude'],
+              lng: pickup['longitude'],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// สรุปการชำระเงิน — ตัวเลขมาเฉพาะตอนค้นด้วยรหัสการจอง (amounts_hidden)
+class _GuestPaymentSection extends StatelessWidget {
+  final Map<String, dynamic> payment;
+  final String status;
+  final String refundStatus;
+
+  const _GuestPaymentSection({
+    required this.payment,
+    required this.status,
+    required this.refundStatus,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (payment.isEmpty) return const SizedBox.shrink();
+
+    final hidden = payment['amounts_hidden'] == true;
+    final fullyPaid = payment['is_fully_paid'] == true;
+    final hasOutstanding = payment['has_outstanding'] == true;
+    final type = textOf(payment['payment_type'], 'full');
+    final typeLabel = switch (type) {
+      'deposit' => 'จ่ายมัดจำ',
+      'installment' => 'ผ่อนชำระ',
+      _ => 'จ่ายเต็มจำนวน',
+    };
+    final installments = asList(payment['installments']);
+    final addons = asList(payment['addons']);
+    final rentals = asList(payment['rentals']);
+
+    return _GuestSection(
+      icon: Icons.payments_rounded,
+      title: 'การชำระเงิน',
+      children: [
+        _GuestNoticePill(
+          icon: fullyPaid
+              ? Icons.verified_rounded
+              : payment['slip_under_review'] == true
+              ? Icons.hourglass_top_rounded
+              : Icons.info_rounded,
+          color: fullyPaid
+              ? AppTheme.successColor
+              : payment['slip_under_review'] == true
+              ? AppTheme.infoColor
+              : AppTheme.warningColor,
+          text: fullyPaid
+              ? 'ชำระครบแล้ว'
+              : payment['slip_under_review'] == true
+              ? 'ได้รับสลิปแล้ว รอทีมงานตรวจสอบ'
+              : hasOutstanding
+              ? 'ยังมียอดค้างชำระ'
+              : 'รอการชำระเงิน',
+        ),
+        _GuestInfoRow(
+          icon: Icons.account_balance_wallet_rounded,
+          label: 'รูปแบบ',
+          value: typeLabel,
+        ),
+        if (!hidden) ...[
+          _GuestInfoRow(
+            icon: Icons.summarize_rounded,
+            label: 'ยอดรวม',
+            value: money(payment['total_amount']),
+          ),
+          _GuestInfoRow(
+            icon: Icons.check_circle_rounded,
+            label: 'ชำระแล้ว',
+            value: money(payment['paid_amount']),
+          ),
+          if ((num.tryParse(textOf(payment['outstanding_amount'])) ?? 0) > 0)
+            _GuestInfoRow(
+              icon: Icons.pending_actions_rounded,
+              label: 'คงเหลือ',
+              value: money(payment['outstanding_amount']),
+              highlight: true,
+            ),
+          if ((num.tryParse(textOf(payment['discount_amount'])) ?? 0) > 0)
+            _GuestInfoRow(
+              icon: Icons.local_offer_rounded,
+              label: 'ส่วนลด',
+              value:
+                  '- ${money(payment['discount_amount'])}'
+                  '${textOf(payment['promotion_code']).isEmpty ? '' : ' (${textOf(payment['promotion_code'])})'}',
+            ),
+          if ((num.tryParse(textOf(payment['flexi_surcharge'])) ?? 0) > 0)
+            _GuestInfoRow(
+              icon: Icons.trending_up_rounded,
+              label: 'ส่วนต่างเก็บวันเดินทาง',
+              value: money(payment['flexi_surcharge']),
+            ),
+        ],
+        if (textOf(payment['balance_due_at']).isNotEmpty &&
+            payment['balance_paid_at'] == null)
+          _GuestInfoRow(
+            icon: Icons.event_busy_rounded,
+            label: 'กำหนดชำระส่วนที่เหลือ',
+            value: _dateOnly(textOf(payment['balance_due_at'])),
+            highlight: true,
+          ),
+        if (textOf(payment['paid_at']).isNotEmpty)
+          _GuestInfoRow(
+            icon: Icons.task_alt_rounded,
+            label: 'ชำระเมื่อ',
+            value: _dateOnly(textOf(payment['paid_at'])),
+          ),
+        if (addons.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          _GuestLineItems(title: 'ของแถม/บริการเสริม', items: addons),
+        ],
+        if (rentals.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          _GuestLineItems(title: 'อุปกรณ์เช่า', items: rentals),
+        ],
+        if (installments.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          ...installments.map((raw) {
+            final item = asMap(raw);
+            final paid = textOf(item['status']) == 'paid';
+            return _GuestInfoRow(
+              icon: paid
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              label: 'งวดที่ ${textOf(item['installment_no'], '-')}',
+              value:
+                  '${money(item['amount'])} · '
+                  '${paid ? 'จ่ายแล้ว' : 'ครบกำหนด ${_dateOnly(textOf(item['due_date']))}'}',
+            );
+          }),
+        ],
+        if (refundStatus.isNotEmpty)
+          _GuestInfoRow(
+            icon: Icons.assignment_return_rounded,
+            label: 'สถานะคืนเงิน',
+            value: switch (refundStatus) {
+              'pending' => 'รอดำเนินการ',
+              'processing' => 'กำลังโอนคืน',
+              'completed' => 'คืนเงินแล้ว',
+              'rejected' => 'ไม่อนุมัติ',
+              _ => refundStatus,
+            },
+          ),
+      ],
+    );
+  }
+}
+
+/// ผู้เดินทางในการจอง — ชื่อ ที่นั่ง เบอร์ (ปิดกลาง) จุดขึ้นรถรายคน
+class _GuestPassengersSection extends StatelessWidget {
+  final List<dynamic> passengers;
+
+  const _GuestPassengersSection({required this.passengers});
+
+  @override
+  Widget build(BuildContext context) {
+    if (passengers.isEmpty) return const SizedBox.shrink();
+
+    return _GuestSection(
+      icon: Icons.people_alt_rounded,
+      title: 'ผู้เดินทาง (${passengers.length} คน)',
+      children: [
+        for (final raw in passengers) ...[
+          Builder(
+            builder: (context) {
+              final p = asMap(raw);
+              final seat = textOf(p['seat']);
+              final nickname = textOf(p['nickname']);
+              final details = [
+                if (seat.isNotEmpty) 'ที่นั่ง $seat',
+                if (textOf(p['phone']).isNotEmpty) textOf(p['phone']),
+                if (textOf(p['pickup_location']).isNotEmpty)
+                  'ขึ้นรถ ${textOf(p['pickup_location'])}',
+              ].join(' · ');
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppTheme.selectedTint(context),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        seat.isNotEmpty
+                            ? seat
+                            : textOf(p['name'], '?').characters.first,
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  textOf(p['name'], 'ผู้เดินทาง') +
+                                      (nickname.isEmpty ? '' : ' ($nickname)'),
+                                  style: appFont(
+                                    fontSize: AppText.sizeBody,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.onSurface(context),
+                                  ),
+                                ),
+                              ),
+                              if (p['halal_food'] == true) ...[
+                                const SizedBox(width: 6),
+                                const _GuestTag(text: 'ฮาลาล'),
+                              ],
+                            ],
+                          ),
+                          if (details.isNotEmpty)
+                            Text(
+                              details,
+                              style: appFont(
+                                fontSize: AppText.sizeCaption,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.mutedText(context),
+                                height: 1.4,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// รถ คนขับ และทีมงานที่ดูแลรอบนี้ พร้อมปุ่มโทร
+class _GuestVehicleSection extends StatelessWidget {
+  final Map<String, dynamic> vehicle;
+  final List<dynamic> staff;
+  final Future<void> Function(String phone) onCall;
+
+  const _GuestVehicleSection({
+    required this.vehicle,
+    required this.staff,
+    required this.onCall,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (vehicle.isEmpty && staff.isEmpty) return const SizedBox.shrink();
+
+    final driverPhone = textOf(vehicle['driver_phone']);
+
+    return _GuestSection(
+      icon: Icons.airport_shuttle_rounded,
+      title: 'รถและทีมงาน',
+      children: [
+        if (textOf(vehicle['license_plate']).isNotEmpty)
+          _GuestInfoRow(
+            icon: Icons.confirmation_number_rounded,
+            label: 'ทะเบียนรถ',
+            value: [
+              textOf(vehicle['license_plate']),
+              if (textOf(vehicle['color']).isNotEmpty)
+                'สี${textOf(vehicle['color'])}',
+            ].join(' · '),
+          ),
+        if (textOf(vehicle['name']).isNotEmpty)
+          _GuestInfoRow(
+            icon: Icons.directions_bus_rounded,
+            label: 'คันที่ใช้',
+            value: textOf(vehicle['name']),
+          ),
+        if (textOf(vehicle['driver_name']).isNotEmpty)
+          _GuestInfoRow(
+            icon: Icons.person_rounded,
+            label: 'คนขับ',
+            value: textOf(vehicle['driver_name']),
+          ),
+        if (driverPhone.isNotEmpty)
+          _GuestCallRow(
+            label: 'โทรหาคนขับ',
+            phone: driverPhone,
+            onCall: onCall,
+          ),
+        for (final raw in staff) ...[
+          Builder(
+            builder: (context) {
+              final s = asMap(raw);
+              final phone = textOf(s['phone']);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _GuestInfoRow(
+                    icon: Icons.support_agent_rounded,
+                    label: 'ทีมงาน',
+                    value: textOf(s['name'], 'ทีมงาน'),
+                  ),
+                  if (phone.isNotEmpty)
+                    _GuestCallRow(
+                      label: 'โทรหา ${textOf(s['name'], 'ทีมงาน')}',
+                      phone: phone,
+                      onCall: onCall,
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// กำหนดการของรอบ จัดกลุ่มตามวัน
+class _GuestItinerarySection extends StatelessWidget {
+  final List<dynamic> items;
+
+  const _GuestItinerarySection({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final raw in items) {
+      final item = asMap(raw);
+      grouped.putIfAbsent(textOf(item['item_date']), () => []).add(item);
+    }
+
+    return _GuestSection(
+      icon: Icons.event_note_rounded,
+      title: 'กำหนดการ',
+      children: [
+        for (final entry in grouped.entries) ...[
+          if (entry.key.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Text(
+                _dateOnly(entry.key),
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ),
+          ],
+          for (final item in entry.value)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 48,
+                    child: Text(
+                      textOf(item['time'], '—'),
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          textOf(item['title']),
+                          style: appFont(
+                            fontSize: AppText.sizeBody,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.onSurface(context),
+                            height: 1.35,
+                          ),
+                        ),
+                        if (textOf(item['detail']).isNotEmpty)
+                          Text(
+                            textOf(item['detail']),
+                            style: appFont(
+                              fontSize: AppText.sizeCaption,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.mutedText(context),
+                              height: 1.45,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+/// QR เช็คอิน — สลับเป็นสถานะ "เช็คอินแล้ว" เมื่อถูกสแกนไปแล้ว
+class _GuestCheckInCard extends StatelessWidget {
+  final String qrCode;
+  final String bookingRef;
+  final bool checkedIn;
+  final String checkedInAt;
+
+  const _GuestCheckInCard({
+    required this.qrCode,
+    required this.bookingRef,
+    required this.checkedIn,
+    required this.checkedInAt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.primaryColor.withValues(alpha: 0.14)
+            : AppTheme.primaryColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              checkedIn ? Icons.check_circle_rounded : Icons.how_to_reg_rounded,
+              color: AppTheme.primaryColor,
+              size: 26,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            checkedIn ? 'เช็คอินแล้ว' : 'พร้อมสำหรับเช็คอิน',
+            style: appFont(
+              color: AppTheme.onSurface(context),
+              fontSize: AppText.sizeSubtitle,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            checkedIn
+                ? (checkedInAt.isEmpty
+                      ? 'รหัสนี้ถูกสแกนเรียบร้อยแล้ว'
+                      : 'เช็คอินเมื่อ ${_dateTime(checkedInAt)}')
+                : 'โปรดแสดงรหัสนี้แก่เจ้าหน้าที่เมื่อถึงจุดนัดหมาย',
+            textAlign: TextAlign.center,
+            style: appFont(
+              color: AppTheme.mutedText(context),
+              fontSize: AppText.sizeCaption,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (!checkedIn) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.14),
+                ),
+              ),
+              child: QrImageView(
+                data: qrCode,
+                version: QrVersions.auto,
+                size: 180,
+                backgroundColor: Colors.white,
+                errorCorrectionLevel: QrErrorCorrectLevel.M,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          SelectableText(
+            bookingRef,
+            style: appFont(
+              color: AppTheme.primaryColor,
+              fontSize: AppText.sizeSubtitle,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Small building blocks ────────────────────────────────────────────────────
+
+class _GuestSection extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+
+  const _GuestSection({
+    required this.icon,
+    required this.title,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = children
+        .where((child) => child is! SizedBox || child.height != 0)
+        .toList();
+    if (visible.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppTheme.surface(context),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(
+            color: AppTheme.border(context).withValues(alpha: 0.55),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 17, color: AppTheme.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool highlight;
+
+  const _GuestInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (value.trim().isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 15, color: AppTheme.mutedText(context)),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mutedText(context),
+                height: 1.4,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: highlight ? FontWeight.w900 : FontWeight.w700,
+                color: highlight
+                    ? AppTheme.primaryColor
+                    : AppTheme.onSurface(context),
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuestCallRow extends StatelessWidget {
+  final String label;
+  final String phone;
+  final Future<void> Function(String phone) onCall;
+
+  const _GuestCallRow({
+    required this.label,
+    required this.phone,
+    required this.onCall,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onCall(phone);
+            },
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            child: Ink(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(
+                color: AppTheme.selectedTint(context),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.call_rounded,
+                    size: 15,
+                    color: AppTheme.primaryColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$label · $phone',
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestMapButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _GuestMapButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: AppTheme.selectedTint(context),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.map_rounded,
+                  size: 15,
+                  color: AppTheme.primaryColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'เปิดแผนที่จุดนัดหมาย',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestLineItems extends StatelessWidget {
+  final String title;
+  final List<dynamic> items;
+
+  const _GuestLineItems({required this.title, required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: appFont(
+            fontSize: AppText.sizeCaption,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.mutedText(context),
+          ),
+        ),
+        const SizedBox(height: 6),
+        for (final raw in items)
+          Builder(
+            builder: (context) {
+              final item = asMap(raw);
+              final quantity = int.tryParse(textOf(item['quantity'])) ?? 1;
+              final price = num.tryParse(textOf(item['price']));
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${textOf(item['name'], 'รายการ')}'
+                        '${quantity > 1 ? ' ×$quantity' : ''}',
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                    ),
+                    if (price != null)
+                      Text(
+                        money(price * quantity),
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+}
+
+class _GuestNoticePill extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  const _GuestNoticePill({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(color: color.withValues(alpha: 0.28)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                text,
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestTag extends StatelessWidget {
+  final String text;
+
+  const _GuestTag({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.6),
+        ),
+      ),
+      child: Text(
+        text,
+        style: appFont(
+          fontSize: AppText.sizeMicro,
+          fontWeight: FontWeight.w800,
+          color: AppTheme.mutedText(context),
+        ),
+      ),
+    );
+  }
+}
+
+/// "2026-09-05" / ISO → "5 ก.ย. 2569"
+String _dateOnly(String raw) {
+  final parsed = DateTime.tryParse(raw);
+  return parsed == null ? raw : thaiDateShort(parsed.toLocal());
+}
+
+String _dateTime(String raw) {
+  final parsed = DateTime.tryParse(raw);
+  return parsed == null ? raw : thaiDateTimeShort(parsed.toLocal());
 }
 
 class _EmptyNameResult extends StatelessWidget {
