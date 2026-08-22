@@ -107,9 +107,12 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                       if (hasHero)
                         _StaffTodayHero(
                           schedule: activeSchedules.first,
+                          // ปุ่มบนการ์ดงานวันนี้เขียนว่า "เปิด QR เช็คอิน"
+                          // สตาฟยืนอยู่หน้าลูกค้าที่ถือ QR อยู่แล้ว จึงพาไป
+                          // ที่กล้องเลย ไม่ใช่หน้ารวมที่ต้องกดสแกนอีกที
                           onCheckIn: () => _pushPremium(
                             context,
-                            const StaffCheckInScreen(),
+                            const StaffCheckInScreen(autoOpenScanner: true),
                           ),
                         )
                       else

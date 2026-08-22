@@ -13,7 +13,12 @@ import '../utils/thai_date.dart';
 import 'login_screen.dart';
 
 class StaffCheckInScreen extends StatefulWidget {
-  const StaffCheckInScreen({super.key});
+  /// เปิดกล้องให้ทันทีที่เข้าหน้านี้ — ใช้กับปุ่มที่สัญญาว่าจะได้สแกนเลย
+  /// (เช่น "เปิด QR เช็คอิน" บนการ์ดงานวันนี้) ส่วนทางเข้าที่โฆษณาว่าเช็คอิน
+  /// ได้ทั้งสแกนและกรอกรหัส ให้ลงหน้านี้ตามปกติ
+  final bool autoOpenScanner;
+
+  const StaffCheckInScreen({super.key, this.autoOpenScanner = false});
 
   @override
   State<StaffCheckInScreen> createState() => _StaffCheckInScreenState();
@@ -44,6 +49,20 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
       parent: _successAnimController,
       curve: Curves.elasticOut,
     );
+    if (widget.autoOpenScanner) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _autoOpenScanner());
+    }
+  }
+
+  /// เด้งกล้องทับหน้านี้ทันทีที่เฟรมแรกวาดเสร็จ ถอยออกจากกล้องแล้วจะเจอหน้า
+  /// เช็คอินที่ยังกรอกรหัสเองได้ — คนที่ลูกค้าเปิด QR ไม่ได้จึงไม่ตกขบวน
+  Future<void> _autoOpenScanner() async {
+    if (!mounted) return;
+    final app = context.read<AppProvider>();
+    // ยังไม่ล็อกอินหรือไม่มีสิทธิ์ หน้านี้กำลังแสดงจอเข้าสู่ระบบ/จอห้ามใช้อยู่
+    // อย่าเปิดกล้องทับ
+    if (!app.isLoggedIn || !app.canUseStaffCheckIn) return;
+    await _openScanner(instant: true);
   }
 
   @override
@@ -54,10 +73,18 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
     super.dispose();
   }
 
-  Future<void> _openScanner() async {
+  Future<void> _openScanner({bool instant = false}) async {
     _focusNode.unfocus();
     final value = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const _StaffQrScannerScreen()),
+      instant
+          // เปิดอัตโนมัติ — ไม่ใส่ทรานซิชัน ไม่งั้นจะเห็นหน้าเช็คอินแวบหนึ่ง
+          // ก่อนกล้องจะเลื่อนขึ้นมาทับ ซึ่งอ่านเหมือนกดปุ่มผิด
+          ? PageRouteBuilder<String>(
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+              pageBuilder: (_, _, _) => const _StaffQrScannerScreen(),
+            )
+          : MaterialPageRoute(builder: (_) => const _StaffQrScannerScreen()),
     );
     if (value == null || value.trim().isEmpty || !mounted) return;
     await _lookup(value.trim());
