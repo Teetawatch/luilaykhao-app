@@ -41,6 +41,7 @@ class OfflineCache {
     'trip_progress.': 12,
     'tripday_announcements.': 8,
     'tripday_pack.': 8,
+    'sos_contacts.': 8,
   };
 
   final Map<String, dynamic> _public = {};

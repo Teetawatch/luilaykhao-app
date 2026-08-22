@@ -23,6 +23,7 @@ import 'tracking_screen.dart' show TrackingMapPage;
 import '../services/home_widget_service.dart';
 import '../services/notification_navigator.dart';
 import '../services/push_notification_service.dart';
+import '../services/sos_outbox.dart';
 import '../services/trip_activity_service.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/min_tap_target.dart';
@@ -141,6 +142,9 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
         // An SOS raised while this phone was off, flat, or out of signal never
         // arrived — catch up on it the moment the phone is usable again.
         unawaited(app.recoverMissedSosAlerts());
+        // และในทางกลับกัน — SOS ที่ "ผู้ใช้เครื่องนี้" กดตอนไม่มีสัญญาณยังค้าง
+        // อยู่ในคิว การกลับเข้าแอปคือจังหวะที่มีโอกาสมีสัญญาณมากที่สุด
+        unawaited(SosOutbox.instance.flush(force: true));
         // การ์ด "วันเดินทาง" อัปเดตตัวเองผ่าน APNs ได้ก็ต่อเมื่อเซิร์ฟเวอร์ถือ
         // token ของมันอยู่ ถ้าการฝากครั้งแรกล้มเหลว (เน็ตหลุดตอนกดจอง) นี่คือ
         // จังหวะที่ได้ลองใหม่ — เงียบและไม่มีค่าใช้จ่ายเมื่อไม่มีการ์ดเปิดอยู่

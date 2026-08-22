@@ -121,7 +121,7 @@ class TripDayScreen extends StatelessWidget {
           // SOS first while on/near the trip — it's the one action that must be
           // immediate rather than tucked behind a tile.
           if (_withinSosWindow && _scheduleId > 0) ...[
-            SosButton(scheduleId: _scheduleId),
+            SosButton(scheduleId: _scheduleId, tripTitle: textOf(_trip['title'])),
             const SizedBox(height: 16),
           ],
 

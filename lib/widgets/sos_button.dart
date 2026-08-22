@@ -9,7 +9,9 @@ import 'package:provider/provider.dart';
 
 import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
+import '../services/sos_outbox.dart';
 import '../theme/app_theme.dart';
+import 'sos_fallback_sheet.dart';
 
 /// Emergency "ขอความช่วยเหลือฉุกเฉิน" action. Captures GPS, lets the traveller
 /// pick a message + optional photo, and dispatches an SOS for the schedule —
@@ -18,7 +20,11 @@ import '../theme/app_theme.dart';
 class SosButton extends StatefulWidget {
   final int scheduleId;
 
-  const SosButton({super.key, required this.scheduleId});
+  /// ชื่อทริป — ใส่ลงในข้อความ SMS สำรอง เพื่อให้คนรับรู้ว่าเป็นรอบไหนโดยไม่ต้อง
+  /// เปิดระบบดู (ซึ่งเป็นสิ่งที่ทำไม่ได้ถ้าเขาก็อยู่ในที่ไม่มีสัญญาณเหมือนกัน)
+  final String? tripTitle;
+
+  const SosButton({super.key, required this.scheduleId, this.tripTitle});
 
   @override
   State<SosButton> createState() => _SosButtonState();
@@ -117,8 +123,12 @@ class _SosButtonState extends State<SosButton> {
     if (_sending) return;
 
     setState(() => _sending = true);
-    final messenger = ScaffoldMessenger.of(context);
     final provider = context.read<AppProvider>();
+
+    // ตราไว้ตั้งแต่ตอนกด ไม่ใช่ตอนที่คำขอไปถึงเซิร์ฟเวอร์ — ถ้าต้องเข้าคิวรอ
+    // สัญญาณสองชั่วโมง เวลานี้คือเวลาเดียวที่มีความหมายกับทีมค้นหา
+    final occurredAt = DateTime.now();
+    final clientToken = SosOutbox.newToken();
 
     double? lat;
     double? lng;
@@ -135,6 +145,8 @@ class _SosButtonState extends State<SosButton> {
         longitude: lng,
         message: message.isEmpty ? null : message,
         photoPath: photoPath,
+        occurredAt: occurredAt,
+        clientToken: clientToken,
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
@@ -142,20 +154,57 @@ class _SosButtonState extends State<SosButton> {
       unawaited(_refreshMyOpenAlert());
       await _successDialog(hasLocation: lat != null);
     } catch (e) {
-      // triggerSos already retried with backoff; offer a manual retry too.
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('ส่ง SOS ไม่สำเร็จ: $e'),
-          duration: const Duration(seconds: 8),
-          action: SnackBarAction(
-            label: 'ลองอีกครั้ง',
-            onPressed: () => _dispatchSos(message, photoPath),
-          ),
-        ),
+      // ส่งไม่ผ่าน — เก็บเข้าคิวไว้ส่งเองเมื่อสัญญาณกลับมา แล้วเปิดทางสำรอง
+      // ทันที ไม่ใช่ขึ้น SnackBar ให้กด "ลองอีกครั้ง" ในที่ที่ลองอีกกี่ครั้ง
+      // ก็ไม่มีเน็ตเหมือนเดิม
+      await SosOutbox.instance.enqueue(
+        scheduleId: widget.scheduleId,
+        clientToken: clientToken,
+        occurredAt: occurredAt,
+        latitude: lat,
+        longitude: lng,
+        message: message.isEmpty ? null : message,
+        photoPath: photoPath,
+      );
+
+      if (!mounted) return;
+      HapticFeedback.heavyImpact();
+      await _openFallback(
+        provider: provider,
+        message: message,
+        latitude: lat,
+        longitude: lng,
+        occurredAt: occurredAt,
       );
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  /// เปิดแผ่นทางสำรอง — โทร/ส่งข้อความหาทีมงานจากเบอร์ที่แคชไว้ในเครื่อง
+  Future<void> _openFallback({
+    required AppProvider provider,
+    required String message,
+    double? latitude,
+    double? longitude,
+    required DateTime occurredAt,
+  }) async {
+    final book = await provider.sosContacts(widget.scheduleId);
+    if (!mounted) return;
+
+    await SosFallbackSheet.show(
+      context,
+      contacts: book.contacts,
+      emergencyNumbers: book.emergency,
+      smsBody: SosFallbackSheet.composeSms(
+        travellerName: '${provider.user?['name'] ?? 'ผู้เดินทาง'}',
+        tripTitle: widget.tripTitle,
+        message: message,
+        latitude: latitude,
+        longitude: longitude,
+        occurredAt: occurredAt,
+      ),
+    );
   }
 
   Future<_SosSheetResult?> _confirmDialog() {
@@ -239,21 +288,53 @@ class _SosButtonState extends State<SosButton> {
 
   @override
   Widget build(BuildContext context) {
-    if (_myOpenAlert != null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _button(context),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _button(context),
+
+        // SOS ที่ยังส่งไม่ออกต้องมองเห็นได้ ไม่ใช่ค้างอยู่เงียบ ๆ ในเครื่อง —
+        // ผู้ใช้ต้องรู้ว่าทีมงาน "ยังไม่ได้รับ" เพื่อจะได้ตัดสินใจโทรเอง
+        ValueListenableBuilder<int>(
+          valueListenable: SosOutbox.instance.pendingCount,
+          builder: (context, count, _) {
+            if (count == 0) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: _QueuedBanner(
+                count: count,
+                onOpenFallback: _openFallbackForQueued,
+              ),
+            );
+          },
+        ),
+
+        if (_myOpenAlert != null) ...[
           const SizedBox(height: 10),
           _OpenCaseBanner(
             closing: _closing,
             onClose: _closeMyAlert,
           ),
         ],
-      );
-    }
+      ],
+    );
+  }
 
-    return _button(context);
+  /// เปิดทางสำรองอีกครั้งจากแถบเตือน — ผู้ใช้ที่ปิดแผ่นไปแล้วต้องกลับมาได้
+  Future<void> _openFallbackForQueued() async {
+    final provider = context.read<AppProvider>();
+    final queued = SosOutbox.instance.pending();
+    final latest = queued.isEmpty ? null : queued.last;
+
+    await _openFallback(
+      provider: provider,
+      message: latest?['message']?.toString() ?? '',
+      latitude: (latest?['latitude'] as num?)?.toDouble(),
+      longitude: (latest?['longitude'] as num?)?.toDouble(),
+      occurredAt:
+          DateTime.tryParse('${latest?['occurred_at']}')?.toLocal() ??
+          DateTime.now(),
+    );
   }
 
   Widget _button(BuildContext context) {
@@ -407,6 +488,87 @@ class _OpenCaseBanner extends StatelessWidget {
               label: Text(
                 closing ? 'กำลังปิดเคส...' : 'ฉันปลอดภัยแล้ว — ปิดเคส',
                 style: appFont(fontSize: AppText.sizeLabel, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// SOS ที่ค้างอยู่ในเครื่องเพราะยังไม่มีสัญญาณ
+///
+/// ข้อความตรงนี้ระวังเป็นพิเศษ: ห้ามทำให้ผู้ใช้เข้าใจว่าทีมงานได้รับแล้ว และห้าม
+/// สัญญาว่าจะส่งเองแม้ปิดแอป เพราะคิวเดินได้เฉพาะตอนแอปทำงานอยู่จริง ๆ
+class _QueuedBanner extends StatelessWidget {
+  final int count;
+  final Future<void> Function() onOpenFallback;
+
+  const _QueuedBanner({required this.count, required this.onOpenFallback});
+
+  @override
+  Widget build(BuildContext context) {
+    const amber = Color(0xFFB45309);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: amber.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.cloud_off_rounded, size: 18, color: amber),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  count > 1
+                      ? 'SOS $count รายการยังส่งไม่สำเร็จ'
+                      : 'SOS ของคุณยังส่งไม่สำเร็จ',
+                  style: appFont(
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'ทีมงานยังไม่ได้รับสัญญาณนี้ ระบบจะส่งให้เองทันทีที่กลับมามีสัญญาณ '
+            '(เปิดแอปค้างไว้) ถ้าเร่งด่วนให้โทรหาทีมงานโดยตรง',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              height: 1.5,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onOpenFallback,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: amber,
+                side: BorderSide(color: amber.withValues(alpha: 0.5)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                ),
+              ),
+              icon: const Icon(Icons.call_rounded, size: 18),
+              label: Text(
+                'โทร / ส่งข้อความหาทีมงาน',
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),

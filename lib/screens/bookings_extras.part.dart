@@ -874,7 +874,10 @@ class _BookingActionDeck extends StatelessWidget {
           },
         ),
       if (showSos)
-        SosButton(scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0),
+        SosButton(
+          scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
+          tripTitle: textOf(asMap(schedule['trip'])['title']),
+        ),
       if (_chipActions(
             context,
             confirmed,

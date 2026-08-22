@@ -207,6 +207,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     _isWithinTripWindow(schedule)) ...[
                   SosButton(
                     scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
+                    tripTitle: textOf(trip['title']),
                   ),
                   const SizedBox(height: 20),
                   // เบอร์ตำรวจ/รถพยาบาลของประเทศปลายทาง — คู่กับปุ่ม SOS

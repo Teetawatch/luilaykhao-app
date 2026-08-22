@@ -127,6 +127,17 @@ class TripDayPack {
       debugPrint('TripDayPack: announcements $scheduleId failed — $e');
     }
 
+    // เบอร์สำรองตอน SOS ส่งไม่ออก — ตัว sosContacts แคชให้เองเมื่อดึงสำเร็จ
+    //
+    // ชิ้นนี้สำคัญกว่าชิ้นอื่นในชุดตรงที่ปลายทางของมันคือหน้าจอที่เปิดตอนกำลัง
+    // ขอความช่วยเหลือแล้วไม่มีสัญญาณ ถ้าไม่ได้ดึงไว้ก่อน ก็ไม่มีทางได้ตอนนั้น
+    try {
+      await app.sosContacts(scheduleId);
+      packed++;
+    } catch (e) {
+      debugPrint('TripDayPack: sos contacts $scheduleId failed — $e');
+    }
+
     // รายละเอียดการจอง — จุดขึ้นรถ เบอร์สตาฟ ที่นั่ง ทั้งหมดอยู่ในนี้
     if (ref.isNotEmpty) {
       try {

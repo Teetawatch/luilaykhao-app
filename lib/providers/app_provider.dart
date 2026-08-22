@@ -20,6 +20,7 @@ import '../services/push_notification_service.dart';
 import '../services/rating_prompt_service.dart';
 import '../services/realtime_service.dart';
 import '../services/secure_storage.dart';
+import '../services/sos_outbox.dart';
 import '../services/trip_activity_service.dart';
 import '../services/trip_day_pack.dart';
 import '../services/version_gate_service.dart';
@@ -221,6 +222,10 @@ class AppProvider extends ChangeNotifier {
     );
     await OfflineCache.instance.load();
     _hydrateFromCache();
+    // ต้องผูกหลัง OfflineCache โหลดเสร็จ — คิว SOS อยู่ในนั้น และแถบเตือน
+    // "ยังส่งไม่สำเร็จ" จะไม่ขึ้นเลยถ้านับจำนวนตอนแคชยังว่าง
+    SosOutbox.instance.attach(this);
+    unawaited(SosOutbox.instance.flush(force: true));
     notifyListeners();
     _initDeepLinks();
     // Push init must NOT block the first data load. On iOS real devices the
@@ -1192,6 +1197,9 @@ class AppProvider extends ChangeNotifier {
     api.token = null;
     user = null;
     await OfflineCache.instance.clearAccount();
+    // แคชถูกล้างไปแล้ว แต่ตัวนับของคิว SOS อยู่ในหน่วยความจำ ถ้าไม่รีเซ็ต แถบ
+    // "ยังส่งไม่สำเร็จ" ของบัญชีก่อนหน้าจะค้างให้คนที่ล็อกอินคนถัดไปเห็น
+    await SosOutbox.instance.clear();
     // ทริปของบัญชีที่ออกไปต้องไม่ค้างอยู่บนหน้าโฮมให้คนถัดไปที่หยิบเครื่องขึ้นมา
     // เห็น — วางไว้ที่นี่ ไม่ใช่ใน logout() เพราะการลบบัญชีก็ผ่านทางนี้เหมือนกัน
     await HomeWidgetService.instance.clear();
@@ -1496,12 +1504,21 @@ class AppProvider extends ChangeNotifier {
     double? longitude,
     String? message,
     String? photoPath,
+    DateTime? occurredAt,
+    String? clientToken,
+    bool retry = true,
   }) async {
     final body = {
       'schedule_id': scheduleId,
       'latitude': ?latitude,
       'longitude': ?longitude,
       if (message != null && message.isNotEmpty) 'message': message,
+      // เวลาที่กดจริงกับกุญแจกันซ้ำ — ทำให้เคสที่ค้างอยู่ในเครื่องแล้วส่งตามมา
+      // ทีหลังยังบันทึกเวลาที่ถูกต้อง และส่งซ้ำกี่รอบก็ยังเป็นเคสเดียว
+      if (occurredAt != null)
+        'occurred_at': occurredAt.toUtc().toIso8601String(),
+      if (clientToken != null && clientToken.isNotEmpty)
+        'client_token': clientToken,
     };
 
     // A photo can take longer to upload on a weak connection, so give multipart
@@ -1510,11 +1527,15 @@ class AppProvider extends ChangeNotifier {
     final attemptTimeout = hasPhoto
         ? const Duration(seconds: 30)
         : const Duration(seconds: 15);
-    const backoff = [
-      Duration(seconds: 2),
-      Duration(seconds: 4),
-      Duration(seconds: 8),
-    ];
+    // คิวออฟไลน์ ([SosOutbox]) มีจังหวะลองใหม่ของตัวเอง จึงยิงครั้งเดียวต่อรอบ
+    // ไม่ให้รายการแรกนั่งลองซ้ำ 14 วินาทีจนรายการถัดไปไม่ได้คิว
+    final backoff = retry
+        ? const [
+            Duration(seconds: 2),
+            Duration(seconds: 4),
+            Duration(seconds: 8),
+          ]
+        : const <Duration>[];
 
     Object lastError = const ApiException('ส่งสัญญาณ SOS ไม่สำเร็จ');
 
@@ -1591,6 +1612,51 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> resolveSos(int id) async {
     await api.post('sos/$id/resolve');
+  }
+
+  static String _sosContactsKey(int scheduleId) => 'sos_contacts.$scheduleId';
+
+  /// เบอร์สำรองของรอบนี้ — สตาฟ คนขับ ศูนย์ช่วยเหลือ และเบอร์ฉุกเฉินราชการ
+  ///
+  /// อ่านจากแคชก่อนเสมอเมื่อดึงใหม่ไม่ได้ เพราะหน้าจอที่ใช้ข้อมูลชุดนี้คือหน้าจอ
+  /// ที่เปิดตอนไม่มีสัญญาณ — ถ้ามันต้องมีเน็ตถึงจะทำงาน ก็ไม่ต่างจากปุ่ม SOS
+  /// ที่เพิ่งส่งไม่ผ่านไปเมื่อครู่
+  Future<({List<Map<String, dynamic>> contacts, Map<String, String> emergency})>
+  sosContacts(int scheduleId) async {
+    final key = _sosContactsKey(scheduleId);
+
+    try {
+      final response = await api.get('schedules/$scheduleId/emergency-contacts');
+      final data = api.data(response);
+      if (data is Map) {
+        final payload = Map<String, dynamic>.from(data);
+        OfflineCache.instance.writeAccount(key, payload);
+        return _parseSosContacts(payload);
+      }
+    } catch (_) {
+      // ไม่มีสัญญาณ — ตกไปใช้ของที่เก็บไว้ ซึ่งเป็นเหตุผลที่ดึงล่วงหน้าตั้งแต่แรก
+    }
+
+    final cached = OfflineCache.instance.readAccount<Map>(key);
+    if (cached == null) return (contacts: <Map<String, dynamic>>[], emergency: <String, String>{});
+    return _parseSosContacts(Map<String, dynamic>.from(cached));
+  }
+
+  ({List<Map<String, dynamic>> contacts, Map<String, String> emergency})
+  _parseSosContacts(Map<String, dynamic> payload) {
+    final contacts = (payload['contacts'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((e) => '${e['phone'] ?? ''}'.trim().isNotEmpty)
+        .toList();
+
+    final emergency = <String, String>{};
+    final raw = payload['emergency_numbers'];
+    if (raw is Map) {
+      raw.forEach((key, value) => emergency['$key'] = '$value');
+    }
+
+    return (contacts: contacts, emergency: emergency);
   }
 
   /// Looks up a booking for staff check-in. Returns the booking plus `meta`,
