@@ -35,35 +35,10 @@ class _BookingsHeader extends StatelessWidget {
           _NextTripHeroCard(booking: nextTrip!),
           const SizedBox(height: 12),
         ],
-        Row(
-          children: [
-            Expanded(
-              child: _SummaryPill(
-                icon: Icons.event_available_rounded,
-                label: 'กำลังจะถึง',
-                value: '$upcomingCount',
-                accent: AppTheme.primaryColor,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _SummaryPill(
-                icon: Icons.backpack_rounded,
-                label: 'เดินทางแล้ว',
-                value: '$completedCount',
-                accent: const Color(0xFF16A34A),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _SummaryPill(
-                icon: Icons.terrain_rounded,
-                label: 'จังหวัดที่ไป',
-                value: '$provinceCount',
-                accent: const Color(0xFF6366F1),
-              ),
-            ),
-          ],
+        _TravelStatsPanel(
+          upcomingCount: upcomingCount,
+          completedCount: completedCount,
+          provinceCount: provinceCount,
         ),
       ],
     );
@@ -241,66 +216,144 @@ class _NextTripHeroCard extends StatelessWidget {
   }
 }
 
-class _SummaryPill extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color accent;
+/// สรุปการเดินทางสามตัวเลขในแผงเดียว คั่นด้วยเส้นบาง ๆ
+/// อ่านเป็นชุดข้อมูลเดียวกัน ไม่ใช่การ์ดสามใบที่แข่งกันเรียกสายตา
+class _TravelStatsPanel extends StatelessWidget {
+  final int upcomingCount;
+  final int completedCount;
+  final int provinceCount;
 
-  const _SummaryPill({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.accent,
+  const _TravelStatsPanel({
+    required this.upcomingCount,
+    required this.completedCount,
+    required this.provinceCount,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(
           color: AppTheme.border(context).withValues(alpha: 0.55),
         ),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-            ),
-            child: Icon(icon, color: accent, size: 19),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              color: AppTheme.onSurface(context),
-              fontSize: AppText.sizeH1,
-              fontWeight: FontWeight.w800,
-              height: 1,
-              letterSpacing: -0.3,
+          Expanded(
+            child: _TravelStat(
+              icon: Icons.event_available_rounded,
+              label: 'กำลังจะถึง',
+              value: upcomingCount,
+              unit: 'ทริป',
+              accent: AppTheme.primaryColor,
             ),
           ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppTheme.mutedText(context),
-              fontSize: AppText.sizeCaption,
-              fontWeight: FontWeight.w600,
+          _statDivider(context),
+          Expanded(
+            child: _TravelStat(
+              icon: Icons.backpack_rounded,
+              label: 'เดินทางแล้ว',
+              value: completedCount,
+              unit: 'ทริป',
+              accent: const Color(0xFF6366F1),
+            ),
+          ),
+          _statDivider(context),
+          Expanded(
+            child: _TravelStat(
+              icon: Icons.terrain_rounded,
+              label: 'จังหวัดที่ไป',
+              value: provinceCount,
+              unit: 'จังหวัด',
+              accent: const Color(0xFFD97706),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _statDivider(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 36,
+      color: AppTheme.border(context).withValues(alpha: 0.5),
+    );
+  }
+}
+
+class _TravelStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int value;
+  final String unit;
+  final Color accent;
+
+  const _TravelStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: accent, size: 13),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  color: AppTheme.mutedText(context),
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              '$value',
+              style: appFont(
+                color: AppTheme.onSurface(context),
+                fontSize: AppText.sizeH1,
+                fontWeight: FontWeight.w800,
+                height: 1,
+                letterSpacing: -0.6,
+                // ตัวเลขความกว้างเท่ากัน สามช่องจึงไม่ขยับตามค่าที่เปลี่ยน
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              unit,
+              style: appFont(
+                color: AppTheme.mutedText(context),
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
