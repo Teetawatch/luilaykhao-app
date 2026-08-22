@@ -310,7 +310,7 @@
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				51654BD36477F739CAE53893 /* Upload Crashlytics dSYM */,
 				4542F73D19C83FB4FD786977 /* [CP] Copy Pods Resources */,
-				56062F548F03FAA92498FEA8 /* Strip Simulator Platform Slices */,
+				D96844F82487CA0579E1D328 /* Strip Simulator Platform Slices */,
 			);
 			buildRules = (
 			);
@@ -452,24 +452,6 @@
 			shellPath = /bin/sh;
 			shellScript = "# Upload dSYMs to Firebase Crashlytics so crash reports are symbolicated.\n# Firebase is integrated via Swift Package Manager here (Podfile.lock has only\n# Flutter), so the run helper lives in the SwiftPM checkout. Fall back to the\n# CocoaPods path, and guard against it being absent so dSYM upload never\n# fails the build (e.g. Debug builds that don't emit a dSYM).\nSPM_RUN=\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\nPOD_RUN=\"${PODS_ROOT}/FirebaseCrashlytics/run\"\nif [ -f \"$SPM_RUN\" ]; then\n  \"$SPM_RUN\"\nelif [ -f \"$POD_RUN\" ]; then\n  \"$POD_RUN\"\nelse\n  echo \"warning: FirebaseCrashlytics run script not found (tried SPM: $SPM_RUN and Pods: $POD_RUN) — skipping dSYM upload\"\nfi\n";
 		};
-		56062F548F03FAA92498FEA8 /* Strip Simulator Platform Slices */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Strip Simulator Platform Slices";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "#!/bin/bash\nset -e\n# Only patch for device builds — simulator builds need IOSSIMULATOR platform markers\nif [[ \"$PLATFORM_NAME\" == *\"simulator\"* ]]; then\n  echo \"Simulator build — skipping platform patch\"\n  exit 0\nfi\nAPP=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"\nSDK=$(xcrun --sdk iphoneos --show-sdk-version)\nfind \"$APP\" -name '*.framework' -type d | while read -r FW; do\n  EXEC=$(defaults read \"$FW/Info.plist\" CFBundleExecutable 2>/dev/null || true)\n  [ -z \"$EXEC\" ] && continue\n  BIN=\"$FW/$EXEC\"\n  [ -f \"$BIN\" ] || continue\n  # Strip x86_64 (simulator-only arch) from device builds\n  if lipo -archs \"$BIN\" 2>/dev/null | grep -q \"x86_64\"; then\n    echo \"Stripping x86_64 from $EXEC\"\n    lipo -remove x86_64 \"$BIN\" -output \"${BIN}.stripped\" && mv \"${BIN}.stripped\" \"$BIN\"\n  fi\n  # Patch IOSSIMULATOR platform markers to IOS for device builds\n  if vtool -show-build \"$BIN\" 2>/dev/null | grep -q \"IOSSIMULATOR\"; then\n    MIN_OS=$(defaults read \"$FW/Info.plist\" MinimumOSVersion 2>/dev/null || echo \"${IPHONEOS_DEPLOYMENT_TARGET:-15.0}\")\n    echo \"Patching $EXEC: IOSSIMULATOR -> IOS (minos=$MIN_OS)\"\n    vtool -set-build-version ios \"$MIN_OS\" \"$SDK\" -replace -output \"${BIN}.fixed\" \"$BIN\"\n    mv \"${BIN}.fixed\" \"$BIN\"\n  fi\ndone\n";
-		};
 		6EA1BD6DB863A5C57C368877 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -528,6 +510,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+		};
+		D96844F82487CA0579E1D328 /* Strip Simulator Platform Slices */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Strip Simulator Platform Slices";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/bash\nset -e\n# Only patch for device builds — simulator builds need IOSSIMULATOR platform markers\nif [[ \"$PLATFORM_NAME\" == *\"simulator\"* ]]; then\n  echo \"Simulator build — skipping platform patch\"\n  exit 0\nfi\nAPP=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"\nSDK=$(xcrun --sdk iphoneos --show-sdk-version)\nfind \"$APP\" -name '*.framework' -type d | while read -r FW; do\n  EXEC=$(defaults read \"$FW/Info.plist\" CFBundleExecutable 2>/dev/null || true)\n  [ -z \"$EXEC\" ] && continue\n  BIN=\"$FW/$EXEC\"\n  [ -f \"$BIN\" ] || continue\n  # Strip x86_64 (simulator-only arch) from device builds\n  if lipo -archs \"$BIN\" 2>/dev/null | grep -q \"x86_64\"; then\n    echo \"Stripping x86_64 from $EXEC\"\n    lipo -remove x86_64 \"$BIN\" -output \"${BIN}.stripped\" && mv \"${BIN}.stripped\" \"$BIN\"\n  fi\n  # Patch IOSSIMULATOR platform markers to IOS for device builds\n  if vtool -show-build \"$BIN\" 2>/dev/null | grep -q \"IOSSIMULATOR\"; then\n    MIN_OS=$(defaults read \"$FW/Info.plist\" MinimumOSVersion 2>/dev/null || echo \"${IPHONEOS_DEPLOYMENT_TARGET:-15.0}\")\n    echo \"Patching $EXEC: IOSSIMULATOR -> IOS (minos=$MIN_OS)\"\n    vtool -set-build-version ios \"$MIN_OS\" \"$SDK\" -replace -output \"${BIN}.fixed\" \"$BIN\"\n    mv \"${BIN}.fixed\" \"$BIN\"\n  fi\ndone\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

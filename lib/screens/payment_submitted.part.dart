@@ -116,6 +116,14 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
     NotificationNavigator.goToBookings();
   }
 
+  /// จ่ายเสร็จแล้วการเด้งกลับไปหน้าฟอร์มชำระเงินชวนให้เข้าใจผิดว่ายังต้องจ่ายอีก —
+  /// ทางออกที่สองจึงพากลับหน้าหลักไปเลย ไม่ใช่แค่ pop ทีละชั้น
+  void _goHome() {
+    HapticFeedback.selectionClick();
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    NotificationNavigator.goToHome();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -187,7 +195,7 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
             ),
             _SubmittedActions(
               onPrimary: _goToMyBookings,
-              onSecondary: () => Navigator.of(context).maybePop(),
+              onSecondary: _goHome,
             ),
           ],
         ),
@@ -757,7 +765,7 @@ class _SubmittedActions extends StatelessWidget {
                 foregroundColor: AppTheme.mutedText(context),
               ),
               child: Text(
-                'กลับไปหน้าชำระเงิน',
+                'กลับไปหน้าหลัก',
                 style: appFont(fontWeight: FontWeight.w800, fontSize: AppText.sizeBody),
               ),
             ),

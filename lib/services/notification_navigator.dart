@@ -317,6 +317,8 @@ class NotificationNavigator {
 
   static void Function(Map<String, dynamic>)? _reviewPrompter;
 
+  static void goToHome() => _switchTab(0);
+
   static void goToProfile() => _switchTab(4);
 
   static void goToBookings() => _switchTab(2);
