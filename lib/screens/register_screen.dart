@@ -29,6 +29,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _idCardController = TextEditingController();
   String? _selectedTitle;
   String? _selectedBloodGroup;
+  DateTime? _birthDate;
 
   // Emergency & health
   final _emergencyContactController = TextEditingController();
@@ -89,6 +90,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'email': email,
         'phone': phone,
         'id_card': idCard,
+        'birth_date': _formatRegisterBirthDate(_birthDate),
         'emergency_contact': emergencyContact,
         'emergency_phone': emergencyPhone,
         'allergies': allergies,
@@ -191,6 +193,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 12),
+                      _RegisterDateField(
+                        value: _birthDate,
+                        onPicked: (date) => setState(() => _birthDate = date),
+                        validator: (date) =>
+                            date == null ? 'กรุณาเลือกวัน/เดือน/ปีเกิด' : null,
                       ),
 
                       const SizedBox(height: 24),
@@ -765,6 +774,139 @@ class _LoginPrompt extends StatelessWidget {
 // Shared input widgets
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// กรอบช่องกรอกของหน้าสมัคร ใช้ร่วมกันทุกชนิดช่อง (พิมพ์ / เลือก / เลือกวันที่)
+/// เพื่อให้ทุกช่องดูเป็นชุดเดียวกันจริง ๆ ไม่ใช่คล้ายกันด้วยการก๊อปสไตล์ไปวาง
+InputDecoration _registerDecoration(
+  BuildContext context, {
+  required String hint,
+  required IconData icon,
+  bool required = false,
+  Widget? suffixIcon,
+  double verticalPadding = 18,
+}) {
+  OutlineInputBorder border(Color color, double width) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+    borderSide: BorderSide(color: color, width: width),
+  );
+
+  final idle = AppTheme.border(context).withValues(alpha: 0.65);
+
+  return InputDecoration(
+    hintText: hint + (required ? ' *' : ''),
+    hintStyle: appFont(
+      color: AppTheme.mutedText(context).withValues(alpha: 0.70),
+      fontWeight: FontWeight.w500,
+    ),
+    prefixIcon: Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Icon(icon, color: AppTheme.primaryColor, size: 22),
+    ),
+    suffixIcon: suffixIcon,
+    filled: true,
+    fillColor: AppTheme.fieldSurface(context),
+    border: border(idle, 1),
+    enabledBorder: border(idle, 1),
+    focusedBorder: border(AppTheme.primaryColor, 1.5),
+    errorBorder: border(AppTheme.errorColor.withValues(alpha: 0.80), 1),
+    focusedErrorBorder: border(AppTheme.errorColor, 1.5),
+    contentPadding: EdgeInsets.symmetric(
+      vertical: verticalPadding,
+      horizontal: 16,
+    ),
+    errorStyle: appFont(
+      fontSize: AppText.sizeCaption,
+      fontWeight: FontWeight.w700,
+    ),
+  );
+}
+
+/// ช่องเลือกวัน/เดือน/ปีเกิด — เก็บตั้งแต่สมัครเพราะขั้นตอนจองบังคับกรอกอยู่แล้ว
+/// (ประกันการเดินทาง/ออกตั๋ว) กรอกที่นี่ครั้งเดียวแล้วเติมให้เองตอนจอง
+///
+/// เป็น FormField เพื่อให้ตรวจพร้อมช่องอื่นตอนกดสมัคร ไม่ใช่เด้ง SnackBar แยก
+class _RegisterDateField extends FormField<DateTime> {
+  _RegisterDateField({
+    required DateTime? value,
+    required ValueChanged<DateTime> onPicked,
+    super.validator,
+  }) : super(
+         initialValue: value,
+         builder: (state) {
+           final context = state.context;
+           final picked = state.value;
+
+           return InkWell(
+             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+             onTap: () async {
+               FocusScope.of(context).unfocus();
+               final now = DateTime.now();
+               final chosen = await showDatePicker(
+                 context: context,
+                 initialDate:
+                     picked ?? DateTime(now.year - 25, now.month, now.day),
+                 firstDate: DateTime(now.year - 100),
+                 lastDate: now,
+                 helpText: 'เลือกวัน/เดือน/ปีเกิด',
+               );
+               if (chosen == null) return;
+               final date = DateTime(chosen.year, chosen.month, chosen.day);
+               state.didChange(date);
+               onPicked(date);
+             },
+             child: InputDecorator(
+               isEmpty: picked == null,
+               decoration: _registerDecoration(
+                 context,
+                 hint: 'วัน/เดือน/ปีเกิด',
+                 icon: Icons.cake_outlined,
+                 required: true,
+                 suffixIcon: Icon(
+                   Icons.calendar_month_rounded,
+                   color: AppTheme.mutedText(context),
+                   size: 20,
+                 ),
+               ).copyWith(errorText: state.errorText),
+               child: picked == null
+                   ? null
+                   : Text(
+                       _registerBirthDateLabel(picked),
+                       style: appFont(
+                         fontWeight: FontWeight.w700,
+                         color: AppTheme.onSurface(context),
+                         fontSize: AppText.sizeBody,
+                       ),
+                     ),
+             ),
+           );
+         },
+       );
+}
+
+const _registerThaiMonths = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+];
+
+/// รูปแบบที่ API รับ ('YYYY-MM-DD') — null เมื่อยังไม่ได้เลือก
+String? _formatRegisterBirthDate(DateTime? date) {
+  if (date == null) return null;
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '${date.year}-$month-$day';
+}
+
+/// "21 เม.ย. 2541 · อายุ 27 ปี" — รูปแบบเดียวกับหน้าโปรไฟล์และขั้นตอนจอง
+String _registerBirthDateLabel(DateTime date) {
+  final now = DateTime.now();
+  var age = now.year - date.year;
+  if (now.month < date.month ||
+      (now.month == date.month && now.day < date.day)) {
+    age--;
+  }
+  return '${date.day} ${_registerThaiMonths[date.month - 1]} '
+      '${date.year + 543} · อายุ $age ปี';
+}
+
 class _RegisterInput extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
@@ -806,16 +948,12 @@ class _RegisterInput extends StatelessWidget {
         fontWeight: FontWeight.w600,
         color: AppTheme.onSurface(context),
       ),
-      decoration: InputDecoration(
-        hintText: hint + (required ? ' *' : ''),
-        hintStyle: appFont(
-          color: AppTheme.mutedText(context).withValues(alpha: 0.70),
-          fontWeight: FontWeight.w500,
-        ),
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: Icon(icon, color: AppTheme.primaryColor, size: 22),
-        ),
+      decoration: _registerDecoration(
+        context,
+        hint: hint,
+        icon: icon,
+        required: required,
+        verticalPadding: maxLines > 1 ? 16 : 18,
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
@@ -829,45 +967,6 @@ class _RegisterInput extends StatelessWidget {
                 onPressed: onToggleVisibility,
               )
             : null,
-        filled: true,
-        fillColor: AppTheme.fieldSurface(context),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: BorderSide(
-            color: AppTheme.border(context).withValues(alpha: 0.65),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: BorderSide(
-            color: AppTheme.border(context).withValues(alpha: 0.65),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: const BorderSide(
-            color: AppTheme.primaryColor,
-            width: 1.5,
-          ),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: BorderSide(
-            color: AppTheme.errorColor.withValues(alpha: 0.80),
-          ),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: const BorderSide(color: AppTheme.errorColor, width: 1.5),
-        ),
-        contentPadding: EdgeInsets.symmetric(
-          vertical: maxLines > 1 ? 16 : 18,
-          horizontal: 16,
-        ),
-        errorStyle: appFont(
-          fontSize: AppText.sizeCaption,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }
@@ -909,55 +1008,11 @@ class _RegisterSelect extends StatelessWidget {
         fontSize: AppText.sizeBody,
       ),
       dropdownColor: AppTheme.surface(context),
-      decoration: InputDecoration(
-        hintText: hint + (required ? ' *' : ''),
-        hintStyle: appFont(
-          color: AppTheme.mutedText(context).withValues(alpha: 0.70),
-          fontWeight: FontWeight.w500,
-        ),
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: Icon(icon, color: AppTheme.primaryColor, size: 22),
-        ),
-        filled: true,
-        fillColor: AppTheme.fieldSurface(context),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: BorderSide(
-            color: AppTheme.border(context).withValues(alpha: 0.65),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: BorderSide(
-            color: AppTheme.border(context).withValues(alpha: 0.65),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: const BorderSide(
-            color: AppTheme.primaryColor,
-            width: 1.5,
-          ),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: BorderSide(
-            color: AppTheme.errorColor.withValues(alpha: 0.80),
-          ),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          borderSide: const BorderSide(color: AppTheme.errorColor, width: 1.5),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 18,
-          horizontal: 16,
-        ),
-        errorStyle: appFont(
-          fontSize: AppText.sizeCaption,
-          fontWeight: FontWeight.w700,
-        ),
+      decoration: _registerDecoration(
+        context,
+        hint: hint,
+        icon: icon,
+        required: required,
       ),
       items: items
           .map(
