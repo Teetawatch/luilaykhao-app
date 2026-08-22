@@ -316,7 +316,13 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
           _VehicleCard(vehicle: vehicle),
           const SizedBox(height: 12),
         ],
-        _ManifestSummary(summary: summary, pickupGroupCount: groups.length),
+        // กลุ่ม "จอยทริป" ไม่ใช่จุดรับ จึงไม่นับรวมในตัวเลขจุดรับ
+        _ManifestSummary(
+          summary: summary,
+          pickupGroupCount: groups
+              .where((g) => g['is_join_trip'] != true)
+              .length,
+        ),
         const SizedBox(height: 16),
         if (addonBookings.isNotEmpty) ...[
           _AddonRequestsCard(bookings: addonBookings),
@@ -525,47 +531,86 @@ class _ManifestSummary extends StatelessWidget {
         ? _intOf(summary['checked_in_passengers'])
         : _intOf(summary['checked_in']);
     final careAlerts = _intOf(summary['care_alerts']);
+    // แยกหัวคนสองแบบ: รอขึ้นรถตามจุดรับ กับ จอยทริปที่ไปเจอกันเองหน้างาน
+    final joinTrip = _intOf(summary['join_trip_passengers']);
+    final regular = summary['regular_passengers'] != null
+        ? _intOf(summary['regular_passengers'])
+        : passengers - joinTrip;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: AppTheme.cardDecoration(context, radius: 20),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _SummaryStat(
-              icon: Icons.groups_outlined,
-              value: passengers.toString(),
-              label: 'ผู้โดยสาร',
-              color: const Color(0xFF059669),
-            ),
-          ),
-          _divider(context),
-          Expanded(
-            child: _SummaryStat(
-              icon: Icons.place_outlined,
-              value: pickupGroupCount.toString(),
-              label: 'จุดรับ',
-              color: const Color(0xFF2563EB),
-            ),
-          ),
-          _divider(context),
-          Expanded(
-            child: _SummaryStat(
-              icon: Icons.how_to_reg_outlined,
-              value: '$checkedIn/$passengers',
-              label: 'เช็คอินแล้ว',
-              color: AppTheme.primaryColor,
-            ),
-          ),
-          if (careAlerts > 0) ...[
-            _divider(context),
-            Expanded(
-              child: _SummaryStat(
-                icon: Icons.health_and_safety_outlined,
-                value: careAlerts.toString(),
-                label: 'ต้องดูแล',
-                color: AppTheme.errorColor,
+          Row(
+            children: [
+              Expanded(
+                child: _SummaryStat(
+                  icon: Icons.groups_outlined,
+                  value: passengers.toString(),
+                  label: 'ผู้โดยสาร',
+                  color: const Color(0xFF059669),
+                ),
               ),
+              _divider(context),
+              Expanded(
+                child: _SummaryStat(
+                  icon: Icons.place_outlined,
+                  value: pickupGroupCount.toString(),
+                  label: 'จุดรับ',
+                  color: const Color(0xFF2563EB),
+                ),
+              ),
+              _divider(context),
+              Expanded(
+                child: _SummaryStat(
+                  icon: Icons.how_to_reg_outlined,
+                  value: '$checkedIn/$passengers',
+                  label: 'เช็คอินแล้ว',
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              if (careAlerts > 0) ...[
+                _divider(context),
+                Expanded(
+                  child: _SummaryStat(
+                    icon: Icons.health_and_safety_outlined,
+                    value: careAlerts.toString(),
+                    label: 'ต้องดูแล',
+                    color: AppTheme.errorColor,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          // มีจอยทริปในรอบนี้ — บอกให้ชัดว่าคนที่ต้องรับขึ้นรถจริง ๆ มีเท่าไหร่
+          if (joinTrip > 0) ...[
+            const SizedBox(height: 14),
+            Divider(
+              height: 1,
+              color: AppTheme.border(context).withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _BookingTypeTally(
+                    icon: Icons.airline_seat_recline_normal_rounded,
+                    label: 'จองปกติ · ขึ้นรถตามจุดรับ',
+                    count: regular,
+                    color: const Color(0xFF059669),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _BookingTypeTally(
+                    icon: Icons.hail_rounded,
+                    label: 'จอยทริป · ไม่มีจุดขึ้นรถ',
+                    count: joinTrip,
+                    color: _joinTripColor,
+                  ),
+                ),
+              ],
             ),
           ],
         ],
@@ -578,6 +623,76 @@ class _ManifestSummary extends StatelessWidget {
     height: 36,
     color: AppTheme.border(context).withValues(alpha: 0.5),
   );
+}
+
+/// หัวคนแยกตามชนิดการจอง ใต้แถบสรุป — โผล่เฉพาะรอบที่มีจอยทริปจริง ๆ
+class _BookingTypeTally extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int count;
+  final Color color;
+
+  const _BookingTypeTally({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 5),
+              Text(
+                '$count',
+                style: appFont(
+                  fontSize: AppText.sizeSubtitle,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.onSurface(context),
+                  height: 1,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Text(
+                'คน',
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w700,
+              height: 1.3,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SummaryStat extends StatelessWidget {
@@ -653,6 +768,9 @@ class _PickupGroupCard extends StatelessWidget {
     final region = textOf(group['region_label']);
     final mapUrl = textOf(group['map_url']);
     final isCustom = group['is_custom'] == true;
+    // กลุ่มจอยทริป — ไม่ใช่จุดรับจริง จึงไม่มีแผนที่/ปุ่ม "รับครบแล้ว" และใช้สีของตัวเอง
+    final isJoinGroup = group['is_join_trip'] == true;
+    final accent = isJoinGroup ? _joinTripColor : const Color(0xFF059669);
     // พิกัดหมุดที่ลูกค้าปักเอง — โชว์เป็นตัวเลขให้สตาฟอ่าน/เทียบได้
     final coordsText = isCustom && group['lat'] is num && group['lng'] is num
         ? '${(group['lat'] as num).toStringAsFixed(5)}, ${(group['lng'] as num).toStringAsFixed(5)}'
@@ -673,14 +791,14 @@ class _PickupGroupCard extends StatelessWidget {
           // Header
           Container(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
-            color: const Color(0xFF059669).withValues(alpha: 0.06),
+            color: accent.withValues(alpha: 0.06),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.place_rounded,
+                Icon(
+                  isJoinGroup ? Icons.hail_rounded : Icons.place_rounded,
                   size: 18,
-                  color: Color(0xFF059669),
+                  color: accent,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -725,6 +843,43 @@ class _PickupGroupCard extends StatelessWidget {
                                     fontSize: AppText.sizeCaption,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.warningColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (isJoinGroup)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _joinTripColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusPill,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 12,
+                                  color: _joinTripColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  region.isEmpty
+                                      ? 'ไปเจอกันที่จุดนัดพบ'
+                                      : region,
+                                  style: appFont(
+                                    fontSize: AppText.sizeCaption,
+                                    fontWeight: FontWeight.w800,
+                                    color: _joinTripColor,
                                   ),
                                 ),
                               ],
@@ -789,9 +944,8 @@ class _PickupGroupCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: allIn
-                            ? AppTheme.primaryColor.withValues(alpha: 0.12)
-                            : const Color(0xFF059669).withValues(alpha: 0.12),
+                        color: (allIn ? AppTheme.primaryColor : accent)
+                            .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                       ),
                       child: Text(
@@ -799,9 +953,7 @@ class _PickupGroupCard extends StatelessWidget {
                         style: appFont(
                           fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w800,
-                          color: allIn
-                              ? AppTheme.primaryColor
-                              : const Color(0xFF059669),
+                          color: allIn ? AppTheme.primaryColor : accent,
                         ),
                       ),
                     ),
@@ -969,6 +1121,7 @@ class _ManifestPassengerRow extends StatelessWidget {
     final nickname = textOf(passenger['nickname']);
     final phone = textOf(passenger['phone']);
     final checkedIn = passenger['checked_in'] == true;
+    final isJoinTrip = passenger['is_join_trip'] == true;
     final avatarUrl = ApiConfig.mediaUrl(passenger['avatar_url']);
 
     final allergies = textOf(passenger['allergies']);
@@ -1017,10 +1170,17 @@ class _ManifestPassengerRow extends StatelessWidget {
                     ],
                   ],
                 ),
-                if (phone.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  _CallButton(phone: phone, compact: true),
-                ],
+                const SizedBox(height: 5),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _BookingTypeChip(isJoinTrip: isJoinTrip),
+                    if (phone.isNotEmpty)
+                      _CallButton(phone: phone, compact: true),
+                  ],
+                ),
                 _SafetyBadges(
                   allergies: allergies,
                   healthNotes: healthNotes,
@@ -1037,6 +1197,51 @@ class _ManifestPassengerRow extends StatelessWidget {
             checkedIn: checkedIn,
             busy: busy,
             onTap: checkedIn ? null : onCheckIn,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// สีประจำ "จอยทริป" ทั้งหน้า — คนละสีกับจุดรับ (เขียว) และหมุดที่ลูกค้าปักเอง (ส้ม)
+const Color _joinTripColor = Color(0xFF6366F1);
+
+/// ชนิดการจองของผู้โดยสารคนนี้ — จอยทริปคือไปเจอกันเองที่จุดนัด ไม่มีจุดขึ้นรถ
+/// ส่วนจองปกติคือรอขึ้นรถตามจุดรับ สองแบบนี้สตาฟต้องนับหัวคนละทาง จึงติดป้ายทุกคน
+class _BookingTypeChip extends StatelessWidget {
+  final bool isJoinTrip;
+
+  const _BookingTypeChip({required this.isJoinTrip});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isJoinTrip ? _joinTripColor : AppTheme.mutedText(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isJoinTrip ? 0.12 : 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isJoinTrip
+                ? Icons.hail_rounded
+                : Icons.airline_seat_recline_normal_rounded,
+            size: 12,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isJoinTrip ? 'จอยทริป' : 'จองปกติ',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
           ),
         ],
       ),

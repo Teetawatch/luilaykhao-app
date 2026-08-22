@@ -882,6 +882,31 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
     final pickupBreakdown = (s['pickup_breakdown'] as List? ?? []).map(_toMap).toList();
     final noPickupCount = _numberValue(s['no_pickup_count']);
     final noPickupPassengers = (s['no_pickup_passengers'] as List? ?? []).toList();
+    // จอยทริปไม่มีจุดขึ้นรถโดยตั้งใจ — แยกออกจาก "ไม่ระบุจุดรับ" ที่แปลว่าข้อมูลหาย
+    final joinTripCount = _numberValue(s['join_trip_count']);
+    final joinTripPassengers =
+        (s['join_trip_passengers'] as List? ?? []).toList();
+
+    final extraPickupRows = <Widget>[
+      if (noPickupCount > 0)
+        _PickupPointRow(
+          point: {
+            'label': 'ไม่ระบุจุดรับ',
+            'passenger_count': noPickupCount,
+            'passengers': noPickupPassengers,
+          },
+          isDefault: true,
+        ),
+      if (joinTripCount > 0)
+        _PickupPointRow(
+          point: {
+            'label': 'จอยทริป (ไม่มีจุดขึ้นรถ)',
+            'passenger_count': joinTripCount,
+            'passengers': joinTripPassengers,
+          },
+          isJoinTrip: true,
+        ),
+    ];
 
     final checkinProgress = totalConfirmed > 0
         ? (checkedIn / totalConfirmed).clamp(0.0, 1.0)
@@ -1067,7 +1092,8 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                 ),
 
                 // Pickup breakdown
-                if (pickupBreakdown.isNotEmpty || noPickupCount > 0) ...[
+                if (pickupBreakdown.isNotEmpty ||
+                    extraPickupRows.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   GestureDetector(
                     onTap: () => setState(() => _pickupsExpanded = !_pickupsExpanded),
@@ -1109,21 +1135,20 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                           for (var i = 0; i < pickupBreakdown.length; i++) ...[
                             _PickupPointRow(point: pickupBreakdown[i]),
                             if (i < pickupBreakdown.length - 1 ||
-                                noPickupCount > 0)
+                                extraPickupRows.isNotEmpty)
                               Divider(
                                 height: 12,
                                 color: AppTheme.border(context).withValues(alpha: 0.5),
                               ),
                           ],
-                          if (noPickupCount > 0)
-                            _PickupPointRow(
-                              point: {
-                                'label': 'ไม่ระบุจุดรับ',
-                                'passenger_count': noPickupCount,
-                                'passengers': noPickupPassengers,
-                              },
-                              isDefault: true,
-                            ),
+                          for (var i = 0; i < extraPickupRows.length; i++) ...[
+                            extraPickupRows[i],
+                            if (i < extraPickupRows.length - 1)
+                              Divider(
+                                height: 12,
+                                color: AppTheme.border(context).withValues(alpha: 0.5),
+                              ),
+                          ],
                         ],
                       ),
                     ),
@@ -1153,7 +1178,14 @@ class _PickupPointRow extends StatefulWidget {
   final Map<String, dynamic> point;
   final bool isDefault;
 
-  const _PickupPointRow({required this.point, this.isDefault = false});
+  /// แถวรวมคนจอยทริป — ไม่ใช่จุดขึ้นรถจริง จึงใช้ไอคอน/สีของตัวเอง
+  final bool isJoinTrip;
+
+  const _PickupPointRow({
+    required this.point,
+    this.isDefault = false,
+    this.isJoinTrip = false,
+  });
 
   @override
   State<_PickupPointRow> createState() => _PickupPointRowState();
@@ -1163,6 +1195,7 @@ class _PickupPointRowState extends State<_PickupPointRow> {
   bool _expanded = false;
 
   static const Color _teal = Color(0xFF059669);
+  static const Color _joinTrip = Color(0xFF6366F1);
 
   List<Map<String, dynamic>> get _passengers =>
       (widget.point['passengers'] as List? ?? []).map(_toMap).toList();
@@ -1185,6 +1218,9 @@ class _PickupPointRowState extends State<_PickupPointRow> {
     final count = _numberValue(widget.point['passenger_count']);
     final passengers = _passengers;
     final canExpand = passengers.isNotEmpty;
+    final accent = widget.isJoinTrip
+        ? _joinTrip
+        : (widget.isDefault ? AppTheme.textSecondary : _teal);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1203,9 +1239,13 @@ class _PickupPointRowState extends State<_PickupPointRow> {
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Icon(
-                  widget.isDefault ? Icons.help_outline : Icons.trip_origin,
+                  widget.isJoinTrip
+                      ? Icons.hail_rounded
+                      : (widget.isDefault
+                          ? Icons.help_outline
+                          : Icons.trip_origin),
                   size: 14,
-                  color: widget.isDefault ? AppTheme.textSecondary : _teal,
+                  color: accent,
                 ),
               ),
               const SizedBox(width: 8),
@@ -1220,7 +1260,9 @@ class _PickupPointRowState extends State<_PickupPointRow> {
                         fontWeight: FontWeight.w600,
                         color: widget.isDefault
                             ? AppTheme.textSecondary
-                            : AppTheme.textMain,
+                            : (widget.isJoinTrip
+                                ? _joinTrip
+                                : AppTheme.textMain),
                         letterSpacing: -0.1,
                       ),
                     ),
@@ -1240,7 +1282,8 @@ class _PickupPointRowState extends State<_PickupPointRow> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: _teal.withValues(alpha: 0.10),
+                  color: (widget.isJoinTrip ? _joinTrip : _teal)
+                      .withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                 ),
                 child: Text(
@@ -1248,7 +1291,7 @@ class _PickupPointRowState extends State<_PickupPointRow> {
                   style: appFont(
                     fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w700,
-                    color: _teal,
+                    color: widget.isJoinTrip ? _joinTrip : _teal,
                     letterSpacing: -0.1,
                   ),
                 ),
@@ -1276,6 +1319,8 @@ class _PickupPointRowState extends State<_PickupPointRow> {
                   _PickupPassengerRow(
                     passenger: p,
                     onCall: _call,
+                    // ในแถวจอยทริปทุกคนจอยอยู่แล้ว ป้ายซ้ำไม่มีประโยชน์
+                    showJoinTag: !widget.isJoinTrip,
                   ),
               ],
             ),
@@ -1290,14 +1335,20 @@ class _PickupPointRowState extends State<_PickupPointRow> {
 class _PickupPassengerRow extends StatelessWidget {
   final Map<String, dynamic> passenger;
   final Future<void> Function(String phone) onCall;
+  final bool showJoinTag;
 
-  const _PickupPassengerRow({required this.passenger, required this.onCall});
+  const _PickupPassengerRow({
+    required this.passenger,
+    required this.onCall,
+    this.showJoinTag = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     final name = _cleanText(passenger['name'], fallback: 'ผู้โดยสาร');
     final phone = _cleanText(passenger['phone']);
     final checkedIn = passenger['checked_in'] == true;
+    final isJoinTrip = passenger['is_join_trip'] == true;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1323,6 +1374,24 @@ class _PickupPassengerRow extends StatelessWidget {
               ),
             ),
           ),
+          if (isJoinTrip && showJoinTag) ...[
+            Container(
+              margin: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              ),
+              child: Text(
+                'จอยทริป',
+                style: appFont(
+                  fontSize: AppText.sizeMicro,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF6366F1),
+                ),
+              ),
+            ),
+          ],
           if (phone.isNotEmpty)
             GestureDetector(
               onTap: () => onCall(phone),
