@@ -25,6 +25,8 @@ class ApiEndpoints {
   static String tripRelated(String slug) => 'trips/$slug/related';
   static const categories = 'categories';
   static const stats = 'stats';
+  // ไกด์ประเภทรถรับ-ส่งจากจุดรับต่างภูมิภาค (แสดงตอนเลือกจุดขึ้นรถที่มีค่าใช้จ่าย)
+  static const pickupVehicleClasses = 'pickup-vehicle-classes';
   static const heroSlides = 'hero-slides';
 
   // Blog / Articles (public read)

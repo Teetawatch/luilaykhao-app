@@ -26,6 +26,7 @@ import '../utils/thai_date.dart';
 import '../widgets/elevation_profile_chart.dart';
 import '../widgets/flash_countdown_pill.dart';
 import '../widgets/moderation_sheet.dart';
+import '../widgets/pickup_vehicle_guide.dart';
 import '../widgets/route_map_card.dart';
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
 import '../widgets/weather_card.dart';
@@ -122,6 +123,11 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   void initState() {
     super.initState();
     _future = _loadData();
+    // ไกด์ประเภทรถรับ-ส่ง — ใช้เมื่อผู้ใช้เลือกจุดรับที่มีค่าใช้จ่ายเพิ่ม
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<AppProvider>().ensurePickupVehicleClasses();
+    });
     _seatPoll = Timer.periodic(
       const Duration(seconds: 25),
       (_) => _refreshSchedules(),

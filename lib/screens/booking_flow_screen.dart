@@ -15,6 +15,7 @@ import '../utils/thai_date.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/document_attach_field.dart';
 import '../widgets/min_tap_target.dart';
+import '../widgets/pickup_vehicle_guide.dart';
 import '../theme/app_theme.dart';
 import '../services/booking_draft_store.dart';
 import '../widgets/saved_traveller_picker.dart';
@@ -377,7 +378,12 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       _loadSeatMap(preserveSelection: initialSeatIds.isNotEmpty);
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _offerDraft());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _offerDraft();
+      // ไกด์ประเภทรถรับ-ส่ง — โหลดเงียบ ๆ ล้มก็ไม่กระทบขั้นตอนจอง
+      context.read<AppProvider>().ensurePickupVehicleClasses();
+    });
   }
 
   String get _draftSlug => textOf(widget.trip['slug']);
@@ -1240,6 +1246,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             isInternational: _isInternational,
             minPassportExpiry: _minPassportExpiry,
             documentRequirements: _documentRequirements,
+            schedulePrice:
+                num.tryParse(textOf(_selectedSchedule['price'])) ?? 0,
             onAddPassenger: _addPassenger,
             onRemovePassenger: _removePassenger,
             onUseProfile: _fillPassengerFromProfile,

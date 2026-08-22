@@ -79,6 +79,8 @@ class TravelerFormSection extends StatelessWidget {
   final DateTime? minPassportExpiry;
   /// เอกสารที่ทริปนี้ขอให้แนบ — แอดมินตั้งไว้บนทริป ว่างได้ (ไม่ต้องแนบอะไร)
   final List<dynamic> documentRequirements;
+  /// ราคาต่อคนของรอบ — ใช้ดูว่าจุดรับที่เลือกแพงกว่ารอบ (= มีรถวิ่งไปรับ) หรือไม่
+  final num schedulePrice;
 
   const TravelerFormSection({
     super.key,
@@ -95,6 +97,7 @@ class TravelerFormSection extends StatelessWidget {
     this.isInternational = false,
     this.minPassportExpiry,
     this.documentRequirements = const [],
+    this.schedulePrice = 0,
   });
 
   @override
@@ -128,6 +131,11 @@ class TravelerFormSection extends StatelessWidget {
               onUseSavedTraveller: () => onUseSavedTraveller(index),
             );
           }),
+          _PickupVehicleGuideSlot(
+            passengers: passengers,
+            pickupPoints: pickupPoints,
+            schedulePrice: schedulePrice,
+          ),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
             child: passengers.length > 1
@@ -147,6 +155,64 @@ class TravelerFormSection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// แสดงไกด์ประเภทรถรับ-ส่ง "เมื่อมีคนเลือกจุดขึ้นรถที่แพงกว่าราคารอบ" เท่านั้น
+///
+/// จุดรับต่างภูมิภาคที่คิดเพิ่ม = มีรถวิ่งมารับถึงจุดขึ้นรถจุดแรก การเห็นรูปรถ
+/// ตรงนี้ทำให้ตัวเลขที่บวกเพิ่มมีหน้าตา ไม่ใช่ค่าธรรมเนียมลอย ๆ — ส่วนจุดขึ้นรถ
+/// หลักที่ราคาเท่ารอบไม่มีอะไรต้องอธิบาย จึงไม่แสดง
+class _PickupVehicleGuideSlot extends StatelessWidget {
+  final List<_PassengerControllers> passengers;
+  final List<dynamic> pickupPoints;
+  final num schedulePrice;
+
+  const _PickupVehicleGuideSlot({
+    required this.passengers,
+    required this.pickupPoints,
+    required this.schedulePrice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (pickupPoints.isEmpty || passengers.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final classes = context.watch<AppProvider>().pickupVehicleClasses;
+    if (classes.isEmpty) return const SizedBox.shrink();
+
+    return AnimatedBuilder(
+      animation: Listenable.merge(
+        passengers.map((p) => p.pickupPointId).toList(),
+      ),
+      builder: (context, _) {
+        // `price` ของจุดรับคือราคาต่อคนเมื่อขึ้นจุดนั้น (ทับราคารอบ) ไม่ใช่ส่วนต่าง
+        // จุดที่เท่ากับราคารอบจึงไม่นับว่าจ่ายเพิ่ม
+        final hasSurcharge = passengers.any((passenger) {
+          final id = passenger.pickupPointId.value;
+          if (id == null) return false;
+
+          return pickupPoints.map(asMap).any((point) {
+            if (int.tryParse(point['id'].toString()) != id) return false;
+            final price = _asNum(point['price']);
+            return price > 0 && price > schedulePrice;
+          });
+        });
+
+        if (!hasSurcharge) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 8),
+          child: PickupVehicleGuide(
+            classes: classes,
+            paxCount: passengers.length,
+            hasSurcharge: true,
+          ),
+        );
+      },
     );
   }
 }

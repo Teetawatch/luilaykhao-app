@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/api_config.dart';
 import '../config/api_endpoints.dart';
+import '../models/pickup_vehicle_class.dart';
 import '../models/sos_alert.dart';
 import '../services/analytics_service.dart';
 import '../services/api_client.dart';
@@ -61,6 +62,9 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> almostFullTrips = [];
   List<dynamic> flashSaleTrips = [];
   List<dynamic> categories = [];
+  /// ไกด์ประเภทรถรับ-ส่งจุดรับต่างภูมิภาค — โหลดครั้งเดียวแล้วใช้ซ้ำทั้งแอป
+  List<PickupVehicleClass> pickupVehicleClasses = [];
+  bool _pickupVehicleClassesLoaded = false;
   List<dynamic> bookings = [];
   // True once account data (incl. bookings) has been loaded at least once —
   // from the network or a cache restore. Lets screens show a skeleton on the
@@ -270,6 +274,9 @@ class AppProvider extends ChangeNotifier {
     );
     categories = List<dynamic>.from(
       cache.readPublic<List>('categories') ?? const [],
+    );
+    pickupVehicleClasses = PickupVehicleClass.listFrom(
+      cache.readPublic<List>('pickup_vehicle_classes'),
     );
     reviews = List<dynamic>.from(cache.readPublic<List>('reviews') ?? const []);
     recentlyViewedTrips = List<dynamic>.from(
@@ -490,6 +497,40 @@ class AppProvider extends ChangeNotifier {
       cache.writePublic('flash_sale', flashSaleTrips);
     }
     notifyListeners();
+  }
+
+  /// โหลดไกด์ประเภทรถรับ-ส่งครั้งเดียวต่อการเปิดแอป
+  ///
+  /// ไม่ได้อยู่ใน [loadPublicData] เพราะหน้าแรกไม่ได้ใช้ — เรียกจากหน้าที่แสดง
+  /// จุดรับจริง ๆ (รายละเอียดทริป/ขั้นตอนจอง) พังก็เงียบ ๆ ไป เพราะเป็นแค่
+  /// ข้อมูลประกอบ ไม่ควรทำให้หน้าจองสะดุด
+  Future<void> ensurePickupVehicleClasses({bool force = false}) async {
+    if (_pickupVehicleClassesLoaded && !force) return;
+    _pickupVehicleClassesLoaded = true;
+
+    try {
+      final response = await api.get(ApiEndpoints.pickupVehicleClasses);
+      final classes = PickupVehicleClass.listFrom(api.data(response));
+      if (classes.isEmpty && pickupVehicleClasses.isNotEmpty) return;
+
+      pickupVehicleClasses = classes;
+      OfflineCache.instance.writePublic(
+        'pickup_vehicle_classes',
+        classes.map((c) => c.toJson()).toList(),
+      );
+      notifyListeners();
+    } catch (_) {
+      // เก็บของเดิมจากแคชไว้ใช้ต่อ และเปิดให้ลองใหม่รอบหน้า
+      _pickupVehicleClassesLoaded = false;
+    }
+  }
+
+  /// ประเภทรถที่ตรงกับจำนวนผู้โดยสาร [pax] (null = ไม่มีช่วงไหนครอบคลุม)
+  PickupVehicleClass? pickupVehicleClassFor(int pax) {
+    for (final c in pickupVehicleClasses) {
+      if (c.covers(pax)) return c;
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>> trip(String slug) async {

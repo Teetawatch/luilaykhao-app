@@ -185,6 +185,9 @@ class TravelPlanSelectionSection extends StatelessWidget {
                       points: pickupMaps,
                       selectedId: pickupValue,
                       onChanged: onPickupChanged,
+                      basePrice:
+                          num.tryParse(textOf(selectedScheduleMap['price'])) ??
+                          0,
                     ),
                 ],
               ],
@@ -1770,10 +1773,14 @@ class _PickupPointSelector extends StatelessWidget {
   final int? selectedId;
   final ValueChanged<int?> onChanged;
 
+  /// ราคาต่อคนของรอบนี้ — จุดรับที่แพงกว่านี้คือจุดต่างภูมิภาคที่มีรถวิ่งไปรับ
+  final num basePrice;
+
   const _PickupPointSelector({
     required this.points,
     required this.selectedId,
     required this.onChanged,
+    this.basePrice = 0,
   });
 
   @override
@@ -1822,9 +1829,36 @@ class _PickupPointSelector extends StatelessWidget {
             ),
           ),
         ],
+        // จุดรับที่แพงกว่าราคารอบ = มีรถวิ่งมารับถึงจุดขึ้นรถจุดแรก ให้เห็นว่าเป็นรถแบบไหน
+        if (_pickupHasExtraCharge(selected, basePrice)) ...[
+          const SizedBox(height: 12),
+          Builder(
+            builder: (context) {
+              final classes =
+                  context.watch<AppProvider>().pickupVehicleClasses;
+              if (classes.isEmpty) return const SizedBox.shrink();
+
+              return PickupVehicleGuide(
+                classes: classes,
+                hasSurcharge: true,
+              );
+            },
+          ),
+        ],
       ],
     );
   }
+}
+
+/// จุดรับนี้แพงกว่าราคารอบไหม
+///
+/// `price` ของจุดรับคือ "ราคาต่อคนเมื่อขึ้นจุดนี้" (ทับราคารอบ) ไม่ใช่ส่วนต่าง
+/// จุดที่ราคาเท่ากับรอบจึงไม่ได้จ่ายเพิ่ม และไม่ต้องอธิบายเรื่องรถรับ-ส่ง
+/// ตัวเลขจาก API มาเป็นสตริง decimal ("0.00") จึงต้อง parse ก่อนเทียบ
+bool _pickupHasExtraCharge(Map<String, dynamic> point, num basePrice) {
+  if (point.isEmpty) return false;
+  final price = num.tryParse(textOf(point['price'])) ?? 0;
+  return price > 0 && price > basePrice;
 }
 
 /// Prominent "เวลาขึ้นรถ" badge shown under a pickup point. Apple-style: a solid
