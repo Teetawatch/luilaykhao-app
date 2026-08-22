@@ -346,7 +346,9 @@ class TravelSliverAppBar extends StatelessWidget {
         title,
         style: AppTheme.appBarTitleStyle(context, color: colorScheme.onSurface),
       ),
-      leading: showBackButton && Navigator.canPop(context)
+      // ถาม route ของหน้านี้ ไม่ใช่ทั้ง navigator — หน้าที่ฝังอยู่ในแท็บจะได้
+      // ไม่ขึ้นปุ่มย้อนกลับค้างไว้เมื่อมีหน้าอื่นถูก push ทับแท็บอยู่
+      leading: showBackButton && (ModalRoute.canPopOf(context) ?? false)
           ? Padding(
               padding: const EdgeInsets.all(8.0),
               child: CircleAvatar(
@@ -546,7 +548,9 @@ class _LargeTitleBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!Navigator.canPop(context)) return const SizedBox(width: 12);
+    if (!(ModalRoute.canPopOf(context) ?? false)) {
+      return const SizedBox(width: 12);
+    }
     return IconButton(
       onPressed: () {
         HapticFeedback.selectionClick();

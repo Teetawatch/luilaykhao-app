@@ -233,7 +233,7 @@ class _TrackVehiclePageState extends State<TrackVehiclePage> {
                   fontSize: AppText.sizeTitle,
                 ),
               ),
-              leading: !widget.embedded && Navigator.canPop(context)
+              leading: !widget.embedded && (ModalRoute.canPopOf(context) ?? false)
                   ? IconButton(
                       tooltip: 'ย้อนกลับ',
                       icon: const Icon(Icons.arrow_back_ios_new_rounded),

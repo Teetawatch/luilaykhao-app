@@ -152,7 +152,7 @@ class _AllReviewsScreenState extends State<AllReviewsScreen> {
                   fontSize: AppText.sizeTitle,
                 ),
               ),
-              leading: Navigator.canPop(context)
+              leading: (ModalRoute.canPopOf(context) ?? false)
                   ? Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: IconButton(

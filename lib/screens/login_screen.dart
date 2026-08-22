@@ -249,7 +249,12 @@ class _LoginHeader extends StatelessWidget {
     final topPad = MediaQuery.paddingOf(context).top;
     final isDark = AppTheme.isDark(context);
     final bgFade = AppTheme.background(context);
-    final canPop = Navigator.canPop(context);
+    // ถามที่ "route ของหน้านี้" ไม่ใช่ที่ navigator ทั้งเส้น — หน้าเข้าสู่ระบบ
+    // ตัวเดียวกันนี้ถูกฝังอยู่ในแท็บโปรไฟล์ด้วย ถ้าถาม Navigator.canPop จะได้
+    // true ทันทีที่มีหน้าอื่น (เช่น หน้าทริป) ถูก push ทับแท็บอยู่ แล้วค่านั้น
+    // ค้างอยู่ต่อเพราะ canPop ไม่ใช่ dependency ที่ทำให้ rebuild — ปุ่มย้อนกลับ
+    // จึงโผล่บนแท็บและกดแล้ว pop หน้าเดียวที่มีทิ้งจนจอดำ
+    final canPop = ModalRoute.canPopOf(context) ?? false;
 
     return SizedBox(
       height: _height,
@@ -313,7 +318,9 @@ class _LoginHeader extends StatelessWidget {
               top: topPad + 8,
               left: 12,
               child: _GlassBackButton(
-                onPressed: () => Navigator.pop(context),
+                // maybePop ไม่ใช่ pop — ถ้าไม่มีอะไรให้ถอย ให้ไม่เกิดอะไรขึ้น
+                // ดีกว่าดันหน้าสุดท้ายออกจนเหลือจอเปล่า
+                onPressed: () => Navigator.maybePop(context),
               ),
             ),
           Positioned(

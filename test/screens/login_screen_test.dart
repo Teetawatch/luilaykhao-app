@@ -49,4 +49,91 @@ void main() {
     expect(find.text('ลืมรหัสผ่าน?'), findsOneWidget);
     expect(find.text('หรือใช้อีเมล'), findsOneWidget);
   });
+
+  /// หน้าเข้าสู่ระบบตัวเดียวกันนี้ถูกฝังอยู่ในแท็บโปรไฟล์ตอนยังไม่ล็อกอิน
+  /// เปิดหน้าทริป (push ทับแท็บ) แล้วถอยกลับมา ปุ่มย้อนกลับต้องไม่ติดค้างมา
+  ///
+  /// จุดตายคือหัวหน้าจอถูก rebuild "ระหว่างที่หน้าทริปยังทับอยู่" (เช่นคีย์บอร์ด
+  /// เปิด/ปิดทำให้ padding ของ MediaQuery เปลี่ยน) ของเดิมอ่าน Navigator.canPop
+  /// ตอนนั้นได้ true แล้วค้างอยู่อย่างนั้น เพราะ canPop ไม่ทำให้ rebuild เอง
+  /// ปุ่มจึงโผล่บนแท็บ และกดแล้ว pop หน้าสุดท้ายทิ้งจนเหลือจอดำ
+  testWidgets('ปุ่มย้อนกลับไม่ติดค้างเมื่อหน้าเข้าสู่ระบบอยู่ในแท็บ', (
+    tester,
+  ) async {
+    final provider = AppProvider();
+    addTearDown(provider.dispose);
+
+    final navigatorKey = GlobalKey<NavigatorState>();
+    late StateSetter rebuildTab;
+    var topPadding = 24.0;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<AppProvider>.value(
+        value: provider,
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              rebuildTab = setState;
+              return MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(padding: EdgeInsets.only(top: topPadding)),
+                child: const LoginScreen(popOnSuccess: false),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final backIcon = find.byIcon(Icons.arrow_back_rounded);
+    expect(backIcon, findsNothing, reason: 'แท็บล่างสุดไม่มีอะไรให้ถอย');
+
+    // เปิดหน้าอื่นทับ (เหมือนกดเข้าหน้าทริป) แล้วหัวหน้าจอถูก rebuild ระหว่างนั้น
+    navigatorKey.currentState!.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: Text('ทริป')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    rebuildTab(() => topPadding = 48);
+    await tester.pump();
+
+    // ปิดหน้าทริปกลับมาที่แท็บ
+    navigatorKey.currentState!.pop();
+    await tester.pumpAndSettle();
+
+    expect(
+      backIcon,
+      findsNothing,
+      reason: 'ปุ่มย้อนกลับต้องไม่ติดมาจากหน้าทริป',
+    );
+  });
+
+  testWidgets('หน้าเข้าสู่ระบบที่ถูก push ทับ ยังมีปุ่มย้อนกลับ', (
+    tester,
+  ) async {
+    final provider = AppProvider();
+    addTearDown(provider.dispose);
+
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      ChangeNotifierProvider<AppProvider>.value(
+        value: provider,
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          home: const Scaffold(body: Text('หน้าทริป')),
+        ),
+      ),
+    );
+
+    navigatorKey.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+  });
 }

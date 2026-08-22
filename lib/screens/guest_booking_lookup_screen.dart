@@ -292,7 +292,7 @@ class _GuestBookingLookupScreenState extends State<GuestBookingLookupScreen> {
                 'ค้นหาการจอง',
                 style: AppTheme.appBarTitleStyle(context),
               ),
-              leading: Navigator.canPop(context)
+              leading: (ModalRoute.canPopOf(context) ?? false)
                   ? IconButton(
                       tooltip: 'ย้อนกลับ',
                       icon: const Icon(Icons.arrow_back_ios_new_rounded),
