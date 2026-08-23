@@ -238,16 +238,25 @@ class _PaymentTypeSection extends StatelessWidget {
   final String value;
   final ValueChanged<String> onChanged;
 
+  /// จำนวนงวดที่ลูกค้าเลือกไว้ (null = ใช้ค่าที่เซิร์ฟเวอร์แนะนำ)
+  final int? installmentCount;
+  final ValueChanged<int> onInstallmentCountChanged;
+
   const _PaymentTypeSection({
     required this.booking,
     required this.value,
     required this.onChanged,
+    required this.installmentCount,
+    required this.onInstallmentCountChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final count = _installmentCount(booking);
-    final perInstallment = _installmentAmount(booking);
+    final count = _installmentCount(booking, preferred: installmentCount);
+    final perInstallment = _installmentAmount(booking, preferred: installmentCount);
+    final countChoices = _availableInstallmentCounts(booking);
+    final finalDue = _installmentFinalDueDate(booking, preferred: installmentCount);
+    final leadDays = _installmentLeadDays(booking);
     final installmentOn = _installmentAvailable(booking);
     final installmentBlocked = _installmentNotAvailable(booking);
     final depositOn = _depositAvailable(booking);
@@ -257,8 +266,6 @@ class _PaymentTypeSection extends StatelessWidget {
     final splitShare = _splitOwnShare(booking);
     final splitFriends = _splitPassengerCount(booking) - 1;
     final days = _daysUntilTrip(booking);
-    final interval = _installmentInterval(booking);
-    final maxAllowed = _maxAllowedInstallmentCount(booking);
 
     return _SectionCard(
       child: Column(
@@ -290,17 +297,15 @@ class _PaymentTypeSection extends StatelessWidget {
           if (installmentOn || installmentBlocked) ...[
             const SizedBox(height: 10),
             if (installmentBlocked)
-              _DisabledInstallmentTile(
-                days: days,
-                interval: interval,
-              )
+              _DisabledInstallmentTile(days: days, leadDays: leadDays)
             else
               _ChoiceTile(
                 selected: value == 'installment',
                 icon: Icons.calendar_month_rounded,
-                title: 'ผ่อนชำระ ${maxAllowed < count ? maxAllowed : count} งวด',
-                subtitle:
-                    'งวดแรก ${money(perInstallment)} · ทุก $interval วัน',
+                title: 'ผ่อนชำระ $count งวด',
+                subtitle: finalDue.isEmpty
+                    ? 'งวดละ ${money(perInstallment)}'
+                    : 'งวดละ ${money(perInstallment)} · ปิดยอด ${dateText(finalDue)}',
                 onTap: () => onChanged('installment'),
               ),
           ],
@@ -318,10 +323,20 @@ class _PaymentTypeSection extends StatelessWidget {
             ),
           ],
           if (value == 'installment' && !installmentBlocked) ...[
+            if (countChoices.length > 1) ...[
+              const SizedBox(height: 14),
+              _InstallmentCountPicker(
+                choices: countChoices,
+                selected: count,
+                onSelected: onInstallmentCountChanged,
+              ),
+            ],
             const SizedBox(height: 14),
-            ..._installmentSchedule(booking).map(
+            ..._installmentSchedule(booking, preferred: installmentCount).map(
               (row) => _InstallmentRow(row: row),
             ),
+            const SizedBox(height: 4),
+            _InstallmentAutoNote(leadDays: leadDays),
           ],
           if (value == 'split') ...[
             const SizedBox(height: 14),
@@ -341,9 +356,9 @@ class _PaymentTypeSection extends StatelessWidget {
 
 class _DisabledInstallmentTile extends StatelessWidget {
   final int days;
-  final int interval;
+  final int leadDays;
 
-  const _DisabledInstallmentTile({required this.days, required this.interval});
+  const _DisabledInstallmentTile({required this.days, required this.leadDays});
 
   @override
   Widget build(BuildContext context) {
@@ -409,7 +424,7 @@ class _DisabledInstallmentTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'ระยะเวลาไม่เพียงพอสำหรับการผ่อน',
+                        'ทริปนี้ใกล้เกินไปสำหรับการผ่อน',
                         style: TextStyle(
                           fontSize: AppText.sizeCaption,
                           color: AppTheme.border(context),
@@ -440,7 +455,7 @@ class _DisabledInstallmentTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'ทริปจะเริ่มในอีก $days วัน ต้องมีอย่างน้อย ${interval + 1} วันขึ้นไปจึงจะผ่อนได้ขั้นต่ำ 2 งวด',
+                    'ทริปจะเริ่มในอีก $days วัน และยอดผ่อนต้องปิดก่อนเดินทาง $leadDays วัน จึงเหลือเวลาไม่พอแบ่งงวด',
                     style: const TextStyle(
                       fontSize: AppText.sizeCaption,
                       color: Color(0xFF92400E),

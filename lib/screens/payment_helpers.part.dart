@@ -19,6 +19,13 @@ class _InstallmentPreview {
 /// ทางถอยเมื่อ payload เก่าไม่มี expires_at — ต้องตรงกับ Booking::PENDING_TTL_MINUTES
 const int kPaymentWindowFallbackMinutes = 10;
 
+/// ทางถอยของแผนผ่อนเมื่อ payload เก่าไม่มี payment_options
+/// ต้องตรงกับ PaymentQuote ฝั่งเซิร์ฟเวอร์ (INSTALLMENT_LEAD_DAYS /
+/// MIN_INSTALLMENT_GAP_DAYS / MAX_INSTALLMENT_COUNT)
+const int _kInstallmentLeadDays = 15;
+const int _kInstallmentGapDays = 14;
+const int _kMaxInstallmentCount = 6;
+
 /// เส้นตายที่ระบบจะยกเลิกใบนี้เพื่อคืนที่นั่ง — null เมื่อไม่มีเส้นตายให้นับ
 ///
 /// เดินตาม expires_at ที่ BookingResource ส่งมา ไม่ตั้งนาฬิกาของตัวเอง:
@@ -56,9 +63,15 @@ int paymentWindowMinutes(Map<String, dynamic> booking, DateTime deadline) {
 Map<String, dynamic> _quote(Map<String, dynamic> booking) =>
     asMap(booking['payment_options']);
 
-num _amountDue(Map<String, dynamic> booking, String paymentType) {
+num _amountDue(
+  Map<String, dynamic> booking,
+  String paymentType, {
+  int? preferredInstallmentCount,
+}) {
   final type = _normalizePaymentType(booking, paymentType);
-  if (type == 'installment') return _installmentAmount(booking);
+  if (type == 'installment') {
+    return _installmentAmount(booking, preferred: preferredInstallmentCount);
+  }
   if (type == 'deposit') return _depositAmount(booking);
   if (type == 'split') return _splitOwnShare(booking);
   return _asNum(booking['total_amount']);
@@ -103,10 +116,8 @@ num _splitOwnShare(Map<String, dynamic> booking) {
 bool _installmentAvailable(Map<String, dynamic> booking) {
   final installment = asMap(_quote(booking)['installment']);
   if (installment.isNotEmpty) return _asBool(installment['available']);
-  final schedule = asMap(booking['schedule']);
-  if (!_asBool(schedule['installment_enabled'])) return false;
-  if (_installmentCount(booking) <= 1) return false;
-  return true;
+  if (_asBool(booking['is_join_trip'])) return false;
+  return _maxAllowedInstallmentCount(booking) >= 2;
 }
 
 int _daysUntilTrip(Map<String, dynamic> booking) {
@@ -122,11 +133,13 @@ int _daysUntilTrip(Map<String, dynamic> booking) {
   return diff < 0 ? 0 : diff;
 }
 
+/// ทางถอยเมื่อ payload เก่าไม่มี payment_options — สูตรต้องตรงกับ PaymentQuote:
+/// ผ่อนได้ในช่วง "วันนี้ → วันเดินทาง - lead" และแต่ละงวดห่างกันอย่างน้อย 14 วัน
 int _maxAllowedInstallmentCount(Map<String, dynamic> booking) {
-  final days = _daysUntilTrip(booking);
-  final interval = _installmentInterval(booking);
-  if (days <= 0) return 1;
-  return (days / interval).floor() + 1;
+  final window = _daysUntilTrip(booking) - _installmentLeadDays(booking);
+  if (window < _kInstallmentGapDays) return 1;
+  final byGap = (window / _kInstallmentGapDays).floor() + 1;
+  return byGap > _kMaxInstallmentCount ? _kMaxInstallmentCount : byGap;
 }
 
 /// Returns the feasible installment counts (2..min(scheduleMax, timeBased)).
@@ -138,17 +151,13 @@ List<int> _availableInstallmentCounts(Map<String, dynamic> booking) {
         .where((count) => count >= 2)
         .toList();
   }
-  final scheduleMax = _installmentCount(booking);
-  final maxAllowed = _maxAllowedInstallmentCount(booking);
-  final max = scheduleMax < maxAllowed ? scheduleMax : maxAllowed;
+  final max = _maxAllowedInstallmentCount(booking);
   if (max < 2) return [];
   return List.generate(max - 1, (i) => i + 2);
 }
 
-/// True when installment is enabled by schedule but no feasible count exists due to departure proximity.
+/// ผ่อนชำระเปิดให้ทุกรอบอัตโนมัติ เหลือเหตุผลเดียวที่เลือกไม่ได้คือทริปใกล้เกินไป
 bool _installmentNotAvailable(Map<String, dynamic> booking) {
-  final schedule = asMap(booking['schedule']);
-  if (!_asBool(schedule['installment_enabled'])) return false;
   if (_asBool(booking['is_join_trip'])) return false;
   return _availableInstallmentCounts(booking).isEmpty;
 }
@@ -245,8 +254,8 @@ bool _balanceUnpaid(Map<String, dynamic> booking) {
   return _asNum(booking['balance_amount']) > 0;
 }
 
-num _installmentAmount(Map<String, dynamic> booking) {
-  final count = _installmentCount(booking);
+num _installmentAmount(Map<String, dynamic> booking, {int? preferred}) {
+  final count = _installmentCount(booking, preferred: preferred);
   final option = _installmentOption(booking, count);
   if (option.isNotEmpty) return _asNum(option['per_amount']);
   final total = _asNum(booking['total_amount']);
@@ -264,10 +273,18 @@ Map<String, dynamic> _installmentOption(Map<String, dynamic> booking, int count)
 }
 
 /// จำนวนงวดที่แอปจะใช้จริง — ต้องส่งไปกับคำขอชำระเงินด้วย ไม่งั้นหลังบ้านจะใช้
-/// จำนวนงวดของรอบ ซึ่งอาจมากกว่าที่ผ่อนทันก่อนเดินทาง แล้วยอดงวดแรกจะไม่ตรงกัน
-int _installmentCount(Map<String, dynamic> booking) {
+/// จำนวนงวดสูงสุดที่คิดได้ ซึ่งอาจไม่ใช่ที่ลูกค้าเลือก แล้วยอดงวดแรกจะไม่ตรงกัน
+///
+/// [preferred] คือจำนวนงวดที่ลูกค้ากดเลือกบนหน้าจอ — ใช้ได้เฉพาะเมื่ออยู่ในตัวเลือก
+/// ที่เซิร์ฟเวอร์ยืนยันมา การจองที่ยืนยันแผนผ่อนไปแล้วยึดของเดิมเสมอ
+int _installmentCount(Map<String, dynamic> booking, {int? preferred}) {
   final booked = int.tryParse(textOf(booking['installment_count']));
   if (booked != null && booked >= 2) return booked;
+
+  if (preferred != null &&
+      _availableInstallmentCounts(booking).contains(preferred)) {
+    return preferred;
+  }
 
   final quoted =
       int.tryParse(textOf(asMap(_quote(booking)['installment'])['default_count']));
@@ -277,7 +294,19 @@ int _installmentCount(Map<String, dynamic> booking) {
   return int.tryParse(textOf(schedule['installment_count'])) ?? 2;
 }
 
-int _installmentInterval(Map<String, dynamic> booking) {
+/// ระยะห่างเฉลี่ยระหว่างงวด — งวดถูกหารจากเวลาที่เหลือ ไม่ใช่เดินทีละ 30 วัน
+/// ค่าของแผนที่เลือกอยู่ (option) แม่นที่สุด ที่เหลือเป็นทางถอยของ payload เก่า
+int _installmentInterval(Map<String, dynamic> booking, {int? preferred}) {
+  final option = _installmentOption(
+    booking,
+    _installmentCount(booking, preferred: preferred),
+  );
+  final fromOption = _asNum(option['interval_days']).toInt();
+  if (fromOption > 0) return fromOption;
+
+  final quoted = _asNum(asMap(_quote(booking)['installment'])['interval_days']).toInt();
+  if (quoted > 0) return quoted;
+
   final schedule = asMap(booking['schedule']);
   return int.tryParse(
         textOf(
@@ -285,27 +314,53 @@ int _installmentInterval(Map<String, dynamic> booking) {
               schedule['installment_interval_days'],
         ),
       ) ??
-      30;
+      _kInstallmentGapDays;
 }
 
-List<_InstallmentPreview> _installmentSchedule(Map<String, dynamic> booking) {
+/// ต้องปิดยอดผ่อนก่อนวันเดินทางกี่วัน (เซิร์ฟเวอร์เป็นคนกำหนด)
+int _installmentLeadDays(Map<String, dynamic> booking) {
+  final quoted = _asNum(asMap(_quote(booking)['installment'])['lead_days']).toInt();
+  if (quoted > 0) return quoted;
+  final schedule = asMap(booking['schedule']);
+  return int.tryParse(textOf(schedule['installment_lead_days'])) ??
+      _kInstallmentLeadDays;
+}
+
+/// วันครบกำหนดงวดสุดท้ายของแผนที่เลือกอยู่ ('' เมื่อยังผ่อนไม่ได้)
+String _installmentFinalDueDate(Map<String, dynamic> booking, {int? preferred}) {
+  final dates = _installmentSchedule(booking, preferred: preferred);
+  if (dates.isEmpty) return '';
+  return dates.last.dueDate;
+}
+
+/// ตารางงวดที่โชว์ให้ลูกค้าดู — วันครบกำหนดมาจากเซิร์ฟเวอร์ (due_dates) เพราะงวด
+/// ถูกหารจากเวลาที่เหลือถึงวันปิดยอด การคำนวณเองด้วย interval ที่ปัดแล้วจะเพี้ยนไปวันสองวัน
+List<_InstallmentPreview> _installmentSchedule(
+  Map<String, dynamic> booking, {
+  int? preferred,
+}) {
   final total = _asNum(booking['total_amount']);
-  final count = _installmentCount(booking);
-  final interval = _installmentInterval(booking);
-  final per = _installmentAmount(booking);
+  final count = _installmentCount(booking, preferred: preferred);
   final option = _installmentOption(booking, count);
+  final per = _installmentAmount(booking, preferred: preferred);
   final last = option.isNotEmpty
       ? _asNum(option['last_amount'])
       : ((total - per * (count - 1)) * 100).round() / 100;
+  final dueDates = asList(option['due_dates']).map(textOf).toList();
+  final interval = _installmentInterval(booking, preferred: preferred);
   final today = DateTime.now();
+
   return List.generate(count, (index) {
     final no = index + 1;
-    final dueDate = today.add(Duration(days: index * interval));
-    final amount = no == count ? last : per;
+    final dueDate = index < dueDates.length
+        ? dueDates[index]
+        : DateFormat(
+            'yyyy-MM-dd',
+          ).format(today.add(Duration(days: index * interval)));
     return _InstallmentPreview(
       no: no,
-      dueDate: DateFormat('yyyy-MM-dd').format(dueDate),
-      amount: amount,
+      dueDate: dueDate,
+      amount: no == count ? last : per,
     );
   });
 }

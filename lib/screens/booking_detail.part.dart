@@ -71,7 +71,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   ..sort();
             return unpaid.isEmpty ? null : unpaid.first;
           }();
-          final installmentAvailable = _scheduleInstallmentAvailable(schedule);
+          final installmentAvailable =
+              _scheduleInstallmentAvailable(schedule) &&
+              !_asBool(booking['is_join_trip']);
           final depositAvailable =
               _scheduleDepositAvailable(schedule) &&
               !_asBool(booking['is_join_trip']);

@@ -232,6 +232,112 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
+/// เลือกจำนวนงวด — ตัวเลือกมาจากเซิร์ฟเวอร์ (คิดจากเวลาที่เหลือถึงวันปิดยอด)
+/// ลูกค้าเลือกได้แค่ "แบ่งกี่ก้อน" ส่วนวันครบกำหนดระบบจัดให้เอง
+class _InstallmentCountPicker extends StatelessWidget {
+  final List<int> choices;
+  final int selected;
+  final ValueChanged<int> onSelected;
+
+  const _InstallmentCountPicker({
+    required this.choices,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'แบ่งเป็นกี่งวด',
+          style: appFont(
+            color: AppTheme.mutedText(context),
+            fontSize: AppText.sizeLabel,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: choices.map((choice) {
+            final isSelected = choice == selected;
+            return InkWell(
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onSelected(choice);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? _accent.withValues(
+                          alpha: AppTheme.isDark(context) ? 0.18 : 0.08,
+                        )
+                      : AppTheme.fieldSurface(context),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  border: Border.all(
+                    color: isSelected ? _accent : AppTheme.border(context),
+                    width: isSelected ? 1.5 : 1,
+                  ),
+                ),
+                child: Text(
+                  '$choice งวด',
+                  style: appFont(
+                    color: isSelected ? _accent : AppTheme.onSurface(context),
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+/// อธิบายว่าตารางงวดนี้มาจากไหน — ลูกค้าไม่ต้องเดาว่าทำไมงวดถึงห่างเท่านี้
+class _InstallmentAutoNote extends StatelessWidget {
+  final int leadDays;
+
+  const _InstallmentAutoNote({required this.leadDays});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.auto_awesome_rounded,
+          size: 14,
+          color: AppTheme.mutedText(context),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            'ระบบแบ่งงวดให้จากวันที่จองถึงวันเดินทาง งวดสุดท้ายปิดยอดก่อนเดินทาง $leadDays วัน · ไม่มีดอกเบี้ย',
+            style: appFont(
+              color: AppTheme.mutedText(context),
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _InstallmentRow extends StatelessWidget {
   final _InstallmentPreview row;
 

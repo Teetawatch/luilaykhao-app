@@ -68,6 +68,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   late Future<Map<String, dynamic>> _future;
   String _paymentType = 'full';
   String _paymentMethod = 'promptpay';
+  /// จำนวนงวดที่ลูกค้าเลือกเอง — null = ใช้จำนวนที่เซิร์ฟเวอร์แนะนำ (มากที่สุดที่ทัน)
+  int? _installmentChoice;
   DateTime? _transferDate;
   TimeOfDay? _transferTime;
   XFile? _slipImage;
@@ -278,7 +280,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
         );
       } else {
         final paymentType = _normalizePaymentType(booking, _paymentType);
-        amount = _amountDue(booking, paymentType);
+        amount = _amountDue(
+          booking,
+          paymentType,
+          preferredInstallmentCount: _installmentChoice,
+        );
         kind = paymentType == 'deposit'
             ? PaymentSubmissionKind.deposit
             : PaymentSubmissionKind.initial;
@@ -290,7 +296,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           transferDate: transferDateStr,
           transferTime: transferTimeStr,
           installmentCount: paymentType == 'installment'
-              ? _installmentCount(booking)
+              ? _installmentCount(booking, preferred: _installmentChoice)
               : null,
           slipImagePath: _slipImage!.path,
         );
@@ -530,7 +536,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ? _balanceAmount(booking)
                   : payingInstallment
                       ? _asNum(installmentRecord['amount'])
-                      : _amountDue(booking, paymentType);
+                      : _amountDue(
+                          booking,
+                          paymentType,
+                          preferredInstallmentCount: _installmentChoice,
+                        );
           // สลิปเข้ามาแล้วแต่ยังไม่ confirmed — หลังบ้านกันไว้ให้แอดมินตรวจ และ
           // ส่ง expires_at เป็น null เพราะที่นั่งถูกถือไว้แล้ว ไม่มีเส้นตายอีก
           final slipUnderReview =
@@ -601,6 +611,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     booking: booking,
                     value: paymentType,
                     onChanged: (v) => setState(() => _paymentType = v),
+                    installmentCount: _installmentChoice,
+                    onInstallmentCountChanged: (count) =>
+                        setState(() => _installmentChoice = count),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -632,7 +645,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             !payingInstallment &&
                             !payingShare &&
                             paymentType == 'installment'
-                        ? _installmentCount(booking)
+                        ? _installmentCount(
+                            booking,
+                            preferred: _installmentChoice,
+                          )
                         : null,
                     onPaid: (_) => _onBeamPaid(
                       amount: amountDue,
