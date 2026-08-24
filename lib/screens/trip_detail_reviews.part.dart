@@ -616,43 +616,62 @@ class _ReviewCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 3),
-                      Row(
+                      // Stars and the relative date share one line when the
+                      // card is wide enough. On a narrow phone (or a large
+                      // text scale) a long date like "1 ชม. ที่แล้ว" used to
+                      // run out of this column and under the rating badge, so
+                      // it drops to its own line instead.
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 2,
                         children: [
-                          ...List.generate(
-                            5,
-                            (i) => Icon(
-                              i < rating
-                                  ? Icons.star_rounded
-                                  : Icons.star_outline_rounded,
-                              size: 14,
-                              color: i < rating
-                                  ? const Color(0xFFF59E0B)
-                                  : AppTheme.border(context),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(
+                              5,
+                              (i) => Icon(
+                                i < rating
+                                    ? Icons.star_rounded
+                                    : Icons.star_outline_rounded,
+                                size: 14,
+                                color: i < rating
+                                    ? const Color(0xFFF59E0B)
+                                    : AppTheme.border(context),
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 3,
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: _mutedText.withValues(alpha: 0.4),
-                              shape: BoxShape.circle,
+                          if (date.isNotEmpty)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 3,
+                                  height: 3,
+                                  decoration: BoxDecoration(
+                                    color: _mutedText.withValues(alpha: 0.4),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  date,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: appFont(
+                                    fontSize: AppText.sizeCaption,
+                                    color: _mutedText,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            date,
-                            style: appFont(
-                              fontSize: AppText.sizeCaption,
-                              color: _mutedText,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 // rating badge
                 Container(
                   padding: const EdgeInsets.symmetric(
