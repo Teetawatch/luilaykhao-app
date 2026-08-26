@@ -26,6 +26,13 @@ class StickyBookingBar extends StatelessWidget {
     );
     final joinTripEnabled = _asBool(selectedSchedule['join_trip_enabled']);
     final joinTripPrice = _asNum(selectedSchedule['join_trip_price']);
+    // โควตาจอยเต็มแล้วต้องกดไม่ได้ ไม่งั้นลูกค้ากรอกฟอร์มจนจบแล้วค่อยโดนปฏิเสธ
+    final joinTripFull = _joinTripIsFull(selectedSchedule);
+    // จอยทริปไม่กินที่นั่งบนรถ รอบที่ที่นั่งเต็มแล้วจึงยังจอยได้ตราบใดที่โควตาจอยเหลือ
+    final joinTripCanBook = joinTripEnabled &&
+        !_asBool(selectedSchedule['is_charter']) &&
+        !_isSchedulePast(selectedSchedule) &&
+        !joinTripFull;
     final selectedRegionLabel = _pickupRegionLabel(selectedPickupPoint);
     // รอบที่บินไปไม่มีจุดรับ ราคาจึงไม่ผูกกับภูมิภาคใด — ไม่งั้นแถบราคาจะขึ้นว่า
     // "ราคาสำหรับ ยังไม่ระบุภูมิภาค" ซึ่งอ่านเหมือนข้อมูลตกหล่น
@@ -249,16 +256,18 @@ class StickyBookingBar extends StatelessWidget {
                                     vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: _softAccent.withValues(alpha: 0.1),
+                                    color: (joinTripFull ? AppTheme.dangerColor : _softAccent)
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(AppTheme.radiusXs),
                                   ),
                                   child: Text(
-                                    'Join Trip ${_priceText(trip, schedule: selectedSchedule, isJoinTrip: true)}',
+                                    'Join Trip ${_priceText(trip, schedule: selectedSchedule, isJoinTrip: true)}'
+                                    ' · ${_joinTripSeatLabel(selectedSchedule)}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: appFont(
                                       fontSize: AppText.sizeCaption,
-                                      color: _softAccent,
+                                      color: joinTripFull ? AppTheme.dangerColor : _softAccent,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -301,9 +310,9 @@ class StickyBookingBar extends StatelessWidget {
                             ),
                           ),
                           child: TextButton.icon(
-                            onPressed: !isBookable
-                                ? null
-                                : () => handleBookingTap(joinTrip: true),
+                            onPressed: joinTripCanBook
+                                ? () => handleBookingTap(joinTrip: true)
+                                : null,
                             style: TextButton.styleFrom(
                               foregroundColor: _softAccent,
                               shape: RoundedRectangleBorder(
@@ -312,9 +321,11 @@ class StickyBookingBar extends StatelessWidget {
                             ),
                             icon: const Icon(Icons.groups_rounded, size: 19),
                             label: Text(
-                              joinTripPrice > 0
-                                  ? 'จอยทริป · ${money(joinTripPrice)} / คน'
-                                  : 'จอยทริป',
+                              joinTripFull
+                                  ? 'จอยทริปเต็มแล้ว'
+                                  : joinTripPrice > 0
+                                      ? 'จอยทริป · ${money(joinTripPrice)} / คน'
+                                      : 'จอยทริป',
                               style: appFont(
                                 fontSize: AppText.sizeSubtitle,
                                 fontWeight: FontWeight.w700,

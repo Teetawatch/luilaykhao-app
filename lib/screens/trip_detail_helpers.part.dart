@@ -662,6 +662,51 @@ bool _scheduleIsBookable(Map<String, dynamic> schedule) {
   return _scheduleAvailableSeats(schedule) > 0;
 }
 
+// ── จอยทริป: โควตาแยกจากที่นั่งบนรถ ────────────────────────────────
+// คนจอยไม่กินที่นั่งรถ (booked_seats ไม่นับให้) จึงมีเพดานของตัวเอง
+// join_trip_seats = null คือแอดมินไม่ได้กำหนดเพดาน = รับไม่จำกัด
+// ในกรณีนั้นบอกได้แค่ "จอยแล้วกี่คน" ไม่มีตัวเลข "ว่างกี่ที่"
+
+/// เพดานคนจอยของรอบนี้ — null = ไม่จำกัด
+int? _joinTripSeats(Map<String, dynamic> schedule) {
+  final raw = schedule['join_trip_seats'];
+  if (raw == null) return null;
+  return int.tryParse(textOf(raw, ''));
+}
+
+int _joinTripBookedSeats(Map<String, dynamic> schedule) =>
+    int.tryParse(textOf(schedule['join_trip_booked_seats'], '0')) ?? 0;
+
+/// ที่จอยที่ยังว่าง — null = ไม่จำกัด
+int? _joinTripAvailableSeats(Map<String, dynamic> schedule) {
+  final total = _joinTripSeats(schedule);
+  if (total == null) return null;
+  final fromApi = schedule['join_trip_available_seats'];
+  if (fromApi != null) {
+    return int.tryParse(textOf(fromApi, '0')) ?? 0;
+  }
+  final left = total - _joinTripBookedSeats(schedule);
+  return left < 0 ? 0 : left;
+}
+
+/// จอยทริปรอบนี้เต็มหรือยัง — รอบที่ไม่ได้กำหนดเพดานไม่มีวันเต็ม
+bool _joinTripIsFull(Map<String, dynamic> schedule) {
+  if (!_asBool(schedule['join_trip_enabled'])) return false;
+  final left = _joinTripAvailableSeats(schedule);
+  return left != null && left <= 0;
+}
+
+/// ข้อความสรุปโควตาจอย เช่น "จอยแล้ว 3/10 · ว่าง 7 ที่"
+String _joinTripSeatLabel(Map<String, dynamic> schedule) {
+  final booked = _joinTripBookedSeats(schedule);
+  final total = _joinTripSeats(schedule);
+  if (total == null) return 'จอยแล้ว $booked ท่าน';
+  final left = _joinTripAvailableSeats(schedule) ?? 0;
+  return left > 0
+      ? 'จอยแล้ว $booked/$total · ว่าง $left ที่'
+      : 'จอยทริปเต็มแล้ว';
+}
+
 /// รอบที่จองได้ "ใกล้ที่สุด" (กรองตาม region ถ้าระบุ) — ไว้ใช้เป็นค่าเริ่มต้น
 /// เพื่อให้เปิดหน้ามาแล้วเลือกวันเดินทางที่ใกล้ที่สุดที่ยังจองได้ให้เลย ถ้าวันนั้น
 /// เต็มก็ขยับไปวันถัดไปเอง เลือกด้วยวันเดินทางจริง ไม่พึ่งลำดับของ list ที่ส่งมา

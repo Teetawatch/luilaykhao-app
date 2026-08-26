@@ -352,7 +352,7 @@ class TravelInfoSection extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '${dateText(schedule['departure_date'])}$departHint  ·  ${isCharter ? 'รอบเหมา' : 'เหลือ ${textOf(schedule['available_seats'], '0')} ที่'}',
+                        '${dateText(schedule['departure_date'])}$departHint  ·  ${isCharter ? 'รอบเหมา' : 'เหลือ ${textOf(schedule['available_seats'], '0')} ที่'}${_asBool(schedule['join_trip_enabled']) ? '  ·  ${_joinTripSeatLabel(schedule)}' : ''}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -390,6 +390,8 @@ class TravelInfoSection extends StatelessWidget {
             _JoinTripSwitch(
               selected: isJoinTrip,
               price: joinTripPrice,
+              seatLabel: _joinTripSeatLabel(selectedSchedule),
+              full: _joinTripIsFull(selectedSchedule),
               onChanged: onJoinTripChanged,
             ),
             const SizedBox(height: 12),
@@ -908,18 +910,24 @@ class _CustomPickupTile extends StatelessWidget {
 class _JoinTripSwitch extends StatelessWidget {
   final bool selected;
   final num price;
+  /// สรุปโควตาจอย เช่น "จอยแล้ว 3/10 · ว่าง 7 ที่" — ว่างไว้เมื่อไม่มีข้อมูล
+  final String seatLabel;
+  /// โควตาเต็มแล้ว: เปิดสวิตช์ไม่ได้ ต้องบอกให้ชัดว่าทำไม
+  final bool full;
   final ValueChanged<bool> onChanged;
 
   const _JoinTripSwitch({
     required this.selected,
     required this.price,
+    required this.seatLabel,
+    required this.full,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => onChanged(!selected),
+      onTap: full ? null : () => onChanged(!selected),
       borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -963,10 +971,24 @@ class _JoinTripSwitch extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (seatLabel.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      seatLabel,
+                      style: appFont(
+                        color: full ? AppTheme.dangerColor : _softAccent,
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            Switch.adaptive(value: selected, onChanged: onChanged),
+            Switch.adaptive(
+              value: selected,
+              onChanged: full ? null : onChanged,
+            ),
           ],
         ),
       ),

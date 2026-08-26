@@ -314,8 +314,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           ))
       .toList(growable: false);
 
+  /// รอบนี้ยังรับจอยได้ไหม — เปิดจอยไว้ "และ" โควตายังไม่เต็ม
+  /// (โควตาไม่ได้กำหนด = ไม่จำกัด)
   bool get _selectedScheduleAllowsJoinTrip =>
-      _asBool(_selectedSchedule['join_trip_enabled']);
+      _asBool(_selectedSchedule['join_trip_enabled']) &&
+      !_joinTripIsFull(_selectedSchedule);
 
   bool get _hasSeatMap => !_isJoinTrip && _seatMap?['has_seat_map'] == true;
 
@@ -354,8 +357,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     super.initState();
     final initialSchedule = _initialSchedule();
     _scheduleId = int.tryParse(initialSchedule['id'].toString());
-    _isJoinTrip =
-        widget.initialJoinTrip && _asBool(initialSchedule['join_trip_enabled']);
+    _isJoinTrip = widget.initialJoinTrip &&
+        _asBool(initialSchedule['join_trip_enabled']) &&
+        !_joinTripIsFull(initialSchedule);
     _syncPickup(
       initialSchedule,
       preferredPickupPointId: widget.initialPickupPointId,
@@ -604,6 +608,16 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   }
 
   void _addPassenger() {
+    // จอยทริปมีโควตาของตัวเอง — กันไว้ตรงนี้ ดีกว่าปล่อยให้กรอกครบแล้วเซิร์ฟเวอร์ปฏิเสธ
+    if (_isJoinTrip) {
+      final left = _joinTripAvailableSeats(_selectedSchedule);
+      if (left != null && _passengers.length >= left) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('จอยทริปรอบนี้เหลือ $left ที่')),
+        );
+        return;
+      }
+    }
     HapticFeedback.selectionClick();
     setState(() {
       final p = _PassengerControllers();
@@ -1137,7 +1151,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           _stopSeatRealtimeRefresh();
           setState(() {
             _scheduleId = value;
-            if (_isJoinTrip && !_asBool(nextSchedule['join_trip_enabled'])) {
+            if (_isJoinTrip &&
+                (!_asBool(nextSchedule['join_trip_enabled']) ||
+                    _joinTripIsFull(nextSchedule))) {
               _isJoinTrip = false;
             }
             _syncPickup(nextSchedule, preferredRegion: _pickupRegion);

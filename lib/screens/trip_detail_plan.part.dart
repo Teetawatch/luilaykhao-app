@@ -882,9 +882,12 @@ class _ScheduleDatePickerState extends State<_ScheduleDatePicker> {
                 return _MonthDivider(label: entry.monthLabel!);
               }
               final schedule = entry.schedule!;
+              // ที่นั่งรถหมดแล้วยังเลือกรอบนี้ได้ ถ้าจอยทริปยังเปิดและโควตาเหลือ
+              final joinTripOpen = _asBool(schedule['join_trip_enabled']) &&
+                  !_joinTripIsFull(schedule);
               final disabled = _asBool(schedule['is_charter']) ||
                   _isSchedulePast(schedule) ||
-                  _scheduleAvailableSeats(schedule) == 0;
+                  (_scheduleAvailableSeats(schedule) == 0 && !joinTripOpen);
               return _ScheduleChip(
                 schedule: schedule,
                 isSelected: widget.selectedId ==
@@ -1290,13 +1293,20 @@ class _ScheduleChip extends StatelessWidget {
                 )
               else if (seats == 0)
                 Text(
-                  'เต็ม',
+                  // ที่นั่งรถเต็ม แต่ยังจอยได้ถ้าโควตาจอยเหลือ
+                  _asBool(schedule['join_trip_enabled']) &&
+                          !_joinTripIsFull(schedule)
+                      ? 'จอยได้'
+                      : 'เต็ม',
                   style: appFont(
                     fontSize: AppText.sizeMicro,
                     fontWeight: FontWeight.w700,
                     color: isSelected
                         ? Colors.white.withValues(alpha: 0.75)
-                        : _appleRed(isDark),
+                        : _asBool(schedule['join_trip_enabled']) &&
+                                !_joinTripIsFull(schedule)
+                            ? _softAccent
+                            : _appleRed(isDark),
                   ),
                 )
               else
@@ -1560,7 +1570,12 @@ class _SheetDateRow extends StatelessWidget {
     final isPast = _isSchedulePast(schedule);
     final isLowSeats = !isCharter && !isPast && seats > 0 && seats <= 5;
     final isFull = !isCharter && !isPast && seats == 0;
-    final disabled = isCharter || isPast || isFull;
+    // ที่นั่งบนรถเต็มแต่จอยทริปยังเปิดและโควตายังเหลือ = ยังกดเลือกรอบนี้ได้
+    final joinTripOpen = !isCharter &&
+        !isPast &&
+        _asBool(schedule['join_trip_enabled']) &&
+        !_joinTripIsFull(schedule);
+    final disabled = isCharter || isPast || (isFull && !joinTripOpen);
 
     final accent = isLowSeats ? _appleOrange(isDark) : _softAccent;
 
@@ -1601,6 +1616,10 @@ class _SheetDateRow extends StatelessWidget {
     } else if (isPast) {
       statusText = 'ผ่านแล้ว';
       statusColor = AppTheme.mutedText(context);
+    } else if (isFull && joinTripOpen) {
+      final left = _joinTripAvailableSeats(schedule);
+      statusText = left == null ? 'จอยทริปได้' : 'จอยได้ $left ที่';
+      statusColor = _softAccent;
     } else if (isFull) {
       statusText = 'เต็มแล้ว';
       statusColor = _appleRed(isDark);
