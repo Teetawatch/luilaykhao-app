@@ -24,7 +24,7 @@ const int kPaymentWindowFallbackMinutes = 10;
 /// MIN_INSTALLMENT_GAP_DAYS / MAX_INSTALLMENT_COUNT)
 const int _kInstallmentLeadDays = 15;
 const int _kInstallmentGapDays = 14;
-const int _kMaxInstallmentCount = 6;
+const int _kMaxInstallmentCount = 3;
 
 /// เส้นตายที่ระบบจะยกเลิกใบนี้เพื่อคืนที่นั่ง — null เมื่อไม่มีเส้นตายให้นับ
 ///
