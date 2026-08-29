@@ -715,6 +715,7 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
           .where((id) => id.isNotEmpty)
           .toList();
       final pickupPointId = int.tryParse(textOf(lock['pickup_point_id']));
+      final vehicleOptionId = int.tryParse(textOf(lock['vehicle_option_id']));
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => BookingFlowScreen(
@@ -722,6 +723,7 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
             schedules: List<dynamic>.from(results[1] as List),
             initialScheduleId: scheduleId,
             initialPickupPointId: pickupPointId,
+            initialVehicleOptionId: vehicleOptionId,
             initialSeatIds: seatIds,
             resumeLockedSeats: true,
           ),
@@ -748,11 +750,16 @@ class _SeatLockSectionState extends State<_SeatLockSection> {
         .where((id) => id.isNotEmpty)
         .toList();
     final pickupPointId = int.tryParse(textOf(lock['pickup_point_id']));
+    final vehicleOptionId = int.tryParse(textOf(lock['vehicle_option_id']));
 
     setState(() => _busyScheduleId = scheduleId);
     try {
       final results = await Future.wait([app.trip(slug), app.schedules(slug)]);
-      await app.cancelActiveSeatLock(scheduleId, seatIds: seatIds);
+      await app.cancelActiveSeatLock(
+        scheduleId,
+        seatIds: seatIds,
+        vehicleOptionId: vehicleOptionId,
+      );
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         const SnackBar(content: Text('ยกเลิกการจองแล้ว เลือกที่นั่งใหม่ได้เลย')),

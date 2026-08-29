@@ -834,8 +834,13 @@ class AppProvider extends ChangeNotifier {
     return (items: items, hasMore: currentPage < lastPage, total: total);
   }
 
-  Future<Map<String, dynamic>> seats(int scheduleId) async {
-    final response = await api.get('schedules/$scheduleId/seats');
+  /// ผังที่นั่งของรอบ — รอบที่วิ่งหลายคันต้องบอกด้วยว่าเป็นผังของคันไหน
+  /// (ไม่ส่งไป = คันราคาปกติ ตามที่เซิร์ฟเวอร์เลือกให้)
+  Future<Map<String, dynamic>> seats(int scheduleId, {int? vehicleOptionId}) async {
+    final query = vehicleOptionId != null
+        ? '?vehicle_option_id=$vehicleOptionId'
+        : '';
+    final response = await api.get('schedules/$scheduleId/seats$query');
     final map = Map<String, dynamic>.from(api.data(response) ?? {});
     // ตรึงเส้นตายของแต่ละล็อกไว้กับนาฬิกาเครื่อง โดยคิดจาก ttl แบบ "เหลืออีกกี่
     // วินาที" ที่เซิร์ฟเวอร์ส่งมา (ไม่ใช่ timestamp สัมบูรณ์) — UI จึงนับถอยหลัง
@@ -909,6 +914,7 @@ class AppProvider extends ChangeNotifier {
     List<String> seatIds, {
     int? pickupPointId,
     String? pickupRegion,
+    int? vehicleOptionId,
   }) async {
     final response = await api.post(
       'schedules/$scheduleId/seats/lock',
@@ -917,6 +923,8 @@ class AppProvider extends ChangeNotifier {
         'pickup_point_id': ?pickupPointId,
         if (pickupRegion != null && pickupRegion.isNotEmpty)
           'pickup_region': pickupRegion,
+        // ที่นั่งผูกกับคัน — A1 ของบัสกับ A1 ของตู้ล็อกกันคนละใบ
+        'vehicle_option_id': ?vehicleOptionId,
       },
     );
     final result = Map<String, dynamic>.from(api.data(response) ?? {});
@@ -924,10 +932,14 @@ class AppProvider extends ChangeNotifier {
     return result;
   }
 
-  Future<void> unlockSeats(int scheduleId, List<String> seatIds) async {
+  Future<void> unlockSeats(
+    int scheduleId,
+    List<String> seatIds, {
+    int? vehicleOptionId,
+  }) async {
     await api.delete(
       'schedules/$scheduleId/seats/lock',
-      body: {'seat_ids': seatIds},
+      body: {'seat_ids': seatIds, 'vehicle_option_id': ?vehicleOptionId},
     );
     await loadActiveSeatLocks(silent: true);
   }
@@ -935,10 +947,14 @@ class AppProvider extends ChangeNotifier {
   Future<void> cancelActiveSeatLock(
     int scheduleId, {
     List<String> seatIds = const [],
+    int? vehicleOptionId,
   }) async {
     await api.delete(
       'seat-locks/$scheduleId',
-      body: {if (seatIds.isNotEmpty) 'seat_ids': seatIds},
+      body: {
+        if (seatIds.isNotEmpty) 'seat_ids': seatIds,
+        'vehicle_option_id': ?vehicleOptionId,
+      },
     );
     await loadActiveSeatLocks(silent: true);
   }

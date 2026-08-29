@@ -54,6 +54,9 @@ class BookingFlowScreen extends StatelessWidget {
   final List<dynamic> schedules;
   final int? initialScheduleId;
   final int? initialPickupPointId;
+  // คันที่ที่นั่งที่ล็อกค้างไว้เป็นของมัน — ต้องกลับเข้ามาที่คันเดิม ไม่งั้นผังที่
+  // เปิดจะเป็นของอีกคันและที่นั่งที่ล็อกไว้จะดูหายไป
+  final int? initialVehicleOptionId;
   final bool initialJoinTrip;
   final List<String> initialSeatIds;
   final bool resumeLockedSeats;
@@ -65,6 +68,7 @@ class BookingFlowScreen extends StatelessWidget {
     required this.schedules,
     this.initialScheduleId,
     this.initialPickupPointId,
+    this.initialVehicleOptionId,
     this.initialJoinTrip = false,
     this.initialSeatIds = const [],
     this.resumeLockedSeats = false,
@@ -78,6 +82,7 @@ class BookingFlowScreen extends StatelessWidget {
       schedules: schedules,
       initialScheduleId: initialScheduleId,
       initialPickupPointId: initialPickupPointId,
+      initialVehicleOptionId: initialVehicleOptionId,
       initialJoinTrip: initialJoinTrip,
       initialSeatIds: initialSeatIds,
       resumeLockedSeats: resumeLockedSeats,
@@ -91,6 +96,9 @@ class BookingCheckoutPage extends StatefulWidget {
   final List<dynamic> schedules;
   final int? initialScheduleId;
   final int? initialPickupPointId;
+  // คันที่ที่นั่งที่ล็อกค้างไว้เป็นของมัน — ต้องกลับเข้ามาที่คันเดิม ไม่งั้นผังที่
+  // เปิดจะเป็นของอีกคันและที่นั่งที่ล็อกไว้จะดูหายไป
+  final int? initialVehicleOptionId;
   final bool initialJoinTrip;
   final List<String> initialSeatIds;
   final bool resumeLockedSeats;
@@ -102,6 +110,7 @@ class BookingCheckoutPage extends StatefulWidget {
     required this.schedules,
     this.initialScheduleId,
     this.initialPickupPointId,
+    this.initialVehicleOptionId,
     this.initialJoinTrip = false,
     this.initialSeatIds = const [],
     this.resumeLockedSeats = false,
@@ -145,6 +154,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   String? _seatError;
   Map<String, dynamic>? _seatMap;
   int? _seatMapScheduleId;
+  // ผังที่นั่งเป็นของ "รอบ + คัน" — เก็บคันที่ผังและล็อกปัจจุบันเป็นของมันไว้
+  // ไม่งั้นการสลับคันจะปลดล็อกผิดคัน แล้วที่นั่งเดิมค้างจนกว่า TTL จะหมด
+  int? _seatMapOptionId;
+  int? _lockedSeatOptionId;
   bool _isJoinTrip = false;
   // ประเภทรถที่เลือก (รอบที่วิ่งทั้งบัสและตู้ คนละราคา) — null = ยังไม่ได้เลือก
   int? _vehicleOptionId;
@@ -421,12 +434,21 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       preferredPickupPointId: widget.initialPickupPointId,
     );
     _syncVehicleOption();
+    // กลับมาต่อจากที่นั่งที่ล็อกค้างไว้ — ต้องเป็นคันเดิมที่ล็อกไว้
+    final resumedOptionId = widget.initialVehicleOptionId;
+    if (resumedOptionId != null &&
+        _vehicleOptions.any(
+          (item) => item['id'].toString() == resumedOptionId.toString(),
+        )) {
+      _vehicleOptionId = resumedOptionId;
+    }
     final initialSeatIds = widget.initialSeatIds
         .where((seatId) => seatId.isNotEmpty)
         .toSet();
     if (initialSeatIds.isNotEmpty) {
       _selectedSeatIds.addAll(initialSeatIds);
       _lockedSeatIds.addAll(initialSeatIds);
+      _lockedSeatOptionId = _vehicleOptionId;
       _syncPassengerCount(initialSeatIds.length);
       if (widget.resumeLockedSeats) {
         _currentStep = _passengerStepIndex;
@@ -788,6 +810,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       return;
     }
 
+    final optionId = _vehicleOptionId;
+
     if (silent) {
       _seatRefreshing = true;
     } else {
@@ -795,6 +819,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         _seatLoading = true;
         _seatError = null;
         _seatMapScheduleId = scheduleId;
+        _seatMapOptionId = optionId;
         _seatMap = null;
         if (!preserveSelection) {
           _selectedSeatIds.clear();
@@ -805,8 +830,15 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     }
 
     try {
-      final seatMap = await context.read<AppProvider>().seats(scheduleId);
-      if (!mounted || _seatMapScheduleId != scheduleId) return;
+      final seatMap = await context.read<AppProvider>().seats(
+        scheduleId,
+        vehicleOptionId: optionId,
+      );
+      if (!mounted ||
+          _seatMapScheduleId != scheduleId ||
+          _vehicleOptionId != optionId) {
+        return;
+      }
       var removedSeats = <String>[];
       setState(() {
         _seatMap = seatMap;
@@ -824,12 +856,18 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         );
       }
     } catch (e) {
-      if (!mounted || _seatMapScheduleId != scheduleId) return;
+      if (!mounted ||
+          _seatMapScheduleId != scheduleId ||
+          _vehicleOptionId != optionId) {
+        return;
+      }
       if (!silent) setState(() => _seatError = e.toString());
     } finally {
       if (silent) {
         _seatRefreshing = false;
-      } else if (mounted && _seatMapScheduleId == scheduleId) {
+      } else if (mounted &&
+          _seatMapScheduleId == scheduleId &&
+          _vehicleOptionId == optionId) {
         setState(() => _seatLoading = false);
       }
     }
@@ -866,9 +904,12 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     _unbindRealtimeChannel();
     _realtimeScheduleId = scheduleId;
 
-    void onSeatEvent(Map<String, dynamic> _) {
+    void onSeatEvent(Map<String, dynamic> payload) {
       if (!mounted) return;
       if (_scheduleId != scheduleId) return;
+      // ที่นั่งชื่อเดียวกันบนอีกคันไม่เกี่ยวกับผังที่เปิดอยู่
+      final eventOptionId = int.tryParse('${payload['vehicle_option_id'] ?? ''}');
+      if (eventOptionId != _vehicleOptionId) return;
       _loadSeatMap(silent: true);
     }
 
@@ -967,6 +1008,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       seatIds,
       pickupPointId: _pickupPointId,
       pickupRegion: _pickupRegion,
+      vehicleOptionId: _vehicleOptionId,
     );
     if (result['locked'] != true) {
       throw _CheckoutValidationException(
@@ -976,6 +1018,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     _lockedSeatIds
       ..clear()
       ..addAll(seatIds);
+    _lockedSeatOptionId = _vehicleOptionId;
     await _releaseStaleOwnLocks(seatIds);
   }
 
@@ -995,7 +1038,11 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     if (stale.isEmpty || !mounted) return;
 
     try {
-      await context.read<AppProvider>().unlockSeats(_scheduleId!, stale);
+      await context.read<AppProvider>().unlockSeats(
+        _scheduleId!,
+        stale,
+        vehicleOptionId: _seatMapOptionId,
+      );
       if (!mounted) return;
       setState(() {
         for (final item in asList(_seatMap!['seats'])) {
@@ -1013,9 +1060,16 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   Future<void> _unlockLockedSeats() async {
     if (_scheduleId == null || _lockedSeatIds.isEmpty) return;
     final seatIds = _lockedSeatIds.toList();
+    // ปลดล็อกด้วยคันที่ล็อกไว้ตอนนั้น ไม่ใช่คันที่เพิ่งเลือกใหม่
+    final optionId = _lockedSeatOptionId;
     _lockedSeatIds.clear();
+    _lockedSeatOptionId = null;
     try {
-      await context.read<AppProvider>().unlockSeats(_scheduleId!, seatIds);
+      await context.read<AppProvider>().unlockSeats(
+        _scheduleId!,
+        seatIds,
+        vehicleOptionId: optionId,
+      );
     } catch (_) {
       // Seat locks expire automatically; checkout should still recover gracefully.
     }
@@ -1266,17 +1320,18 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         },
         vehicleOptionId: _vehicleOptionId,
         onVehicleOptionChanged: (value) {
+          if (value == _vehicleOptionId) return;
+          // ที่นั่งเป็นของคันที่เลือกไว้ตอนนั้น — คืนของคันเดิมก่อนเสมอ แล้วค่อย
+          // ดึงผังของคันใหม่ (คันที่ไม่ให้เลือกที่นั่งก็แค่ไม่มีผังให้ดึง)
+          _unlockLockedSeats();
+          _stopSeatRealtimeRefresh();
           setState(() {
             _vehicleOptionId = value;
-            // คันที่ไม่มีผังที่นั่งของตัวเอง = ทีมงานจัดที่นั่งหน้างาน
-            // ที่เลือกไว้ก่อนหน้าต้องปล่อยคืน ไม่งั้นล็อกค้างไว้เปล่า ๆ
-            if (!_vehicleAllowsSeatMap) {
-              _unlockLockedSeats();
-              _stopSeatRealtimeRefresh();
-              _selectedSeatIds.clear();
-              _lockedSeatIds.clear();
-            }
+            _selectedSeatIds.clear();
+            _lockedSeatIds.clear();
+            _seatError = null;
           });
+          if (_vehicleAllowsSeatMap) _loadSeatMap();
         },
         onPickupChanged: (value) {
           final point = asMap(
