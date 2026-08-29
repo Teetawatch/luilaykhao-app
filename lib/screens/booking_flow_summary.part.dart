@@ -236,6 +236,9 @@ class TravelInfoSection extends StatelessWidget {
   final ValueChanged<bool> onJoinTripChanged;
   final ValueChanged<String?> onRegionChanged;
   final ValueChanged<int?> onPickupChanged;
+  // ประเภทรถที่เลือก (รอบที่วิ่งทั้งบัสและตู้) — null = ยังไม่ได้เลือก
+  final int? vehicleOptionId;
+  final ValueChanged<int> onVehicleOptionChanged;
   // จุดรับที่ลูกค้าปักหมุดเอง { label, lat, lng, note } — null = ไม่ได้ใช้
   final Map<String, dynamic>? customPickup;
   final VoidCallback onCustomPickupTap;
@@ -253,6 +256,8 @@ class TravelInfoSection extends StatelessWidget {
     required this.onJoinTripChanged,
     required this.onRegionChanged,
     required this.onPickupChanged,
+    required this.vehicleOptionId,
+    required this.onVehicleOptionChanged,
     this.customPickup,
     required this.onCustomPickupTap,
     required this.onCustomPickupClear,
@@ -326,6 +331,13 @@ class TravelInfoSection extends StatelessWidget {
     final joinTripPrice = _asNum(selectedSchedule['join_trip_price']);
     // รอบที่บินไปไม่มีรถวิ่งรับ — จุดนัดพบที่สนามบินมาแทนทั้งจุดขึ้นรถและหมุดเอง
     final isFlight = _scheduleIsFlight(selectedSchedule);
+    // ประเภทรถของรอบ — แบบเดียวไม่ใช่ตัวเลือก มันคือรถของรอบนี้อยู่แล้ว
+    final vehicleOptionMaps = asList(selectedSchedule['vehicle_options'])
+        .map(asMap)
+        .where((item) => int.tryParse(item['id'].toString()) != null)
+        .toList();
+    final showVehicleOptions =
+        !isJoinTrip && !isFlight && vehicleOptionMaps.length > 1;
 
     return _SectionShell(
       title: 'ข้อมูลการเดินทาง',
@@ -393,6 +405,14 @@ class TravelInfoSection extends StatelessWidget {
               seatLabel: _joinTripSeatLabel(selectedSchedule),
               full: _joinTripIsFull(selectedSchedule),
               onChanged: onJoinTripChanged,
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (showVehicleOptions) ...[
+            _VehicleOptionPicker(
+              options: vehicleOptionMaps,
+              selectedId: vehicleOptionId,
+              onChanged: onVehicleOptionChanged,
             ),
             const SizedBox(height: 12),
           ],
@@ -902,6 +922,189 @@ class _CustomPickupTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// เลือกว่าจะเดินทางไปกับคันไหน — รอบเดียวกันวิ่งได้ทั้งรถบัสและรถตู้ คนละราคา
+///
+/// ราคาที่แสดงเป็น "ส่วนต่างต่อคน" ตรงกับที่เซิร์ฟเวอร์คิด (บวกท้ายราคาจุดขึ้นรถ)
+/// ไม่ใช่ราคาเต็มของคันนั้น เพราะราคาเต็มขึ้นกับจุดที่ยังไม่ได้เลือกในขั้นนี้
+class _VehicleOptionPicker extends StatelessWidget {
+  final List<Map<String, dynamic>> options;
+  final int? selectedId;
+  final ValueChanged<int> onChanged;
+
+  const _VehicleOptionPicker({
+    required this.options,
+    required this.selectedId,
+    required this.onChanged,
+  });
+
+  String _priceLabel(num adjustment) {
+    if (adjustment == 0) return 'ราคาปกติ';
+    final sign = adjustment > 0 ? '+' : '-';
+    return '$sign${money(adjustment.abs())} / คน';
+  }
+
+  String _seatLabel(Map<String, dynamic> option) {
+    if (_asBool(option['is_sold_out'])) return 'เต็มแล้ว';
+    final available = option['available_seats'];
+    if (available == null) return '';
+    return 'เหลือ ${textOf(available, '0')} ที่';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'เลือกประเภทรถ',
+          style: appFont(
+            color: _mutedTextColor(context),
+            fontSize: AppText.sizeCaption,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (final option in options) ...[
+          _VehicleOptionTile(
+            option: option,
+            selected:
+                int.tryParse(option['id'].toString()) == selectedId,
+            priceLabel: _priceLabel(_asNum(option['price_adjustment'])),
+            seatLabel: _seatLabel(option),
+            onTap: () {
+              final id = int.tryParse(option['id'].toString());
+              if (id == null || _asBool(option['is_sold_out'])) return;
+              HapticFeedback.selectionClick();
+              onChanged(id);
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _VehicleOptionTile extends StatelessWidget {
+  final Map<String, dynamic> option;
+  final bool selected;
+  final String priceLabel;
+  final String seatLabel;
+  final VoidCallback onTap;
+
+  const _VehicleOptionTile({
+    required this.option,
+    required this.selected,
+    required this.priceLabel,
+    required this.seatLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final soldOut = _asBool(option['is_sold_out']);
+    final note = textOf(option['note']).trim();
+    final imageUrl = textOf(option['image_url']).trim();
+
+    return Opacity(
+      opacity: soldOut ? 0.55 : 1,
+      child: InkWell(
+        onTap: soldOut ? null : onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: selected
+                ? _softAccent.withValues(alpha: 0.10)
+                : _fieldBackground(context),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(
+              color: selected
+                  ? _softAccent.withValues(alpha: 0.28)
+                  : _cardBorder(context),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                color: selected ? _softAccent : _mutedTextColor(context),
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              if (imageUrl.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  child: Image.network(
+                    imageUrl,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    cacheWidth: 144,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      textOf(option['label']),
+                      style: appFont(
+                        color: _premiumText(context),
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                    if (note.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        note,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          color: _mutedTextColor(context),
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    if (seatLabel.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        seatLabel,
+                        style: appFont(
+                          color: soldOut ? AppTheme.dangerColor : _softAccent,
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                priceLabel,
+                style: appFont(
+                  color: selected ? _softAccent : _premiumText(context),
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

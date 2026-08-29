@@ -430,6 +430,10 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   ];
                 })(),
 
+                // ประเภทรถที่เลือกไว้ (รอบที่วิ่งทั้งบัสและตู้) — อ่านจากสำเนา
+                // บนใบจอง ไม่ใช่ตัวเลือกปัจจุบันของรอบ
+                _BookingVehicleOptionRow(booking: booking),
+
                 // จุดขึ้นรถที่จองไว้ (พร้อมรูปจริง) — แสดงเสมอเมื่อมีจุดรับ
                 _BookingPickupSection(booking: booking, schedule: schedule),
 
@@ -1196,6 +1200,68 @@ class _BookingCustomerRow extends StatelessWidget {
 /// and a map link — always visible (not just in the pre-trip window).
 /// จุดนัดพบที่สนามบิน + ขาบิน — ของรอบที่บินไป
 ///
+/// รถที่ลูกค้าเลือกตอนจอง — ขึ้นเฉพาะรอบที่มีให้เลือกจริง
+class _BookingVehicleOptionRow extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _BookingVehicleOptionRow({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final option = asMap(booking['vehicle_option']);
+    final label = textOf(option['label']).trim();
+    if (label.isEmpty) return const SizedBox.shrink();
+
+    final adjustment =
+        num.tryParse(textOf(option['price_adjustment'], '0')) ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const _SheetSectionTitle(
+          icon: Icons.directions_bus_rounded,
+          title: 'รถที่คุณเลือก',
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.subtleSurface(context),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.6),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: appFont(
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+              if (adjustment != 0)
+                Text(
+                  '${adjustment > 0 ? '+' : '-'}${money(adjustment.abs())} / คน',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// รอบต่างประเทศข้ามขั้นเลือกจุดขึ้นรถ (นัดเจอกันที่สนามบิน) เดิมข้อมูลนี้ไปกอง
 /// อยู่ในกำหนดการซึ่งเป็นข้อความยาว ๆ อ่านบนมือถือไม่ทันตอนตีสาม การ์ดนี้ยกมันขึ้นมา
 /// อยู่ที่เดียวกับที่รอบรถแสดงจุดขึ้นรถ

@@ -227,6 +227,9 @@ class PricingSummaryCard extends StatelessWidget {
   final String? promoError;
   final VoidCallback onApplyPromo;
   final VoidCallback onRemovePromo;
+  // ประเภทรถที่เลือก — ยอดรวมอยู่ในค่าที่นั่งแล้ว บรรทัดนี้บอกว่ามาจากอะไร
+  final String vehicleLabel;
+  final num vehicleAdjustment;
 
   const PricingSummaryCard({
     super.key,
@@ -239,6 +242,8 @@ class PricingSummaryCard extends StatelessWidget {
     required this.promoError,
     required this.onApplyPromo,
     required this.onRemovePromo,
+    this.vehicleLabel = '',
+    this.vehicleAdjustment = 0,
   });
 
   @override
@@ -277,6 +282,16 @@ class PricingSummaryCard extends StatelessWidget {
             value: money(pricing.tripSubtotal),
           ),
           const SizedBox(height: 10),
+          // ส่วนต่างของรถถูกบวกในค่าที่นั่งไปแล้ว บรรทัดนี้จึงบอกที่มา ไม่ใช่ยอดเพิ่ม
+          if (vehicleLabel.isNotEmpty && vehicleAdjustment != 0) ...[
+            _PriceRow(
+              label: 'รวมค่า$vehicleLabel',
+              value:
+                  '${vehicleAdjustment > 0 ? '+' : '-'}${money(vehicleAdjustment.abs())} × ${pricing.travelerCount}',
+              valueColor: _mutedTextColor(context),
+            ),
+            const SizedBox(height: 10),
+          ],
           if (pricing.addonsTotal > 0) ...[
             _PriceRow(
               label: 'ตัวเลือกเสริม',

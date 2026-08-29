@@ -146,6 +146,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   Map<String, dynamic>? _seatMap;
   int? _seatMapScheduleId;
   bool _isJoinTrip = false;
+  // ประเภทรถที่เลือก (รอบที่วิ่งทั้งบัสและตู้ คนละราคา) — null = ยังไม่ได้เลือก
+  int? _vehicleOptionId;
   Timer? _seatRefreshTimer;
   final Set<String> _selectedSeatIds = <String>{};
   final Set<String> _lockedSeatIds = <String>{};
@@ -167,6 +169,56 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   List<dynamic> get _pickupPoints => asList(_selectedSchedule['pickup_points']);
 
+  /// ประเภทรถของรอบที่เลือกอยู่ — มีแบบเดียวไม่นับเป็นตัวเลือก มันคือรถของรอบ
+  List<Map<String, dynamic>> get _vehicleOptions =>
+      asList(_selectedSchedule['vehicle_options'])
+          .map(asMap)
+          .where((item) => int.tryParse(item['id'].toString()) != null)
+          .toList();
+
+  bool get _offersVehicleChoice =>
+      !_isJoinTrip && !_isFlightSchedule && _vehicleOptions.length > 1;
+
+  Map<String, dynamic> get _selectedVehicleOption {
+    if (_vehicleOptionId == null) return <String, dynamic>{};
+
+    return asMap(
+      _vehicleOptions.firstWhere(
+        (item) => item['id'].toString() == _vehicleOptionId.toString(),
+        orElse: () => const <String, dynamic>{},
+      ),
+    );
+  }
+
+  /// ส่วนต่างต่อคนของคันที่เลือก (0 เมื่อยังไม่ได้เลือกหรือรอบนี้มีคันเดียว)
+  num get _vehicleAdjustment =>
+      _asNum(_selectedVehicleOption['price_adjustment']);
+
+  /// คันที่เลือกใช้ผังที่นั่งของรอบไหม — คันรองไม่มีผัง ทีมงานจัดที่นั่งหน้างาน
+  /// (เซิร์ฟเวอร์เป็นคนตัดสิน ส่งมาที่ `uses_seat_map`)
+  bool get _vehicleAllowsSeatMap {
+    final option = _selectedVehicleOption;
+    if (option.isEmpty) return true;
+    final flag = option['uses_seat_map'];
+
+    return flag == null || _asBool(flag);
+  }
+
+  /// เลือกคันให้อัตโนมัติเมื่อรอบนั้นมีแบบเดียว และล้างค่าเมื่อคันที่เคยเลือก
+  /// ไม่ได้อยู่ในรอบใหม่ — ผู้ใช้ต้องกดเลือกเองเมื่อมีให้เลือกจริง ๆ
+  void _syncVehicleOption() {
+    final options = _vehicleOptions;
+    if (options.length == 1) {
+      _vehicleOptionId = int.tryParse(options.first['id'].toString());
+
+      return;
+    }
+    final stillThere = options.any(
+      (item) => item['id'].toString() == _vehicleOptionId.toString(),
+    );
+    if (!stillThere) _vehicleOptionId = null;
+  }
+
   Map<String, dynamic> get _selectedPickupPoint {
     if (_pickupPoints.isEmpty) return <String, dynamic>{};
 
@@ -187,6 +239,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     selectedAddons: _selectedAddons,
     selectedRentals: _selectedRentals,
     appliedPromo: _appliedPromo,
+    vehicleAdjustment: _vehicleAdjustment,
   );
 
   /// Validate the entered code and, on success, apply it inline so the discount
@@ -320,10 +373,13 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       _asBool(_selectedSchedule['join_trip_enabled']) &&
       !_joinTripIsFull(_selectedSchedule);
 
-  bool get _hasSeatMap => !_isJoinTrip && _seatMap?['has_seat_map'] == true;
+  bool get _hasSeatMap =>
+      !_isJoinTrip && _vehicleAllowsSeatMap && _seatMap?['has_seat_map'] == true;
 
   bool get _usesSeatStep =>
-      !_isJoinTrip && (_seatLoading || _seatMap == null || _hasSeatMap);
+      !_isJoinTrip &&
+      _vehicleAllowsSeatMap &&
+      (_seatLoading || _seatMap == null || _hasSeatMap);
 
   /// เหตุผลที่รอบนี้ไม่มีผังที่นั่งให้เลือก (รอบที่บินไป — สายการบินจัดที่นั่งเอง)
   /// ว่างไว้เมื่อไม่มีผังด้วยเหตุอื่น เช่น จอยทริป
@@ -364,6 +420,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       initialSchedule,
       preferredPickupPointId: widget.initialPickupPointId,
     );
+    _syncVehicleOption();
     final initialSeatIds = widget.initialSeatIds
         .where((seatId) => seatId.isNotEmpty)
         .toSet();
@@ -469,6 +526,14 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         _pickupPointId = pickupId;
       }
 
+      final draftVehicleId = int.tryParse('${draft['vehicle_option_id'] ?? ''}');
+      if (draftVehicleId != null &&
+          _vehicleOptions.any(
+            (item) => item['id'].toString() == draftVehicleId.toString(),
+          )) {
+        _vehicleOptionId = draftVehicleId;
+      }
+
       _addonQuantities.clear();
       final addons = draft['addons'];
       if (addons is Map) {
@@ -524,6 +589,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       draft: {
         'schedule_id': _scheduleId,
         'pickup_point_id': _pickupPointId,
+        'vehicle_option_id': _vehicleOptionId,
         'group_notes': _groupNotes.text,
         'passengers': [for (final p in _passengers) p.payload()],
         'addons': _addonQuantities.map((k, v) => MapEntry('$k', v)),
@@ -1009,6 +1075,13 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       }
       return true;
     }
+    // รอบที่วิ่งหลายคันคนละราคา ต้องเลือกก่อนไปต่อ — ราคาต่างกัน จะเดาแทนไม่ได้
+    if (_offersVehicleChoice && _vehicleOptionId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณาเลือกประเภทรถที่จะเดินทาง')),
+      );
+      return false;
+    }
     // รอบที่บินไปไม่มีจุดรับให้เลือกและไม่มีอะไรให้ปักหมุด — เจอกันที่สนามบิน
     if (_isFlightSchedule) return true;
     // ปักหมุดจุดรับเองแล้ว ถือว่าเลือกจุดรับครบ ข้ามการบังคับเลือกจุดที่กำหนด
@@ -1157,6 +1230,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
               _isJoinTrip = false;
             }
             _syncPickup(nextSchedule, preferredRegion: _pickupRegion);
+            _syncVehicleOption();
           });
           _loadSeatMap();
         },
@@ -1187,6 +1261,20 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             _customPickup = null; // เลือกจุดที่กำหนด → ยกเลิกจุดที่ปักเอง
             for (final p in _passengers) {
               p.pickupPointId.value = newPickupId;
+            }
+          });
+        },
+        vehicleOptionId: _vehicleOptionId,
+        onVehicleOptionChanged: (value) {
+          setState(() {
+            _vehicleOptionId = value;
+            // คันที่ไม่มีผังที่นั่งของตัวเอง = ทีมงานจัดที่นั่งหน้างาน
+            // ที่เลือกไว้ก่อนหน้าต้องปล่อยคืน ไม่งั้นล็อกค้างไว้เปล่า ๆ
+            if (!_vehicleAllowsSeatMap) {
+              _unlockLockedSeats();
+              _stopSeatRealtimeRefresh();
+              _selectedSeatIds.clear();
+              _lockedSeatIds.clear();
             }
           });
         },
@@ -1317,6 +1405,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           promoError: _promoError,
           onApplyPromo: _applyPromo,
           onRemovePromo: _removePromo,
+          vehicleLabel: textOf(_selectedVehicleOption['label']),
+          vehicleAdjustment: _vehicleAdjustment,
         ),
       ],
     );
@@ -1596,6 +1686,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             : null,
         'seat_ids': _hasSeatMap ? _selectedSeatList : <String>[],
         'is_join_trip': _isJoinTrip,
+        'vehicle_option_id': _isJoinTrip ? null : _vehicleOptionId,
         if (_selectedAddons.isNotEmpty)
           'selected_addons': _selectedAddons
               .map((a) => {'index': a.option.index, 'quantity': a.quantity})

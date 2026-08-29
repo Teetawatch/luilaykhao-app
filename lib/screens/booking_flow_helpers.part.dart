@@ -53,6 +53,9 @@ class _PricingQuote {
     List<_AddonSelection> selectedAddons = const [],
     List<_RentalSelection> selectedRentals = const [],
     Map<String, dynamic>? appliedPromo,
+    // ส่วนต่างต่อคนของประเภทรถที่เลือก — บวกท้ายราคาของแต่ละคน ตรงกับที่
+    // เซิร์ฟเวอร์คิด (ราคาโซนจุดรับทับราคารอบก่อน แล้วค่อยบวกส่วนต่างนี้)
+    num vehicleAdjustment = 0,
   }) {
     final basePrice = _asNum(
       isJoinTrip
@@ -82,6 +85,7 @@ class _PricingQuote {
         final ppPrice = _asNum(asMap(ppData)['price']);
         if (ppPrice > 0) passengerPrice = ppPrice;
       }
+      if (!isJoinTrip) passengerPrice += vehicleAdjustment;
       if (firstPrice == null) {
         firstPrice = passengerPrice;
       } else if (passengerPrice != firstPrice) {
