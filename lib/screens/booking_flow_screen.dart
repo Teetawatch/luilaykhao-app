@@ -20,6 +20,7 @@ import '../theme/app_theme.dart';
 import '../services/booking_draft_store.dart';
 import '../widgets/saved_traveller_picker.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/vehicle_seat_map.dart';
 import 'custom_pickup_picker_screen.dart';
 import 'document_wallet_screen.dart';
 import 'payment_screen.dart';

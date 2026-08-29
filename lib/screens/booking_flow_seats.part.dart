@@ -357,10 +357,19 @@ class SeatSelectionSection extends StatelessWidget {
       for (final item in asList(map['seats']))
         if (_seatOwnedByCurrentUser(asMap(item))) textOf(asMap(item)['id']),
     ]..sort();
+    final showBody = !isLoading && error == null && hasSeatMap;
 
     return _SectionShell(
       title: 'เลือกที่นั่ง',
       icon: Icons.event_seat_rounded,
+      // จำนวนที่ว่างขึ้นหัวข้อไปเลย — เป็นตัวเลขที่ลูกค้ามองหาก่อนอย่างอื่น
+      // และไม่ต้องเสียการ์ดทั้งใบให้มัน
+      trailing: showBody
+          ? _SeatAvailabilityPill(
+              available: int.tryParse(textOf(map['available_seats'])) ?? 0,
+              total: int.tryParse(textOf(map['total_seats'])) ?? 0,
+            )
+          : null,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 180),
         child: isLoading
@@ -377,34 +386,42 @@ class SeatSelectionSection extends StatelessWidget {
                 key: const ValueKey('seat-map'),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _SelectedSeatSummary(selectedSeatIds: selectedSeatIds),
-                  const SizedBox(height: 14),
-                  _SeatRealtimeSummary(
-                    counts: statusCounts,
-                    refreshInterval: _seatRefreshInterval,
-                    onLockExpired: onLockExpired,
-                  ),
-                  const SizedBox(height: 16),
-                  Center(child: _SeatLegend(hasOwnSeats: ownSeatIds.isNotEmpty)),
+                  // คำสั่งเดียวก่อนถึงผัง แล้วปล่อยให้ผังเป็นพระเอก — ของเดิม
+                  // มีการ์ดข้อความสามใบซ้อนกันก่อนจะได้เห็นที่นั่งสักที่
+                  _SeatPickHint(selectedCount: selectedSeatIds.length),
                   if (ownSeatIds.isNotEmpty) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     _OwnSeatsNote(seatIds: ownSeatIds),
                   ],
-                  const SizedBox(height: 18),
-                  _VehicleSeatMap(
+                  const SizedBox(height: 14),
+                  _BookingSeatMap(
                     seatMap: map,
                     selectedSeatIds: selectedSeatIds,
                     onSeatTap: onSeatTap,
                   ),
                   const SizedBox(height: 14),
-                  Text(
-                    'ที่นั่งว่าง ${textOf(map['available_seats'], '0')} / ${textOf(map['total_seats'], '0')}',
-                    textAlign: TextAlign.center,
-                    style: appFont(
-                      color: _mutedTextColor(context),
-                      fontSize: AppText.sizeLabel,
-                      fontWeight: FontWeight.w700,
+                  Center(
+                    child: VehicleSeatLegend(
+                      tones: [
+                        SeatTone.available,
+                        SeatTone.picking,
+                        SeatTone.locked,
+                        SeatTone.booked,
+                        if (ownSeatIds.isNotEmpty) SeatTone.mine,
+                      ],
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  _SeatLiveFooter(
+                    counts: statusCounts,
+                    refreshInterval: _seatRefreshInterval,
+                    onLockExpired: onLockExpired,
+                  ),
+                  const SizedBox(height: 14),
+                  _SelectedSeatSummary(
+                    seatMap: map,
+                    selectedSeatIds: selectedSeatIds,
+                    onRemove: onSeatTap,
                   ),
                 ],
               ),
@@ -413,10 +430,140 @@ class SeatSelectionSection extends StatelessWidget {
   }
 }
 
-class _SelectedSeatSummary extends StatelessWidget {
+/// ผังที่นั่งของขั้นตอนจอง — โครงรถทั้งหมดอยู่ใน [VehicleSeatMap] (ใช้ร่วมกับ
+/// หน้าใบจองและห้องกลุ่ม) ตรงนี้เหลือแค่การแปลสถานะที่นั่งเป็นโทนสีและกฎว่า
+/// แตะได้ไหม
+class _BookingSeatMap extends StatelessWidget {
+  final Map<String, dynamic> seatMap;
   final Set<String> selectedSeatIds;
+  final ValueChanged<Map<String, dynamic>> onSeatTap;
 
-  const _SelectedSeatSummary({required this.selectedSeatIds});
+  const _BookingSeatMap({
+    required this.seatMap,
+    required this.selectedSeatIds,
+    required this.onSeatTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return VehicleSeatMap(
+      seatMap: seatMap,
+      toneFor: (seat, id) {
+        if (selectedSeatIds.contains(id)) return SeatTone.picking;
+        // ที่นั่งที่ตัวเองถืออยู่ใช้โทนเดียวกับที่นั่งว่าง (มีป้ายรูปคนกำกับ)
+        // เพื่อไม่ให้อ่านว่า "ของคนอื่น"
+        if (_seatOwnedByCurrentUser(seat)) return SeatTone.available;
+        final status = textOf(seat['status'], 'available');
+        if (status == 'booked') return SeatTone.booked;
+        if (status == 'locked') return SeatTone.locked;
+        return SeatTone.available;
+      },
+      selectableFor: (seat, id) =>
+          _isSeatAvailable(seat) || _seatLockedByCurrentUser(seat),
+      badgeFor: (seat, id) =>
+          !selectedSeatIds.contains(id) && _seatOwnedByCurrentUser(seat)
+          ? Icons.person_rounded
+          : null,
+      tooltipFor: (seat, id) =>
+          _seatTooltip(seat, id, selected: selectedSeatIds.contains(id)),
+      onSeatTap: (seat, _) => onSeatTap(seat),
+      // แตะที่นั่งที่เลือกไม่ได้แล้วเงียบสนิท คือจุดที่ลูกค้าคิดว่าแอปค้าง
+      // บอกเหตุผลไปเลยว่าทำไมที่นั่งนี้แตะไม่ได้
+      onBlockedSeatTap: (seat, id) {
+        HapticFeedback.lightImpact();
+        AppSnack.show(context, _seatTooltip(seat, id, selected: false));
+      },
+    );
+  }
+}
+
+/// "ว่าง 7 / 10" ข้างหัวข้อ — สีเปลี่ยนตามความตึงของที่นั่งที่เหลือ
+class _SeatAvailabilityPill extends StatelessWidget {
+  final int available;
+  final int total;
+
+  const _SeatAvailabilityPill({required this.available, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    final soldOut = available <= 0;
+    final tight = available > 0 && available <= 3;
+    final color = soldOut
+        ? AppTheme.dangerColor
+        : tight
+        ? AppTheme.warningColor
+        : _softAccent;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        soldOut ? 'เต็มแล้ว' : 'ว่าง $available/$total',
+        style: appFont(
+          color: color,
+          fontSize: AppText.sizeCaption,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+/// บรรทัดบอกวิธีใช้ผัง — ย้ำว่าจำนวนที่นั่งที่เลือก = จำนวนผู้เดินทาง ซึ่งเป็น
+/// ความเข้าใจผิดที่เจอบ่อยที่สุดของหน้านี้
+class _SeatPickHint extends StatelessWidget {
+  final int selectedCount;
+
+  const _SeatPickHint({required this.selectedCount});
+
+  @override
+  Widget build(BuildContext context) {
+    final picking = selectedCount > 0;
+
+    return Row(
+      children: [
+        Icon(
+          picking ? Icons.check_circle_rounded : Icons.touch_app_rounded,
+          size: 17,
+          color: picking ? _softAccent : AppTheme.warningColor,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            picking
+                ? 'เลือกไว้ $selectedCount ที่นั่ง = เดินทาง $selectedCount คน แตะซ้ำเพื่อยกเลิก'
+                : 'แตะเลือกที่นั่ง — เลือกกี่ที่ ก็คือเดินทางกี่คน',
+            style: appFont(
+              color: picking
+                  ? const Color(0xFF047857)
+                  : const Color(0xFF92400E),
+              fontWeight: FontWeight.w700,
+              fontSize: AppText.sizeLabel,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// สรุปที่นั่งที่เลือก — เป็นชิปกดเอาออกได้ทีละที่ ไม่ต้องเลื่อนกลับขึ้นไปหา
+/// ที่นั่งนั้นในผัง (สำคัญมากกับรถบัสที่ผังยาวเป็นหน้าจอ)
+class _SelectedSeatSummary extends StatelessWidget {
+  final Map<String, dynamic> seatMap;
+  final Set<String> selectedSeatIds;
+  final ValueChanged<Map<String, dynamic>> onRemove;
+
+  const _SelectedSeatSummary({
+    required this.seatMap,
+    required this.selectedSeatIds,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -436,31 +583,86 @@ class _SelectedSeatSummary extends StatelessWidget {
               : const Color(0xFFFDE68A),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            hasSelection
-                ? Icons.airline_seat_recline_extra_rounded
-                : Icons.touch_app_rounded,
-            color: hasSelection ? _softAccent : AppTheme.warningColor,
-            size: 19,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              hasSelection
-                  ? 'ที่นั่งที่เลือก ${seats.join(', ')}'
-                  : 'กรุณาเลือกที่นั่งก่อนกรอกข้อมูลผู้เดินทาง',
-              style: appFont(
-                color: hasSelection
-                    ? const Color(0xFF047857)
-                    : const Color(0xFF92400E),
-                fontWeight: FontWeight.w700,
-                fontSize: AppText.sizeLabel,
-                height: 1.35,
+          Row(
+            children: [
+              Icon(
+                hasSelection
+                    ? Icons.airline_seat_recline_extra_rounded
+                    : Icons.touch_app_rounded,
+                color: hasSelection ? _softAccent : AppTheme.warningColor,
+                size: 19,
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  hasSelection
+                      ? 'ที่นั่งที่เลือก ${seats.length} ที่'
+                      : 'กรุณาเลือกที่นั่งก่อนกรอกข้อมูลผู้เดินทาง',
+                  style: appFont(
+                    color: hasSelection
+                        ? const Color(0xFF047857)
+                        : const Color(0xFF92400E),
+                    fontWeight: FontWeight.w700,
+                    fontSize: AppText.sizeLabel,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (hasSelection) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: seats.map((id) {
+                final seat = _seatById(seatMap, id);
+
+                return MinTapTarget(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                    onTap: seat == null
+                        ? null
+                        : () {
+                            HapticFeedback.selectionClick();
+                            onRemove(seat);
+                          },
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
+                      decoration: BoxDecoration(
+                        color: _softAccent,
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusPill,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            textOf(seat?['label'], id),
+                            style: appFont(
+                              color: Colors.white,
+                              fontSize: AppText.sizeCaption,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          const Icon(
+                            Icons.close_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );
@@ -475,40 +677,34 @@ class _OwnSeatsNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _softAccent.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: _softAccent.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.how_to_reg_rounded, color: _softAccent, size: 19),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'ที่นั่ง ${seatIds.join(', ')} เป็นของคุณอยู่แล้ว ไม่ได้ถูกคนอื่นจอง',
-              style: appFont(
-                color: const Color(0xFF047857),
-                fontWeight: FontWeight.w700,
-                fontSize: AppText.sizeLabel,
-                height: 1.35,
-              ),
+    return Row(
+      children: [
+        const Icon(Icons.how_to_reg_rounded, color: _softAccent, size: 17),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'ที่นั่ง ${seatIds.join(', ')} เป็นของคุณอยู่แล้ว ไม่ได้ถูกคนอื่นจอง',
+            style: appFont(
+              color: const Color(0xFF047857),
+              fontWeight: FontWeight.w600,
+              fontSize: AppText.sizeCaption,
+              height: 1.35,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _SeatRealtimeSummary extends StatelessWidget {
+/// บรรทัดเล็ก ๆ ใต้ผัง — บอกว่าสถานะสด และที่นั่งไหนกำลังถูกคนอื่นจองอยู่
+/// (ของเดิมเป็นการ์ดใหญ่ที่มีตัวเลขซ้ำกับคำอธิบายสีใต้ผังทุกตัว)
+class _SeatLiveFooter extends StatelessWidget {
   final _SeatStatusCounts counts;
   final Duration refreshInterval;
   final VoidCallback? onLockExpired;
 
-  const _SeatRealtimeSummary({
+  const _SeatLiveFooter({
     required this.counts,
     required this.refreshInterval,
     this.onLockExpired,
@@ -516,579 +712,42 @@ class _SeatRealtimeSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.selectedTint(context),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: _softAccent.withValues(alpha: 0.16)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.sync_rounded, color: _softAccent, size: 19),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'อัปเดตสถานะที่นั่งทุก ${refreshInterval.inSeconds} วินาที ล็อกที่นั่งชั่วคราวตามจำนวนที่นั่งที่เลือก',
-                  style: appFont(
-                    color: const Color(0xFF047857),
-                    fontWeight: FontWeight.w600,
-                    fontSize: AppText.sizeLabel,
-                    height: 1.35,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _SeatStatusPill(
-                color: const Color(0xFFD1FAE5),
-                textColor: const Color(0xFF065F46),
-                label: 'ว่าง',
-                value: counts.available,
-              ),
-              _SeatStatusPill(
-                color: const Color(0xFFF59E0B),
-                textColor: const Color(0xFF78350F),
-                label: 'กำลังจอง',
-                value: counts.locked,
-              ),
-              _SeatStatusPill(
-                color: const Color(0xFFE11D48),
-                textColor: Colors.white,
-                label: 'จองแล้ว',
-                value: counts.booked,
-              ),
-            ],
-          ),
-          if (counts.lockedSeats.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            _LockedSeatsCountdown(
-              seats: counts.lockedSeats,
-              onExpired: onLockExpired,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SeatStatusPill extends StatelessWidget {
-  final Color color;
-  final Color textColor;
-  final String label;
-  final int value;
-
-  const _SeatStatusPill({
-    required this.color,
-    required this.textColor,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
-      ),
-      child: Text(
-        '$label $value',
-        style: appFont(
-          color: textColor,
-          fontSize: AppText.sizeCaption,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _SeatLegend extends StatelessWidget {
-  final bool hasOwnSeats;
-
-  const _SeatLegend({this.hasOwnSeats = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <_SeatLegendItem>[
-      _SeatLegendItem(_seatVisual(status: 'available', selected: false), 'ว่าง'),
-      _SeatLegendItem(
-        _seatVisual(status: 'available', selected: true),
-        'กำลังเลือก',
-      ),
-      _SeatLegendItem(_seatVisual(status: 'locked', selected: false), 'กำลังจอง'),
-      _SeatLegendItem(_seatVisual(status: 'booked', selected: false), 'จองแล้ว'),
-      if (hasOwnSeats)
-        _SeatLegendItem(
-          _seatVisual(status: 'locked', selected: false, owned: true),
-          'ที่นั่งของคุณ',
-        ),
-    ];
-
-    return Wrap(
-      spacing: 14,
-      runSpacing: 10,
-      children: items.map((item) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 22,
-              height: 22,
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: item.visual.fill,
-                borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: _softAccent,
+                shape: BoxShape.circle,
               ),
-              child: _SeatGlyph(color: item.visual.glyph),
             ),
-            const SizedBox(width: 6),
-            Text(
-              item.label,
-              style: appFont(
-                color: _mutedTextColor(context),
-                fontSize: AppText.sizeCaption,
-                fontWeight: FontWeight.w700,
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                'สถานะที่นั่งอัปเดตทุก ${refreshInterval.inSeconds} วินาที',
+                textAlign: TextAlign.center,
+                style: appFont(
+                  color: _mutedTextColor(context),
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _VehicleSeatMap extends StatelessWidget {
-  final Map<String, dynamic> seatMap;
-  final Set<String> selectedSeatIds;
-  final ValueChanged<Map<String, dynamic>> onSeatTap;
-
-  const _VehicleSeatMap({
-    required this.seatMap,
-    required this.selectedSeatIds,
-    required this.onSeatTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final frontSeatId = textOf(seatMap['front_seat']);
-    final frontSeat = frontSeatId.isEmpty
-        ? null
-        : _seatById(seatMap, frontSeatId);
-    final rows = _seatRows(seatMap);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _fieldBackground(context),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(color: _cardBorder(context)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minWidth: constraints.maxWidth),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  frontSeat == null
-                      ? const SizedBox(width: 58)
-                      : _SeatButton(
-                          seat: frontSeat,
-                          selected: selectedSeatIds.contains(frontSeatId),
-                          onTap: () => onSeatTap(frontSeat),
-                        ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    child: _VehicleLabel(
-                      text: textOf(seatMap['front_label'], 'หน้ารถ'),
-                    ),
-                  ),
-                  _DriverBlock(show: seatMap['show_driver'] != false),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: SizedBox(
-                  width: 292,
-                  child: Divider(height: 1, color: AppTheme.border(context)),
-                ),
-              ),
-              ...rows.map((row) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _SeatRow(
-                    row: row,
-                    seatMap: seatMap,
-                    selectedSeatIds: selectedSeatIds,
-                    onSeatTap: onSeatTap,
-                  ),
-                );
-              }),
-              const SizedBox(height: 4),
-              _VehicleLabel(
-                text: textOf(
-                  seatMap['rear_label'],
-                  'ท้ายรถ (สำหรับเก็บสัมภาระ)',
-                ),
-                muted: true,
-              ),
-            ],
+        ),
+        if (counts.lockedSeats.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          _LockedSeatsCountdown(
+            seats: counts.lockedSeats,
+            onExpired: onLockExpired,
           ),
-        ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SeatRow extends StatelessWidget {
-  final _SeatRowData row;
-  final Map<String, dynamic> seatMap;
-  final Set<String> selectedSeatIds;
-  final ValueChanged<Map<String, dynamic>> onSeatTap;
-
-  const _SeatRow({
-    required this.row,
-    required this.seatMap,
-    required this.selectedSeatIds,
-    required this.onSeatTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Widget seats(List<String> ids) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: ids.map((id) {
-          final seat = _seatById(seatMap, id);
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: _SeatButton(
-              seat: seat,
-              seatId: id,
-              selected: selectedSeatIds.contains(id),
-              onTap: seat == null ? null : () => onSeatTap(seat),
-            ),
-          );
-        }).toList(),
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        seats(row.left),
-        if (row.center.isNotEmpty) ...[
-          const SizedBox(width: 8),
-          seats(row.center),
         ],
-        SizedBox(
-          width: 44,
-          child: Center(
-            child: row.hasAisle
-                ? Container(
-                    width: 2,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppTheme.border(context),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    ),
-                  )
-                : null,
-          ),
-        ),
-        seats(row.right),
       ],
-    );
-  }
-}
-
-class _SeatButton extends StatelessWidget {
-  final Map<String, dynamic>? seat;
-  final String? seatId;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  const _SeatButton({
-    required this.seat,
-    this.seatId,
-    required this.selected,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final id = textOf(seat?['id'] ?? seatId);
-    final status = textOf(seat?['status'], 'available');
-    final lockedByCurrentUser = seat != null && _seatLockedByCurrentUser(seat!);
-    final ownedByCurrentUser = seat != null && _seatOwnedByCurrentUser(seat!);
-    final disabled =
-        seat == null ||
-        status == 'booked' ||
-        (status == 'locked' && !lockedByCurrentUser);
-
-    final visual = _seatVisual(
-      status: status,
-      selected: selected,
-      owned: ownedByCurrentUser,
-    );
-    // Booked seats keep their flat grey; other unavailable seats fade slightly.
-    final softDisabled = disabled && status != 'booked';
-    final tileFill = softDisabled
-        ? visual.fill.withValues(alpha: 0.6)
-        : visual.fill;
-    final glyphColor = softDisabled
-        ? visual.glyph.withValues(alpha: 0.55)
-        : visual.glyph;
-
-    IconData? badgeIcon;
-    if (selected) {
-      badgeIcon = Icons.check_rounded;
-    } else if (ownedByCurrentUser) {
-      badgeIcon = Icons.person_rounded;
-    } else if (status == 'booked') {
-      badgeIcon = Icons.lock_rounded;
-    } else if (status == 'locked') {
-      badgeIcon = Icons.schedule_rounded;
-    }
-
-    final labelColor = selected || ownedByCurrentUser
-        ? _softAccent
-        : status == 'locked'
-        ? const Color(0xFF92400E).withValues(alpha: softDisabled ? 0.62 : 1)
-        : _mutedTextColor(context).withValues(alpha: softDisabled ? 0.62 : 1);
-
-    return Tooltip(
-      message: _seatTooltip(seat, id, selected: selected),
-      child: InkWell(
-        onTap: disabled ? null : onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        child: SizedBox(
-          width: 52,
-          height: 62,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                width: 44,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: tileFill,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                  border: Border.all(
-                    color: selected
-                        ? Colors.transparent
-                        : Colors.black.withValues(alpha: 0.04),
-                  ),
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(9),
-                      child: _SeatGlyph(color: glyphColor),
-                    ),
-                    if (badgeIcon != null)
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: Container(
-                          width: 15,
-                          height: 15,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: selected ? Colors.white : visual.badge,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            badgeIcon,
-                            size: 9.5,
-                            color: selected ? _softAccent : Colors.white,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                textOf(seat?['label'], id),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: appFont(
-                  color: labelColor,
-                  fontSize: AppText.sizeMicro,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A clean, front-facing armchair silhouette — backrest, two armrests and a
-/// cushion — drawn as a single-color glyph so it reads crisply at seat size.
-class _SeatGlyph extends StatelessWidget {
-  final Color color;
-
-  const _SeatGlyph({required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(size: Size.infinite, painter: _SeatGlyphPainter(color));
-  }
-}
-
-class _SeatGlyphPainter extends CustomPainter {
-  final Color color;
-
-  const _SeatGlyphPainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..isAntiAlias = true;
-    final w = size.width;
-    final h = size.height;
-
-    // Backrest — rounded bar across the top.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.18, 0, w * 0.64, h * 0.34),
-        Radius.circular(w * 0.13),
-      ),
-      paint,
-    );
-
-    // Armrests — slim rounded bars hugging each side.
-    final armW = w * 0.15;
-    final armTop = h * 0.32;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(0, armTop, armW, h),
-        Radius.circular(armW * 0.55),
-      ),
-      paint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(w - armW, armTop, w, h),
-        Radius.circular(armW * 0.55),
-      ),
-      paint,
-    );
-
-    // Seat cushion — wider rounded block sitting in the lower middle.
-    canvas.drawRRect(
-      RRect.fromRectAndCorners(
-        Rect.fromLTRB(w * 0.2, h * 0.42, w * 0.8, h),
-        topLeft: Radius.circular(w * 0.1),
-        topRight: Radius.circular(w * 0.1),
-        bottomLeft: Radius.circular(w * 0.2),
-        bottomRight: Radius.circular(w * 0.2),
-      ),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_SeatGlyphPainter oldDelegate) =>
-      oldDelegate.color != color;
-}
-
-class _DriverBlock extends StatelessWidget {
-  final bool show;
-
-  const _DriverBlock({required this.show});
-
-  @override
-  Widget build(BuildContext context) {
-    if (!show) return const SizedBox(width: 58);
-
-    return SizedBox(
-      width: 58,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 44,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppTheme.subtleSurface(context),
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
-            ),
-            child: Icon(
-              Icons.drive_eta_rounded,
-              color: _mutedTextColor(context),
-              size: 20,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'คนขับ',
-            style: appFont(
-              color: _mutedTextColor(context),
-              fontSize: AppText.sizeMicro,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VehicleLabel extends StatelessWidget {
-  final String text;
-  final bool muted;
-
-  const _VehicleLabel({required this.text, this.muted = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: muted ? Colors.white : _softAccent.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        border: Border.all(color: muted ? _cardBorder(context) : Colors.transparent),
-      ),
-      child: Text(
-        text,
-        style: appFont(
-          color: muted ? _mutedTextColor(context) : _softAccent,
-          fontSize: AppText.sizeCaption,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
     );
   }
 }
@@ -1151,13 +810,6 @@ class _NoSeatMapState extends StatelessWidget {
           'ทริปนี้ไม่มีผังที่นั่ง เลือกจำนวนผู้เดินทางได้ตามปกติ · ว่าง ${textOf(seatMap['available_seats'], '0')} / ${textOf(seatMap['total_seats'], '0')} ที่นั่ง',
     );
   }
-}
-
-class _SeatLegendItem {
-  final _SeatVisual visual;
-  final String label;
-
-  const _SeatLegendItem(this.visual, this.label);
 }
 
 class _SeatStatusCounts {
@@ -1275,18 +927,3 @@ class _LockedSeatsCountdownState extends State<_LockedSeatsCountdown> {
     );
   }
 }
-
-class _SeatRowData {
-  final List<String> left;
-  final List<String> right;
-  final List<String> center;
-  final bool hasAisle;
-
-  const _SeatRowData({
-    required this.left,
-    required this.right,
-    required this.center,
-    required this.hasAisle,
-  });
-}
-
