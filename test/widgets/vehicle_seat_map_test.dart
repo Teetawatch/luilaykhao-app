@@ -10,7 +10,6 @@ Map<String, dynamic> vanSeatMap() => {
   'columns': ['A', 'B', 'C', '', 'D', 'E'],
   'front_seat': 'A1',
   'last_row_center': ['A4', 'B4', 'C4'],
-  'door_rows': [2],
   'seats': [
     for (final id in [
       'A1',
@@ -48,7 +47,6 @@ Map<String, dynamic> busSeatMap({int rows = 11}) {
     'last_row_center': [
       for (final c in ['A', 'B', 'C', 'D', 'E']) '$c$rows',
     ],
-    'door_rows': [1, (rows / 2).ceil()],
     'seats': seats,
   };
 }
@@ -91,10 +89,6 @@ double centreX(WidgetTester tester, String seatId) {
   return rect.center.dx;
 }
 
-double centreYOf(WidgetTester tester, String seatId) {
-  return tester.getRect(find.text(seatId)).center.dy;
-}
-
 void main() {
   group('VehicleSeatMap · รถตู้', () {
     testWidgets('วาดครบทุกที่นั่ง คนขับ และท้ายรถ', (tester) async {
@@ -118,18 +112,6 @@ void main() {
         expect((centreX(tester, 'B4') - rowCentre).abs(), lessThan(2));
       },
     );
-
-    testWidgets('ประตูขึ้นรถแนบขอบซ้าย เคียงที่นั่งหน้า A1', (tester) async {
-      await tester.pumpWidget(host(vanSeatMap()));
-
-      expect(find.text('ประตู'), findsOneWidget);
-      final door = tester.getRect(find.text('ประตู'));
-      final a1 = tester.getRect(find.text('A1'));
-      // ฝั่งซ้ายของ A1 (รถไทยพวงมาลัยขวา ประตูผู้โดยสารอยู่ซ้ายเสมอ)
-      expect(door.center.dx, lessThan(a1.center.dx));
-      // เคียงแถวหัวรถ ไม่ใช่แถวผู้โดยสารแถวแรก
-      expect(door.center.dy, lessThan(centreYOf(tester, 'A2')));
-    });
 
     testWidgets('ไม่มีเลขแถวเมื่อแถวน้อย', (tester) async {
       await tester.pumpWidget(host(vanSeatMap()));

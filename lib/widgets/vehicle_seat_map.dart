@@ -86,9 +86,6 @@ class VehicleSeatMap extends StatelessWidget {
         : _seatById(seatMap, frontSeatId);
     final rows = _seatRows(seatMap);
     final showDriver = seatMap['show_driver'] != false;
-    // ประตูขึ้นรถอยู่ติดที่นั่งหน้าฝั่งซ้าย ไม่ใช่แถบสีข้างแถว — แถบสีที่ไม่มี
-    // ป้ายกำกับทำให้ต้องเดาว่ามันคืออะไร ซึ่งแปลว่ามันสื่อไม่สำเร็จ
-    final hasDoor = _hasDoor(seatMap);
     // เลขแถวช่วยเฉพาะตอนที่แถวเยอะจนนับเองไม่ไหว (รถบัส) รถตู้ 3-4 แถวไม่ต้อง
     final showRowNumbers = rows.length >= 6;
 
@@ -161,31 +158,13 @@ class VehicleSeatMap extends StatelessWidget {
             ),
             border: Border.all(color: AppTheme.border(context)),
           ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              needsScroll
-                  ? SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      child: body,
-                    )
-                  : body,
-              // ประตูขึ้นรถ ฝั่งซ้าย (รถไทยพวงมาลัยขวา ประตูผู้โดยสารอยู่ซ้ายเสมอ)
-              // รถตู้ = ประตูเลื่อนแนบที่นั่งหน้า A1 · รถบัส = บันไดหน้าสุด
-              // ต่ำลงมาเล็กน้อย แนบขอบซ้ายของลำตัวจึงต้องเลยขอบ padding ออกไป
-              if (hasDoor)
-                Positioned(
-                  left: -_bodyPadding,
-                  // แนวเดียวกับ A1 พอดี — รถตู้ A1 คือที่นั่งคู่คนขับที่หัวรถ
-                  // ส่วนรถบัสไม่มีที่นั่งคู่คนขับ A1 จึงเป็นที่นั่งแถวแรก
-                  top: kind == VehicleKind.bus
-                      ? _noseTop + metrics.seatButtonHeight + _noseToRowsGap
-                      : _noseTop,
-                  child: _DoorTab(height: metrics.seatButtonHeight),
-                ),
-            ],
-          ),
+          child: needsScroll
+              ? SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: body,
+                )
+              : body,
         );
       },
     );
@@ -484,16 +463,8 @@ class _SeatVisual {
 const _accent = AppTheme.primaryColor; // Emerald 600
 const _warning = AppTheme.warningColor; // Amber 600
 
-const _door = Color(0xFFFBBF24); // Amber 400
-const _doorInk = Color(0xFFB45309); // Amber 700
-
 const double _bodyPadding = 16;
 
-/// ระยะจากขอบบนของพื้นที่ในโครงรถถึงแถวหัวรถ: กระจกหน้า 10 + ช่องไฟ 10
-const double _noseTop = 20;
-
-/// ระยะจากท้ายแถวหัวรถถึงที่นั่งแถวแรก: ช่องไฟ 12 + เส้นประ 1 + ช่องไฟ 12
-const double _noseToRowsGap = 25;
 const double _rowNumberWidth = 18;
 
 _SeatVisual _visualFor(SeatTone tone) {
@@ -559,10 +530,6 @@ class _SeatMetrics {
   double get tileHeight => 42 * scale;
   double get seatGap => 8 * scale;
   double get slotWidth => tileWidth + seatGap;
-
-  /// ความสูงของปุ่มที่นั่งทั้งปุ่ม (เบาะ + ป้าย) — กล่องข้อความสูงกว่า fontSize
-  /// ตามระยะบรรทัด จึงคูณเผื่อไว้
-  double get seatButtonHeight => tileHeight + labelGap + labelSize * 1.5;
   double get aisleWidth => 34 * scale;
   double get rowGap => 10 * scale;
   double get labelGap => 4 * scale;
@@ -829,57 +796,6 @@ class _CrewBlock extends StatelessWidget {
   }
 }
 
-/// แถบประตูขึ้นรถที่แนบขอบซ้ายของลำตัว — มีไอคอนและคำว่า "ประตู" กำกับเสมอ
-/// แถบสีเปล่า ๆ ที่ไม่มีป้ายทำให้ต้องเดาว่ามันคืออะไร ซึ่งแปลว่ามันสื่อไม่สำเร็จ
-class _DoorTab extends StatelessWidget {
-  final double height;
-
-  const _DoorTab({required this.height});
-
-  @override
-  Widget build(BuildContext context) {
-    // ไอคอนบวกคำว่า "ประตู" ที่ตะแคงอยู่กินความสูงเท่านี้เป็นอย่างน้อย
-    // ผังที่ย่อลงจนที่นั่งเตี้ยกว่านี้ต้องไม่บีบแถบจนล้น
-    return Container(
-      width: 20,
-      height: math.max(56, height),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: _door.withValues(alpha: 0.16),
-        borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
-        border: Border.all(color: _door.withValues(alpha: 0.45)),
-      ),
-      // ย่อเนื้อในให้พอดีเสมอ — ความสูงของคำที่ตะแคงขึ้นกับฟอนต์และ textScaler
-      // ของเครื่อง เดาเป็นตัวเลขตายตัวเมื่อไหร่ก็ล้นบนเครื่องที่ตั้งค่าต่างไป
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.door_front_door_rounded,
-              size: 12,
-              color: _doorInk,
-            ),
-            const SizedBox(height: 2),
-            RotatedBox(
-              quarterTurns: 1,
-              child: Text(
-                'ประตู',
-                style: appFont(
-                  color: _doorInk,
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _VehicleLabel extends StatelessWidget {
   final String text;
   final bool muted;
@@ -967,13 +883,6 @@ IconData _driverIcon(Map<String, dynamic> seatMap, VehicleKind kind) {
     VehicleKind.boat => Icons.sailing_rounded,
     VehicleKind.van => Icons.drive_eta_rounded,
   };
-}
-
-/// รถคันนี้มีประตูผู้โดยสารให้วาดไหม — ผังบอกมาเป็นเลขแถว เราสนแค่ว่ามีหรือไม่มี
-bool _hasDoor(Map<String, dynamic> seatMap) {
-  return _asList(seatMap['door_rows'])
-      .map((item) => int.tryParse(item?.toString() ?? '') ?? 0)
-      .any((row) => row > 0);
 }
 
 Map<String, dynamic>? _seatById(Map<String, dynamic> seatMap, String id) {
