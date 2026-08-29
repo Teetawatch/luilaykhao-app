@@ -150,6 +150,8 @@ enum TripActivityStyle {
     case "arrived": return "figure.wave"
     case "arriving", "approaching": return "bus.fill"
     case "onboard": return "checkmark.seal.fill"
+    // ขึ้นรถแล้ว การ์ดเดินตามกำหนดการต่อ — หมุดคือ "จุดถัดไป" ไม่ใช่ตำแหน่งรถ
+    case "itinerary": return "mappin.and.ellipse"
     case "enroute": return "location.fill"
     case "preparing": return "backpack.fill"
     // ขั้นของรอบที่บินไป — ไทม์ไลน์สนามบิน ไม่ใช่รถตู้วิ่งมารับ

@@ -247,21 +247,37 @@ class TripActivityService {
   ///
   /// ถามฝั่ง iOS ตรง ๆ ว่าตอนนี้มีการ์ดอะไรเปิดอยู่บ้าง ไม่ได้เดาจากรายการจอง —
   /// การ์ดอาจถูกเปิดไว้ตั้งแต่ก่อนแอปถูกปิด และรายการจองอาจโหลดไม่สำเร็จรอบนี้
-  Future<void> reregisterActiveTokens() async {
+  ///
+  /// ส่ง [bookings] มาด้วยเพื่อให้เปิดการ์ดใบใหม่ได้เมื่อใบเก่าถูกระบบเก็บไปแล้ว
+  Future<void> reregisterActiveTokens({
+    List<dynamic> bookings = const [],
+  }) async {
     if (defaultTargetPlatform != TargetPlatform.iOS) return;
 
     final api = _api;
     if (api == null || api.token == null || api.token!.isEmpty) return;
 
     try {
-      final entries = await _channel.invokeListMethod<dynamic>('activeTokens');
-      for (final entry in entries ?? const []) {
+      final entries =
+          await _channel.invokeListMethod<dynamic>('activeTokens') ?? const [];
+      for (final entry in entries) {
         if (entry is! Map) continue;
         await _registerToken(
           bookingRef: entry['bookingRef']?.toString() ?? '',
           pushToken: entry['pushToken']?.toString() ?? '',
           activityId: entry['activityId']?.toString(),
         );
+      }
+
+      // ไม่มีการ์ดเปิดอยู่เลยทั้งที่ยังอยู่กลางทริป — iOS สั่งจบ Live Activity เอง
+      // ที่ราว 8 ชั่วโมง ทริปสองวันการ์ดจึงหายกลางทางเสมอ ต่ออายุใบเดิมไม่ได้
+      // (ActivityKit ไม่มี API ให้) แต่เปิดใบใหม่ได้ และจังหวะที่ผู้ใช้กลับเข้าแอป
+      // คือจังหวะที่ทำได้โดยไม่ต้องพึ่ง push-to-start ซึ่งมีเฉพาะ iOS 17.2+
+      //
+      // ถามฝั่ง iOS ว่า "ตอนนี้มีการ์ดไหม" ไม่ได้จำเอง เพราะระบบเก็บการ์ดไปตอน
+      // แอปไม่ได้ทำงานอยู่ ตัวแปรในเครื่องจึงเชื่อไม่ได้
+      if (entries.isEmpty && bookings.isNotEmpty) {
+        await syncFromBookings(bookings);
       }
     } catch (e) {
       debugPrint('[TripActivity] reregister failed: $e');

@@ -30,6 +30,14 @@ void main() {
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
       if (call.method == 'activeTokens') return activeTokens;
+      if (call.method == 'isSupported') return true;
+      if (call.method == 'start') {
+        return {
+          'activityId': 'activity-new',
+          'pushToken': 'cafebabe',
+          'bookingRef': 'LLK-20260810-0001',
+        };
+      }
       return null;
     });
   });
@@ -145,6 +153,96 @@ void main() {
     );
 
     expect(paths, isEmpty);
+  });
+
+  /// รอบที่ "วันนี้อยู่กลางทริป" — ต้องคำนวณจากวันนี้จริง ไม่ใช่วันตายตัว ไม่งั้น
+  /// เทสต์จะเขียวอยู่พักหนึ่งแล้วแดงเองโดยไม่มีใครแตะโค้ด
+  List<Map<String, dynamic>> midTripBookings() {
+    final today = DateTime.now();
+    String day(int offset) =>
+        today.add(Duration(days: offset)).toIso8601String().split('T').first;
+
+    return [
+      {
+        'booking_ref': 'LLK-20260810-0001',
+        'status': 'confirmed',
+        'schedule': {'departure_date': day(0), 'return_date': day(1)},
+      },
+    ];
+  }
+
+  http.Response liveState(http.Request request) {
+    if (!request.url.path.endsWith('live-activities')) {
+      return http.Response(
+        jsonEncode({
+          'success': true,
+          'data': {
+            'state': {
+              'stage': 'itinerary',
+              'headline': '10:00 น. · ถึงจุดชมวิวผาตั้ง',
+              'detail': 'ถัดไปในกำหนดการ · ผ่านมาแล้ว 2 จาก 4 จุด',
+              'progress': 0.5,
+              'booking_ref': 'LLK-20260810-0001',
+              'schedule_id': 7,
+            },
+          },
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    }
+    return http.Response('{"success":true,"data":{}}', 200);
+  }
+
+  test('ระบบเก็บการ์ดไปกลางทริป — กลับเข้าแอปแล้วต้องได้ใบใหม่', () async {
+    // iOS สั่งจบ Live Activity เองที่ราว 8 ชม. ทริปสองวันจึงมีช่วงที่ไม่มีการ์ด
+    // ทั้งที่ยังอยู่กลางทาง ต่ออายุใบเดิมไม่ได้ แต่เปิดใบใหม่ได้
+    activeTokens = [];
+    TripActivityService.instance.attachApi(loggedIn());
+
+    final paths = await capture(
+      () => TripActivityService.instance.reregisterActiveTokens(
+        bookings: midTripBookings(),
+      ),
+      respond: liveState,
+    );
+
+    expect(calls.map((c) => c.method), contains('start'));
+    expect(paths.last, endsWith('live-activities'));
+  });
+
+  test('การ์ดที่ยังอยู่ไม่ถูกเปิดซ้อน', () async {
+    activeTokens = [
+      {
+        'bookingRef': 'LLK-20260810-0001',
+        'activityId': 'activity-1',
+        'pushToken': 'deadbeef',
+      },
+    ];
+    TripActivityService.instance.attachApi(loggedIn());
+
+    await capture(
+      () => TripActivityService.instance.reregisterActiveTokens(
+        bookings: midTripBookings(),
+      ),
+      respond: liveState,
+    );
+
+    expect(calls.map((c) => c.method), isNot(contains('start')));
+  });
+
+  test('รายการจองยังโหลดไม่มา ห้ามไปยุ่งกับการ์ดที่มีอยู่', () async {
+    // resume ตอนแอปเพิ่งตื่น รายการจองอาจยังว่าง ถ้าเผลอเดินต่อจะกลายเป็นสั่ง
+    // ปิดการ์ดที่ดีอยู่แล้วทิ้ง
+    activeTokens = [];
+    TripActivityService.instance.attachApi(loggedIn());
+
+    await capture(
+      () => TripActivityService.instance.reregisterActiveTokens(),
+      respond: liveState,
+    );
+
+    expect(calls.map((c) => c.method), ['activeTokens']);
   });
 
   test('ยังไม่ได้ล็อกอินก็ไม่ต้องถาม iOS ด้วยซ้ำ', () async {
