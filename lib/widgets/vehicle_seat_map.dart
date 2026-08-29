@@ -86,16 +86,21 @@ class VehicleSeatMap extends StatelessWidget {
         : _seatById(seatMap, frontSeatId);
     final rows = _seatRows(seatMap);
     final showDriver = seatMap['show_driver'] != false;
-    final doorRows = _doorRows(seatMap);
+    // ประตูขึ้นรถอยู่ติดที่นั่งหน้าฝั่งซ้าย ไม่ใช่แถบสีข้างแถว — แถบสีที่ไม่มี
+    // ป้ายกำกับทำให้ต้องเดาว่ามันคืออะไร ซึ่งแปลว่ามันสื่อไม่สำเร็จ
+    final hasDoor = _hasDoor(seatMap);
     // เลขแถวช่วยเฉพาะตอนที่แถวเยอะจนนับเองไม่ไหว (รถบัส) รถตู้ 3-4 แถวไม่ต้อง
     final showRowNumbers = rows.length >= 6;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // เฉพาะที่นั่งกับทางเดินเท่านั้นที่ย่อตาม — รางประตูและเลขแถวเป็นความ
-        // กว้างคงที่ ถ้าเอาไปคูณด้วยจะคำนวณเกินจนล้นขอบ
-        final chrome = _doorRailWidth + (showRowNumbers ? _rowNumberWidth : 0);
-        final natural = _naturalRowWidth(rows);
+        // เฉพาะที่นั่งกับทางเดินเท่านั้นที่ย่อตาม — ช่องเลขแถว (และช่องเปล่า
+        // ที่ถ่วงไว้อีกฝั่ง) เป็นความกว้างคงที่ ถ้าเอาไปคูณด้วยจะคำนวณเกินจนล้นขอบ
+        final chrome = showRowNumbers ? _rowNumberWidth * 2 : 0.0;
+        final natural = _naturalRowWidth(
+          rows,
+          noseSlots: (frontSeat == null ? 0 : 1) + (hasDoor ? 1 : 0) + 1,
+        );
         // ขอบ 1px ของโครงรถกินความกว้างด้านละ 1 เพิ่มจาก padding
         final available = constraints.maxWidth - _bodyPadding * 2 - 2;
         final scale = _fitScale(available - chrome, natural);
@@ -115,6 +120,7 @@ class VehicleSeatMap extends StatelessWidget {
                 label: _text(seatMap['front_label'], 'หน้ารถ'),
                 showDriver: showDriver,
                 driverIcon: _driverIcon(seatMap, kind),
+                hasDoor: hasDoor,
                 frontSeat: frontSeat == null
                     ? null
                     : _buildSeat(context, frontSeat, frontSeatId, metrics),
@@ -128,7 +134,6 @@ class VehicleSeatMap extends StatelessWidget {
                     rows[i],
                     metrics,
                     showRowNumbers: showRowNumbers,
-                    hasDoor: doorRows.contains(rows[i].index),
                   ),
                 ),
               const SizedBox(height: 2),
@@ -174,7 +179,6 @@ class VehicleSeatMap extends StatelessWidget {
     _SeatRowData row,
     _SeatMetrics metrics, {
     required bool showRowNumbers,
-    required bool hasDoor,
   }) {
     Widget seats(List<String> ids) {
       return Row(
@@ -191,7 +195,6 @@ class VehicleSeatMap extends StatelessWidget {
 
     return Row(
       children: [
-        _DoorRail(active: hasDoor, height: metrics.tileHeight),
         if (showRowNumbers)
           SizedBox(
             width: _rowNumberWidth,
@@ -239,6 +242,7 @@ class VehicleSeatMap extends StatelessWidget {
             ],
           ),
         ),
+        if (showRowNumbers) const SizedBox(width: _rowNumberWidth),
       ],
     );
   }
@@ -286,8 +290,9 @@ class VehicleSeatMap extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       child: SizedBox(
         // ช่องไฟระหว่างที่นั่งมาจาก Padding รอบนอก — ตัวที่นั่งกว้างเท่าเบาะ
+        // ส่วนความสูงปล่อยให้เนื้อหากำหนดเอง เพราะกล่องข้อความของป้ายที่นั่ง
+        // สูงกว่า fontSize ตามระยะบรรทัด ตรึงไว้เองเมื่อไหร่ก็ล้นเมื่อนั้น
         width: metrics.tileWidth,
-        height: metrics.slotHeight + (spotlight ? 4 : 0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -461,11 +466,9 @@ class _SeatVisual {
 
 const _accent = AppTheme.primaryColor; // Emerald 600
 const _warning = AppTheme.warningColor; // Amber 600
-const _door = Color(0xFFF59E0B);
 
 const double _bodyPadding = 16;
 const double _rowNumberWidth = 18;
-const double _doorRailWidth = 10;
 
 _SeatVisual _visualFor(SeatTone tone) {
   switch (tone) {
@@ -530,7 +533,6 @@ class _SeatMetrics {
   double get tileHeight => 42 * scale;
   double get seatGap => 8 * scale;
   double get slotWidth => tileWidth + seatGap;
-  double get slotHeight => tileHeight + labelGap + labelSize + 4;
   double get aisleWidth => 34 * scale;
   double get rowGap => 10 * scale;
   double get labelGap => 4 * scale;
@@ -542,10 +544,10 @@ class _SeatMetrics {
 }
 
 /// ความกว้างของแถวที่กว้างที่สุดถ้าวาดขนาดเต็ม — เอาไว้คิดตัวคูณย่อ
-double _naturalRowWidth(List<_SeatRowData> rows) {
+double _naturalRowWidth(List<_SeatRowData> rows, {required int noseSlots}) {
   const base = _SeatMetrics(1);
-  // หัวรถ (ที่นั่งคู่คนขับ + ป้าย + คนขับ) ต้องไม่แคบกว่านี้
-  var widest = 3 * base.slotWidth;
+  // หัวรถ (ที่นั่งคู่คนขับ + ประตู + คนขับ) ต้องไม่แคบกว่านี้ ไม่งั้นป้ายถูกบีบ
+  var widest = (noseSlots + 1) * base.slotWidth;
 
   for (final row in rows) {
     final seats = row.left.length + row.center.length + row.right.length;
@@ -633,12 +635,14 @@ class _SeatGlyphPainter extends CustomPainter {
 }
 
 /// หัวรถ — กระจกหน้า แล้วแถวคนขับ ประเทศไทยพวงมาลัยขวา คนขับจึงอยู่ฝั่งขวาเสมอ
-/// รถตู้มีที่นั่งคู่คนขับฝั่งซ้าย รถบัสตรงนั้นเป็นบันไดขึ้นลง
+/// รถตู้มีที่นั่งคู่คนขับฝั่งซ้ายและประตูขึ้นรถอยู่ติดกัน รถบัสตรงที่นั่งคู่คนขับ
+/// เป็นบันไดขึ้นลงพอดี ประตูจึงไปอยู่ตำแหน่งเดียวกัน
 class _VehicleNose extends StatelessWidget {
   final VehicleKind kind;
   final _SeatMetrics metrics;
   final String label;
   final bool showDriver;
+  final bool hasDoor;
   final IconData driverIcon;
   final Widget? frontSeat;
 
@@ -647,6 +651,7 @@ class _VehicleNose extends StatelessWidget {
     required this.metrics,
     required this.label,
     required this.showDriver,
+    required this.hasDoor,
     required this.driverIcon,
     this.frontSeat,
   });
@@ -671,19 +676,16 @@ class _VehicleNose extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            SizedBox(
-              width: slot,
-              child:
-                  frontSeat ??
-                  (kind == VehicleKind.van
-                      ? null
-                      : _CrewBlock(
-                          icon: Icons.door_sliding_rounded,
-                          label: 'ประตู',
-                          size: metrics.driverSize,
-                          tint: _door,
-                        )),
-            ),
+            if (frontSeat != null) SizedBox(width: slot, child: frontSeat),
+            if (hasDoor)
+              SizedBox(
+                width: slot,
+                child: _CrewBlock(
+                  icon: Icons.door_front_door_rounded,
+                  label: 'ประตู',
+                  size: metrics.driverSize,
+                ),
+              ),
             Expanded(
               child: Center(child: _VehicleLabel(text: label)),
             ),
@@ -769,18 +771,16 @@ class _CrewBlock extends StatelessWidget {
   final IconData icon;
   final String label;
   final double size;
-  final Color? tint;
 
   const _CrewBlock({
     required this.icon,
     required this.label,
     required this.size,
-    this.tint,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = tint ?? AppTheme.mutedText(context);
+    final color = AppTheme.mutedText(context);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -789,15 +789,9 @@ class _CrewBlock extends StatelessWidget {
           width: size,
           height: size * 0.95,
           decoration: BoxDecoration(
-            color: tint == null
-                ? AppTheme.subtleSurface(context)
-                : tint!.withValues(alpha: 0.12),
+            color: AppTheme.subtleSurface(context),
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            border: Border.all(
-              color: tint == null
-                  ? Colors.black.withValues(alpha: 0.04)
-                  : tint!.withValues(alpha: 0.28),
-            ),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
           ),
           child: Icon(icon, color: color, size: size * 0.45),
         ),
@@ -813,38 +807,6 @@ class _CrewBlock extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// รางประตูฝั่งซ้ายของรถ (รถไทยพวงมาลัยขวา ประตูผู้โดยสารจึงอยู่ซ้ายเสมอ)
-/// แถวที่ประตูอยู่จะขึ้นแถบสีเหลือง — ช่วยให้เลือกที่นั่งใกล้/ไกลประตูได้ตั้งใจ
-class _DoorRail extends StatelessWidget {
-  final bool active;
-  final double height;
-
-  const _DoorRail({required this.active, required this.height});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: _doorRailWidth,
-      height: height,
-      child: active
-          ? Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                width: 5,
-                height: height,
-                decoration: BoxDecoration(
-                  color: _door.withValues(alpha: 0.35),
-                  borderRadius: const BorderRadius.horizontal(
-                    right: Radius.circular(4),
-                  ),
-                ),
-              ),
-            )
-          : null,
     );
   }
 }
@@ -938,11 +900,11 @@ IconData _driverIcon(Map<String, dynamic> seatMap, VehicleKind kind) {
   };
 }
 
-Set<int> _doorRows(Map<String, dynamic> seatMap) {
+/// รถคันนี้มีประตูผู้โดยสารให้วาดไหม — ผังบอกมาเป็นเลขแถว เราสนแค่ว่ามีหรือไม่มี
+bool _hasDoor(Map<String, dynamic> seatMap) {
   return _asList(seatMap['door_rows'])
       .map((item) => int.tryParse(item?.toString() ?? '') ?? 0)
-      .where((row) => row > 0)
-      .toSet();
+      .any((row) => row > 0);
 }
 
 Map<String, dynamic>? _seatById(Map<String, dynamic> seatMap, String id) {

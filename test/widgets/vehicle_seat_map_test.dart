@@ -91,6 +91,10 @@ double centreX(WidgetTester tester, String seatId) {
   return rect.center.dx;
 }
 
+double centreYOf(WidgetTester tester, String seatId) {
+  return tester.getRect(find.text(seatId)).center.dy;
+}
+
 void main() {
   group('VehicleSeatMap · รถตู้', () {
     testWidgets('วาดครบทุกที่นั่ง คนขับ และท้ายรถ', (tester) async {
@@ -114,6 +118,19 @@ void main() {
         expect((centreX(tester, 'B4') - rowCentre).abs(), lessThan(2));
       },
     );
+
+    testWidgets('ประตูขึ้นรถอยู่หัวรถ ติดกับที่นั่งหน้า A1', (tester) async {
+      await tester.pumpWidget(host(vanSeatMap()));
+
+      expect(find.text('ประตู'), findsOneWidget);
+      // อยู่แถวเดียวกับ A1 และอยู่ทางขวาของ A1 (ฝั่งซ้ายของรถ ถัดจากที่นั่งหน้า)
+      final door = tester.getRect(find.text('ประตู'));
+      final a1 = tester.getRect(find.text('A1'));
+      expect((door.center.dy - a1.center.dy).abs(), lessThan(8));
+      expect(door.center.dx, greaterThan(a1.center.dx));
+      // และอยู่ก่อนที่นั่งแถวแรกของห้องโดยสาร
+      expect(door.center.dy, lessThan(centreYOf(tester, 'A2')));
+    });
 
     testWidgets('ไม่มีเลขแถวเมื่อแถวน้อย', (tester) async {
       await tester.pumpWidget(host(vanSeatMap()));
