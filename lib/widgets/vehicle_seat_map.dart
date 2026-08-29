@@ -99,7 +99,7 @@ class VehicleSeatMap extends StatelessWidget {
         final chrome = showRowNumbers ? _rowNumberWidth * 2 : 0.0;
         final natural = _naturalRowWidth(
           rows,
-          noseSlots: (frontSeat == null ? 0 : 1) + (hasDoor ? 1 : 0) + 1,
+          noseSlots: (frontSeat == null ? 0 : 1) + 1,
         );
         // ขอบ 1px ของโครงรถกินความกว้างด้านละ 1 เพิ่มจาก padding
         final available = constraints.maxWidth - _bodyPadding * 2 - 2;
@@ -120,7 +120,6 @@ class VehicleSeatMap extends StatelessWidget {
                 label: _text(seatMap['front_label'], 'หน้ารถ'),
                 showDriver: showDriver,
                 driverIcon: _driverIcon(seatMap, kind),
-                hasDoor: hasDoor,
                 frontSeat: frontSeat == null
                     ? null
                     : _buildSeat(context, frontSeat, frontSeatId, metrics),
@@ -162,13 +161,31 @@ class VehicleSeatMap extends StatelessWidget {
             ),
             border: Border.all(color: AppTheme.border(context)),
           ),
-          child: needsScroll
-              ? SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: body,
-                )
-              : body,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              needsScroll
+                  ? SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: body,
+                    )
+                  : body,
+              // ประตูขึ้นรถ ฝั่งซ้าย (รถไทยพวงมาลัยขวา ประตูผู้โดยสารอยู่ซ้ายเสมอ)
+              // รถตู้ = ประตูเลื่อนแนบที่นั่งหน้า A1 · รถบัส = บันไดหน้าสุด
+              // ต่ำลงมาเล็กน้อย แนบขอบซ้ายของลำตัวจึงต้องเลยขอบ padding ออกไป
+              if (hasDoor)
+                Positioned(
+                  left: -_bodyPadding,
+                  top: _noseTop + (kind == VehicleKind.bus ? 8 : 0),
+                  child: _DoorTab(
+                    height:
+                        metrics.tileHeight +
+                        (kind == VehicleKind.bus ? 12 : 24),
+                  ),
+                ),
+            ],
+          ),
         );
       },
     );
@@ -467,7 +484,13 @@ class _SeatVisual {
 const _accent = AppTheme.primaryColor; // Emerald 600
 const _warning = AppTheme.warningColor; // Amber 600
 
+const _door = Color(0xFFFBBF24); // Amber 400
+const _doorInk = Color(0xFFB45309); // Amber 700
+
 const double _bodyPadding = 16;
+
+/// ระยะจากขอบบนของพื้นที่ในโครงรถถึงแถวหัวรถ: กระจกหน้า 10 + ช่องไฟ 10
+const double _noseTop = 20;
 const double _rowNumberWidth = 18;
 
 _SeatVisual _visualFor(SeatTone tone) {
@@ -635,14 +658,12 @@ class _SeatGlyphPainter extends CustomPainter {
 }
 
 /// หัวรถ — กระจกหน้า แล้วแถวคนขับ ประเทศไทยพวงมาลัยขวา คนขับจึงอยู่ฝั่งขวาเสมอ
-/// รถตู้มีที่นั่งคู่คนขับฝั่งซ้ายและประตูขึ้นรถอยู่ติดกัน รถบัสตรงที่นั่งคู่คนขับ
-/// เป็นบันไดขึ้นลงพอดี ประตูจึงไปอยู่ตำแหน่งเดียวกัน
+/// รถตู้มีที่นั่งคู่คนขับฝั่งซ้าย รถบัสตรงนั้นเป็นบันไดขึ้นลง
 class _VehicleNose extends StatelessWidget {
   final VehicleKind kind;
   final _SeatMetrics metrics;
   final String label;
   final bool showDriver;
-  final bool hasDoor;
   final IconData driverIcon;
   final Widget? frontSeat;
 
@@ -651,7 +672,6 @@ class _VehicleNose extends StatelessWidget {
     required this.metrics,
     required this.label,
     required this.showDriver,
-    required this.hasDoor,
     required this.driverIcon,
     this.frontSeat,
   });
@@ -677,15 +697,6 @@ class _VehicleNose extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (frontSeat != null) SizedBox(width: slot, child: frontSeat),
-            if (hasDoor)
-              SizedBox(
-                width: slot,
-                child: _CrewBlock(
-                  icon: Icons.door_front_door_rounded,
-                  label: 'ประตู',
-                  size: metrics.driverSize,
-                ),
-              ),
             Expanded(
               child: Center(child: _VehicleLabel(text: label)),
             ),
@@ -807,6 +818,48 @@ class _CrewBlock extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// แถบประตูขึ้นรถที่แนบขอบซ้ายของลำตัว — มีไอคอนและคำว่า "ประตู" กำกับเสมอ
+/// แถบสีเปล่า ๆ ที่ไม่มีป้ายทำให้ต้องเดาว่ามันคืออะไร ซึ่งแปลว่ามันสื่อไม่สำเร็จ
+class _DoorTab extends StatelessWidget {
+  final double height;
+
+  const _DoorTab({required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    // ไอคอนบวกคำว่า "ประตู" ที่ตะแคงอยู่กินความสูงเท่านี้เป็นอย่างน้อย
+    // ผังที่ย่อลงจนที่นั่งเตี้ยกว่านี้ต้องไม่บีบแถบจนล้น
+    return Container(
+      width: 20,
+      height: math.max(66, height),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: _door.withValues(alpha: 0.16),
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
+        border: Border.all(color: _door.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.door_front_door_rounded, size: 13, color: _doorInk),
+          const SizedBox(height: 3),
+          RotatedBox(
+            quarterTurns: 1,
+            child: Text(
+              'ประตู',
+              style: appFont(
+                color: _doorInk,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -119,16 +119,15 @@ void main() {
       },
     );
 
-    testWidgets('ประตูขึ้นรถอยู่หัวรถ ติดกับที่นั่งหน้า A1', (tester) async {
+    testWidgets('ประตูขึ้นรถแนบขอบซ้าย เคียงที่นั่งหน้า A1', (tester) async {
       await tester.pumpWidget(host(vanSeatMap()));
 
       expect(find.text('ประตู'), findsOneWidget);
-      // อยู่แถวเดียวกับ A1 และอยู่ทางขวาของ A1 (ฝั่งซ้ายของรถ ถัดจากที่นั่งหน้า)
       final door = tester.getRect(find.text('ประตู'));
       final a1 = tester.getRect(find.text('A1'));
-      expect((door.center.dy - a1.center.dy).abs(), lessThan(8));
-      expect(door.center.dx, greaterThan(a1.center.dx));
-      // และอยู่ก่อนที่นั่งแถวแรกของห้องโดยสาร
+      // ฝั่งซ้ายของ A1 (รถไทยพวงมาลัยขวา ประตูผู้โดยสารอยู่ซ้ายเสมอ)
+      expect(door.center.dx, lessThan(a1.center.dx));
+      // เคียงแถวหัวรถ ไม่ใช่แถวผู้โดยสารแถวแรก
       expect(door.center.dy, lessThan(centreYOf(tester, 'A2')));
     });
 
