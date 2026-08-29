@@ -177,12 +177,12 @@ class VehicleSeatMap extends StatelessWidget {
               if (hasDoor)
                 Positioned(
                   left: -_bodyPadding,
-                  top: _noseTop + (kind == VehicleKind.bus ? 8 : 0),
-                  child: _DoorTab(
-                    height:
-                        metrics.tileHeight +
-                        (kind == VehicleKind.bus ? 12 : 24),
-                  ),
+                  // แนวเดียวกับ A1 พอดี — รถตู้ A1 คือที่นั่งคู่คนขับที่หัวรถ
+                  // ส่วนรถบัสไม่มีที่นั่งคู่คนขับ A1 จึงเป็นที่นั่งแถวแรก
+                  top: kind == VehicleKind.bus
+                      ? _noseTop + metrics.seatButtonHeight + _noseToRowsGap
+                      : _noseTop,
+                  child: _DoorTab(height: metrics.seatButtonHeight),
                 ),
             ],
           ),
@@ -491,6 +491,9 @@ const double _bodyPadding = 16;
 
 /// ระยะจากขอบบนของพื้นที่ในโครงรถถึงแถวหัวรถ: กระจกหน้า 10 + ช่องไฟ 10
 const double _noseTop = 20;
+
+/// ระยะจากท้ายแถวหัวรถถึงที่นั่งแถวแรก: ช่องไฟ 12 + เส้นประ 1 + ช่องไฟ 12
+const double _noseToRowsGap = 25;
 const double _rowNumberWidth = 18;
 
 _SeatVisual _visualFor(SeatTone tone) {
@@ -556,6 +559,10 @@ class _SeatMetrics {
   double get tileHeight => 42 * scale;
   double get seatGap => 8 * scale;
   double get slotWidth => tileWidth + seatGap;
+
+  /// ความสูงของปุ่มที่นั่งทั้งปุ่ม (เบาะ + ป้าย) — กล่องข้อความสูงกว่า fontSize
+  /// ตามระยะบรรทัด จึงคูณเผื่อไว้
+  double get seatButtonHeight => tileHeight + labelGap + labelSize * 1.5;
   double get aisleWidth => 34 * scale;
   double get rowGap => 10 * scale;
   double get labelGap => 4 * scale;
@@ -835,30 +842,39 @@ class _DoorTab extends StatelessWidget {
     // ผังที่ย่อลงจนที่นั่งเตี้ยกว่านี้ต้องไม่บีบแถบจนล้น
     return Container(
       width: 20,
-      height: math.max(66, height),
+      height: math.max(56, height),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: _door.withValues(alpha: 0.16),
         borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
         border: Border.all(color: _door.withValues(alpha: 0.45)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.door_front_door_rounded, size: 13, color: _doorInk),
-          const SizedBox(height: 3),
-          RotatedBox(
-            quarterTurns: 1,
-            child: Text(
-              'ประตู',
-              style: appFont(
-                color: _doorInk,
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
+      // ย่อเนื้อในให้พอดีเสมอ — ความสูงของคำที่ตะแคงขึ้นกับฟอนต์และ textScaler
+      // ของเครื่อง เดาเป็นตัวเลขตายตัวเมื่อไหร่ก็ล้นบนเครื่องที่ตั้งค่าต่างไป
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.door_front_door_rounded,
+              size: 12,
+              color: _doorInk,
+            ),
+            const SizedBox(height: 2),
+            RotatedBox(
+              quarterTurns: 1,
+              child: Text(
+                'ประตู',
+                style: appFont(
+                  color: _doorInk,
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
