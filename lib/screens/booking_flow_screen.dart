@@ -422,9 +422,15 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   List<String> get _selectedSeatList => _selectedSeatIds.toList()..sort();
 
+  /// บัญชีที่กำลังจองเป็นแอดมินไหม — ตั้งครั้งเดียวใน initState
+  bool _isAdmin = false;
+
   @override
   void initState() {
     super.initState();
+    // สิทธิ์แอดมิน: อ่านครั้งเดียวตอนเปิดหน้า — ปุ่มสุดท้ายจะกลายเป็น "ยืนยันการจอง"
+    // และคำขอจะแนบ skip_payment ไปด้วย (หลังบ้านเป็นคนตัดสินใจจริงว่าให้ข้ามได้ไหม)
+    _isAdmin = context.read<AppProvider>().isAdmin;
     final initialSchedule = _initialSchedule();
     _scheduleId = int.tryParse(initialSchedule['id'].toString());
     _isJoinTrip = widget.initialJoinTrip &&
@@ -1250,14 +1256,16 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       if (_submitting) return 'กำลังล็อคที่นั่ง...';
       return 'ไปกรอกข้อมูลผู้โดยสาร';
     }
-    return _submitting ? 'กำลังส่งข้อมูล...' : 'ดำเนินการชำระเงิน';
+    if (_submitting) return 'กำลังส่งข้อมูล...';
+
+    return _isAdmin ? 'ยืนยันการจอง (แอดมิน)' : 'ดำเนินการชำระเงิน';
   }
 
   IconData get _primaryActionIcon {
     final step = _safeCurrentStep;
     if (step == 0) return Icons.arrow_forward_rounded;
     if (_usesSeatStep && step == _seatStepIndex) return Icons.event_seat_rounded;
-    return Icons.payment_rounded;
+    return _isAdmin ? Icons.check_circle_rounded : Icons.payment_rounded;
   }
 
   Widget _buildCurrentStepContent() {
@@ -1379,6 +1387,13 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     return Column(
       key: const ValueKey('passenger-step'),
       children: [
+        if (_isAdmin) ...[
+          const _CompactNotice(
+            icon: Icons.admin_panel_settings_rounded,
+            text: 'บัญชีแอดมิน — กดยืนยันแล้วการจองจะสำเร็จทันที ไม่ต้องชำระเงิน',
+          ),
+          const SizedBox(height: 24),
+        ],
         // รอบที่บินไปข้ามขั้นตอนเลือกที่นั่งไปเลย — บอกเหตุผลไว้ ไม่งั้นคนที่เคย
         // จองทริปในประเทศจะนึกว่าแอปลืมถาม
         if (_seatSelectionDisabledReason.isNotEmpty) ...[
@@ -1735,6 +1750,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           'custom_pickup_lng': _customPickup!['lng'],
           'custom_pickup_note': _customPickup!['note'],
         },
+        // แอดมินเท่านั้น — หลังบ้านยืนยันใบจองให้ทันทีโดยไม่ต้องชำระเงิน
+        // บัญชีอื่นที่ส่งธงนี้จะได้ใบจองรอชำระเงินตามปกติ
+        if (_isAdmin) 'skip_payment': true,
         'is_group': _passengers.length > 1,
         'group_name': _passengers.length > 1
             ? 'กลุ่ม ${_passengers.length} คน'
@@ -1785,6 +1803,15 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       // carries ID numbers, so it goes immediately.
       await BookingDraftStore.clear(_draftSlug);
       if (!mounted) return;
+      // ใบจองของแอดมินยืนยันมาแล้วตั้งแต่หลังบ้าน หน้าถัดไปจึงเป็นการ์ด
+      // "พร้อมสำหรับเช็คอิน" ไม่ใช่ QR โอนเงิน — บอกไว้ก่อนจะได้ไม่งงกับชื่อหน้า
+      if (_isAdmin) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('จองสำเร็จแล้ว — ข้ามการชำระเงินด้วยสิทธิ์แอดมิน'),
+          ),
+        );
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

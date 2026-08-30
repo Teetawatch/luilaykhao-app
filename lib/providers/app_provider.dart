@@ -120,6 +120,10 @@ class AppProvider extends ChangeNotifier {
   /// operators/admins (who have their own tooling) shouldn't see this tab.
   bool get canUseStaffCheckIn => roleNames.contains('staff');
 
+  /// บัญชีแอดมิน — จองในแอปได้โดยข้ามหน้าชำระเงิน (หลังบ้านตรวจสิทธิ์ซ้ำอีกชั้น
+  /// ที่ BookingController ธงจากแอปเพียงอย่างเดียวยืนยันการจองให้ไม่ได้)
+  bool get isAdmin => roleNames.contains('admin');
+
   int get unreadNotificationCount =>
       notifications.where((n) => (n as Map?)?['is_read'] != true).length;
 
