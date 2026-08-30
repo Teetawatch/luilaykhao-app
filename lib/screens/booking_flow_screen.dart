@@ -984,7 +984,14 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   void _syncPassengerCount(int count) {
     final target = count < 1 ? 1 : count;
     while (_passengers.length < target) {
-      _passengers.add(_PassengerControllers());
+      // คนที่ถูกเพิ่มมาพร้อมที่นั่งต้องได้จุดขึ้นรถของการจองติดไปด้วย เหมือนที่
+      // _addPassenger ทำ — ราคาจุดขึ้นรถเป็นราคาต่อคนเต็มจำนวนที่ทับราคารอบ และ
+      // เซิร์ฟเวอร์คิดราคานี้ให้ทุกคนที่ยังไม่ได้เลือกจุดของตัวเองอยู่แล้ว
+      // (BookingService) ถ้าไม่เติมตรงนี้ ยอดที่โชว์จะต่ำกว่าที่เก็บจริงคนละ
+      // ส่วนต่าง และยิ่งเลือกที่นั่งเยอะยิ่งเพี้ยนมาก
+      _passengers.add(
+        _PassengerControllers()..pickupPointId.value = _pickupPointId,
+      );
     }
     while (_passengers.length > target) {
       _passengers.removeLast().dispose();
