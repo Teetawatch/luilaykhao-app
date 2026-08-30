@@ -316,8 +316,8 @@ class VehicleSeatMap extends StatelessWidget {
                       ? Colors.white
                       : emphasised
                       ? Colors.transparent
-                      : Colors.black.withValues(alpha: 0.04),
-                  width: spotlight ? 2.5 : 1,
+                      : visual.border,
+                  width: spotlight ? 2.5 : 1.5,
                 ),
               ),
               child: Stack(
@@ -433,7 +433,7 @@ class VehicleSeatLegend extends StatelessWidget {
               decoration: BoxDecoration(
                 color: visual.fill,
                 borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+                border: Border.all(color: visual.border, width: 1.5),
               ),
               child: _SeatGlyph(color: visual.glyph),
             ),
@@ -455,6 +455,10 @@ class VehicleSeatLegend extends StatelessWidget {
 
 class _SeatVisual {
   final Color fill;
+
+  /// เส้นขอบเบาะ — พื้นสีอ่อนอย่างเดียวยังแยก "ว่าง/จองแล้ว" ได้ไม่เด็ดขาดพอ
+  /// ในสภาพแสงกลางแจ้ง ขอบสีเดียวกันจึงเป็นตัวย้ำอีกชั้น
+  final Color border;
   final Color glyph;
   final Color badge;
   final Color badgeIconColor;
@@ -463,6 +467,7 @@ class _SeatVisual {
 
   const _SeatVisual({
     required this.fill,
+    required this.border,
     required this.glyph,
     required this.badge,
     required this.badgeIconColor,
@@ -473,6 +478,7 @@ class _SeatVisual {
 
 const _accent = AppTheme.primaryColor; // Emerald 600
 const _warning = AppTheme.warningColor; // Amber 600
+const _danger = AppTheme.errorColor; // Rose 600
 
 const double _bodyPadding = 16;
 
@@ -484,6 +490,7 @@ _SeatVisual _visualFor(SeatTone tone) {
     case SeatTone.mine:
       return _SeatVisual(
         fill: _accent,
+        border: _accent,
         glyph: Colors.white,
         badge: Colors.white,
         badgeIconColor: _accent,
@@ -493,6 +500,7 @@ _SeatVisual _visualFor(SeatTone tone) {
     case SeatTone.group:
       return _SeatVisual(
         fill: _warning.withValues(alpha: 0.16),
+        border: _warning.withValues(alpha: 0.40),
         glyph: _warning,
         badge: _warning,
         badgeIconColor: Colors.white,
@@ -502,25 +510,29 @@ _SeatVisual _visualFor(SeatTone tone) {
     case SeatTone.locked:
       return _SeatVisual(
         fill: const Color(0xFFFFF3E0),
+        border: const Color(0xFFFFD9A0),
         glyph: const Color(0xFFE08A00),
         badge: const Color(0xFFE08A00),
         badgeIconColor: Colors.white,
         badgeIcon: Icons.schedule_rounded,
         labelColor: (_) => const Color(0xFF92400E),
       );
+    // ไฟจราจร: ว่าง = เขียว, จองแล้ว = แดง + แม่กุญแจ — อ่านออกตั้งแต่ระยะสายตา
+    // แรกโดยไม่ต้องไล่อ่านคำอธิบายสี
     case SeatTone.booked:
       return _SeatVisual(
-        fill: const Color(0xFFF1F5F9),
-        glyph: const Color(0xFFCBD5E1),
-        badge: const Color(0xFF94A3B8),
+        fill: const Color(0xFFFFF1F2),
+        border: const Color(0xFFFECDD3),
+        glyph: const Color(0xFFFB7185),
+        badge: _danger,
         badgeIconColor: Colors.white,
         badgeIcon: Icons.lock_rounded,
-        labelColor: (context) =>
-            AppTheme.mutedText(context).withValues(alpha: 0.62),
+        labelColor: (_) => const Color(0xFFFB7185),
       );
     case SeatTone.available:
       return _SeatVisual(
         fill: const Color(0xFFECFDF5),
+        border: const Color(0xFFA7F3D0),
         glyph: _accent,
         badge: _accent,
         badgeIconColor: Colors.white,
