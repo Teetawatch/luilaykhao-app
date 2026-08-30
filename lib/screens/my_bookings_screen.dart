@@ -301,7 +301,7 @@ class _JoinBookingAction extends StatelessWidget {
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppTheme.selectedTint(context),
+              color: AppTheme.primaryColor,
               borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             ),
             child: Row(
@@ -310,7 +310,7 @@ class _JoinBookingAction extends StatelessWidget {
                 const Icon(
                   Icons.add_link_rounded,
                   size: 18,
-                  color: AppTheme.primaryColor,
+                  color: Colors.white,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -318,7 +318,7 @@ class _JoinBookingAction extends StatelessWidget {
                   style: appFont(
                     fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.primaryColor,
+                    color: Colors.white,
                   ),
                 ),
               ],
