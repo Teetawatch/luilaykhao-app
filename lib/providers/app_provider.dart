@@ -3043,6 +3043,18 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 
+  /// ลิงก์การ์ดนับถอยหลังของการจองหนึ่งใบ สำหรับแนบไปกับโพสต์ที่แชร์
+  ///
+  /// ปลายทางเป็นหน้าสาธารณะที่มีภาพ OG เป็นการ์ดใบเดียวกัน — ต่างจากลิงก์ชวน
+  /// เพื่อนเปล่า ๆ ตรงที่พอโพสต์ลง Facebook/LINE แล้วพรีวิวขึ้นเป็นรูปการ์ด
+  Future<String?> fetchBookingStoryLink(String bookingRef) async {
+    final response = await api.post(ApiEndpoints.bookingStoryLink(bookingRef));
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    final url = data['url']?.toString();
+
+    return (url == null || url.isEmpty) ? null : url;
+  }
+
   /// Loads the user's referral snapshot (code, share copy, invited friends).
   /// Fetched on demand when the referral screen opens.
   Future<Map<String, dynamic>> fetchReferral() async {

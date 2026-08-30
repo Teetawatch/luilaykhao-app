@@ -3893,13 +3893,33 @@ class _HomeNextTripCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  _NextTripCta(
-                    label: isPending ? 'ชำระเงินให้เสร็จ' : 'ดูรายละเอียด',
-                    icon: isPending
-                        ? Icons.payments_rounded
-                        : Icons.arrow_forward_rounded,
-                    highlighted: isPending,
-                    onTap: openSheet,
+                  Row(
+                    children: [
+                      _NextTripCta(
+                        label: isPending ? 'ชำระเงินให้เสร็จ' : 'ดูรายละเอียด',
+                        icon: isPending
+                            ? Icons.payments_rounded
+                            : Icons.arrow_forward_rounded,
+                        highlighted: isPending,
+                        onTap: openSheet,
+                      ),
+                      // ปุ่มแชร์โผล่เฉพาะการจองที่จ่ายแล้ว — การ์ดสตอรี่ประกาศ
+                      // ว่า "ฉันกำลังจะไป" ซึ่งยังไม่จริงถ้ายังค้างชำระอยู่
+                      if (!isPending) ...[
+                        const SizedBox(width: 8),
+                        _NextTripShareButton(
+                          onTap: () => showTripStoryShareSheet(
+                            context,
+                            tripTitle: title,
+                            location: location,
+                            departureDate: travelDate,
+                            daysLeft: days,
+                            coverImageUrl: image,
+                            bookingRef: ref,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -3945,6 +3965,43 @@ class _GlassPill extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ปุ่มแชร์การ์ดนับถอยหลังลงสตอรี่ วางคู่กับ [_NextTripCta] จึงสูงเท่ากัน (38)
+class _NextTripShareButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _NextTripShareButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'แชร์การ์ดนับถอยหลัง',
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Container(
+          height: 38,
+          width: 38,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+            border: Border.all(
+              color: AppTheme.surface(context).withValues(alpha: 0.30),
+            ),
+          ),
+          child: const Icon(
+            Icons.ios_share_rounded,
+            size: 17,
+            color: Colors.white,
           ),
         ),
       ),

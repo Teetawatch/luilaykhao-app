@@ -1,17 +1,12 @@
-import 'dart:io';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/share_card.dart';
 import '../utils/thai_date.dart';
 
 /// สรุปทริปแบบ story (ลุยเลเขา Recap) — เปิดหลังจบทริป กดปัดทีละสไลด์
@@ -283,24 +278,11 @@ class _RecapStoryState extends State<_RecapStory> {
     HapticFeedback.mediumImpact();
     setState(() => _sharing = true);
     try {
-      final boundary =
-          _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return;
-
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (bytes == null) return;
-
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/luilaykhao_recap.png');
-      await file.writeAsBytes(bytes.buffer.asUint8List());
-
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          text: 'เพิ่งพิชิต "$_tripTitle" กับ ลุยเลเขา 🏔️ '
-              'มาลุยด้วยกันไหม? #ลุยเลเขา',
-        ),
+      await shareWidgetAsPng(
+        boundaryKey: _cardKey,
+        fileName: 'luilaykhao_recap.png',
+        text: 'เพิ่งพิชิต "$_tripTitle" กับ ลุยเลเขา 🏔️ '
+            'มาลุยด้วยกันไหม? #ลุยเลเขา',
       );
     } catch (_) {
       if (mounted) {

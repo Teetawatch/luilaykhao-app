@@ -3774,6 +3774,29 @@ class _TripSummaryCard extends StatelessWidget {
     };
   }
 
+  /// เปิดการ์ดนับถอยหลังสำหรับแชร์ลงสตอรี่ ใช้ตัวเลขวันชุดเดียวกับ
+  /// [_countdownLabel] เพื่อไม่ให้ชิปบนหน้าจอกับการ์ดที่แชร์ออกไปนับไม่ตรงกัน
+  Future<void> _shareStory(BuildContext context) async {
+    final trip = asMap(schedule['trip']);
+    final travelDate = bookingTravelDate(booking);
+    final now = DateTime.now();
+    final daysLeft = travelDate
+        ?.difference(DateTime(now.year, now.month, now.day))
+        .inDays;
+
+    await showTripStoryShareSheet(
+      context,
+      tripTitle: textOf(trip['title'], 'ทริปของคุณ'),
+      location: textOf(trip['location']),
+      departureDate: travelDate,
+      daysLeft: daysLeft,
+      coverImageUrl: ApiConfig.mediaUrl(
+        textOf(trip['thumbnail_image'], textOf(trip['cover_image'])),
+      ),
+      bookingRef: textOf(booking['booking_ref']),
+    );
+  }
+
   Future<void> _open(BuildContext context, Uri uri) async {
     HapticFeedback.selectionClick();
     if (await canLaunchUrl(uri)) {
@@ -3831,14 +3854,14 @@ class _TripSummaryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (countdown != null)
+              if (countdown != null) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 9,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                    color: AppTheme.selectedTint(context),
                     borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
@@ -3850,6 +3873,24 @@ class _TripSummaryCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: 4),
+                // ชิปนับถอยหลังคือสิ่งที่ลูกค้าแคปไปลงสตอรี่ ปุ่มแชร์จึงอยู่ติดกับมัน
+                IconButton(
+                  onPressed: () => _shareStory(context),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 32,
+                    height: 32,
+                  ),
+                  tooltip: 'แชร์การ์ดนับถอยหลัง',
+                  icon: const Icon(
+                    Icons.ios_share_rounded,
+                    size: 17,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),

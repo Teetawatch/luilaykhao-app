@@ -1,16 +1,11 @@
-import 'dart:io';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../providers/app_provider.dart';
 import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
+import '../utils/share_card.dart';
 import '../utils/thai_date.dart';
 import 'conquest_map_screen.dart';
 
@@ -996,7 +991,7 @@ class _ErrorState extends StatelessWidget {
 // ─── Share card ───────────────────────────────────────────────────────────────
 
 /// Bottom sheet that previews the shareable passport card and exports it as a
-/// PNG via [SharePlus] — same RepaintBoundary→toImage flow as Trip Recap.
+/// PNG via [shareWidgetAsPng] — the shared card-export flow.
 class _ShareSheet extends StatefulWidget {
   final Map<String, dynamic> data;
 
@@ -1015,24 +1010,11 @@ class _ShareSheetState extends State<_ShareSheet> {
     HapticFeedback.mediumImpact();
     setState(() => _sharing = true);
     try {
-      final boundary =
-          _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return;
-
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (bytes == null) return;
-
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/luilaykhao_passport.png');
-      await file.writeAsBytes(bytes.buffer.asUint8List());
-
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          text: 'สมุดสะสมการเดินทางของฉันกับ ลุยเลเขา 🏔️ '
-              'มาสะสมยอดดอยด้วยกันไหม? #ลุยเลเขา',
-        ),
+      await shareWidgetAsPng(
+        boundaryKey: _cardKey,
+        fileName: 'luilaykhao_passport.png',
+        text: 'สมุดสะสมการเดินทางของฉันกับ ลุยเลเขา 🏔️ '
+            'มาสะสมยอดดอยด้วยกันไหม? #ลุยเลเขา',
       );
     } catch (_) {
       if (mounted) {
