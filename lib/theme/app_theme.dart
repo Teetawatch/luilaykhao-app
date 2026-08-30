@@ -270,10 +270,15 @@ class AppTheme {
   static const Color lineBrandColor = Color(0xFF06C755);
 
   /// Tinted background for a semantic hue, weighted for the active theme.
-  /// Dark mode needs more alpha for the tint to register against a dark
+  /// Dark mode needs more weight for the tint to register against a dark
   /// surface, and the hue itself stays the foreground.
+  ///
+  /// The result is **opaque**: the hue is mixed into the surface colour rather
+  /// than laid over it at an alpha. Same shade as the old translucent version
+  /// on a plain card, but it no longer shifts when something scrolls behind it
+  /// (a tinted chip on a SliverAppBar used to change colour mid-scroll).
   static Color tintOf(BuildContext context, Color hue) {
-    return hue.withValues(alpha: isDark(context) ? 0.18 : 0.10);
+    return Color.lerp(surface(context), hue, isDark(context) ? 0.18 : 0.10)!;
   }
 
   /// Readable foreground for [tintOf]. In light mode the saturated hue reads
@@ -335,13 +340,11 @@ class AppTheme {
     return Theme.of(context).colorScheme.outline;
   }
 
-  static Color selectedTint(BuildContext context) {
-    return primaryColor.withValues(alpha: isDark(context) ? 0.18 : 0.10);
-  }
+  static Color selectedTint(BuildContext context) =>
+      tintOf(context, primaryColor);
 
-  static Color warningTint(BuildContext context) {
-    return warningColor.withValues(alpha: isDark(context) ? 0.18 : 0.10);
-  }
+  static Color warningTint(BuildContext context) =>
+      tintOf(context, warningColor);
 
   static BoxDecoration cardDecoration(
     BuildContext context, {
