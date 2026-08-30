@@ -40,7 +40,7 @@ typedef SeatBadgeResolver =
 /// ดู `App\Support\SeatLayoutFactory`) ผังรุ่นเก่าที่ไม่มีคีย์นี้ถือเป็นรถตู้
 enum VehicleKind { van, bus, boat }
 
-/// ผังที่นั่งตามรูปทรงรถจริง — กระจกหน้า คนขับ (พวงมาลัยขวาแบบไทย จึงอยู่ฝั่งขวา)
+/// ผังที่นั่งตามรูปทรงรถจริง — คนขับ (พวงมาลัยขวาแบบไทย จึงอยู่ฝั่งขวา)
 /// ประตูฝั่งซ้าย ทางเดินกลาง แล้วปิดท้ายด้วยท้ายรถ
 ///
 /// ความกว้างถูกย่อให้พอดีจอเสมอ (`_fitScale`) เพราะรถบัส 2+2 และแถวหลัง 5 ที่
@@ -86,6 +86,9 @@ class VehicleSeatMap extends StatelessWidget {
         : _seatById(seatMap, frontSeatId);
     final rows = _seatRows(seatMap);
     final showDriver = seatMap['show_driver'] != false;
+    // ที่นั่งคู่คนขับฝั่งซ้ายเป็นที่ของทีมงาน (พวงมาลัยขวาแบบไทย) — เว็บวาดสตาฟ
+    // ตรงนี้มาตลอด ดู resources/js/components/SeatMap.vue แอปเพิ่งตามมาให้ตรงกัน
+    final showStaff = seatMap['show_staff'] != false;
     // เลขแถวช่วยเฉพาะตอนที่แถวเยอะจนนับเองไม่ไหว (รถบัส) รถตู้ 3-4 แถวไม่ต้อง
     final showRowNumbers = rows.length >= 6;
 
@@ -94,9 +97,15 @@ class VehicleSeatMap extends StatelessWidget {
         // เฉพาะที่นั่งกับทางเดินเท่านั้นที่ย่อตาม — ช่องเลขแถว (และช่องเปล่า
         // ที่ถ่วงไว้อีกฝั่ง) เป็นความกว้างคงที่ ถ้าเอาไปคูณด้วยจะคำนวณเกินจนล้นขอบ
         final chrome = showRowNumbers ? _rowNumberWidth * 2 : 0.0;
+        // หัวรถกว้างเท่าแถวที่นั่งที่กว้างที่สุด สตาฟกับคนขับจึงไปยืนตรงกับ
+        // คอลัมน์ริมสุดของผังพอดี — ก่อนหน้านี้แถวหัวรถกินความกว้างเต็มกล่อง
+        // คนขับเลยไปอยู่ริมกล่องห่างจากที่นั่งจนดูเบี้ยว
         final natural = _naturalRowWidth(
           rows,
-          noseSlots: (frontSeat == null ? 0 : 1) + 1,
+          noseSlots:
+              (showStaff ? 1 : 0) +
+              (frontSeat == null ? 0 : 1) +
+              (showDriver ? 1 : 0),
         );
         // ขอบ 1px ของโครงรถกินความกว้างด้านละ 1 เพิ่มจาก padding
         final available = constraints.maxWidth - _bodyPadding * 2 - 2;
@@ -112,16 +121,18 @@ class VehicleSeatMap extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _VehicleNose(
-                kind: kind,
                 metrics: metrics,
+                width: natural * scale,
                 label: _text(seatMap['front_label'], 'หน้ารถ'),
                 showDriver: showDriver,
                 driverIcon: _driverIcon(seatMap, kind),
+                staffIcon: showStaff ? _staffIcon(seatMap) : null,
+                staffLabel: _text(seatMap['staff_label'], 'สตาฟ'),
                 frontSeat: frontSeat == null
                     ? null
                     : _buildSeat(context, frontSeat, frontSeatId, metrics),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
               for (var i = 0; i < rows.length; i++)
                 Padding(
                   padding: EdgeInsets.only(bottom: metrics.rowGap),
@@ -132,7 +143,7 @@ class VehicleSeatMap extends StatelessWidget {
                     showRowNumbers: showRowNumbers,
                   ),
                 ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               _VehicleRear(
                 label: _text(
                   seatMap['rear_label'],
@@ -146,7 +157,7 @@ class VehicleSeatMap extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.fromLTRB(
             _bodyPadding,
-            14,
+            16,
             _bodyPadding,
             _bodyPadding,
           ),
@@ -528,11 +539,11 @@ class _SeatMetrics {
 
   double get tileWidth => 44 * scale;
   double get tileHeight => 42 * scale;
-  double get seatGap => 8 * scale;
+  double get seatGap => 14 * scale;
   double get slotWidth => tileWidth + seatGap;
-  double get aisleWidth => 34 * scale;
-  double get rowGap => 10 * scale;
-  double get labelGap => 4 * scale;
+  double get aisleWidth => 36 * scale;
+  double get rowGap => 18 * scale;
+  double get labelGap => 5 * scale;
   double get labelSize => math.max(8, AppText.sizeMicro * scale);
   double get tileRadius => AppTheme.radiusMd * math.max(0.7, scale);
   double get glyphInset => 9 * scale;
@@ -543,8 +554,9 @@ class _SeatMetrics {
 /// ความกว้างของแถวที่กว้างที่สุดถ้าวาดขนาดเต็ม — เอาไว้คิดตัวคูณย่อ
 double _naturalRowWidth(List<_SeatRowData> rows, {required int noseSlots}) {
   const base = _SeatMetrics(1);
-  // หัวรถ (ที่นั่งคู่คนขับ + ประตู + คนขับ) ต้องไม่แคบกว่านี้ ไม่งั้นป้ายถูกบีบ
-  var widest = (noseSlots + 1) * base.slotWidth;
+  // ป้าย "หน้ารถ" อยู่คนละบรรทัดกับสตาฟ/คนขับ หัวรถจึงต้องการแค่ที่ของบล็อก
+  // ที่วาดจริงเท่านั้น — รถที่ผังแคบกว่านั้นค่อยถูกถ่างออกให้พอดี
+  var widest = noseSlots * base.slotWidth;
 
   for (final row in rows) {
     final seats = row.left.length + row.center.length + row.right.length;
@@ -631,22 +643,30 @@ class _SeatGlyphPainter extends CustomPainter {
       oldDelegate.color != color;
 }
 
-/// หัวรถ — กระจกหน้า แล้วแถวคนขับ ประเทศไทยพวงมาลัยขวา คนขับจึงอยู่ฝั่งขวาเสมอ
-/// รถตู้มีที่นั่งคู่คนขับฝั่งซ้าย รถบัสตรงนั้นเป็นบันไดขึ้นลง
+/// หัวรถ — ป้ายบอกด้านหน้าหนึ่งบรรทัด แล้วแถวคนของรถข้างล่าง
+/// ประเทศไทยพวงมาลัยขวา คนขับจึงอยู่ฝั่งขวาเสมอ ฝั่งซ้ายคือสตาฟ แล้วต่อด้วย
+/// ที่นั่งคู่คนขับถ้ารอบนั้นเปิดขายที่ตรงนั้น
+///
+/// [width] คือความกว้างของแถวที่นั่งที่กว้างที่สุด แถวนี้จึงยืนตรงกับผังข้างล่าง
+/// ส่วนป้ายแยกไปอยู่อีกบรรทัดเพื่อไม่ให้ไปแย่งที่ตรงกลางจนสองฝั่งเบี้ยว
 class _VehicleNose extends StatelessWidget {
-  final VehicleKind kind;
   final _SeatMetrics metrics;
+  final double width;
   final String label;
   final bool showDriver;
   final IconData driverIcon;
+  final IconData? staffIcon;
+  final String staffLabel;
   final Widget? frontSeat;
 
   const _VehicleNose({
-    required this.kind,
     required this.metrics,
+    required this.width,
     required this.label,
     required this.showDriver,
     required this.driverIcon,
+    required this.staffLabel,
+    this.staffIcon,
     this.frontSeat,
   });
 
@@ -656,37 +676,39 @@ class _VehicleNose extends StatelessWidget {
 
     return Column(
       children: [
-        // กระจกหน้า — บอกว่าด้านบนของผังคือหน้ารถ โดยไม่ต้องอ่านตัวหนังสือ
-        Container(
-          height: 10,
-          margin: const EdgeInsets.symmetric(horizontal: 22),
-          decoration: BoxDecoration(
-            color: AppTheme.subtleSurface(context),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-            border: Border.all(color: AppTheme.border(context)),
+        _VehicleLabel(text: label),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: width,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // ที่นั่งคู่คนขับติดริมซ้ายเหมือนเดิม (ตรงกับคอลัมน์ริมของผัง)
+              // สตาฟถัดเข้ามา คือช่วงกลางเบาะหน้าที่ติดกับคนขับ
+              if (frontSeat != null) SizedBox(width: slot, child: frontSeat),
+              if (staffIcon != null)
+                SizedBox(
+                  width: slot,
+                  child: _CrewBlock(
+                    icon: staffIcon!,
+                    label: staffLabel,
+                    size: metrics.driverSize,
+                  ),
+                ),
+              const Spacer(),
+              if (showDriver)
+                SizedBox(
+                  width: slot,
+                  child: _CrewBlock(
+                    icon: driverIcon,
+                    label: 'คนขับ',
+                    size: metrics.driverSize,
+                  ),
+                ),
+            ],
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (frontSeat != null) SizedBox(width: slot, child: frontSeat),
-            Expanded(
-              child: Center(child: _VehicleLabel(text: label)),
-            ),
-            SizedBox(
-              width: slot,
-              child: showDriver
-                  ? _CrewBlock(
-                      icon: driverIcon,
-                      label: 'คนขับ',
-                      size: metrics.driverSize,
-                    )
-                  : null,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 18),
         const _DashedRule(),
       ],
     );
@@ -703,7 +725,7 @@ class _VehicleRear extends StatelessWidget {
     return Column(
       children: [
         const _DashedRule(),
-        const SizedBox(height: 10),
+        const SizedBox(height: 16),
         _VehicleLabel(text: label, muted: true),
       ],
     );
@@ -883,6 +905,20 @@ IconData _driverIcon(Map<String, dynamic> seatMap, VehicleKind kind) {
     VehicleKind.boat => Icons.sailing_rounded,
     VehicleKind.van => Icons.drive_eta_rounded,
   };
+}
+
+/// ไอคอนสตาฟ — ชื่อเดียวกับที่เว็บใช้ (material symbols) แปลงเป็นไอคอนของ Flutter
+IconData _staffIcon(Map<String, dynamic> seatMap) {
+  switch (_text(seatMap['staff_icon'])) {
+    case 'badge':
+      return Icons.badge_rounded;
+    case 'person':
+      return Icons.person_rounded;
+    case 'groups':
+      return Icons.groups_rounded;
+  }
+
+  return Icons.support_agent_rounded;
 }
 
 Map<String, dynamic>? _seatById(Map<String, dynamic> seatMap, String id) {

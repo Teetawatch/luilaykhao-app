@@ -51,6 +51,23 @@ Map<String, dynamic> busSeatMap({int rows = 11}) {
   };
 }
 
+/// ผังเล็กแบบไม่มีทางเดินและไม่มีที่นั่งคู่คนขับ (รถเก๋ง/ผังที่แอดมินวาดเอง)
+Map<String, dynamic> gridSeatMap() => {
+  'layout_kind': 'van',
+  'rows': 3,
+  'columns': ['A', 'B', 'C'],
+  'front_seat': null,
+  'last_row_center': [
+    for (final r in [1, 2, 3])
+      for (final c in ['A', 'B', 'C']) '$c$r',
+  ],
+  'seats': [
+    for (final r in [1, 2, 3])
+      for (final c in ['A', 'B', 'C'])
+        {'id': '$c$r', 'label': '$c$r', 'status': 'available'},
+  ],
+};
+
 Widget host(
   Map<String, dynamic> seatMap, {
   double width = 360,
@@ -88,6 +105,10 @@ double centreX(WidgetTester tester, String seatId) {
   final rect = tester.getRect(find.text(seatId));
   return rect.center.dx;
 }
+
+/// จุดกึ่งกลางแนวนอนของบล็อกคนของรถ วัดจากป้ายใต้บล็อก
+double crewCentreX(WidgetTester tester, String label) =>
+    tester.getRect(find.text(label)).center.dx;
 
 void main() {
   group('VehicleSeatMap · รถตู้', () {
@@ -161,6 +182,70 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('VehicleSeatMap · หัวรถ', () {
+    testWidgets('สตาฟอยู่ฝั่งซ้ายของคนขับ', (tester) async {
+      await tester.pumpWidget(host(gridSeatMap()));
+
+      expect(find.text('สตาฟ'), findsOneWidget);
+      expect(
+        crewCentreX(tester, 'สตาฟ'),
+        lessThan(crewCentreX(tester, 'คนขับ')),
+        reason: 'พวงมาลัยขวาแบบไทย สตาฟจึงต้องอยู่ซ้ายของคนขับเสมอ',
+      );
+    });
+
+    testWidgets('สตาฟกับคนขับยืนตรงกับคอลัมน์ริมของผัง ไม่ลอยออกไปริมกล่อง', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(gridSeatMap()));
+
+      expect(
+        (crewCentreX(tester, 'สตาฟ') - centreX(tester, 'A1')).abs(),
+        lessThan(2),
+      );
+      expect(
+        (crewCentreX(tester, 'คนขับ') - centreX(tester, 'C1')).abs(),
+        lessThan(2),
+      );
+    });
+
+    testWidgets('ป้ายหน้ารถอยู่กึ่งกลางคันจริง', (tester) async {
+      await tester.pumpWidget(host(gridSeatMap()));
+
+      final rowCentre = (centreX(tester, 'A1') + centreX(tester, 'C1')) / 2;
+      expect(
+        (crewCentreX(tester, 'หน้ารถ') - rowCentre).abs(),
+        lessThan(2),
+        reason: 'ป้ายอยู่คนละบรรทัดกับสตาฟ/คนขับ จึงไม่ควรถูกดันให้เยื้อง',
+      );
+    });
+
+    testWidgets('รถตู้ยังวางที่นั่งคู่คนขับไว้ริมซ้ายเหมือนเดิม', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(vanSeatMap()));
+
+      expect(centreX(tester, 'A1'), lessThan(crewCentreX(tester, 'สตาฟ')));
+      expect(
+        crewCentreX(tester, 'สตาฟ'),
+        lessThan(crewCentreX(tester, 'คนขับ')),
+      );
+      // คนขับอยู่ริมขวาของผัง ตรงกับที่นั่งริมขวาของแถว 2+ทางเดิน
+      expect(
+        (crewCentreX(tester, 'คนขับ') - centreX(tester, 'E2')).abs(),
+        lessThan(2),
+      );
+    });
+
+    testWidgets('ผังที่สั่งซ่อนสตาฟก็ต้องไม่วาด', (tester) async {
+      final map = gridSeatMap()..['show_staff'] = false;
+      await tester.pumpWidget(host(map));
+
+      expect(find.text('สตาฟ'), findsNothing);
+      expect(find.text('คนขับ'), findsOneWidget);
     });
   });
 
