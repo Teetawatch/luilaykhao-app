@@ -2468,8 +2468,9 @@ class _SystemMessage extends StatelessWidget {
             ),
             if (rest.isNotEmpty) ...[
               const SizedBox(height: 5),
-              Text(
-                rest,
+              // เบอร์โทรในสรุปทีมงาน/คนขับต้องกดโทรได้ ไม่ใช่ให้ลูกค้าจดเอง
+              _SystemBodyText(
+                text: rest,
                 style: appFont(
                   fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w500,
@@ -2489,6 +2490,109 @@ class _SystemMessage extends StatelessWidget {
     if (dt == null) return '';
     return '${dt.hour.toString().padLeft(2, '0')}:'
         '${dt.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+/// ข้อความระบบที่มีเบอร์โทร (สรุปทีมงาน/คนขับก่อนวันเดินทาง) — ทำเบอร์ให้กดโทรได้
+/// แทนที่จะต้องจดใส่กระดาษหรือคัดลอกทีละตัว
+///
+/// Stateful เหมือน [_MessageText] เพราะ [TapGestureRecognizer] ต้องถูก dispose
+class _SystemBodyText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+
+  const _SystemBodyText({required this.text, required this.style});
+
+  @override
+  State<_SystemBodyText> createState() => _SystemBodyTextState();
+}
+
+class _SystemBodyTextState extends State<_SystemBodyText> {
+  /// เบอร์ไทย 9–10 หลักที่ขึ้นต้นด้วย 0 คั่นด้วยขีดหรือเว้นวรรคได้
+  /// (กันชนกับตัวเลขอื่นในข้อความด้วยการห้ามมีหลักต่อท้าย/นำหน้า)
+  static final _phonePattern = RegExp(
+    r'(?<!\d)0\d{1,2}[-\s]?\d{3}[-\s]?\d{3,4}(?!\d)',
+  );
+
+  final List<TapGestureRecognizer> _recognizers = [];
+  late List<InlineSpan> _spans;
+
+  @override
+  void initState() {
+    super.initState();
+    _spans = _build();
+  }
+
+  @override
+  void didUpdateWidget(_SystemBodyText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text || oldWidget.style != widget.style) {
+      _spans = _build();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposeRecognizers();
+    super.dispose();
+  }
+
+  void _disposeRecognizers() {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+  }
+
+  Future<void> _call(String phone) async {
+    HapticFeedback.selectionClick();
+    final uri = Uri.parse('tel:${phone.replaceAll(RegExp(r'[^0-9+]'), '')}');
+    try {
+      await launchUrl(uri);
+    } catch (_) {
+      // เครื่องที่โทรออกไม่ได้ (แท็บเล็ต/อีมูเลเตอร์) — ปล่อยผ่านเงียบ ๆ
+    }
+  }
+
+  List<InlineSpan> _build() {
+    _disposeRecognizers();
+    final text = widget.text;
+    final spans = <InlineSpan>[];
+    var last = 0;
+
+    for (final match in _phonePattern.allMatches(text)) {
+      if (match.start > last) {
+        spans.add(TextSpan(text: text.substring(last, match.start)));
+      }
+
+      final phone = match.group(0)!;
+      final recognizer = TapGestureRecognizer()..onTap = () => _call(phone);
+      _recognizers.add(recognizer);
+
+      spans.add(TextSpan(
+        text: phone,
+        style: widget.style.copyWith(
+          fontWeight: FontWeight.w800,
+          color: AppTheme.primaryColor,
+          decoration: TextDecoration.underline,
+          decorationColor: AppTheme.primaryColor.withValues(alpha: 0.5),
+        ),
+        recognizer: recognizer,
+      ));
+
+      last = match.end;
+    }
+
+    if (last < text.length) {
+      spans.add(TextSpan(text: text.substring(last)));
+    }
+
+    return spans;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(TextSpan(children: _spans), style: widget.style);
   }
 }
 
