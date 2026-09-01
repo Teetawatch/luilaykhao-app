@@ -126,16 +126,12 @@ class DestinationInfoSection extends StatelessWidget {
           // ── stats grid ─────────────────────────────────────────────
           if (chips.isNotEmpty) ...[
             const SizedBox(height: 18),
-            Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.04)
-                    : AppTheme.subtleSurface(context),
-                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                border: Border.all(
-                  color: AppTheme.border(context).withValues(alpha: 0.55),
-                ),
-              ),
+            // การ์ดขาวใบเดียวกับ section ข้างล่าง — พื้นเดิมเป็น subtleSurface
+            // ซึ่งโหมดสว่างเป็นสีเดียวกับพื้นหน้าเป๊ะ กล่องนี้เลยเหลือแต่เส้น
+            // ขอบ ดูเป็นกรอบเปล่าแทนที่จะเป็นก้อนข้อมูล
+            // (ขอบในของ QuickInfoChips เป็น padding 4 อยู่แล้ว)
+            _PremiumCard(
+              padding: EdgeInsets.zero,
               child: QuickInfoChips(trip: trip),
             ),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:luilaykhao_app/screens/trip_detail_screen.dart';
+import 'package:luilaykhao_app/theme/app_theme.dart';
 
 /// เนื้อหาอ้างอิงในหน้าทริปถูกพับเก็บไว้ให้กดกาง เพื่อไม่ให้ 22 section
 /// กินหน้าจอตอนคนกำลังตัดสินใจ — เทสนี้กันไม่ให้มันกลับไปกางค้างทั้งหมด
@@ -70,6 +71,52 @@ void main() {
       tester.getSize(find.byType(MustKnowSection)).height,
       lessThan(expanded),
     );
+  });
+
+  testWidgets('กล่องสถิติของหัวเรื่องเป็นการ์ดขาว ไม่ใช่กรอบเปล่าสีพื้น', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const Scaffold(
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: DestinationInfoSection(
+                trip: {
+                  'title': 'เขาหลวง สุโขทัย',
+                  'duration_days': 2,
+                  'difficulty': 'medium',
+                },
+                reviews: [],
+                isLoading: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(DestinationInfoSection));
+    final fill = tester
+        .widgetList<Container>(
+          find.ancestor(
+            of: find.byType(QuickInfoChips),
+            matching: find.byType(Container),
+          ),
+        )
+        .map((container) => container.decoration)
+        .whereType<BoxDecoration>()
+        .map((decoration) => decoration.color)
+        .whereType<Color>()
+        .first;
+
+    // สีเดียวกับการ์ด section ข้างล่าง — ไม่ใช่สีพื้นของหน้า ซึ่งจะทำให้กล่อง
+    // นี้เหลือแค่เส้นขอบ มองไม่เห็นว่าเป็นก้อนข้อมูล
+    expect(fill, AppTheme.surface(context));
+    expect(fill, isNot(AppTheme.background(context)));
   });
 
   testWidgets('หัวเรื่องทริปไม่มีกรอบการ์ด — เป็นหัวหน้า ไม่ใช่ section', (

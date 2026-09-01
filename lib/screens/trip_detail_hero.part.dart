@@ -249,7 +249,10 @@ class _SectionTab extends StatelessWidget {
   }
 }
 
-/// รอยต่อระหว่างรูปปกกับการ์ดเนื้อหา — เฉดที่ปลายรูป, ขอบโค้ง และขีดจับ
+/// รอยต่อระหว่างรูปปกกับการ์ดเนื้อหา — ขอบโค้งและขีดจับ
+///
+/// รูปจบคมที่ขอบการ์ด ไม่มีเฉดสีการ์ดไล่ขึ้นไปในรูป — ฝ้าแบบนั้นอ่านเป็นแสง
+/// เรืองที่หัวการ์ด ไม่ใช่รอยต่อ
 ///
 /// อยู่ใน [TravelSliverAppBar] ไม่ใช่ใน sliver ของเนื้อหา เพราะ viewport วาด
 /// sliver แรกทับ sliver ที่ตามมา — โค้งที่ติดอยู่กับเนื้อหาจะถูกรูปปกบังจนหมด
@@ -282,39 +285,14 @@ class _ContentTopCap extends StatelessWidget {
           alignment: Alignment.bottomCenter,
           child: Opacity(
             opacity: opacity,
-            child: Stack(
-              alignment: Alignment.bottomCenter,
-              children: [
-                // เฉดจางลงหาสีการ์ด ไล่ต่อเนื่องลงไปจนถึงขอบล่างสุดของแถบ
-                // (ส่วนล่างสุดโดนขอบโค้งทับ เหลือโผล่เฉพาะเนื้อรูปตรงมุม)
-                SizedBox(
-                  width: double.infinity,
-                  height: _heroVeilHeight,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          background.withValues(alpha: 0),
-                          background.withValues(alpha: _heroVeilOpacity * 0.3),
-                          background.withValues(alpha: _heroVeilOpacity),
-                        ],
-                        stops: const [0.0, 0.55, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  key: const Key('tripDetailContentCap'),
-                  width: double.infinity,
-                  height: _contentOverlap,
-                  child: CustomPaint(
-                    painter: _SquircleCapPainter(background),
-                    child: const _CardGrabHandle(),
-                  ),
-                ),
-              ],
+            child: SizedBox(
+              key: const Key('tripDetailContentCap'),
+              width: double.infinity,
+              height: _contentOverlap,
+              child: CustomPaint(
+                painter: _SquircleCapPainter(background),
+                child: const _CardGrabHandle(),
+              ),
             ),
           ),
         );
@@ -406,8 +384,8 @@ class _SquircleCapPainter extends CustomPainter {
 }
 
 /// A single, static cover image for the trip — no swiping, no counters.
-/// The bottom dissolves into the page background so the detail card below
-/// blends in cleanly, in the spirit of Apple's photo-led layouts.
+/// The image runs full-bleed to the card's rounded cap, which sits on top of
+/// it; no fade into the page background.
 class HeroCoverImage extends StatelessWidget {
   final Map<String, dynamic> trip;
   final bool isLoading;

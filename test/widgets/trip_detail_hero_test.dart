@@ -85,6 +85,42 @@ void main() {
     expect(capRect.contains(handleRect.bottomRight), isTrue);
   });
 
+  testWidgets('ไม่มีฝ้าสีการ์ดไล่ขึ้นไปในรูปปก — รูปจบคมที่ขอบการ์ด', (
+    tester,
+  ) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_wrap(controller));
+    await tester.pump();
+
+    final context = tester.element(find.byType(CustomScrollView));
+    final background = Theme.of(context).scaffoldBackgroundColor;
+
+    // เฉดดำบาง ๆ ที่หัวรูป (ให้ปุ่มอ่านออก) ยังมีได้ — ที่ห้ามคือเฉด "สีการ์ด"
+    // ไล่ขึ้นไปในรูป เพราะมันอ่านเป็นแสงเรืองที่หัวการ์ด ไม่ใช่รอยต่อ
+    final gradients = tester
+        .widgetList<DecoratedBox>(
+          find.descendant(
+            of: find.byType(SliverAppBar),
+            matching: find.byType(DecoratedBox),
+          ),
+        )
+        .map((box) => box.decoration)
+        .whereType<BoxDecoration>()
+        .map((decoration) => decoration.gradient)
+        .whereType<LinearGradient>();
+
+    expect(
+      gradients.any(
+        (gradient) => gradient.colors.any(
+          (color) => color.withValues(alpha: 1) == background,
+        ),
+      ),
+      isFalse,
+    );
+  });
+
   testWidgets('พอแถบหุบจนเหลือ toolbar ขอบโค้งหายไป ไม่ค้างทับเนื้อหา', (
     tester,
   ) async {
