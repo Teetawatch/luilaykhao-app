@@ -81,6 +81,17 @@ class _StaffLedgerScreenState extends State<StaffLedgerScreen> {
 
   Map<String, dynamic> get _summary => asMap(_data?['summary']);
 
+  /// ข้อบังคับที่เซิร์ฟเวอร์กำลังใช้อยู่ — แอปสะท้อนตาม ไม่ตัดสินใจเอง
+  Map<String, dynamic> get _rules => asMap(_data?['rules']);
+
+  double? get _slipRequiredAbove =>
+      (_rules['slip_required_above'] as num?)?.toDouble();
+
+  bool get _requiresCategory => _rules['require_category'] == true;
+
+  /// ปิดงบแล้ว = รอบนี้ล็อก จดเพิ่ม/แก้/ลบไม่ได้อีก ต้องบอกแอดมิน
+  bool get _closed => asMap(_data?['schedule'])['finance_closed'] == true;
+
   List<Map<String, dynamic>> _categoriesFor(String kind) =>
       asList(asMap(_data?['categories'])[kind]).map(asMap).toList();
 
@@ -95,6 +106,8 @@ class _StaffLedgerScreenState extends State<StaffLedgerScreen> {
         entry: entry,
         expenseCategories: _categoriesFor('expense'),
         incomeCategories: _categoriesFor('income'),
+        slipRequiredAbove: _slipRequiredAbove,
+        requiresCategory: _requiresCategory,
       ),
     );
     if (saved != null && mounted) setState(() => _data = saved);
@@ -105,7 +118,7 @@ class _StaffLedgerScreenState extends State<StaffLedgerScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _LedgerDetailSheet(entry: entry),
+      builder: (_) => _LedgerDetailSheet(entry: entry, locked: _closed),
     );
     if (!mounted || action == null) return;
 
@@ -186,7 +199,7 @@ class _StaffLedgerScreenState extends State<StaffLedgerScreen> {
           ),
         ],
       ),
-      floatingActionButton: _error != null
+      floatingActionButton: _error != null || _closed
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _openForm(),
@@ -235,6 +248,13 @@ class _StaffLedgerScreenState extends State<StaffLedgerScreen> {
       ),
       children: [
         _LedgerSummaryCard(summary: _summary, tripTitle: widget.title),
+        if (_closed) ...[
+          const SizedBox(height: 12),
+          const _LockedNotice(),
+        ] else if (_slipRequiredAbove != null) ...[
+          const SizedBox(height: 12),
+          _RuleNotice(slipRequiredAbove: _slipRequiredAbove!),
+        ],
         const SizedBox(height: 14),
         if (all.isNotEmpty) ...[
           _FilterRow(
@@ -286,6 +306,77 @@ class _StaffLedgerScreenState extends State<StaffLedgerScreen> {
     }
 
     return widgets;
+  }
+}
+
+// ─── แถบบอกกติกา ──────────────────────────────────────────────
+
+/// รอบนี้ปิดงบแล้ว — บอกให้ชัดว่าทำไมปุ่มบันทึกหายไป
+class _LockedNotice extends StatelessWidget {
+  const _LockedNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return _NoticeBar(
+      icon: Icons.lock_rounded,
+      color: AppTheme.mutedText(context),
+      text: 'รอบนี้ปิดงบแล้ว บันทึกเพิ่มหรือแก้ไขไม่ได้ — มีอะไรตกหล่นแจ้งแอดมิน',
+    );
+  }
+}
+
+/// เกณฑ์สลิป — บอกก่อนจด ไม่ใช่ให้ไปเจอตอนกดบันทึก
+class _RuleNotice extends StatelessWidget {
+  final double slipRequiredAbove;
+
+  const _RuleNotice({required this.slipRequiredAbove});
+
+  @override
+  Widget build(BuildContext context) {
+    return _NoticeBar(
+      icon: Icons.receipt_long_rounded,
+      color: AppTheme.primaryColor,
+      text: 'รายจ่ายเกิน ${money(slipRequiredAbove)} ต้องถ่ายสลิป/ใบเสร็จแนบด้วย',
+    );
+  }
+}
+
+class _NoticeBar extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  const _NoticeBar({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -681,7 +772,10 @@ class _EmptyLedger extends StatelessWidget {
 class _LedgerDetailSheet extends StatelessWidget {
   final Map<String, dynamic> entry;
 
-  const _LedgerDetailSheet({required this.entry});
+  /// รอบปิดงบแล้ว — ซ่อนปุ่มแก้/ลบ แทนที่จะปล่อยให้กดแล้วโดนปฏิเสธ
+  final bool locked;
+
+  const _LedgerDetailSheet({required this.entry, this.locked = false});
 
   @override
   Widget build(BuildContext context) {
@@ -690,7 +784,7 @@ class _LedgerDetailSheet extends StatelessWidget {
     final color = isIncome ? AppTheme.successColor : AppTheme.errorColor;
     final slipUrl = textOf(entry['slip_url']);
     final note = textOf(entry['note']);
-    final canEdit = entry['can_edit'] == true;
+    final canEdit = entry['can_edit'] == true && !locked;
     final spentAt = DateTime.tryParse(textOf(entry['spent_at']));
 
     return _SheetShell(
@@ -805,7 +899,9 @@ class _LedgerDetailSheet extends StatelessWidget {
             )
           else
             Text(
-              'รายการนี้บันทึกโดยคนอื่น แก้ไขได้เฉพาะเจ้าของรายการหรือแอดมิน',
+              locked
+                  ? 'รอบนี้ปิดงบแล้ว ตัวเลขถูกล็อก — ถ้ามีที่ต้องแก้ให้แจ้งแอดมิน'
+                  : 'รายการนี้บันทึกโดยคนอื่น แก้ไขได้เฉพาะเจ้าของรายการหรือแอดมิน',
               style: appFont(
                 fontSize: AppText.sizeCaption,
                 fontWeight: FontWeight.w600,
@@ -866,11 +962,17 @@ class _LedgerFormSheet extends StatefulWidget {
   final List<Map<String, dynamic>> expenseCategories;
   final List<Map<String, dynamic>> incomeCategories;
 
+  /// รายจ่ายเกินยอดนี้ต้องมีสลิป — null คือไม่บังคับ (เซิร์ฟเวอร์เป็นคนกำหนด)
+  final double? slipRequiredAbove;
+  final bool requiresCategory;
+
   const _LedgerFormSheet({
     required this.scheduleId,
     required this.entry,
     required this.expenseCategories,
     required this.incomeCategories,
+    this.slipRequiredAbove,
+    this.requiresCategory = false,
   });
 
   @override
@@ -1008,6 +1110,25 @@ class _LedgerFormSheetState extends State<_LedgerFormSheet> {
       AppSnack.error(
         context,
         _kind == 'income' ? 'ระบุว่ารับเงินจากอะไร' : 'ระบุว่าจ่ายค่าอะไร',
+      );
+      return;
+    }
+    // เช็กกติกาเดียวกับเซิร์ฟเวอร์ตรงนี้ก่อน — สตาฟจะได้ไม่เสียเวลากดบันทึก
+    // บนดอยที่เน็ตช้าแล้วค่อยรู้ว่าไม่ผ่าน
+    if (widget.requiresCategory && (_category == null || _category!.isEmpty)) {
+      AppSnack.error(context, 'เลือกหมวดของรายการก่อนบันทึก');
+      return;
+    }
+    final threshold = widget.slipRequiredAbove;
+    final hasSlip = _slipPath != null ||
+        (!_removeSlip && (_existingSlipUrl ?? '').isNotEmpty);
+    if (threshold != null &&
+        _kind != 'income' &&
+        amount > threshold &&
+        !hasSlip) {
+      AppSnack.error(
+        context,
+        'รายจ่ายเกิน ${money(threshold)} ต้องถ่ายสลิป/ใบเสร็จแนบด้วย',
       );
       return;
     }
