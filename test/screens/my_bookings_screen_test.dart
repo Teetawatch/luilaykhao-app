@@ -20,17 +20,22 @@ void main() {
     String departureDate = '2099-01-10',
     int passengerCount = 1,
     bool viewerIsOwner = false,
+    String title = 'ภูกระดึง',
+    bool canReview = false,
+    num? paidAmount,
+    int id = 1,
   }) {
     return {
-      'id': 1,
-      'booking_ref': 'LLK-20990110-0001',
+      'id': id,
+      'booking_ref': 'LLK-20990110-000$id',
       'status': status,
       'viewer_is_owner': viewerIsOwner,
       'slip_ocr_status': slipOcrStatus,
       'expires_at': expiresAt,
+      'can_review': canReview,
       'payment_type': 'full',
       'total_amount': 3500,
-      'paid_amount': status == 'confirmed' ? 3500 : 0,
+      'paid_amount': paidAmount ?? (status == 'confirmed' ? 3500 : 0),
       'created_at': '2026-08-04T10:00:00.000000Z',
       'passengers': [
         for (var i = 0; i < passengerCount; i++)
@@ -40,7 +45,7 @@ void main() {
         'id': 5,
         'departure_date': departureDate,
         'return_date': departureDate,
-        'trip': {'id': 2, 'title': 'ภูกระดึง', 'location': 'เลย', 'slug': 'phu'},
+        'trip': {'id': 2, 'title': title, 'location': 'เลย', 'slug': 'phu'},
         'pickup_points': const [],
         'travelers': const [],
       },
@@ -98,6 +103,79 @@ void main() {
       booking(status: 'completed', departureDate: '2020-01-10'),
     ]);
     expect(tester.takeException(), isNull);
+  });
+
+  // ทริปที่จบแล้วแต่ยังรีวิวได้ เคยแสดงเป็นการ์ดเต็มใบ ทำให้ลิสต์ "เดินทางแล้ว"
+  // มีการ์ดใหญ่ปนแถวย่อ — ตอนนี้ย่อเท่ากันหมดเหมือนรายการที่ยกเลิก
+  testWidgets('ทริปที่จบแล้วซึ่งยังรีวิวได้ ก็ย่อเป็นแถวเดียว', (tester) async {
+    await pump(tester, [
+      booking(
+        status: 'confirmed',
+        departureDate: '2020-01-10',
+        canReview: true,
+      ),
+    ]);
+
+    expect(tester.takeException(), isNull);
+    // ปุ่มรีวิวยังอยู่ แต่เป็นชิปบนแถว ไม่ใช่ปุ่มเต็มความกว้างของการ์ดใหญ่
+    expect(find.text('รีวิว'), findsOneWidget);
+    expect(find.text('รีวิวทริปนี้'), findsNothing);
+    expect(find.text('ดูรายละเอียดการเดินทาง'), findsNothing);
+  });
+
+  testWidgets('ลิสต์ "เดินทางแล้ว" สูงเท่ากันทุกใบ', (tester) async {
+    await pump(tester, [
+      booking(
+        id: 1,
+        status: 'confirmed',
+        departureDate: '2020-01-10',
+        canReview: true,
+      ),
+      booking(
+        id: 2,
+        status: 'completed',
+        departureDate: '2020-02-10',
+        title: 'เขาช้างเผือก',
+      ),
+    ]);
+
+    expect(tester.takeException(), isNull);
+    // การ์ดการจองทุกใบในหน้านี้ห่อด้วย _PressableCard (AnimatedScale)
+    final heights = find
+        .byType(AnimatedScale)
+        .evaluate()
+        .map((element) => element.size!.height)
+        .toSet();
+    expect(heights.length, 1);
+  });
+
+  testWidgets('แตะชิปรีวิวแล้วเปิดหน้าต่างรีวิวได้จริง', (tester) async {
+    await pump(tester, [
+      booking(
+        status: 'confirmed',
+        departureDate: '2020-01-10',
+        canReview: true,
+      ),
+    ]);
+
+    await tester.tap(find.text('รีวิว'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('รีวิวทริปนี้'), findsOneWidget);
+  });
+
+  // ยกเลิกแล้วแต่จ่ายเงินไปแล้ว ยังต้องติดตามเงินคืน จึงไม่ใช่ประวัติที่ปิดจบ
+  testWidgets('รายการยกเลิกที่จ่ายเงินไปแล้ว ยังเป็นการ์ดเต็ม', (tester) async {
+    await pump(tester, [
+      booking(
+        status: 'cancelled',
+        departureDate: '2020-01-10',
+        paidAmount: 3500,
+      ),
+    ]);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('ดูตั๋ว & รายละเอียด'), findsOneWidget);
   });
 
   testWidgets('renders a cancelled booking', (tester) async {

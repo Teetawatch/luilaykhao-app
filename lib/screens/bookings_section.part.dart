@@ -784,11 +784,15 @@ class ReservationCard extends StatelessWidget {
 
     // ทริปที่จบหรือยกเลิกไปแล้วเป็น "ประวัติ" ไม่ใช่สิ่งที่ต้องลงมือทำต่อ
     // ย่อเหลือแถวเดียวเพื่อให้เลื่อนหาทริปข้างหน้าเจอเร็ว รายละเอียดอยู่ในชีตครบเหมือนเดิม
-    // (ยกเว้นรายการที่ยังรีวิวได้/ยังติดตามเงินคืนอยู่ — ยังมีสิ่งที่ต้องทำ)
+    //
+    // ใบที่ยังรีวิวได้เคยถูกกันไว้เป็นการ์ดเต็ม ลิสต์ "เดินทางแล้ว" เลยมีการ์ด
+    // ใหญ่ปนแถวย่อสูงไม่เท่ากัน — ตอนนี้ย่อเท่ากันหมดเหมือนรายการที่ยกเลิก
+    // แล้วยกปุ่มรีวิวไปไว้บนแถวย่อแทน (ดูใน [_CompactHistoryCard])
+    //
+    // ที่ยังเหลือเป็นการ์ดเต็มคือรายการยกเลิกที่จ่ายเงินไปแล้ว เพราะยังต้อง
+    // ติดตามเงินคืนกันต่อ ไม่ใช่ประวัติที่ปิดจบ
     final hasPendingAction =
-        _asBool(booking['can_review']) ||
-        (isCancelled &&
-            (num.tryParse(textOf(booking['paid_amount'])) ?? 0) > 0);
+        isCancelled && (num.tryParse(textOf(booking['paid_amount'])) ?? 0) > 0;
     if ((isPast || isCancelled) && !hasPendingAction) {
       return _CompactHistoryCard(
         booking: booking,
@@ -1055,6 +1059,52 @@ class ReservationCard extends StatelessWidget {
   }
 }
 
+/// ปุ่มรีวิวบนแถวประวัติ — เล็กเท่าชิปสถานะข้าง ๆ เพื่อให้แถวยังสูงเท่าใบอื่น
+/// ในลิสต์ ปุ่มเต็มความกว้างแบบเดิมจะดันการ์ดสูงขึ้นจนหมดความเป็นระเบียบ
+class _CompactReviewButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _CompactReviewButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'รีวิวทริปนี้',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.star_rounded,
+                size: 13,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                'รีวิว',
+                style: appFont(
+                  color: AppTheme.primaryColor,
+                  fontSize: AppText.sizeMicro,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// การ์ดแบบย่อสำหรับทริปที่จบ/ยกเลิกแล้ว — รูปเล็ก ชื่อ วันที่ สถานะ จบ
 /// เต็มใบสูงกว่า 400px ต่อรายการ พอมีประวัติหลายสิบทริปเลื่อนหาอะไรไม่เจอเลย
 class _CompactHistoryCard extends StatelessWidget {
@@ -1062,6 +1112,23 @@ class _CompactHistoryCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _CompactHistoryCard({required this.booking, required this.onTap});
+
+  Future<void> _openReview(BuildContext context) async {
+    final bookingId = int.tryParse(textOf(booking['id']));
+    if (bookingId == null) return;
+
+    // อ่าน provider ไว้ก่อน await — หลังปิดหน้าต่าง context อาจไม่อยู่แล้ว
+    final app = context.read<AppProvider>();
+    final trip = asMap(asMap(booking['schedule'])['trip']);
+    final submitted = await ReviewSubmissionDialog.show(
+      context,
+      bookingId: bookingId,
+      tripTitle: textOf(trip['title'], 'การจอง'),
+    );
+
+    // รีวิวแล้วฝั่งเซิร์ฟเวอร์จะปิด can_review — โหลดใหม่ให้ปุ่มหายไปเอง
+    if (submitted) await app.loadAccountData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1166,6 +1233,12 @@ class _CompactHistoryCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (_asBool(booking['can_review'])) ...[
+                          const SizedBox(width: 6),
+                          _CompactReviewButton(
+                            onTap: () => _openReview(context),
+                          ),
+                        ],
                       ],
                     ),
                   ],
