@@ -23,6 +23,7 @@ import 'tracking_screen.dart' show TrackingMapPage;
 import '../services/home_widget_service.dart';
 import '../services/notification_navigator.dart';
 import '../services/push_notification_service.dart';
+import '../services/search_history_service.dart';
 import '../services/sos_outbox.dart';
 import '../services/trip_activity_service.dart';
 import '../widgets/app_snack.dart';

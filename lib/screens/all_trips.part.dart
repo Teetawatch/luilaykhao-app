@@ -50,13 +50,26 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   String? _error;
   Timer? _searchDebounce;
 
+  /// คำค้นล่าสุดของเครื่องนี้ — โชว์เป็นชิปใต้ช่องค้นหาตอนช่องยังว่าง
+  List<String> _recentSearches = const [];
+
+  /// คำค้นที่ผู้ใช้ "ตั้งใจค้น" (กด Enter, มาจากช่องค้นหาหน้าแรก หรือแตะชิป
+  /// คำค้นล่าสุด) และยังรอผลอยู่ จะถูกบันทึกลงประวัติก็ต่อเมื่อผลกลับมาแล้ว
+  /// เจอทริปจริง — ระหว่างพิมพ์ (debounce) ไม่นับ ประวัติจึงไม่มีคำที่พิมพ์
+  /// ค้างครึ่งคำหรือคำที่ค้นแล้วไม่เจออะไรเลย
+  String? _pendingHistoryQuery;
+
   @override
   void initState() {
     super.initState();
     if (widget.initialSearch != null) {
       _searchController.text = widget.initialSearch!.trim();
+      // คำนี้ผู้ใช้กดค้นมาจากหน้าแรกแล้ว นับเป็นการค้นจริงเท่ากับกดค้นที่นี่
+      final initial = _searchController.text.trim();
+      _pendingHistoryQuery = initial.isEmpty ? null : initial;
     }
     _searchController.addListener(_handleSearchChanged);
+    _loadRecentSearches();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchTrips();
       _fetchDestinations();
@@ -76,6 +89,8 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   // "apply" button.
   void _handleSearchChanged() {
     if (!mounted) return;
+    // คำเปลี่ยนแล้ว ผลที่กำลังจะกลับมาไม่ใช่ของคำที่รอบันทึกอีกต่อไป
+    _pendingHistoryQuery = null;
     setState(() {});
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 400), () {
@@ -88,13 +103,61 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   void _applySearch() {
     _searchDebounce?.cancel();
     FocusManager.instance.primaryFocus?.unfocus();
+    final query = _searchController.text.trim();
+    _pendingHistoryQuery = query.isEmpty ? null : query;
     _fetchTrips();
   }
 
   void _clearSearch() {
     _searchController.clear();
     _searchDebounce?.cancel();
+    _pendingHistoryQuery = null;
     _fetchTrips();
+  }
+
+  Future<void> _loadRecentSearches() async {
+    final history = await SearchHistoryService.instance.read();
+    if (!mounted) return;
+    setState(() => _recentSearches = history);
+  }
+
+  /// เรียกที่ปลายทางของ [_fetchTrips] เท่านั้น จึงบันทึกได้เฉพาะคำที่ค้นแล้ว
+  /// มีทริปจริง
+  void _settleSearchRecord() {
+    final pending = _pendingHistoryQuery;
+    if (pending == null) return;
+    _pendingHistoryQuery = null;
+    if (_trips.isEmpty) return;
+    unawaited(_rememberSearch(pending));
+  }
+
+  Future<void> _rememberSearch(String query) async {
+    await SearchHistoryService.instance.add(query);
+    await _loadRecentSearches();
+  }
+
+  /// แตะชิปคำค้นล่าสุด — เติมคำลงช่องแล้วค้นทันที ไม่ต้องรอ debounce
+  void _applyRecentSearch(String query) {
+    HapticFeedback.selectionClick();
+    // ตั้งค่าผ่าน value เพื่อให้เคอร์เซอร์ไปอยู่ท้ายคำ พิมพ์ต่อได้เลย
+    _searchController.value = TextEditingValue(
+      text: query,
+      selection: TextSelection.collapsed(offset: query.length),
+    );
+    // ต้องอยู่หลังบรรทัดบน เพราะ listener ของช่องค้นหาเพิ่งล้างค่านี้ทิ้ง
+    _applySearch();
+  }
+
+  Future<void> _removeRecentSearch(String query) async {
+    HapticFeedback.selectionClick();
+    await SearchHistoryService.instance.remove(query);
+    await _loadRecentSearches();
+  }
+
+  Future<void> _clearRecentSearches() async {
+    HapticFeedback.selectionClick();
+    await SearchHistoryService.instance.clear();
+    await _loadRecentSearches();
   }
 
   Future<void> _fetchTrips([int page = 1]) async {
@@ -138,6 +201,7 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
         _meta = app.api.meta(response);
         _loading = false;
       });
+      _settleSearchRecord();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -267,6 +331,7 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
   void _clearFilters() {
     _searchController.clear();
     _searchDebounce?.cancel();
+    _pendingHistoryQuery = null;
     setState(() {
       _selectedType = '';
       _selectedDifficulty = '';
@@ -342,6 +407,10 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
                         onToggleDifficulty: _toggleDifficulty,
                         onSubmitSearch: _applySearch,
                         onClearSearch: _clearSearch,
+                        recentSearches: _recentSearches,
+                        onSelectRecent: _applyRecentSearch,
+                        onRemoveRecent: _removeRecentSearch,
+                        onClearRecents: _clearRecentSearches,
                         onClear: _clearFilters,
                         hasFilters: _hasFilters,
                       ),
@@ -442,6 +511,12 @@ class _TripsFilterPanel extends StatelessWidget {
   final VoidCallback onClear;
   final bool hasFilters;
 
+  /// คำค้นล่าสุด เรียงใหม่สุดก่อน — ว่างได้ (แถบจะไม่ขึ้น)
+  final List<String> recentSearches;
+  final ValueChanged<String> onSelectRecent;
+  final ValueChanged<String> onRemoveRecent;
+  final VoidCallback onClearRecents;
+
   const _TripsFilterPanel({
     required this.searchController,
     required this.categories,
@@ -465,6 +540,10 @@ class _TripsFilterPanel extends StatelessWidget {
     required this.onClearSearch,
     required this.onClear,
     required this.hasFilters,
+    required this.recentSearches,
+    required this.onSelectRecent,
+    required this.onRemoveRecent,
+    required this.onClearRecents,
   });
 
   @override
@@ -498,6 +577,47 @@ class _TripsFilterPanel extends StatelessWidget {
           onSubmitted: onSubmitSearch,
           onClear: onClearSearch,
         ),
+        // ขึ้นเฉพาะตอนช่องค้นหาว่าง — ระหว่างพิมพ์ ผลลัพธ์คือสิ่งที่ผู้ใช้มอง
+        // อยู่ ไม่ใช่ประวัติ และแถบนี้จะไปดันผลลัพธ์ลงเปล่า ๆ
+        if (recentSearches.isNotEmpty &&
+            searchController.text.trim().isEmpty) ...[
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const _FilterRailLabel(text: 'ค้นหาล่าสุด'),
+              const Spacer(),
+              InkWell(
+                onTap: onClearRecents,
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    'ล้างประวัติ',
+                    style: appFont(
+                      color: AppTheme.mutedText(context),
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _ChipStrip(
+            children: [
+              for (final query in recentSearches)
+                _RecentSearchChip(
+                  label: query,
+                  onTap: () => onSelectRecent(query),
+                  onRemove: () => onRemoveRecent(query),
+                ),
+            ],
+          ),
+        ],
         if (showCountryRail) ...[
           const SizedBox(height: 14),
           _FilterRailLabel(
@@ -910,6 +1030,82 @@ class _FilterChipButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// ชิปคำค้นล่าสุด — หน้าตาเดียวกับ [_FilterChipButton] แบบยังไม่ถูกเลือก
+/// แต่แบ่งพื้นที่แตะเป็นสองส่วน: ตัวคำค้นไว้ค้นซ้ำ กากบาทไว้ลบคำนั้นทิ้ง
+class _RecentSearchChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  final VoidCallback onRemove;
+
+  const _RecentSearchChip({
+    required this.label,
+    required this.onTap,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = AppTheme.mutedText(context);
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.7),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        // ให้ทั้งสองปุ่มสูงเต็มชิป พื้นที่แตะจะได้ไม่เหลือแค่ความสูงตัวอักษร
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 13, right: 7),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.history_rounded, size: 15, color: muted),
+                  const SizedBox(width: 6),
+                  // คำค้นยาว ๆ ต้องไม่ลากชิปยาวจนดันชิปอื่นตกขอบจอ
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 180),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        color: AppTheme.textMain,
+                        fontSize: AppText.sizeLabel,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Semantics(
+            button: true,
+            label: 'ลบ $label ออกจากประวัติการค้นหา',
+            child: InkWell(
+              onTap: onRemove,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 5, right: 12),
+                child: Icon(Icons.close_rounded, size: 15, color: muted),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
