@@ -2692,6 +2692,12 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// สตาฟกดส่งกำหนดการของรอบเข้าห้อง — คืนข้อความระบบที่เพิ่งโพสต์
+  Future<Map<String, dynamic>> postChatTripItinerary(int scheduleId) async {
+    final response = await api.post(ApiEndpoints.chatTripItinerary(scheduleId));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   /// สร้างโพลในห้องแชท — คืนข้อความ (การ์ดโพล) ที่เพิ่งถูกสร้าง
   Future<Map<String, dynamic>> createChatPoll(
     int scheduleId, {

@@ -1108,7 +1108,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
-      builder: (_) => _TripInfoSheet(info: _tripInfo!, focus: ask),
+      builder: (_) => _TripInfoSheet(
+        info: _tripInfo!,
+        focus: ask,
+        scheduleId: widget.scheduleId,
+        tripTitle: _tripTitle,
+      ),
     );
   }
 
@@ -1117,6 +1122,22 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     HapticFeedback.mediumImpact();
     try {
       final message = await context.read<AppProvider>().postChatTripSummary(
+        widget.scheduleId,
+      );
+      if (!mounted) return;
+      setState(() => _messages.add(message));
+      _scrollToBottom();
+      _markRead();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  /// สตาฟกดส่งกำหนดการเข้าห้อง — คำถามที่ถูกถามซ้ำที่สุดรองจากจุดรับ
+  Future<void> _sendTripItinerary() async {
+    HapticFeedback.mediumImpact();
+    try {
+      final message = await context.read<AppProvider>().postChatTripItinerary(
         widget.scheduleId,
       );
       if (!mounted) return;
@@ -1779,8 +1800,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           if (!_loading && _error == null && !_isComposing)
             _QuickAskBar(
               canModerate: _canModerate,
+              hasItinerary: _hasItinerary,
               onAsk: _openTripInfo,
               onSendSummary: _sendTripSummary,
+              onSendItinerary: _sendTripItinerary,
             ),
           _buildInput(),
         ],
@@ -2598,6 +2621,7 @@ class _SystemBodyTextState extends State<_SystemBodyText> {
 
 /// คำถามที่ลูกค้าถามซ้ำที่สุดในห้องแชท — ใช้เป็นทั้งป้ายปุ่มและหัวข้อคำตอบ
 enum _QuickAsk {
+  itinerary('กำหนดการ', Icons.route_rounded),
   time('ขึ้นรถกี่โมง', Icons.schedule_rounded),
   place('จุดรับที่ไหน', Icons.pin_drop_rounded),
   vehicle('ทะเบียนรถ', Icons.airport_shuttle_rounded),
@@ -2614,13 +2638,17 @@ enum _QuickAsk {
 /// สตาฟ/ทีมงานจะเห็นปุ่มเพิ่มอีกหนึ่งปุ่มสำหรับโพสต์สรุปให้ทั้งห้องรวดเดียว
 class _QuickAskBar extends StatelessWidget {
   final bool canModerate;
+  final bool hasItinerary;
   final ValueChanged<_QuickAsk> onAsk;
   final Future<void> Function() onSendSummary;
+  final Future<void> Function() onSendItinerary;
 
   const _QuickAskBar({
     required this.canModerate,
+    required this.hasItinerary,
     required this.onAsk,
     required this.onSendSummary,
+    required this.onSendItinerary,
   });
 
   @override
@@ -2636,10 +2664,22 @@ class _QuickAskBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         children: [
           for (final ask in _QuickAsk.values) ...[
+            // รอบที่ยังไม่มีกำหนดการ (ทั้งของรอบและของทริป) ไม่ต้องมีปุ่มให้กดค้าง
+            if (ask != _QuickAsk.itinerary || hasItinerary) ...[
+              _QuickAskChip(
+                icon: ask.icon,
+                label: ask.label,
+                onTap: () => onAsk(ask),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ],
+          if (canModerate && hasItinerary) ...[
             _QuickAskChip(
-              icon: ask.icon,
-              label: ask.label,
-              onTap: () => onAsk(ask),
+              icon: Icons.route_rounded,
+              label: 'ส่งกำหนดการ',
+              filled: true,
+              onTap: onSendItinerary,
             ),
             const SizedBox(width: 8),
           ],
@@ -2719,8 +2759,15 @@ class _QuickAskChip extends StatelessWidget {
 class _TripInfoSheet extends StatelessWidget {
   final Map<String, dynamic> info;
   final _QuickAsk focus;
+  final int scheduleId;
+  final String tripTitle;
 
-  const _TripInfoSheet({required this.info, required this.focus});
+  const _TripInfoSheet({
+    required this.info,
+    required this.focus,
+    required this.scheduleId,
+    required this.tripTitle,
+  });
 
   Map<String, dynamic>? _map(dynamic value) =>
       value is Map ? Map<String, dynamic>.from(value) : null;
@@ -2741,6 +2788,18 @@ class _TripInfoSheet extends StatelessWidget {
     }
   }
 
+  void _openItinerary(BuildContext context) {
+    HapticFeedback.selectionClick();
+    final nav = Navigator.of(context);
+    nav.pop();
+    nav.push(MaterialPageRoute(
+      builder: (_) => ScheduleItineraryScreen(
+        scheduleId: scheduleId,
+        tripTitle: tripTitle,
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final pickup = _map(info['pickup']);
@@ -2750,6 +2809,14 @@ class _TripInfoSheet extends StatelessWidget {
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
+
+    final itinerary = _map(info['itinerary']);
+    final itineraryItems = (itinerary?['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final itineraryTotal =
+        int.tryParse('${itinerary?['total']}') ?? itineraryItems.length;
 
     final pickupTime = _text(pickup?['time']);
     final pickupWhere = _text(pickup?['location']) ?? _text(pickup?['label']);
@@ -2816,6 +2883,35 @@ class _TripInfoSheet extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 children: [
+                  _TripInfoBlock(
+                    ask: _QuickAsk.itinerary,
+                    highlight: focus == _QuickAsk.itinerary,
+                    answer: itineraryItems.isEmpty
+                        ? null
+                        : 'ทั้งหมด $itineraryTotal รายการ',
+                    pending: 'ทีมงานจะลงกำหนดการให้ก่อนเดินทางครับ',
+                    actionIcon: Icons.route_rounded,
+                    actionLabel:
+                        itineraryItems.isEmpty ? null : 'ดูกำหนดการทั้งหมด',
+                    onAction: itineraryItems.isEmpty
+                        ? null
+                        : () => _openItinerary(context),
+                    children: [
+                      for (final item
+                          in itineraryItems.take(_itineraryPreviewCount))
+                        _TripInfoItineraryRow(
+                          time: _text(item['time']),
+                          title: _text(item['title']) ?? '',
+                        ),
+                      if (itineraryTotal > _itineraryPreviewCount)
+                        _TripInfoItineraryRow(
+                          time: null,
+                          title:
+                              'และอีก ${itineraryTotal - _itineraryPreviewCount} รายการ',
+                          muted: true,
+                        ),
+                    ],
+                  ),
                   _TripInfoBlock(
                     ask: _QuickAsk.time,
                     highlight: focus == _QuickAsk.time,
@@ -2901,6 +2997,61 @@ class _TripInfoSheet extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// พรีวิวกำหนดการในชีตกี่รายการ — ที่เหลือกด "ดูกำหนดการทั้งหมด" ต่อ
+/// (ชีตนี้ตอบ 5 คำถามในจอเดียว บล็อกเดียวยาวเกินก็ดันข้ออื่นตกจอ)
+const int _itineraryPreviewCount = 5;
+
+/// หนึ่งรายการกำหนดการแบบย่อในชีตคำตอบ — เวลา + หัวข้อ บรรทัดเดียว
+class _TripInfoItineraryRow extends StatelessWidget {
+  final String? time;
+  final String title;
+  final bool muted;
+
+  const _TripInfoItineraryRow({
+    required this.time,
+    required this.title,
+    this.muted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 42,
+            child: Text(
+              time ?? '',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: muted ? FontWeight.w600 : FontWeight.w700,
+                color: muted
+                    ? AppTheme.mutedText(context)
+                    : AppTheme.onSurface(context),
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

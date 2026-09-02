@@ -64,6 +64,8 @@ class ApiEndpoints {
       'schedules/$scheduleId/chat/trip-info';
   static String chatTripSummary(int scheduleId) =>
       'schedules/$scheduleId/chat/trip-summary';
+  static String chatTripItinerary(int scheduleId) =>
+      'schedules/$scheduleId/chat/trip-itinerary';
   static String chatPolls(int scheduleId) => 'schedules/$scheduleId/chat/polls';
   static String chatPollVote(int scheduleId, int pollId) =>
       'schedules/$scheduleId/chat/polls/$pollId/vote';
