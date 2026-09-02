@@ -18,6 +18,7 @@ import '../providers/app_provider.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/moderation_sheet.dart';
 import '../theme/app_theme.dart';
+import '../services/quick_ask_matcher.dart';
 import '../widgets/weather_card.dart';
 import '../widgets/tier_badge.dart';
 import 'schedule_itinerary_screen.dart';
@@ -134,6 +135,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// ข้อมูลการเดินทางของฉัน (โหลดครั้งแรกที่กดถาม แล้วแคชไว้ในหน้านี้)
   Map<String, dynamic>? _tripInfo;
 
+  /// คำถามที่แอปเดาว่ากำลังจะถาม/เพิ่งถามไป — แถบคำตอบเหนือช่องพิมพ์
+  /// ขึ้นเฉพาะเครื่องคนถาม ไม่มีอะไรถูกโพสต์ลงห้อง
+  _QuickAsk? _suggested;
+
+  /// ข้อความต้นทางของคำเดาปัจจุบัน ใช้จำว่าปัดทิ้งอันไหนไปแล้ว
+  String? _suggestedFrom;
+  String? _dismissedSuggestion;
+
   @override
   void initState() {
     super.initState();
@@ -146,10 +155,74 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// พอเริ่มพิมพ์ให้ซ่อนแถบคำถามด่วน — คนที่พิมพ์เองอยู่แล้วไม่ต้องการทางลัด
   /// และแชทควรได้พื้นที่คืน (setState เฉพาะตอนสถานะพลิก ไม่ใช่ทุกตัวอักษร)
   void _watchComposing() {
-    final composing = _input.text.trim().isNotEmpty;
+    final text = _input.text.trim();
+    final composing = text.isNotEmpty;
     if (composing != _isComposing && mounted) {
       setState(() => _isComposing = composing);
     }
+    _considerSuggestion(text);
+  }
+
+  /// อ่านข้อความแล้วยกคำตอบขึ้นมาให้เอง ถ้าเข้าข้อที่แอปตอบได้อยู่แล้ว
+  ///
+  /// เรียกทั้งตอนพิมพ์ (ยื่นให้ก่อนกดส่งด้วยซ้ำ) และตอนส่งไปแล้ว เพราะคนที่พิมพ์
+  /// รวดเดียวแล้วกดส่งไม่ทันเห็นแถบตอนพิมพ์ ปัดทิ้งแล้วข้อความเดิมจะไม่เด้งซ้ำ
+  void _considerSuggestion(String text) {
+    if (text.isEmpty) {
+      if (_suggested != null && mounted) {
+        setState(() {
+          _suggested = null;
+          _suggestedFrom = null;
+        });
+      }
+
+      return;
+    }
+
+    if (text == _dismissedSuggestion) return;
+
+    final topic = QuickAskMatcher.match(text);
+    final ask = topic == null ? null : _QuickAsk.forTopic(topic);
+
+    if (ask == _suggested) {
+      _suggestedFrom = text;
+
+      return;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _suggested = ask;
+      _suggestedFrom = text;
+    });
+
+    // ดึงคำตอบมารอไว้เงียบ ๆ ให้แถบโชว์คำตอบจริง ไม่ใช่แค่ปุ่มให้กดต่อ
+    if (ask != null) _warmTripInfo();
+  }
+
+  /// โหลดข้อมูลการเดินทางล่วงหน้าแบบไม่รบกวน — ล้มเหลวก็เงียบ แถบจะกลายเป็น
+  /// คำชวนให้กดดูแทน แล้วค่อยโหลดใหม่ตอนกด
+  Future<void> _warmTripInfo() async {
+    if (_tripInfo != null) return;
+
+    try {
+      final info = await context.read<AppProvider>().chatTripInfo(
+        widget.scheduleId,
+      );
+      if (!mounted) return;
+      setState(() => _tripInfo = info);
+    } catch (_) {
+      // ผู้ใช้ไม่ได้เป็นคนสั่งโหลด จึงไม่ควรมี error เด้งใส่
+    }
+  }
+
+  void _dismissSuggestion() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _dismissedSuggestion = _suggestedFrom;
+      _suggested = null;
+    });
   }
 
   @override
@@ -451,6 +524,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       mentions: mentions,
       replyPreview: replyPreview,
     );
+    // ช่องพิมพ์ถูกล้างแล้ว listener จึงล้างคำเดาทิ้ง — ยกกลับมาจากข้อความที่
+    // เพิ่งส่ง เพื่อให้คนที่พิมพ์รวดเดียวแล้วกดส่งยังได้คำตอบอยู่ดี
+    _considerSuggestion(text);
   }
 
   /// Generates a per-message client token used to track an optimistic send from
@@ -1082,6 +1158,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   // ── คำถามด่วน "ข้อมูลการเดินทางของฉัน" ───────────────────────────────────
+
+  /// เปิดชีตจากแถบคำตอบอัตโนมัติ — เปิดแล้วถือว่าตอบไปแล้ว เก็บแถบได้
+  Future<void> _openSuggestion(_QuickAsk ask) async {
+    setState(() {
+      _dismissedSuggestion = _suggestedFrom;
+      _suggested = null;
+    });
+    await _openTripInfo(ask);
+  }
 
   /// เปิดคำตอบของคำถามที่กด — โหลดข้อมูลครั้งแรกครั้งเดียวแล้วแคชไว้
   Future<void> _openTripInfo(_QuickAsk ask) async {
@@ -1795,9 +1880,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ),
           ),
           if (_typingLabel() != null) _TypingIndicator(label: _typingLabel()!),
+          // แถบคำตอบอัตโนมัติ — ขึ้นแทนแถบชิปเมื่อข้อความที่พิมพ์/เพิ่งส่งเข้าข้อ
+          // ที่แอปตอบได้ ใช้สลอตเดียวกันเพื่อไม่ให้ห้องแชทเสียพื้นที่เพิ่ม
+          if (!_loading && _error == null && _suggested != null)
+            _QuickAskSuggestion(
+              ask: _suggested!,
+              answer: QuickAskAnswer.line(_suggested!.topic, _tripInfo),
+              onOpen: () => _openSuggestion(_suggested!),
+              onDismiss: _dismissSuggestion,
+            ),
           // ปุ่มคำถามด่วน — คำถามที่ถูกถามซ้ำที่สุดในห้อง กดแล้วได้คำตอบทันที
           // (ตอบเฉพาะคนกด ไม่โพสต์ลงห้อง) ซ่อนตอนกำลังพิมพ์เพื่อไม่กินพื้นที่
-          if (!_loading && _error == null && !_isComposing)
+          if (!_loading && _error == null && !_isComposing && _suggested == null)
             _QuickAskBar(
               canModerate: _canModerate,
               hasItinerary: _hasItinerary,
@@ -2621,16 +2715,113 @@ class _SystemBodyTextState extends State<_SystemBodyText> {
 
 /// คำถามที่ลูกค้าถามซ้ำที่สุดในห้องแชท — ใช้เป็นทั้งป้ายปุ่มและหัวข้อคำตอบ
 enum _QuickAsk {
-  itinerary('กำหนดการ', Icons.route_rounded),
-  time('ขึ้นรถกี่โมง', Icons.schedule_rounded),
-  place('จุดรับที่ไหน', Icons.pin_drop_rounded),
-  vehicle('ทะเบียนรถ', Icons.airport_shuttle_rounded),
-  contact('เบอร์ติดต่อ', Icons.phone_rounded);
+  itinerary(QuickAskTopic.itinerary, 'กำหนดการ', 'กำหนดการ', Icons.route_rounded),
+  time(QuickAskTopic.time, 'ขึ้นรถกี่โมง', 'เวลาขึ้นรถ', Icons.schedule_rounded),
+  place(QuickAskTopic.place, 'จุดรับที่ไหน', 'จุดรับ', Icons.pin_drop_rounded),
+  vehicle(
+    QuickAskTopic.vehicle,
+    'ทะเบียนรถ',
+    'ข้อมูลรถ',
+    Icons.airport_shuttle_rounded,
+  ),
+  contact(QuickAskTopic.contact, 'เบอร์ติดต่อ', 'เบอร์ติดต่อ', Icons.phone_rounded);
 
+  final QuickAskTopic topic;
+
+  /// คำบนชิป — รูปคำถาม เพราะผู้ใช้เป็นคนกดถาม
   final String label;
+
+  /// คำบนแถบคำตอบอัตโนมัติ — รูปคำนาม เพราะแอปเป็นฝ่ายยื่นให้
+  final String hint;
+
   final IconData icon;
 
-  const _QuickAsk(this.label, this.icon);
+  const _QuickAsk(this.topic, this.label, this.hint, this.icon);
+
+  static _QuickAsk forTopic(QuickAskTopic topic) =>
+      values.firstWhere((ask) => ask.topic == topic);
+}
+
+/// แถบคำตอบอัตโนมัติ — ขึ้นเองเมื่อข้อความที่กำลังพิมพ์หรือเพิ่งส่งเข้าข้อที่แอป
+/// ตอบได้ ยกคำตอบมาให้อ่านตรงนั้นเลย แตะเพื่อดูฉบับเต็มในชีต
+///
+/// ขึ้นเฉพาะเครื่องคนถาม ไม่มีอะไรถูกโพสต์ลงห้อง — เดาผิดจึงไม่มีใครเห็นนอกจาก
+/// คนที่ปัดมันทิ้งได้อยู่แล้ว
+class _QuickAskSuggestion extends StatelessWidget {
+  final _QuickAsk ask;
+  final String? answer;
+  final VoidCallback onOpen;
+  final VoidCallback onDismiss;
+
+  const _QuickAskSuggestion({
+    required this.ask,
+    required this.answer,
+    required this.onOpen,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.06),
+        border: Border(top: BorderSide(color: AppTheme.border(context))),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onOpen,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 9, 6, 9),
+            child: Row(
+              children: [
+                Icon(ask.icon, size: 17, color: AppTheme.primaryColor),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        answer ?? 'ดู${ask.hint}ของรอบนี้',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          fontSize: AppText.sizeLabel,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                      Text(
+                        'แตะเพื่อดู${ask.hint}ทั้งหมด',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: onDismiss,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'ปิด',
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 17,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// แถบปุ่มคำถามด่วนเหนือช่องพิมพ์ — ทางลัดที่เร็วกว่าพิมพ์ถามสตาฟ
