@@ -243,7 +243,8 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background(context),
+      // พื้นห้องแชทเดียวกับห้องแชททริป — บับเบิลสีพื้นการ์ดจะได้ลอยขึ้นมาจากพื้น
+      backgroundColor: AppTheme.chatCanvas(context),
       appBar: AppBar(
         centerTitle: false,
         title: Column(
@@ -337,7 +338,7 @@ class _MessageBubble extends StatelessWidget {
 
     final bg = isMine
         ? AppTheme.primaryColor
-        : AppTheme.surface(context);
+        : AppTheme.chatIncomingBubble(context);
     final fg = isMine ? Colors.white : AppTheme.onSurface(context);
 
     return Align(

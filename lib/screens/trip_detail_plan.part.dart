@@ -219,46 +219,243 @@ List<Widget> _departureTimeNotice(
       DateTime(departsAt.year, departsAt.month, departsAt.day)
           .isBefore(DateTime(tripDate.year, tripDate.month, tripDate.day));
 
-  final label = 'ออกเดินทาง ${departureText(schedule)}'
-      '${isNightBefore ? ' (คืนก่อนวันทริป)' : ''}';
-
-  // Apple-style inline notice: systemOrange tint background + symbol, with the
-  // primary label color for the text (high contrast, adapts to dark mode).
-  final isDark = AppTheme.isDark(context);
-  final orange = _appleOrange(isDark);
-
   return [
     const SizedBox(height: 12),
-    Container(
+    _DepartureTimeCard(
+      departsAt: departsAt,
+      tripDate: tripDate,
+      isNightBefore: isNightBefore,
+      isFlight: _scheduleIsFlight(schedule),
+    ),
+  ];
+}
+
+/// การ์ด "เวลาออกรถจริง" ของรอบที่เลือก
+///
+/// ข้อมูลชิ้นนี้พลาดไม่ได้: หลายรอบรถออกตั้งแต่คืนก่อนวันทริป (ทริปเสาร์ที่ 13
+/// แต่รถออกศุกร์ที่ 12 เวลา 23:30) คนที่อ่านผ่าน ๆ แล้วจำแต่ "วันเสาร์" คือคน
+/// ที่ตกรถ การ์ดจึงเล่นใหญ่กับสองอย่างที่ต้องจำ — วันที่ขึ้นรถ (แผ่นวันที่ซ้ายมือ)
+/// และเวลาออก (ตัวเลขใหญ่) — แล้วค่อยอธิบายส่วนที่เหลือด้วยตัวหนังสือเล็ก
+/// รอบที่ออกวันเดียวกับวันทริปใช้โทนแบรนด์ (บอกเฉย ๆ) ส่วนรอบที่ออกคืนก่อน
+/// ใช้โทนส้มเตือน เพราะเป็นกรณีที่ผิดจากที่คนคาดไว้
+class _DepartureTimeCard extends StatelessWidget {
+  final DateTime departsAt;
+  final DateTime? tripDate;
+  final bool isNightBefore;
+  final bool isFlight;
+
+  const _DepartureTimeCard({
+    required this.departsAt,
+    required this.tripDate,
+    required this.isNightBefore,
+    required this.isFlight,
+  });
+
+  /// คำอธิบายท้ายการ์ด — รอบที่บินไปนัดพบกันที่สนามบิน เวลาเผื่อจึงไม่ใช่
+  /// 15 นาทีเหมือนขึ้นรถ ปล่อยให้ทีมงานเป็นคนบอกดีกว่าเดาแทน
+  String _footnote() {
+    final meetingPoint = isFlight ? 'จุดนัดพบ' : 'จุดขึ้นรถ';
+    final advice = isFlight
+        ? 'ควรถึง$meetingPointตามเวลาที่ทีมงานแจ้งก่อนวันเดินทาง'
+        : 'ควรถึง$meetingPointก่อนเวลาออกอย่างน้อย 15 นาที';
+    if (isNightBefore && tripDate != null) {
+      final verb = isFlight ? 'ออกเดินทาง' : 'รถออก';
+      return '$verbตั้งแต่คืนก่อนวันทริป '
+          '(ทริปเริ่ม ${thaiDateShort(tripDate!)}) $advice';
+    }
+    return advice;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    final tint = isNightBefore ? _appleOrange(isDark) : _softAccent;
+    // สีตัวอักษรบนพื้นอ่อน — ส้ม/เขียวสดอ่านบนพื้นสว่างไม่ออก จึงลดความสว่างลง
+    // เฉพาะโหมดสว่าง ส่วนโหมดมืดใช้สีเดิมที่สว่างอยู่แล้ว
+    final strong = isNightBefore
+        ? (isDark ? tint : const Color(0xFFB45309)) // Amber 700
+        : (isDark ? tint : AppTheme.brandDeep);
+
+    final weekday = DateFormat('EEE', 'th_TH').format(departsAt);
+    final dayNumber = DateFormat('d', 'th_TH').format(departsAt);
+    final monthShort = DateFormat('MMM', 'th_TH').format(departsAt);
+    final timeText = DateFormat('HH:mm').format(departsAt);
+
+    return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: orange.withValues(alpha: isDark ? 0.16 : 0.12),
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: orange.withValues(alpha: 0.30)),
+        color: tint.withValues(alpha: isDark ? 0.14 : 0.09),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: tint.withValues(alpha: 0.30)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            isNightBefore ? Icons.nightlight_round : Icons.departure_board,
-            size: 16,
-            color: orange,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: appFont(
-                fontSize: AppText.sizeLabel,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.onSurface(context),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // แผ่นวันที่ขึ้นรถ — ตัวเลขวันคือสิ่งที่ต้องจำให้ได้ที่สุด
+              Container(
+                width: 54,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: tint.withValues(alpha: isDark ? 0.22 : 0.16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  border: Border.all(color: tint.withValues(alpha: 0.28)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      weekday,
+                      style: appFont(
+                        fontSize: AppText.sizeMicro,
+                        fontWeight: FontWeight.w700,
+                        color: strong.withValues(alpha: 0.85),
+                        height: 1.1,
+                      ),
+                    ),
+                    Text(
+                      dayNumber,
+                      style: appFont(
+                        fontSize: AppText.sizeH2,
+                        fontWeight: FontWeight.w800,
+                        color: strong,
+                        height: 1.15,
+                      ),
+                    ),
+                    Text(
+                      monthShort,
+                      style: appFont(
+                        fontSize: AppText.sizeMicro,
+                        fontWeight: FontWeight.w700,
+                        color: strong.withValues(alpha: 0.85),
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isNightBefore
+                              ? Icons.bedtime_rounded
+                              : (isFlight
+                                    ? Icons.flight_takeoff_rounded
+                                    : Icons.departure_board_rounded),
+                          size: 13,
+                          color: strong,
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            isFlight ? 'เวลาออกเดินทางจริง' : 'เวลาออกรถจริง',
+                            style: appFont(
+                              fontSize: AppText.sizeMicro,
+                              fontWeight: FontWeight.w700,
+                              color: strong,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ),
+                        // ป้ายเตือนกรณีที่คนพลาดบ่อยที่สุด: รถออกคืนก่อนวันทริป
+                if (isNightBefore)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: tint,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                    ),
+                    child: Text(
+                      'คืนก่อนวันทริป',
+                      style: appFont(
+                        fontSize: AppText.sizeMicro,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? const Color(0xFF1C1207) : Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // เวลาออก + หน่วย: ตัวเลขใหญ่ "น." เล็กลงมา ให้ตาจับตัวเลขก่อน
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          timeText,
+                          style: appFont(
+                            fontSize: AppText.sizeH1,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.onSurface(context),
+                            height: 1.0,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'น.',
+                          style: appFont(
+                            fontSize: AppText.sizeLabel,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      thaiDateShort(departsAt),
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(height: 1, color: tint.withValues(alpha: 0.20)),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                size: 14,
+                color: AppTheme.mutedText(context),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  _footnote(),
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.mutedText(context),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
-    ),
-  ];
+    );
+  }
 }
 
 /// ระบบสถานะการันตีออกเดินทาง (Trip Status) — แสดงสถานะ 3 ระดับของรอบที่เลือก

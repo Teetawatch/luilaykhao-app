@@ -1782,7 +1782,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background(context),
+      backgroundColor: AppTheme.chatCanvas(context),
       appBar: AppBar(
         centerTitle: false,
         titleSpacing: 0,
@@ -2010,7 +2010,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     return ListView.builder(
       controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 18),
       itemCount: items.length + (_loadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (_loadingMore && index == 0) {
@@ -4179,7 +4179,7 @@ class _MessageTextState extends State<_MessageText> {
       TextSpan(children: _spans),
       style: appFont(
         fontSize: AppText.sizeSubtitle,
-        height: 1.4,
+        height: 1.45,
         color: widget.color,
         fontWeight: FontWeight.w500,
       ),
@@ -4288,9 +4288,9 @@ class _MessageBubble extends StatelessWidget {
         .toList();
 
     final isDark = AppTheme.isDark(context);
-    final neutralBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : AppTheme.subtleSurface(context);
+    // บับเบิลฝั่งคนอื่นเป็นเทาอ่อนบนพื้นห้องสีขาว (โหมดมืดกลับกัน) — คู่สีนี้
+    // อยู่ใน AppTheme เพราะพื้นห้องกับบับเบิลต้องขยับไปด้วยกันเสมอ
+    final neutralBg = AppTheme.chatIncomingBubble(context);
     final bg = (isMine && poll == null) ? AppTheme.primaryColor : neutralBg;
     final fg = (isMine && poll == null)
         ? Colors.white
@@ -4317,7 +4317,9 @@ class _MessageBubble extends StatelessWidget {
 
     final content = Padding(
       // Grouped messages sit tighter; the gap before a new sender opens up.
-      padding: EdgeInsets.only(top: isFirstInGroup ? 8 : 2, bottom: 0),
+      // ช่องว่างก้อนต่อก้อนคือสิ่งที่บอกว่า "คนละคนพูด" — ถ้าแคบเกินไปทั้งห้อง
+      // อ่านเป็นพืดเดียว จังหวะที่ใช้: ในกลุ่มเดียวกัน 5 / ข้ามผู้พูด 16
+      padding: EdgeInsets.only(top: isFirstInGroup ? 16 : 5, bottom: 0),
       child: Row(
         mainAxisAlignment:
             isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -4342,7 +4344,7 @@ class _MessageBubble extends StatelessWidget {
               children: [
                 if (showAuthor && !isMine) ...[
                   Padding(
-                    padding: const EdgeInsets.only(left: 12, bottom: 3),
+                    padding: const EdgeInsets.only(left: 12, bottom: 5),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -4373,21 +4375,28 @@ class _MessageBubble extends StatelessWidget {
                   child: Container(
                     padding: (hasImage || hasLocalImage) && !hasText
                         ? const EdgeInsets.all(4)
-                        : const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
+                        : const EdgeInsets.fromLTRB(14, 11, 14, 12),
                     decoration: BoxDecoration(
                       color: bg,
                       borderRadius: shape,
                       // Outline the bubble when this message tags me (LINE-style
                       // mention highlight) or when we just jumped to it.
+                      // นอกเหนือจากนั้นบับเบิลที่ไม่ใช่สีทึบของเราได้เส้นขอบบาง ๆ
+                      // ให้เห็นขอบก้อนข้อความชัดบนพื้นห้องที่สีใกล้กัน
                       border: (mentionsMe && !isMine) || highlight
                           ? Border.all(
                               color: AppTheme.primaryColor.withValues(alpha: 0.9),
                               width: 1.5,
                             )
-                          : null,
+                          : (isMine && poll == null)
+                          ? null
+                          : Border.all(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.10)
+                                  : AppTheme.border(context).withValues(
+                                      alpha: 0.65,
+                                    ),
+                            ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4461,7 +4470,7 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
                 if (isMine && failed) ...[
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   GestureDetector(
                     onTap: onRetry,
                     child: Padding(
@@ -4488,7 +4497,7 @@ class _MessageBubble extends StatelessWidget {
                     ),
                   ),
                 ] else if (isMine && pending) ...[
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Padding(
                     padding: const EdgeInsets.only(right: 4),
                     child: Row(
@@ -4512,7 +4521,7 @@ class _MessageBubble extends StatelessWidget {
                     ),
                   ),
                 ] else if (showTimestamp) ...[
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Padding(
                     padding: EdgeInsets.only(
                       left: isMine ? 0 : 12,
@@ -6174,11 +6183,165 @@ Future<void> _callContact(BuildContext context, _ChatContact contact) async {
   }
 }
 
+/// สีและไอคอนกำกับบทบาท — สตาฟกับคนขับทำคนละหน้าที่ คนที่กำลังรีบโทรต้องแยก
+/// ออกจากกันได้ตั้งแต่ยังไม่ทันอ่านชื่อ (สตาฟ = สีแบรนด์, คนขับ = สีน้ำเงิน)
+IconData _contactKindIcon(_ContactKind kind) =>
+    kind == _ContactKind.staff
+    ? Icons.verified_user_rounded
+    : Icons.directions_bus_rounded;
+
+Color _contactKindColor(_ContactKind kind) => kind == _ContactKind.staff
+    ? AppTheme.primaryColor
+    : AppTheme.infoColor;
+
+/// รูปผู้ติดต่อพร้อมตราบทบาทมุมล่างขวา
+class _ContactAvatarBadge extends StatelessWidget {
+  final _ChatContact contact;
+  final double size;
+
+  const _ContactAvatarBadge({required this.contact, this.size = 42});
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = _contactKindColor(contact.kind);
+    final initial = contact.name.trim().isEmpty
+        ? '?'
+        : contact.name.trim()[0].toUpperCase();
+    final fallback = Container(
+      alignment: Alignment.center,
+      color: tint.withValues(alpha: 0.14),
+      child: Text(
+        initial,
+        style: appFont(
+          fontSize: AppText.sizeSubtitle,
+          fontWeight: FontWeight.w800,
+          color: tint,
+        ),
+      ),
+    );
+    final badge = size * 0.42;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ClipOval(
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: contact.avatarUrl.isEmpty
+                  ? fallback
+                  : CachedNetworkImage(
+                      imageUrl: contact.avatarUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) => fallback,
+                      errorWidget: (_, _, _) => fallback,
+                    ),
+            ),
+          ),
+          Positioned(
+            right: -1,
+            bottom: -1,
+            child: Container(
+              width: badge,
+              height: badge,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: tint,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.surface(context), width: 2),
+              ),
+              child: Icon(
+                _contactKindIcon(contact.kind),
+                size: badge * 0.56,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ชิปบอกบทบาท — สั้น อ่านจบในตาเดียว ใช้ทั้งบนแถบและในชีต
+class _ContactRoleChip extends StatelessWidget {
+  final _ChatContact contact;
+
+  const _ContactRoleChip({required this.contact});
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = _contactKindColor(contact.kind);
+    final isDark = AppTheme.isDark(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: isDark ? 0.20 : 0.12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      ),
+      child: Text(
+        contact.roleLabel,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: appFont(
+          fontSize: AppText.sizeMicro,
+          fontWeight: FontWeight.w800,
+          color: isDark ? tint : Color.lerp(tint, Colors.black, 0.20)!,
+          letterSpacing: 0.1,
+        ),
+      ),
+    );
+  }
+}
+
+/// ปุ่มโทรวงกลมทึบ — พื้นที่แตะ 44 ตามขนาดขั้นต่ำที่นิ้วโป้งพลาดยาก
+class _ContactCallButton extends StatelessWidget {
+  final _ChatContact contact;
+  final VoidCallback onCall;
+  final double size;
+
+  const _ContactCallButton({
+    required this.contact,
+    required this.onCall,
+    this.size = 44,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.primaryColor,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onCall,
+        customBorder: const CircleBorder(),
+        child: Tooltip(
+          message: 'โทรหา${contact.name}',
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Icon(
+              Icons.phone_rounded,
+              color: Colors.white,
+              size: size * 0.42,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// แถบติดต่อที่ปักอยู่ใต้ AppBar ตลอดเวลา
 ///
 /// คนเดียว = การ์ดเต็มความกว้าง กดโทรได้จากตรงนั้นเลย
 /// หลายคน = แถวสรุปแถวเดียว (รูปซ้อนกัน + จำนวนสตาฟ/คนขับ) แตะแล้วเปิดชีตรายชื่อ
 /// ทั้งหมด — ไม่ใช้เลื่อนแนวนอน เพราะคนที่ต้องโทรหาอาจซ่อนอยู่นอกจอโดยไม่รู้ตัว
+///
+/// แถบนี้แย่งพื้นที่จากข้อความในห้อง จึงยอมสูงได้แค่การ์ดใบเดียว: ทุกอย่างที่
+/// เพิ่มเข้ามาต้องอยู่ในแถวเดิม ไม่ใช่แถวใหม่
 class _ContactBar extends StatelessWidget {
   final List<_ChatContact> contacts;
 
@@ -6210,6 +6373,9 @@ class _ContactBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+    final single = contacts.length == 1 ? contacts.first : null;
+
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
@@ -6217,20 +6383,31 @@ class _ContactBar extends StatelessWidget {
           bottom: BorderSide(color: AppTheme.border(context), width: 1),
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-      child: contacts.length == 1
-          ? _ContactCard(
-              contact: contacts.first,
-              onCall: () => _callContact(context, contacts.first),
-            )
-          : Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                onTap: () => _openSheet(context),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      child: Material(
+        color: AppTheme.primaryColor.withValues(alpha: isDark ? 0.12 : 0.06),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          onTap: single != null
+              ? () => _callContact(context, single)
+              : () => _openSheet(context),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(
+                  alpha: isDark ? 0.28 : 0.18,
+                ),
+              ),
+            ),
+            child: single != null
+                ? _ContactCard(
+                    contact: single,
+                    onCall: () => _callContact(context, single),
+                  )
+                : Row(
                     children: [
                       _ContactAvatarStack(contacts: contacts),
                       const SizedBox(width: 12),
@@ -6240,7 +6417,7 @@ class _ContactBar extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'ติดต่อทีมงานประจำรอบ',
+                              'ทีมงานประจำรอบนี้',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: appFont(
@@ -6250,6 +6427,7 @@ class _ContactBar extends StatelessWidget {
                                 letterSpacing: -0.1,
                               ),
                             ),
+                            const SizedBox(height: 1),
                             Text(
                               _summary(),
                               maxLines: 1,
@@ -6264,11 +6442,10 @@ class _ContactBar extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // ปุ่มนี้ไม่ได้โทรทันที (ยังไม่รู้ว่าจะโทรหาใคร) คำบนปุ่ม
+                      // จึงต้องเป็น "ดูเบอร์" ไม่ใช่ "โทร"
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor,
                           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -6290,14 +6467,19 @@ class _ContactBar extends StatelessWidget {
                                 color: Colors.white,
                               ),
                             ),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 16,
+                              color: Colors.white,
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -6363,18 +6545,21 @@ class _StackedAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // สีตามบทบาท — ในกองซ้อนที่ไม่มีชื่อกำกับ สีคือสิ่งเดียวที่บอกว่าคนไหน
+    // เป็นคนขับ (เทียบกับตราบทบาทบนการ์ดคนเดียวและในชีต)
+    final tint = _contactKindColor(contact.kind);
     final initial = contact.name.trim().isEmpty
         ? '?'
         : contact.name.trim()[0].toUpperCase();
     final fallback = Container(
       alignment: Alignment.center,
-      color: AppTheme.primaryColor.withValues(alpha: 0.12),
+      color: tint.withValues(alpha: 0.14),
       child: Text(
         initial,
         style: appFont(
           fontSize: AppText.sizeLabel,
           fontWeight: FontWeight.w700,
-          color: AppTheme.primaryColor,
+          color: tint,
         ),
       ),
     );
@@ -6529,7 +6714,7 @@ class _ContactSheetTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _StackedAvatar(contact: contact),
+                _ContactAvatarBadge(contact: contact, size: 46),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -6547,50 +6732,43 @@ class _ContactSheetTile extends StatelessWidget {
                           letterSpacing: -0.1,
                         ),
                       ),
-                      const SizedBox(height: 1),
-                      Text(
-                        contact.roleLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: appFont(
-                          fontSize: AppText.sizeCaption,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.mutedText(context),
-                        ),
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _ContactRoleChip(contact: contact),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        contact.phone,
-                        maxLines: 1,
-                        style: appFont(
-                          fontSize: AppText.sizeLabel,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.onSurface(context),
-                        ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.phone_in_talk_rounded,
+                            size: 12,
+                            color: AppTheme.mutedText(context),
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              contact.phone,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: appFont(
+                                fontSize: AppText.sizeCaption,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.mutedText(context),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Material(
-                  color: AppTheme.primaryColor,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    onTap: () => _callContact(context, contact),
-                    customBorder: const CircleBorder(),
-                    child: Tooltip(
-                      message: 'โทรหา${contact.name}',
-                      child: const SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Icon(
-                          Icons.phone_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ),
+                const SizedBox(width: 10),
+                _ContactCallButton(
+                  contact: contact,
+                  onCall: () => _callContact(context, contact),
+                  size: 42,
                 ),
               ],
             ),
@@ -6601,6 +6779,10 @@ class _ContactSheetTile extends StatelessWidget {
   }
 }
 
+/// การ์ดผู้ติดต่อคนเดียว — ชื่อ + บทบาท + เบอร์ ครบในแถวเดียว
+///
+/// แตะที่การ์ดทั้งใบก็โทรออกได้เหมือนกดปุ่ม (แถบข้างบนส่ง onTap มาให้แล้ว)
+/// ปุ่มวงกลมยังอยู่เพราะเป็นสิ่งที่ตาไปหยุดก่อน และบอกว่าการ์ดนี้ "กดได้"
 class _ContactCard extends StatelessWidget {
   final _ChatContact contact;
   final VoidCallback onCall;
@@ -6611,55 +6793,61 @@ class _ContactCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _Avatar(url: contact.avatarUrl, name: contact.name),
-        const SizedBox(width: 10),
+        _ContactAvatarBadge(contact: contact),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                contact.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: appFont(
-                  fontSize: AppText.sizeBody,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.onSurface(context),
-                  letterSpacing: -0.1,
-                ),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      contact.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(child: _ContactRoleChip(contact: contact)),
+                ],
               ),
-              Text(
-                '${contact.roleLabel} · ${contact.phone}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: appFont(
-                  fontSize: AppText.sizeCaption,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.mutedText(context),
-                ),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  Icon(
+                    Icons.phone_in_talk_rounded,
+                    size: 12,
+                    color: AppTheme.mutedText(context),
+                  ),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      contact.phone,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.mutedText(context),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        // ปุ่มโทรเป็นวงกลมทึบ แตะได้เต็มพื้นที่ตามขนาดขั้นต่ำที่ควรเป็น
-        Material(
-          color: AppTheme.primaryColor,
-          shape: const CircleBorder(),
-          child: InkWell(
-            onTap: onCall,
-            customBorder: const CircleBorder(),
-            child: Tooltip(
-              message: 'โทรหา${contact.name}',
-              child: const SizedBox(
-                width: 40,
-                height: 40,
-                child: Icon(Icons.phone_rounded, color: Colors.white, size: 18),
-              ),
-            ),
-          ),
-        ),
+        const SizedBox(width: 10),
+        _ContactCallButton(contact: contact, onCall: onCall),
       ],
     );
   }

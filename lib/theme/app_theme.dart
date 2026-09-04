@@ -324,6 +324,23 @@ class AppTheme {
     return isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
   }
 
+  /// พื้นห้องแชท กับสีบับเบิลข้อความฝั่งคนอื่น — ต้องมาคู่กันเสมอ
+  ///
+  /// โหมดสว่างใช้พื้นขาวสะอาด แล้วให้บับเบิลฝั่งคนอื่นเป็นเทาอ่อนลอยอยู่บนพื้น
+  /// (แบบ iMessage) โหมดมืดกลับกัน: พื้นห้องคือสีมืดสุดของธีม แล้วบับเบิลสว่าง
+  /// ขึ้นมาแทน สองค่านี้ห้ามเท่ากันเด็ดขาด — เดิมพื้นห้อง (bgLight) กับบับเบิล
+  /// (subtleSurface) เป็น #F8FAFC เท่ากันเป๊ะ ก้อนข้อความเลยกลืนไปกับพื้น
+  static Color chatCanvas(BuildContext context) {
+    return isDark(context) ? bgDark : surfaceLight;
+  }
+
+  /// สีบับเบิลข้อความฝั่งคนอื่น — คู่กับ [chatCanvas]
+  static Color chatIncomingBubble(BuildContext context) {
+    return isDark(context)
+        ? const Color(0xFF1B2536)
+        : const Color(0xFFF1F4F3);
+  }
+
   static Color fieldSurface(BuildContext context) {
     return isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFF7F8F7);
   }
