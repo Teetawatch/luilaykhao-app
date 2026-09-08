@@ -1231,6 +1231,7 @@ class AppProvider extends ChangeNotifier {
     bookings = [];
     notifications = [];
     activeSeatLocks = [];
+    claimableBookingCount = 0;
     loyalty = null;
     myReviews = [];
     rewards = [];
@@ -1322,6 +1323,10 @@ class AppProvider extends ChangeNotifier {
     _syncAppIconBadge();
     accountLoaded = true;
     notifyListeners();
+
+    // ใบจองที่ทีมงานเปิดให้ก่อนลูกค้าจะมีบัญชี ไม่ได้อยู่ในรายการข้างบน เพราะมัน
+    // ยังผูกกับบัญชีเงาอยู่ — ถามแยกเพื่อเอามาชวนให้กดผูกเข้าบัญชี
+    unawaited(loadClaimableBookings());
 
     // เตรียมชุดข้อมูลวันเดินทางไว้ใช้ตอนไม่มีสัญญาณ — ทำเงียบ ๆ ต่อท้ายและไม่
     // ให้เกี่ยวกับผลของ loadAccountData เพราะผู้ใช้ไม่ได้สั่งและไม่ได้รออยู่
@@ -2061,6 +2066,40 @@ class AppProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> acceptBookingInvite(String token) async {
     final response = await api.post(ApiEndpoints.bookingInviteAccept(token));
     final data = Map<String, dynamic>.from(api.data(response) as Map);
+    await loadAccountData();
+    return data;
+  }
+
+  // ─── การจองที่ทีมงานจองให้ ───────────────────────────────────────────────
+
+  /// จำนวนใบจองที่ "น่าจะ" เป็นของผู้ใช้ (เบอร์ตรงกับใบที่ทีมงานเปิดให้)
+  /// เซิร์ฟเวอร์ตอบแค่จำนวนกับชื่อทริป — รายละเอียดต้องยืนยันด้วยเลขที่จองก่อน
+  int claimableBookingCount = 0;
+
+  Future<void> loadClaimableBookings() async {
+    try {
+      final response = await api.get(ApiEndpoints.claimableBookings);
+      final data = Map<String, dynamic>.from(api.data(response) ?? {});
+      final count = (data['count'] as num?)?.toInt() ?? 0;
+      if (count == claimableBookingCount) return;
+      claimableBookingCount = count;
+      notifyListeners();
+    } catch (_) {
+      // เป็นแค่คำชวน ไม่ใช่ข้อมูลหลักของหน้า — เงียบไว้ดีกว่าขึ้น error ให้ตกใจ
+    }
+  }
+
+  /// ผูกใบจองที่ทีมงานเปิดให้เข้าบัญชีนี้ ด้วยเลขที่จอง + เบอร์ (4 ตัวท้ายก็พอ)
+  Future<Map<String, dynamic>> claimBooking({
+    required String bookingRef,
+    required String phone,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.claimBooking,
+      body: {'booking_ref': bookingRef, 'phone': phone},
+    );
+    final data = Map<String, dynamic>.from(api.data(response) as Map);
+    claimableBookingCount = 0;
     await loadAccountData();
     return data;
   }

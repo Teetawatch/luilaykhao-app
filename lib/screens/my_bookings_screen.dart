@@ -122,9 +122,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                             message: app.accountError!,
                             onRetry: app.loadAccountData,
                           )
-                        else if (hasNoBookings)
-                          const EmptyStateWidget()
-                        else ...[
+                        else if (hasNoBookings) ...[
+                          const EmptyStateWidget(),
+                          const SizedBox(height: 16),
+                          const _ClaimBookingEntry(),
+                        ] else ...[
+                        if (app.claimableBookingCount > 0) ...[
+                          const _ClaimBookingEntry(),
+                          const SizedBox(height: 20),
+                        ],
                         _BookingsHeader(
                           totalCount: allBookings.length,
                           upcomingCount: allBookings
@@ -281,6 +287,103 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
 
 /// ปุ่มมุมขวาบนของ "การจองของฉัน" — สำหรับคนที่ *ได้รับ* คำเชิญมา
 /// (การ *ส่ง* คำเชิญอยู่บนการ์ดการจองของตัวเอง)
+/// ทางเข้า "ผูกการจองที่ทีมงานจองให้"
+///
+/// โผล่สองที่: บนสุดเมื่อระบบเจอใบจองที่เบอร์ตรงกับบัญชีนี้ (คำชวนตรง ๆ) และ
+/// ใต้สถานะ "ยังไม่มีการจอง" เสมอ — เพราะคนที่เจอปัญหานี้ *เห็นหน้าว่างเปล่า*
+/// พอดี ถ้าไม่มีทางออกตรงนั้น เขาจะไม่มีทางเดาได้ว่าต้องไปหาที่ไหน
+class _ClaimBookingEntry extends StatelessWidget {
+  const _ClaimBookingEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    final count = context.select<AppProvider, int>(
+      (app) => app.claimableBookingCount,
+    );
+    final found = count > 0;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: found
+            ? AppTheme.selectedTint(context)
+            : AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(
+          color: found
+              ? AppTheme.primaryColor.withValues(alpha: 0.30)
+              : AppTheme.border(context),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                found
+                    ? Icons.inbox_rounded
+                    : Icons.support_agent_rounded,
+                size: 20,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  found
+                      ? 'เราพบการจอง $count รายการที่อาจเป็นของคุณ'
+                      : 'ทีมงานจองให้ แต่ยังไม่เห็นในแอป?',
+                  style: appFont(
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            found
+                ? 'การจองที่ทีมงานเปิดให้ก่อนคุณสมัครในแอป จะยังไม่ผูกกับบัญชีนี้ '
+                      'ยืนยันด้วยเลขที่การจองเพื่อย้ายมาให้เรียบร้อย'
+                : 'ถ้าคุณจองผ่านไลน์หรือโทรศัพท์ไว้ก่อนสมัครในแอป '
+                      'ผูกการจองนั้นเข้าบัญชีนี้ได้ด้วยเลขที่การจอง',
+            style: appFont(
+              fontSize: AppText.sizeLabel,
+              color: AppTheme.mutedText(context),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 44,
+            child: FilledButton.icon(
+              onPressed: () async {
+                HapticFeedback.selectionClick();
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ClaimBookingScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.link_rounded, size: 18),
+              label: Text(
+                'ผูกการจองเข้าบัญชี',
+                style: appFont(
+                  fontSize: AppText.sizeBody,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _JoinBookingAction extends StatelessWidget {
   final VoidCallback onPressed;
 

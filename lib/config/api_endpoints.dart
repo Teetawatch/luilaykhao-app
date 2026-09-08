@@ -136,6 +136,10 @@ class ApiEndpoints {
   static String bookingInviteAccept(String token) =>
       'booking-invites/$token/accept';
 
+  // ใบจองที่ทีมงานเปิดให้ก่อนลูกค้ามีบัญชี — ผูกเข้าบัญชีตัวเองด้วยเลขที่จอง
+  static const String claimableBookings = 'me/claimable-bookings';
+  static const String claimBooking = 'bookings/claim';
+
   // Trip posts / ฟีดรูปหลังทริป
   static const tripPosts = 'trip-posts';
   static String tripPostsOf(String slug) => 'trips/$slug/posts';
