@@ -96,6 +96,9 @@ class NotificationNavigator {
       case 'waitlist_expired':
         _openWaitlist();
       case 'promo':
+      // แคมเปญวันพิเศษลดทั้งเว็บ ไม่ได้ผูกกับทริปใดทริปหนึ่ง — พาไปหน้ารวมทริป
+      // ที่ราคาลดแล้วทุกใบ ไม่ใช่หน้าทริปเดียว
+      case 'sale_campaign':
         _switchTab(1);
       case 'staff_assignment':
       case 'staff_shift_reminder':

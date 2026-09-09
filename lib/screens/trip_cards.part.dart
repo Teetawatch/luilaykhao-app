@@ -231,6 +231,15 @@ class _ParticipantRow extends StatelessWidget {
   }
 }
 
+/// ราคาบนการ์ดถูกลดจริงไหม — เทียบราคาก่อนลดที่เซิร์ฟเวอร์ส่งมากับราคาที่โชว์
+/// ครอบทั้งแคมเปญวันพิเศษและ flash sale รายรอบ เพราะทั้งคู่ลด min_price เหมือนกัน
+bool _hasDiscount(Map<String, dynamic> trip) {
+  final before =
+      double.tryParse('${trip['min_original_price'] ?? ''}') ?? 0;
+  final now = double.tryParse('${trip['min_price'] ?? ''}') ?? 0;
+  return before > now && now > 0;
+}
+
 /// Formats an ISO date (Y-m-d) as a short Thai date, e.g. "12 ก.ค. 68" (BE).
 /// Returns '' for empty/unparseable input. Reuses [_thaiMonthsShort].
 String _thaiShortDate(String iso) {
@@ -359,6 +368,23 @@ class _ReferenceTripCard extends StatelessWidget {
                         background: const Color(0xFFEA580C),
                         foreground: Colors.white,
                       ),
+                    ] else if (asMap(trip['campaign']).isNotEmpty) ...[
+                      // ป้ายแคมเปญวันพิเศษ (9.9) — ป้ายสั้นอยู่แล้วโดยธรรมชาติ
+                      // การ์ดแคบจึงเหลือแค่ป้าย ไม่ต้องมีคำว่าลดเท่าไหร่ต่อท้าย
+                      const SizedBox(width: 5),
+                      _CardBadge(
+                        label: box.maxWidth < 200
+                            ? textOf(
+                                asMap(trip['campaign'])['badge_label'],
+                                'SALE',
+                              )
+                            : '${textOf(asMap(trip['campaign'])['badge_label'])} '
+                                  '${textOf(asMap(trip['campaign'])['discount_label'])}'
+                                  .trim(),
+                        icon: Icons.celebration_rounded,
+                        background: const Color(0xFFE11D48),
+                        foreground: Colors.white,
+                      ),
                     ],
                   ],
                 ),
@@ -423,6 +449,17 @@ class _ReferenceTripCard extends StatelessWidget {
                         child: Text.rich(
                           TextSpan(
                             children: [
+                              // ราคาก่อนลดขึ้นเฉพาะตอนที่มันต่างจากราคาขายจริง
+                              // (แคมเปญวันพิเศษ / flash sale) ไม่งั้นซ้ำเปล่า ๆ
+                              if (_hasDiscount(trip))
+                                TextSpan(
+                                  text: '${money(trip['min_original_price'])} ',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w700,
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
                               TextSpan(
                                 text: money(
                                   trip['min_price'] ??

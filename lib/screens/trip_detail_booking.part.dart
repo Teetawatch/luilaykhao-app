@@ -118,6 +118,23 @@ class StickyBookingBar extends StatelessWidget {
     final flashOriginal = _asNum(selectedSchedule['original_price']);
     final flashPrice = _asNum(flashSale['price']);
 
+    // แคมเปญวันพิเศษ (9.9) — ต่างจาก flash sale ตรงที่ลดราคาจุดขึ้นรถและราคาจอย
+    // ด้วย จึงโชว์ได้แม้ลูกค้าเลือกจุดที่มีราคาของตัวเองไปแล้ว
+    final campaign = asMap(selectedSchedule['campaign']);
+    final priceNow = _priceValue(
+      trip,
+      schedule: selectedSchedule,
+      pickupPoint: selectedPickupPoint,
+    );
+    final priceBefore = _originalPriceValue(
+      trip,
+      schedule: selectedSchedule,
+      pickupPoint: selectedPickupPoint,
+    );
+    final campaignActive =
+        campaign.isNotEmpty && !flashActive && priceBefore > priceNow;
+    final campaignEndsAt = DateTime.tryParse(textOf(campaign['ends_at']));
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -248,6 +265,31 @@ class StickyBookingBar extends StatelessWidget {
                                   ],
                                 ),
                               ],
+                              if (!isCharter && campaignActive) ...[
+                                const SizedBox(height: 5),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      money(priceBefore),
+                                      style: appFont(
+                                        fontSize: AppText.sizeLabel,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppTheme.mutedText(context),
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _CampaignPricePill(
+                                      label: textOf(
+                                        campaign['badge_label'],
+                                        textOf(campaign['discount_label']),
+                                      ),
+                                      endsAt: campaignEndsAt,
+                                    ),
+                                  ],
+                                ),
+                              ],
                               if (!isCharter && joinTripEnabled) ...[
                                 const SizedBox(height: 3),
                                 Container(
@@ -350,6 +392,66 @@ class StickyBookingBar extends StatelessWidget {
 /// Sold-out CTA: lets a signed-in customer queue for a seat on a full round,
 /// or jump to "คิวรอที่นั่ง" when they're already in line. Mirrors the booking
 /// button's footprint so the bar layout stays identical between states.
+/// ป้ายแคมเปญวันพิเศษพร้อมนับถอยหลัง — คู่กับ [FlashCountdownPill] แต่ใช้สีของ
+/// แคมเปญ และพูดถึง "ทั้งเว็บ" ไม่ใช่รอบนี้รอบเดียว
+class _CampaignPricePill extends StatefulWidget {
+  final String label;
+  final DateTime? endsAt;
+
+  const _CampaignPricePill({required this.label, this.endsAt});
+
+  @override
+  State<_CampaignPricePill> createState() => _CampaignPricePillState();
+}
+
+class _CampaignPricePillState extends State<_CampaignPricePill> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.endsAt != null) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final left = widget.endsAt?.difference(DateTime.now());
+    String two(int n) => n.toString().padLeft(2, '0');
+
+    final countdown = left == null || left.isNegative
+        ? ''
+        : left.inDays > 0
+        ? ' · ${left.inDays} วัน'
+        : ' · ${two(left.inHours)}:${two(left.inMinutes % 60)}:${two(left.inSeconds % 60)}';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE11D48).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+      ),
+      child: Text(
+        '${widget.label}$countdown',
+        style: appFont(
+          fontSize: AppText.sizeCaption,
+          color: const Color(0xFFE11D48),
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
 class _WaitlistButton extends StatefulWidget {
   final int scheduleId;
 

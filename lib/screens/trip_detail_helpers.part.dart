@@ -760,6 +760,25 @@ String _priceText(
   Map<String, dynamic>? pickupPoint,
   bool isJoinTrip = false,
 }) {
+  final number = _priceValue(
+    trip,
+    schedule: schedule,
+    pickupPoint: pickupPoint,
+    isJoinTrip: isJoinTrip,
+  );
+  if (number <= 0) return 'ดูราคา';
+  return '${money(number)} / คน';
+}
+
+/// ราคาต่อคนที่ลูกค้าจ่ายจริงตามตัวเลือกที่เลือกอยู่ (0 = ยังบอกไม่ได้)
+///
+/// ทุกตัวเลขที่มาจากเซิร์ฟเวอร์ถูกหักแคมเปญวันพิเศษ/flash sale มาแล้ว
+num _priceValue(
+  Map<String, dynamic> trip, {
+  Map<String, dynamic>? schedule,
+  Map<String, dynamic>? pickupPoint,
+  bool isJoinTrip = false,
+}) {
   final pickupPrice = num.tryParse(textOf(pickupPoint?['price']));
   final dynamic value;
   if (isJoinTrip) {
@@ -780,9 +799,31 @@ String _priceText(
         trip['price'] ??
         trip['start_price'];
   }
-  final number = num.tryParse(textOf(value));
-  if (number == null || number <= 0) return 'ดูราคา';
-  return '${money(number)} / คน';
+  return num.tryParse(textOf(value)) ?? 0;
+}
+
+/// ราคาก่อนลดของตัวเลขเดียวกับที่ [_priceValue] คืน — ไล่กิ่งเดียวกันเป๊ะ ๆ
+/// เพื่อไม่ให้ราคาขีดฆ่าเป็นของอีกกรณีหนึ่ง คืน 0 เมื่อไม่มีราคาก่อนลดให้อ้างอิง
+num _originalPriceValue(
+  Map<String, dynamic> trip, {
+  Map<String, dynamic>? schedule,
+  Map<String, dynamic>? pickupPoint,
+  bool isJoinTrip = false,
+}) {
+  final pickupPrice = num.tryParse(textOf(pickupPoint?['price']));
+  if (isJoinTrip) {
+    return num.tryParse(
+          textOf(
+            schedule?['join_trip_original_price'] ??
+                schedule?['original_price'],
+          ),
+        ) ??
+        0;
+  }
+  if (pickupPrice != null && pickupPrice > 0) {
+    return num.tryParse(textOf(pickupPoint?['original_price'])) ?? 0;
+  }
+  return num.tryParse(textOf(schedule?['original_price'])) ?? 0;
 }
 
 bool _asBool(dynamic value) {

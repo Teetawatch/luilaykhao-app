@@ -62,6 +62,10 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> featuredTrips = [];
   List<dynamic> almostFullTrips = [];
   List<dynamic> flashSaleTrips = [];
+
+  /// แคมเปญวันพิเศษที่กำลังลดราคาทั้งเว็บอยู่ (9.9 / 10.10) — null เมื่อไม่มี
+  /// ราคาที่แอปโชว์ถูกลดมาจากเซิร์ฟเวอร์แล้ว ก้อนนี้มีไว้บอกว่า "ทำไมถึงถูกลง"
+  Map<String, dynamic>? saleCampaign;
   List<dynamic> categories = [];
   /// ไกด์ประเภทรถรับ-ส่งจุดรับต่างภูมิภาค — โหลดครั้งเดียวแล้วใช้ซ้ำทั้งแอป
   List<PickupVehicleClass> pickupVehicleClasses = [];
@@ -281,6 +285,11 @@ class AppProvider extends ChangeNotifier {
     flashSaleTrips = List<dynamic>.from(
       cache.readPublic<List>('flash_sale') ?? const [],
     );
+    final cachedCampaign = cache.readPublic<Map>('sale_campaign');
+    // แคมเปญที่แคชไว้อาจจบไปแล้วตั้งแต่เปิดแอปครั้งก่อน — เช็ควันหมดก่อนใช้
+    saleCampaign = _liveCampaign(
+      cachedCampaign == null ? null : Map<String, dynamic>.from(cachedCampaign),
+    );
     categories = List<dynamic>.from(
       cache.readPublic<List>('categories') ?? const [],
     );
@@ -466,6 +475,7 @@ class AppProvider extends ChangeNotifier {
       safe(api.get(ApiEndpoints.heroSlides)),
       safe(api.get('trips/almost-full')),
       safe(api.get('trips/flash-sale')),
+      safe(api.get('sale-campaign/active')),
     ]);
 
     final cache = OfflineCache.instance;
@@ -505,7 +515,27 @@ class AppProvider extends ChangeNotifier {
       flashSaleTrips = List<dynamic>.from(api.data(results[8]) ?? []);
       cache.writePublic('flash_sale', flashSaleTrips);
     }
+    if (results[9] != null) {
+      // endpoint คืน data: null เมื่อไม่มีแคมเปญ ซึ่งเป็นคำตอบที่ถูกต้อง
+      // ไม่ใช่ความผิดพลาด — เขียนทับแคชด้วย null ได้เลย
+      final raw = api.data(results[9]);
+      saleCampaign = _liveCampaign(
+        raw is Map ? Map<String, dynamic>.from(raw) : null,
+      );
+      cache.writePublic('sale_campaign', saleCampaign ?? const {});
+    }
     notifyListeners();
+  }
+
+  /// คืนแคมเปญเฉพาะตอนที่มันยังไม่หมดเวลา ไม่งั้นคืน null
+  ///
+  /// แอปเปิดค้างข้ามเที่ยงคืนได้ และแคชก็อยู่ข้ามการเปิดแอป การ์ดแคมเปญจึงต้อง
+  /// ตรวจวันหมดเองทุกครั้ง แทนที่จะเชื่อว่าอะไรก็ตามที่โหลดมาแล้วยังใช้ได้อยู่
+  Map<String, dynamic>? _liveCampaign(Map<String, dynamic>? campaign) {
+    if (campaign == null || campaign.isEmpty) return null;
+    final endsAt = DateTime.tryParse('${campaign['ends_at'] ?? ''}');
+    if (endsAt == null || endsAt.isBefore(DateTime.now())) return null;
+    return campaign;
   }
 
   /// โหลดไกด์ประเภทรถรับ-ส่งครั้งเดียวต่อการเปิดแอป

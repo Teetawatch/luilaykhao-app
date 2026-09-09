@@ -177,6 +177,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ],
                   ),
+                  // แคมเปญวันพิเศษ (9.9) — วางใต้ทริปของฉัน ไม่ใช่บนสุด เพราะ
+                  // ทริปที่จองแล้วสำคัญกับเจ้าของแอปมากกว่าของที่เรากำลังขาย
+                  if (app.saleCampaign != null)
+                    _SaleCampaignBanner(campaign: app.saleCampaign!),
                   _YourTripSection(app: app),
                   // Browse-continuity: trips the user opened before, so they can
                   // pick up where they left off (hidden until something's viewed).
@@ -1867,6 +1871,128 @@ class _AlmostFullRail extends StatelessWidget {
 // ─── Flash Sale Rail ─────────────────────────────────────────────────────────
 // Mirrors the web "⚡ Flash Sale" home rail: trips with a live per-round flash
 // sale (soonest-ending first). The destination for the flash-sale push CTA.
+/// แถบแคมเปญวันพิเศษ (9.9 / 10.10) บนหน้าแรก
+///
+/// ราคาทุกที่ในแอปถูกลดมาจากเซิร์ฟเวอร์แล้ว แถบนี้มีหน้าที่เดียวคือบอกว่าทำไม
+/// และเหลือเวลาอีกเท่าไหร่ — เก็บตัวเองเมื่อหมดเวลาโดยไม่ต้องรอโหลดข้อมูลใหม่
+class _SaleCampaignBanner extends StatefulWidget {
+  final Map<String, dynamic> campaign;
+
+  const _SaleCampaignBanner({required this.campaign});
+
+  @override
+  State<_SaleCampaignBanner> createState() => _SaleCampaignBannerState();
+}
+
+class _SaleCampaignBannerState extends State<_SaleCampaignBanner> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _remaining(Duration d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final clock =
+        '${two(d.inHours % 24)}:${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}';
+    return d.inDays > 0 ? '${d.inDays} วัน $clock' : clock;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final endsAt = DateTime.tryParse(textOf(widget.campaign['ends_at']));
+    if (endsAt == null) return const SizedBox.shrink();
+
+    final left = endsAt.difference(DateTime.now());
+    if (left.isNegative) return const SizedBox.shrink();
+
+    final badge = textOf(widget.campaign['badge_label']);
+    final headline = textOf(
+      widget.campaign['tagline'],
+      '${textOf(widget.campaign['discount_label'])} ทุกทริปในแอป',
+    );
+    final color =
+        _parseHexColor(textOf(widget.campaign['theme_color'])) ??
+        const Color(0xFFE11D48);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 20, 24, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+      ),
+      child: Row(
+        children: [
+          if (badge.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              ),
+              child: Text(
+                badge,
+                style: appFont(
+                  color: Colors.white,
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  headline,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    color: Colors.white,
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'เหลืออีก ${_remaining(left)}',
+                  style: appFont(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "#RRGGBB" จากแอดมิน → Color; คืน null เมื่อรูปแบบไม่ใช่ เพื่อให้ผู้เรียก
+/// ตกกลับไปใช้สีมาตรฐานแทนที่จะพัง
+Color? _parseHexColor(String value) {
+  final hex = value.replaceAll('#', '').trim();
+  if (hex.length != 6) return null;
+  final parsed = int.tryParse(hex, radix: 16);
+  return parsed == null ? null : Color(0xFF000000 | parsed);
+}
+
 class _FlashSaleRail extends StatelessWidget {
   final List<Map<String, dynamic>> trips;
 
