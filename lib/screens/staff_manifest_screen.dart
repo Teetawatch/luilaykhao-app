@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +9,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
+import '../services/check_in_outbox.dart';
+import '../utils/thai_date.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/skeleton.dart';
 import '../theme/app_theme.dart';
@@ -38,13 +42,40 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
   bool _loading = true;
   final Set<int> _completingPoints = {};
 
+  /// กำลังอ่านรายชื่อชุดที่บันทึกไว้ (ไม่มีสัญญาณ) และบันทึกไว้เมื่อไหร่
+  bool _fromCache = false;
+  DateTime? _savedAt;
+
   /// booking_ref ที่กำลังเช็คอินอยู่ — กันกดซ้ำระหว่างรอ API
   final Set<String> _checkingIn = {};
+
+  /// booking_ref ที่เช็คอินไปแล้วแต่ยังส่งไม่ออก — อ่านจากคิวบนเครื่อง
+  Set<String> _queued = {};
 
   @override
   void initState() {
     super.initState();
+    _queued = CheckInOutbox.instance.pendingRefs(widget.scheduleId);
+    CheckInOutbox.instance.pendingCount.addListener(_syncQueued);
+    // เปิดหน้านี้ตอนมีสัญญาณ = จังหวะที่ดีที่สุดที่จะปล่อยคิวที่ค้างจากเมื่อเช้า
+    unawaited(CheckInOutbox.instance.flush(force: true));
     _load();
+  }
+
+  @override
+  void dispose() {
+    CheckInOutbox.instance.pendingCount.removeListener(_syncQueued);
+    super.dispose();
+  }
+
+  void _syncQueued() {
+    if (!mounted) return;
+    final refs = CheckInOutbox.instance.pendingRefs(widget.scheduleId);
+    final sent = _queued.difference(refs);
+    setState(() => _queued = refs);
+    // คิวเพิ่งส่งของออกไปได้ — ดึงรายชื่อใหม่เพื่อให้สถานะบนหน้าจอเป็นของจริง
+    // จากเซิร์ฟเวอร์ ไม่ใช่ป้าย "รอส่ง" ที่เราวาดเอง
+    if (sent.isNotEmpty) unawaited(_load());
   }
 
   Future<void> _load() async {
@@ -53,11 +84,15 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       _error = null;
     });
     try {
-      final data = await context.read<AppProvider>().loadStaffManifest(
+      final manifest = await context.read<AppProvider>().loadStaffManifest(
         widget.scheduleId,
       );
       if (!mounted) return;
-      setState(() => _data = data);
+      setState(() {
+        _data = manifest.data;
+        _fromCache = manifest.fromCache;
+        _savedAt = manifest.savedAt;
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
@@ -130,6 +165,27 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       await _load();
     } on ApiException catch (e) {
       if (!mounted) return;
+
+      // จุดรับหลายจุดของเราอยู่ในที่ที่สัญญาณไม่ถึง ซึ่งเป็นที่เดียวกับที่ต้อง
+      // เช็คอินคนขึ้นรถ — คำตอบที่ถูกต้องตรงนั้นไม่ใช่ข้อความแดง แต่คือ "รับไว้
+      // แล้ว เดี๋ยวส่งให้เอง" สตาฟจะได้ไปนับคนต่อโดยไม่ต้องจำเอง
+      if (e.isNetworkError) {
+        await CheckInOutbox.instance.enqueue(
+          scheduleId: widget.scheduleId,
+          bookingRef: ref,
+          qrCode: ref,
+          name: name,
+        );
+        if (!mounted) return;
+        HapticFeedback.heavyImpact();
+        setState(() => _queued = CheckInOutbox.instance.pendingRefs(widget.scheduleId));
+        AppSnack.success(
+          context,
+          'บันทึกเช็คอิน $name ไว้แล้ว จะส่งให้เองเมื่อมีสัญญาณ',
+        );
+        return;
+      }
+
       HapticFeedback.vibrate();
       ScaffoldMessenger.of(
         context,
@@ -312,6 +368,14 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
         24 + MediaQuery.of(context).padding.bottom,
       ),
       children: [
+        if (_fromCache) ...[
+          _OfflineManifestBanner(savedAt: _savedAt, onRetry: _load),
+          const SizedBox(height: 12),
+        ],
+        if (_queued.isNotEmpty) ...[
+          _QueuedCheckInBanner(count: _queued.length),
+          const SizedBox(height: 12),
+        ],
         if (vehicle.isNotEmpty) ...[
           _VehicleCard(vehicle: vehicle),
           const SizedBox(height: 12),
@@ -359,6 +423,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
             _PickupGroupCard(
               group: group,
               checkingIn: _checkingIn,
+              queued: _queued,
               onCheckIn: _checkInFromManifest,
               busy: _completingPoints.contains(group['id']),
               onToggleComplete: (group['id'] is int)
@@ -754,10 +819,14 @@ class _PickupGroupCard extends StatelessWidget {
   final Set<String> checkingIn;
   final void Function(Map<String, dynamic> passenger) onCheckIn;
 
+  /// booking_ref ที่เช็คอินไว้แล้วแต่ยังส่งไม่ออก (ไม่มีสัญญาณ)
+  final Set<String> queued;
+
   const _PickupGroupCard({
     required this.group,
     required this.checkingIn,
     required this.onCheckIn,
+    this.queued = const {},
     this.busy = false,
     this.onToggleComplete,
   });
@@ -778,6 +847,9 @@ class _PickupGroupCard extends StatelessWidget {
     final notes = textOf(group['notes']);
     final total = int.tryParse(textOf(group['passenger_count'], '0')) ?? 0;
     final checkedIn = int.tryParse(textOf(group['checked_in_count'], '0')) ?? 0;
+    // ลูกค้ากดบอกเองว่าถึงจุดนัดแล้ว/อาจมาสาย — ตัวเลขที่ตอบว่า "รอต่อไหม"
+    final arrived = int.tryParse(textOf(group['arrived_count'], '0')) ?? 0;
+    final late = int.tryParse(textOf(group['late_count'], '0')) ?? 0;
     final passengers = asList(group['passengers']).map(asMap).toList();
     final allIn = total > 0 && checkedIn >= total;
     final isCompleted = textOf(group['completed_at']).isNotEmpty;
@@ -957,6 +1029,23 @@ class _PickupGroupCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (!allIn && (arrived > 0 || late > 0))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          [
+                            if (arrived > 0) 'ถึงแล้ว $arrived',
+                            if (late > 0) 'แจ้งสาย $late',
+                          ].join(' · '),
+                          style: appFont(
+                            fontSize: AppText.sizeCaption,
+                            fontWeight: FontWeight.w700,
+                            color: late > 0
+                                ? AppTheme.warningColor
+                                : AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ),
                     if (mapUrl.isNotEmpty)
                       TextButton.icon(
                         onPressed: () => launchUrl(
@@ -992,6 +1081,7 @@ class _PickupGroupCard extends StatelessWidget {
                     passenger: passengers[i],
                     index: i + 1,
                     busy: checkingIn.contains(textOf(passengers[i]['booking_ref'])),
+                    queued: queued.contains(textOf(passengers[i]['booking_ref'])),
                     onCheckIn: () => onCheckIn(passengers[i]),
                   ),
                   if (i < passengers.length - 1)
@@ -1103,12 +1193,17 @@ class _ManifestPassengerRow extends StatelessWidget {
   final Map<String, dynamic> passenger;
   final int index;
   final bool busy;
+
+  /// เช็คอินไว้แล้วแต่ยังส่งไม่ออก — สำหรับสตาฟถือว่า "เรียบร้อยแล้ว" เหมือนกัน
+  /// แค่ยังไม่ถึงเซิร์ฟเวอร์ จึงกดซ้ำไม่ได้ และป้ายต้องบอกความจริงข้อนั้น
+  final bool queued;
   final VoidCallback? onCheckIn;
 
   const _ManifestPassengerRow({
     required this.passenger,
     required this.index,
     this.busy = false,
+    this.queued = false,
     this.onCheckIn,
   });
 
@@ -1177,6 +1272,16 @@ class _ManifestPassengerRow extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _BookingTypeChip(isJoinTrip: isJoinTrip),
+                    if (!checkedIn && !queued)
+                      _PickupStatusChip(
+                        status: textOf(passenger['pickup_status']),
+                        etaMinutes: int.tryParse(
+                          textOf(passenger['pickup_status_eta_minutes']),
+                        ),
+                        at: DateTime.tryParse(
+                          textOf(passenger['pickup_status_at']),
+                        ),
+                      ),
                     if (phone.isNotEmpty)
                       _CallButton(phone: phone, compact: true),
                   ],
@@ -1195,12 +1300,218 @@ class _ManifestPassengerRow extends StatelessWidget {
           const SizedBox(width: 8),
           _CheckInPill(
             checkedIn: checkedIn,
+            queued: queued,
             busy: busy,
-            onTap: checkedIn ? null : onCheckIn,
+            onTap: (checkedIn || queued) ? null : onCheckIn,
           ),
         ],
       ),
     );
+  }
+}
+
+/// แถบบอกว่ากำลังอ่านรายชื่อชุดที่บันทึกไว้ ไม่ใช่ของสด
+///
+/// ต้องบอกเวลาที่บันทึกเสมอ เพราะความต่างระหว่าง "เมื่อ 10 นาทีที่แล้ว" กับ
+/// "เมื่อคืนนี้" คือความต่างระหว่างรายชื่อที่เชื่อได้กับรายชื่อที่อาจไม่มีคนที่
+/// เพิ่งยกเลิกเมื่อเช้าอยู่ในนั้น
+class _OfflineManifestBanner extends StatelessWidget {
+  final DateTime? savedAt;
+  final VoidCallback onRetry;
+
+  const _OfflineManifestBanner({required this.savedAt, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final when = savedAt == null
+        ? 'ครั้งล่าสุดที่เปิดตอนมีสัญญาณ'
+        : '${thaiDateTimeShort(savedAt!)} น.';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        // สีทึบ (tintOf) ไม่ใช่สีโปร่ง — แถบนี้นั่งบนพื้นหลังที่เลื่อนผ่านได้
+        color: AppTheme.warningTint(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 20,
+            color: AppTheme.warningColor,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'รายชื่อที่บันทึกไว้ในเครื่อง',
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'ข้อมูล ณ $when',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(
+              'ลองอีกครั้ง',
+              style: appFont(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+}
+
+/// แถบบอกว่ามีเช็คอินค้างอยู่ในเครื่องกี่รายการ
+///
+/// พูดข้อจำกัดจริงของมันตรง ๆ ("เปิดแอปค้างไว้") เหมือนแถบของ SOS เพราะคิวเดิน
+/// ได้เฉพาะตอนแอปทำงานอยู่ — สัญญาที่เกินกว่านั้นคือสัญญาที่รักษาไม่ได้
+class _QueuedCheckInBanner extends StatelessWidget {
+  final int count;
+
+  const _QueuedCheckInBanner({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    const tone = Color(0xFF0891B2);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.tintOf(context, tone),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: tone.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.cloud_upload_rounded,
+            size: 20,
+            color: AppTheme.onTintOf(context, tone),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'เช็คอินรอส่ง $count รายการ',
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'บันทึกไว้ในเครื่องแล้ว จะส่งเองเมื่อมีสัญญาณ — เปิดแอปค้างไว้',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// สถานะที่ลูกค้ากดบอกเองที่จุดนัด — ซ่อนตัวเองเมื่อยังไม่มีใครกด
+///
+/// ป้ายนี้ไม่ใช่การเช็คอิน และตั้งใจให้หน้าตาไม่เหมือนกัน: มันคือสิ่งที่ "ลูกค้า
+/// บอกว่า" ไม่ใช่สิ่งที่ "สตาฟยืนยันแล้ว" คนที่ตัดสินว่าใครอยู่บนรถยังเป็นสตาฟ
+class _PickupStatusChip extends StatelessWidget {
+  final String status;
+  final int? etaMinutes;
+  final DateTime? at;
+
+  const _PickupStatusChip({
+    required this.status,
+    this.etaMinutes,
+    this.at,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (String label, IconData icon, Color color) = switch (status) {
+      'arrived' => (
+        'ลูกค้าว่าถึงแล้ว',
+        Icons.where_to_vote_rounded,
+        AppTheme.primaryColor,
+      ),
+      'on_the_way' => (
+        'กำลังมา',
+        Icons.directions_walk_rounded,
+        const Color(0xFF0891B2),
+      ),
+      'late' => (
+        etaMinutes != null ? 'แจ้งสาย ~$etaMinutes นาที' : 'แจ้งว่าอาจสาย',
+        Icons.running_with_errors_rounded,
+        AppTheme.warningColor,
+      ),
+      _ => ('', Icons.circle, Colors.transparent),
+    };
+
+    if (label.isEmpty) return const SizedBox.shrink();
+
+    final ago = at == null ? '' : _ago(at!.toLocal());
+
+    final ink = AppTheme.onTintOf(context, color);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.tintOf(context, color),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: ink),
+          const SizedBox(width: 4),
+          Text(
+            ago.isEmpty ? label : '$label · $ago',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w800,
+              color: ink,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// "เมื่อ 3 นาทีที่แล้ว" ย่อให้สั้นที่สุดเท่าที่ยังบอกความสดของข้อมูลได้
+  static String _ago(DateTime at) {
+    final minutes = DateTime.now().difference(at).inMinutes;
+    if (minutes < 1) return 'เมื่อสักครู่';
+    if (minutes < 60) return '$minutes นาทีก่อน';
+    return '${(minutes / 60).floor()} ชม.ก่อน';
   }
 }
 
@@ -1253,19 +1564,25 @@ class _BookingTypeChip extends StatelessWidget {
 /// (ไม่ต้องเปิดกล้องสแกน QR ซึ่งใช้ไม่ได้ตอนลูกค้าแบตหมดหรือเปิดแอปไม่ได้)
 class _CheckInPill extends StatelessWidget {
   final bool checkedIn;
+  final bool queued;
   final bool busy;
   final VoidCallback? onTap;
 
   const _CheckInPill({
     required this.checkedIn,
+    this.queued = false,
     this.busy = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = checkedIn ? AppTheme.primaryColor : AppTheme.warningColor;
-    final tappable = !checkedIn && onTap != null;
+    final color = checkedIn
+        ? AppTheme.primaryColor
+        : queued
+        ? const Color(0xFF0891B2)
+        : AppTheme.warningColor;
+    final tappable = !checkedIn && !queued && onTap != null;
 
     final content = Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -1289,13 +1606,19 @@ class _CheckInPill extends StatelessWidget {
             Icon(
               checkedIn
                   ? Icons.check_circle_rounded
+                  : queued
+                  ? Icons.cloud_upload_rounded
                   : Icons.touch_app_rounded,
               size: 13,
               color: color,
             ),
           const SizedBox(width: 4),
           Text(
-            checkedIn ? 'เช็คอินแล้ว' : 'กดเพื่อเช็คอิน',
+            checkedIn
+                ? 'เช็คอินแล้ว'
+                : queued
+                ? 'รอส่ง'
+                : 'กดเพื่อเช็คอิน',
             style: appFont(
               fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,

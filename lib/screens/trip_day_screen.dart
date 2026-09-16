@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/emergency_numbers_card.dart';
 import '../widgets/offline_pack_card.dart';
+import '../widgets/pickup_status_card.dart';
 import '../widgets/rally_card.dart';
 import '../widgets/sos_button.dart';
 import '../widgets/travel_widgets.dart';
@@ -115,6 +116,15 @@ class TripDayScreen extends StatelessWidget {
           if (_withinTripWindow &&
               textOf(booking['booking_ref']).isNotEmpty) ...[
             RightNowCard(bookingRef: textOf(booking['booking_ref'])),
+            const SizedBox(height: 16),
+          ],
+
+          // "บอกทีมงานว่าคุณอยู่ตรงไหน" — ต่อจากการ์ด ETA เพราะเป็นบทสนทนา
+          // เดียวกันคนละทิศ: อันบนบอกว่ารถอยู่ไหน อันนี้บอกว่าเราอยู่ไหน
+          // ซ่อนตัวเองเมื่อเช็คอินแล้ว หรือเมื่อเซิร์ฟเวอร์บอกว่าหมดช่วงแล้ว
+          if (_withinTripWindow &&
+              textOf(booking['booking_ref']).isNotEmpty) ...[
+            PickupStatusCard(booking: booking),
             const SizedBox(height: 16),
           ],
 

@@ -17,6 +17,7 @@ import '../screens/sos_alert_screen.dart';
 import '../screens/support_chat_screen.dart';
 import '../screens/travel_documents_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
+import '../screens/staff_manifest_screen.dart';
 import '../screens/waitlist_screen.dart';
 import 'sos_alarm_service.dart';
 
@@ -100,6 +101,10 @@ class NotificationNavigator {
       // ที่ราคาลดแล้วทุกใบ ไม่ใช่หน้าทริปเดียว
       case 'sale_campaign':
         _switchTab(1);
+      // ลูกค้าแจ้งว่าอาจมาสาย — คนที่ได้แจ้งเตือนนี้คือสตาฟของรอบนั้น สิ่งที่
+      // เขาต้องทำต่อคือดูรายชื่อว่าเหลือใครอีกบ้าง ไม่ใช่มาอ่านซ้ำในศูนย์แจ้งเตือน
+      case 'pickup_late':
+        _openStaffManifest(data);
       case 'staff_assignment':
       case 'staff_shift_reminder':
         // ไม่มีหน้าตารางงานสตาฟในแอปลูกค้า — เปิดศูนย์แจ้งเตือนให้อ่านรายละเอียด
@@ -225,6 +230,26 @@ class NotificationNavigator {
       (nav) => nav.push(
         MaterialPageRoute(
           builder: (_) => ScheduleAnnouncementsScreen(scheduleId: id),
+        ),
+      ),
+    );
+  }
+
+  /// รายชื่อผู้โดยสารของรอบ (สตาฟ) — ชื่อรอบไม่ได้มากับ payload จึงปล่อยว่างไว้
+  /// ให้หน้าจอใช้หัวข้อสำรองของตัวเอง
+  static void _openStaffManifest(Map<String, dynamic> data) {
+    final id = int.tryParse('${data['schedule_id']}') ?? 0;
+    if (id == 0) {
+      _openNotifications();
+      return;
+    }
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => StaffManifestScreen(
+            scheduleId: id,
+            title: '${data['trip_title'] ?? ''}',
+          ),
         ),
       ),
     );

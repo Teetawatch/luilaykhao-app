@@ -77,10 +77,12 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   /// shows the names too. Best-effort: a failure just leaves the field manual.
   Future<void> _loadPassengerNames() async {
     try {
-      final data =
+      final manifest =
           await context.read<AppProvider>().loadStaffManifest(widget.scheduleId);
       final names = <String>{};
-      for (final b in asList(data['bookings']).map(asMap)) {
+      // แจ้งเหตุตอนไม่มีสัญญาณเป็นเรื่องปกติของหน้างาน — รายชื่อจากแคชยังช่วย
+      // ให้กรอกชื่อคนเจ็บได้ถูกต้องกว่าการพิมพ์เองจากความจำ
+      for (final b in asList(manifest.data['bookings']).map(asMap)) {
         for (final p in asList(b['passengers']).map(asMap)) {
           final name = textOf(p['name']);
           if (name.isEmpty) continue;

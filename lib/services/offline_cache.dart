@@ -42,6 +42,10 @@ class OfflineCache {
     'tripday_announcements.': 8,
     'tripday_pack.': 8,
     'sos_contacts.': 8,
+    // ฝั่งสตาฟ: รายชื่อผู้โดยสารหนึ่งชุดต่อหนึ่งรอบ อ้วนพอ ๆ กับใบจอง และคน
+    // ที่เดินทางกับเราสัปดาห์ละรอบไม่ควรแบกของปีที่แล้วไว้ทั้งปี
+    'staff_manifest.': 6,
+    'staff_pack.': 6,
   };
 
   final Map<String, dynamic> _public = {};

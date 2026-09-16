@@ -20,9 +20,11 @@ import '../services/push_notification_service.dart';
 import '../services/rating_prompt_service.dart';
 import '../services/realtime_service.dart';
 import '../services/secure_storage.dart';
+import '../services/check_in_outbox.dart';
 import '../services/sos_outbox.dart';
 import '../services/trek_recorder_service.dart';
 import '../services/trip_activity_service.dart';
+import '../services/staff_trip_pack.dart';
 import '../services/trip_day_pack.dart';
 import '../services/trip_live_location_service.dart';
 import '../services/version_gate_service.dart';
@@ -236,6 +238,10 @@ class AppProvider extends ChangeNotifier {
     // "ยังส่งไม่สำเร็จ" จะไม่ขึ้นเลยถ้านับจำนวนตอนแคชยังว่าง
     SosOutbox.instance.attach(this);
     unawaited(SosOutbox.instance.flush(force: true));
+    // เหตุผลเดียวกันสำหรับคิวเช็คอินของสตาฟ — รายการที่ค้างจากจุดรับที่ไม่มี
+    // สัญญาณเมื่อเช้า ต้องได้ออกทันทีที่แอปเปิดในที่ที่มีสัญญาณ
+    CheckInOutbox.instance.attach(this);
+    unawaited(CheckInOutbox.instance.flush(force: true));
     notifyListeners();
     _initDeepLinks();
     // Push init must NOT block the first data load. On iOS real devices the
@@ -1256,6 +1262,7 @@ class AppProvider extends ChangeNotifier {
     // แคชถูกล้างไปแล้ว แต่ตัวนับของคิว SOS อยู่ในหน่วยความจำ ถ้าไม่รีเซ็ต แถบ
     // "ยังส่งไม่สำเร็จ" ของบัญชีก่อนหน้าจะค้างให้คนที่ล็อกอินคนถัดไปเห็น
     await SosOutbox.instance.clear();
+    await CheckInOutbox.instance.clear();
     // GPS ที่วิ่งอยู่เบื้องหลังต้องดับไปพร้อมบัญชี ไม่งั้นเครื่องจะกินแบตบันทึก
     // เส้นทางของคนที่ออกจากระบบไปแล้วต่อไปเรื่อย ๆ — ไม่ยิง API ตรงนี้เพราะการ
     // ลบบัญชีก็ผ่านทางนี้ ซึ่งโทเคนตายไปแล้ว (logout() ลบหมุดบนเซิร์ฟเวอร์ไป
@@ -1377,6 +1384,16 @@ class AppProvider extends ChangeNotifier {
         debugPrint('TripDayPack prefetch failed: $e');
       }),
     );
+
+    // และชุดของสตาฟ — รายชื่อผู้โดยสารของรอบที่รับผิดชอบพรุ่งนี้ ต้องอยู่ใน
+    // เครื่องตั้งแต่ตอนที่ยังมีสัญญาณ ไม่ใช่ตอนยืนอยู่ที่จุดรับแล้วค่อยโหลด
+    if (hasStaff) {
+      unawaited(
+        StaffTripPack.prefetch(this).catchError((Object e) {
+          debugPrint('StaffTripPack prefetch failed: $e');
+        }),
+      );
+    }
 
     // การ์ด "วันเดินทาง" บนหน้าจอล็อก — เปิดให้เองตั้งแต่วันก่อนเดินทาง ผู้ใช้ไม่
     // ต้องรู้ว่ามีปุ่มให้กด เพราะจังหวะที่เขาต้องการมันคือจังหวะที่เขาไม่ได้เปิดแอป
@@ -1751,12 +1768,24 @@ class AppProvider extends ChangeNotifier {
   Future<
     ({Map<String, dynamic> booking, Map<String, dynamic> meta, String message})
   >
-  confirmStaffCheckIn(String qrCode, {int? scheduleId}) async {
+  confirmStaffCheckIn(
+    String qrCode, {
+    int? scheduleId,
+    DateTime? checkedInAt,
+  }) async {
     final response = await api.post(
       'staff/check-in/confirm',
       // ส่ง schedule_id เมื่อรู้รอบแน่ชัด (เช่น กดเช็คอินจากรายชื่อ) เพื่อกัน
       // การเช็คอินข้ามรอบจากรหัสที่พิมพ์ผิด
-      body: {'qr_code': qrCode, 'schedule_id': ?scheduleId},
+      //
+      // checked_in_at ติดไปเฉพาะรายการที่ออกจาก [CheckInOutbox] — มันบอก
+      // เซิร์ฟเวอร์ทั้งว่า "คนขึ้นรถตอนกี่โมงจริง ๆ" และว่านี่คือการส่งซ้ำของคิว
+      // (ใบที่เช็คอินไปแล้วจะตอบ 200 แทน 422 ให้คิวปล่อยทิ้งได้)
+      body: {
+        'qr_code': qrCode,
+        'schedule_id': ?scheduleId,
+        'checked_in_at': ?checkedInAt?.toUtc().toIso8601String(),
+      },
     );
     final envelope = Map<String, dynamic>.from(response as Map);
     return (
@@ -1768,11 +1797,72 @@ class AppProvider extends ChangeNotifier {
     );
   }
 
+  static String _staffManifestKey(int scheduleId) => 'staff_manifest.$scheduleId';
+
   /// Full passenger manifest for a schedule the staff is assigned to —
   /// contact name, callable phone, pickup point/map/notes per booking.
   /// Backed by the driver manifest endpoint, which grants staff access.
-  Future<Map<String, dynamic>> loadStaffManifest(int scheduleId) async {
-    final response = await api.get('driver/schedules/$scheduleId/manifest');
+  ///
+  /// เก็บสำเนาไว้ทุกครั้งที่ดึงสำเร็จ แล้วตกไปใช้สำเนานั้นเมื่อดึงใหม่ไม่ได้
+  ///
+  /// เหตุผลเดียวกับ [sosContacts] แต่หนักกว่า: สิ่งที่อยู่ในรายชื่อนี้คือเบอร์โทร
+  /// ผู้ติดต่อฉุกเฉิน ข้อมูลแพ้อาหาร และโรคประจำตัวของคนที่กำลังอยู่บนดอยกับเรา
+  /// หน้าจอที่ต้องมีสัญญาณถึงจะเปิดได้ คือหน้าจอที่ใช้ไม่ได้ในนาทีที่ต้องใช้
+  ///
+  /// [fromCache] บอกหน้าจอว่ากำลังอ่านของเก่าอยู่ เพื่อให้มันพูดตรง ๆ ได้ว่า
+  /// ข้อมูลนี้บันทึกไว้เมื่อไหร่ แทนที่จะแสดงเป็นความจริง ณ ตอนนี้
+  Future<({Map<String, dynamic> data, bool fromCache, DateTime? savedAt})>
+  loadStaffManifest(int scheduleId) async {
+    final key = _staffManifestKey(scheduleId);
+
+    try {
+      final response = await api.get('driver/schedules/$scheduleId/manifest');
+      final data = Map<String, dynamic>.from(api.data(response) as Map);
+      OfflineCache.instance.writeAccount(key, {
+        'saved_at': DateTime.now().toIso8601String(),
+        'manifest': data,
+      });
+      return (data: data, fromCache: false, savedAt: null);
+    } catch (e) {
+      final cached = cachedStaffManifest(scheduleId);
+      if (cached == null) rethrow;
+      return (
+        data: cached.data,
+        fromCache: true,
+        savedAt: cached.savedAt,
+      );
+    }
+  }
+
+  /// รายชื่อผู้โดยสารชุดที่บันทึกไว้ครั้งล่าสุดของรอบนี้ — null เมื่อยังไม่เคยมี
+  ({Map<String, dynamic> data, DateTime? savedAt})? cachedStaffManifest(
+    int scheduleId,
+  ) {
+    final cached = OfflineCache.instance.readAccount<Map>(
+      _staffManifestKey(scheduleId),
+    );
+    final manifest = cached?['manifest'];
+    if (manifest is! Map) return null;
+
+    return (
+      data: Map<String, dynamic>.from(manifest),
+      savedAt: DateTime.tryParse('${cached!['saved_at']}')?.toLocal(),
+    );
+  }
+
+  /// ลูกค้ากดบอกสถานะตัวเองที่จุดนัด — `on_the_way` / `arrived` / `late`
+  ///
+  /// [etaMinutes] มีความหมายเฉพาะกับ `late` และเซิร์ฟเวอร์จะล้างทิ้งเองกับ
+  /// สถานะอื่น คืน payload เดียวกับที่ API ตอบ (สถานะ เวลา และคำอธิบายไทย)
+  Future<Map<String, dynamic>> reportPickupStatus(
+    String bookingRef, {
+    required String status,
+    int? etaMinutes,
+  }) async {
+    final response = await api.post(
+      'bookings/$bookingRef/pickup-status',
+      body: {'status': status, 'eta_minutes': ?etaMinutes},
+    );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
