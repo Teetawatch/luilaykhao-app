@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'location_stream_hub.dart';
+
 /// One recorded GPS fix along a walk.
 class TrekPoint {
   final double lat;
@@ -50,6 +52,10 @@ class TrekPoint {
 /// hours, so it filters noisy fixes, survives the app being killed (every point
 /// is written to disk as it arrives), and reports its own moving time.
 ///
+/// การอ่าน GPS ผ่าน [LocationStreamHub] ไม่ใช่ geolocator ตรง ๆ เพราะเส้นทางที่
+/// บันทึกได้เฉพาะตอนถือเครื่องจ้องหน้าจออยู่คือเส้นทางที่ขาด — และเพราะสตรีมของ
+/// geolocator เป็นของกลางทั้งแอป ใครเปิดก่อนได้ตั้งค่าไป (ดูเหตุผลเต็มในไฟล์นั้น)
+///
 /// Nothing is sent anywhere until the customer chooses to save the walk.
 class TrekRecorderService extends ChangeNotifier {
   TrekRecorderService._();
@@ -68,14 +74,25 @@ class TrekRecorderService extends ChangeNotifier {
 
   static const String _storeKeyPrefix = 'trek_recording_v1.';
 
-  StreamSubscription<Position>? _sub;
+  /// การเดินขึ้นดอยกินเวลาหลายชั่วโมงและแทบไม่มีใครถือโทรศัพท์เปิดหน้าจอไว้ทั้ง
+  /// ทาง การบันทึกจึงต้องวิ่งต่อเบื้องหลัง แลกกับแถบแจ้งเตือนค้างที่บอกตรง ๆ
+  /// ว่ากำลังทำอะไรอยู่ และปิดได้ตลอดเวลาด้วยปุ่มหยุดในแอป
+  static const LocationNeed _need = LocationNeed(
+    accuracy: LocationAccuracy.best,
+    distanceFilterM: 5,
+    keepAliveInBackground: true,
+    notificationTitle: 'กำลังบันทึกเส้นทางของคุณ',
+    notificationText: 'บันทึกต่อแม้ปิดหน้าจอ — แตะเพื่อดูระยะที่เดินมาแล้ว',
+  );
+
+  LocationLease? _lease;
   String? _bookingRef;
   final List<TrekPoint> _points = [];
   DateTime? _startedAt;
   Duration _movingTime = Duration.zero;
   bool _saving = false;
 
-  bool get isRecording => _sub != null;
+  bool get isRecording => _lease != null;
   String? get bookingRef => _bookingRef;
   List<TrekPoint> get points => List.unmodifiable(_points);
   DateTime? get startedAt => _startedAt;
@@ -155,25 +172,26 @@ class TrekRecorderService extends ChangeNotifier {
     _bookingRef = bookingRef;
     _startedAt ??= DateTime.now();
 
-    _sub =
-        Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.best,
-            distanceFilter: 5,
-          ),
-        ).listen(
-          _onPosition,
-          onError: (Object e) =>
-              debugPrint('[TrekRecorder] position stream error: $e'),
-        );
+    try {
+      _lease = await LocationStreamHub.instance.attach(
+        need: _need,
+        onPosition: _onPosition,
+        onError: (Object e) =>
+            debugPrint('[TrekRecorder] position stream error: $e'),
+      );
+    } catch (e) {
+      debugPrint('[TrekRecorder] could not start the position stream: $e');
+      return false;
+    }
 
     notifyListeners();
     return true;
   }
 
   Future<void> pause() async {
-    await _sub?.cancel();
-    _sub = null;
+    final lease = _lease;
+    _lease = null;
+    await lease?.cancel();
     notifyListeners();
   }
 

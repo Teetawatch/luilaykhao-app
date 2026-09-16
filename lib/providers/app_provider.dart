@@ -21,8 +21,10 @@ import '../services/rating_prompt_service.dart';
 import '../services/realtime_service.dart';
 import '../services/secure_storage.dart';
 import '../services/sos_outbox.dart';
+import '../services/trek_recorder_service.dart';
 import '../services/trip_activity_service.dart';
 import '../services/trip_day_pack.dart';
+import '../services/trip_live_location_service.dart';
 import '../services/version_gate_service.dart';
 
 class AppProvider extends ChangeNotifier {
@@ -1197,6 +1199,10 @@ class AppProvider extends ChangeNotifier {
     try {
       // เก็บการ์ดวันเดินทางออกจากหน้าจอล็อกก่อน — มันผูกกับบัญชีที่กำลังจะออก
       await TripActivityService.instance.stop();
+      // ลบหมุดของบัญชีนี้ออกจากรอบก่อน โทเคนยังใช้ได้อยู่ตรงนี้ ถ้าปล่อยไว้ให้
+      // _clearLocalSession จัดการ จะเหลือแค่การหยุดส่งฝั่งเครื่อง ส่วนหมุดบน
+      // เซิร์ฟเวอร์จะค้างให้เพื่อนเห็นจนกว่าจะหมดอายุ
+      await TripLocationSharing.instance.stop();
       await PushNotificationService.instance.unregisterToken();
       if (isLoggedIn) await api.post(ApiEndpoints.authLogout);
     } catch (_) {
@@ -1250,6 +1256,12 @@ class AppProvider extends ChangeNotifier {
     // แคชถูกล้างไปแล้ว แต่ตัวนับของคิว SOS อยู่ในหน่วยความจำ ถ้าไม่รีเซ็ต แถบ
     // "ยังส่งไม่สำเร็จ" ของบัญชีก่อนหน้าจะค้างให้คนที่ล็อกอินคนถัดไปเห็น
     await SosOutbox.instance.clear();
+    // GPS ที่วิ่งอยู่เบื้องหลังต้องดับไปพร้อมบัญชี ไม่งั้นเครื่องจะกินแบตบันทึก
+    // เส้นทางของคนที่ออกจากระบบไปแล้วต่อไปเรื่อย ๆ — ไม่ยิง API ตรงนี้เพราะการ
+    // ลบบัญชีก็ผ่านทางนี้ ซึ่งโทเคนตายไปแล้ว (logout() ลบหมุดบนเซิร์ฟเวอร์ไป
+    // ก่อนหน้านี้แล้ว) ใช้ pause ไม่ใช่ discard: เส้นทางที่บันทึกไว้ยังไม่ถูกทิ้ง
+    await TripLocationSharing.instance.abandonLocally();
+    await TrekRecorderService.instance.pause();
     // ทริปของบัญชีที่ออกไปต้องไม่ค้างอยู่บนหน้าโฮมให้คนถัดไปที่หยิบเครื่องขึ้นมา
     // เห็น — วางไว้ที่นี่ ไม่ใช่ใน logout() เพราะการลบบัญชีก็ผ่านทางนี้เหมือนกัน
     await HomeWidgetService.instance.clear();

@@ -107,16 +107,24 @@ class _TripMembersMapScreenState extends State<TripMembersMapScreen> {
     if (_controller.sharing) {
       await _controller.stopSharing();
       if (!mounted) return;
-      AppSnack.show(context, 'หยุดแชร์ตำแหน่งแล้ว');
+      final problem = _controller.sharingError;
+      if (problem != null) {
+        AppSnack.error(context, problem);
+      } else {
+        AppSnack.show(context, 'หยุดแชร์ตำแหน่งแล้ว');
+      }
       return;
     }
 
     final ok = await _controller.startSharing();
     if (!mounted) return;
     if (ok) {
-      AppSnack.show(context, 'เพื่อนร่วมทริปเห็นตำแหน่งของคุณแล้ว');
-    } else if (_controller.error != null) {
-      AppSnack.error(context, _controller.error!);
+      AppSnack.show(
+        context,
+        'เพื่อนร่วมทริปเห็นตำแหน่งของคุณแล้ว — แชร์ต่อแม้ปิดหน้าจอ',
+      );
+    } else if (_controller.sharingError != null) {
+      AppSnack.error(context, _controller.sharingError!);
     }
   }
 
@@ -277,7 +285,7 @@ class _SharePanel extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   sharing
-                      ? 'เห็นเฉพาะคนในรอบนี้ และหยุดเองเมื่อทริปจบ'
+                      ? 'แชร์ต่อแม้ปิดหน้าจอ เห็นเฉพาะคนในรอบนี้ และหยุดเองเมื่อทริปจบ'
                       : 'เปิดเพื่อให้เพื่อนในรอบนี้เห็นว่าคุณอยู่ตรงไหน',
                   style: appFont(
                     fontSize: AppText.sizeLabel,

@@ -3,6 +3,19 @@
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!--
+      บันทึกเส้นทางเดินป่ากับแชร์ตำแหน่งให้เพื่อนร่วมทริป ต้องอ่าน GPS ต่อหลังผู้ใช้
+      กดล็อกหน้าจอ — ไม่งั้นเส้นทางขาดทุกครั้งที่เก็บเครื่องลงกระเป๋า
+
+      ทำผ่าน foreground service ของ geolocator (มันประกาศ service พร้อม
+      foregroundServiceType="location" มาให้ในปลั๊กอินแล้ว) จึงต้องการแค่สองสิทธิ์
+      นี้ ตั้งใจ *ไม่* ขอ ACCESS_BACKGROUND_LOCATION ซึ่งจะทำให้แอปลูกค้าต้องยื่น
+      แบบฟอร์มขออนุมัติกับ Play Store ทั้งที่ไม่ได้ต้องการอะไรเกินไปกว่านี้ — งาน
+      ทั้งสองอย่างเริ่มจากผู้ใช้กดปุ่มในแอปเสมอ ซึ่งเป็นเงื่อนไขที่ foreground
+      service ครอบคลุมอยู่แล้ว
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />

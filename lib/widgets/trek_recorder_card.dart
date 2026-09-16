@@ -168,10 +168,12 @@ class _TrekRecorderCardState extends State<TrekRecorderCard> {
           ),
           const SizedBox(height: 6),
           Text(
-            hasPoints
+            recording
+                ? 'บันทึกต่อแม้คุณปิดหน้าจอหรือเก็บเครื่องลงกระเป๋า'
+                : hasPoints
                 ? 'ระยะทางและความสูงนี้วัดจาก GPS ของคุณเอง'
                 : 'เปิดไว้ระหว่างเดิน แล้วสถิติในสมุดสะสมจะเป็นระยะที่คุณเดินจริง '
-                      '(ใช้แบตเพิ่มขึ้น เปิด–ปิดได้ตลอด)',
+                      'บันทึกต่อแม้ปิดหน้าจอ (ใช้แบตเพิ่มขึ้น เปิด–ปิดได้ตลอด)',
             style: TextStyle(
               fontSize: AppText.sizeLabel,
               height: 1.5,

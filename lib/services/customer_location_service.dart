@@ -4,8 +4,21 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'location_stream_hub.dart';
+
+/// หมุด "คุณอยู่ตรงนี้" บนแผนที่ติดตามรถ
+///
+/// เป็นผู้ใช้ GPS รายเดียวในแอปที่ไม่ต้องวิ่งต่อเบื้องหลัง — ปิดหน้าจอแล้วก็ไม่มี
+/// แผนที่ให้ดูอยู่ดี แต่ยังต้องขอผ่าน [LocationStreamHub] เหมือนรายอื่น ไม่งั้น
+/// สตรีมที่หน้าจอนี้เปิดค้างไว้จะกลายเป็นตัวกำหนดค่าให้การบันทึกเส้นทางกับการ
+/// แชร์ตำแหน่งที่กดทีหลัง แล้วพากันตายตอนล็อกหน้าจอ
 class CustomerLocationService {
-  StreamSubscription<Position>? _positionSub;
+  static const LocationNeed _need = LocationNeed(
+    accuracy: LocationAccuracy.high,
+    distanceFilterM: 10,
+  );
+
+  LocationLease? _lease;
   final StreamController<LatLng> _locationController =
       StreamController<LatLng>.broadcast();
 
@@ -36,23 +49,24 @@ class CustomerLocationService {
       debugPrint('[CustomerLocationService] getCurrentPosition error: $e');
     }
 
-    _positionSub =
-        Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 10,
-          ),
-        ).listen(
-          (pos) {
-            final loc = LatLng(pos.latitude, pos.longitude);
-            _locationController.add(loc);
-            onLocation(loc);
-          },
-          onError: (e) {
-            debugPrint('[CustomerLocationService] stream error: $e');
-            onError?.call('เกิดข้อผิดพลาดในการรับตำแหน่ง');
-          },
-        );
+    try {
+      _lease = await LocationStreamHub.instance.attach(
+        need: _need,
+        onPosition: (pos) {
+          final loc = LatLng(pos.latitude, pos.longitude);
+          if (_locationController.isClosed) return;
+          _locationController.add(loc);
+          onLocation(loc);
+        },
+        onError: (e) {
+          debugPrint('[CustomerLocationService] stream error: $e');
+          onError?.call('เกิดข้อผิดพลาดในการรับตำแหน่ง');
+        },
+      );
+    } catch (e) {
+      debugPrint('[CustomerLocationService] could not attach: $e');
+      onError?.call('เกิดข้อผิดพลาดในการรับตำแหน่ง');
+    }
 
     return initial;
   }
@@ -72,8 +86,9 @@ class CustomerLocationService {
   }
 
   void stop() {
-    _positionSub?.cancel();
-    _positionSub = null;
+    final lease = _lease;
+    _lease = null;
+    unawaited(lease?.cancel() ?? Future<void>.value());
   }
 
   void dispose() {
