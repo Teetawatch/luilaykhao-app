@@ -86,6 +86,7 @@ flutter:
     - logo.png
     - logo_ios.png
     - assets/audio/sos_siren.wav
+    - assets/images/logo_mark.png
     - assets/icons/google_2025.svg
   fonts:
     # Latin + numerals (variable font; weight applied via fontWeight).

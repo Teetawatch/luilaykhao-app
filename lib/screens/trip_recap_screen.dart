@@ -6,8 +6,9 @@ import 'package:provider/provider.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
-import '../utils/share_card.dart';
 import '../utils/thai_date.dart';
+import '../widgets/trip_story_card.dart';
+import '../widgets/trip_story_share_sheet.dart';
 
 /// สรุปทริปแบบ story (ลุยเลเขา Recap) — เปิดหลังจบทริป กดปัดทีละสไลด์
 /// จบด้วยการ์ดสรุปที่แชร์/เซฟรูปได้ เพื่ออวดเพื่อน (UGC + โฆษณาฟรีให้แบรนด์).
@@ -53,7 +54,7 @@ class _TripRecapScreenState extends State<TripRecapScreen> {
           if (snap.hasError || snap.data == null) {
             return _ErrorView(onClose: () => Navigator.of(context).pop());
           }
-          return _RecapStory(data: snap.data!);
+          return _RecapStory(data: snap.data!, bookingRef: widget.bookingRef);
         },
       ),
     );
@@ -71,11 +72,18 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.landscape_rounded, color: Colors.white38, size: 48),
+            const Icon(
+              Icons.landscape_rounded,
+              color: Colors.white38,
+              size: 48,
+            ),
             const SizedBox(height: 12),
             Text(
               'ยังเปิดสรุปทริปไม่ได้ตอนนี้',
-              style: appFont(color: Colors.white70, fontSize: AppText.sizeSubtitle),
+              style: appFont(
+                color: Colors.white70,
+                fontSize: AppText.sizeSubtitle,
+              ),
             ),
             const SizedBox(height: 16),
             TextButton(
@@ -116,7 +124,9 @@ class _ReviewPhoto {
 
 class _RecapStory extends StatefulWidget {
   final Map<String, dynamic> data;
-  const _RecapStory({required this.data});
+  final String bookingRef;
+
+  const _RecapStory({required this.data, required this.bookingRef});
 
   @override
   State<_RecapStory> createState() => _RecapStoryState();
@@ -124,9 +134,7 @@ class _RecapStory extends StatefulWidget {
 
 class _RecapStoryState extends State<_RecapStory> {
   final PageController _pc = PageController();
-  final GlobalKey _cardKey = GlobalKey();
   int _index = 0;
-  bool _sharing = false;
 
   late final List<Widget> _slides = _buildSlides();
 
@@ -135,7 +143,9 @@ class _RecapStoryState extends State<_RecapStory> {
       Map<String, dynamic>.from(widget.data['trip'] as Map? ?? {});
 
   String _text(dynamic v, [String fallback = '']) =>
-      (v?.toString().trim().isNotEmpty ?? false) ? v.toString().trim() : fallback;
+      (v?.toString().trim().isNotEmpty ?? false)
+      ? v.toString().trim()
+      : fallback;
 
   num? _num(dynamic v) => v is num ? v : num.tryParse('${v ?? ''}');
 
@@ -153,23 +163,48 @@ class _RecapStoryState extends State<_RecapStory> {
     return thaiDateFull(dep);
   }
 
-  List<String> get _photos =>
-      (widget.data['photos'] as List? ?? [])
-          .map((e) => ApiConfig.mediaUrl(e))
-          .where((e) => e.isNotEmpty)
-          .toList();
+  List<String> get _photos => (widget.data['photos'] as List? ?? [])
+      .map((e) => ApiConfig.mediaUrl(e))
+      .where((e) => e.isNotEmpty)
+      .toList();
 
   /// รูปจากรีวิวของคนที่ไปทริปนี้ — รอบเดียวกันมาก่อน (จัดลำดับมาจาก API)
   late final List<_ReviewPhoto> _reviewPhotos =
       (widget.data['review_photos'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e as Map))
-          .map((e) => _ReviewPhoto(
-                url: ApiConfig.mediaUrl(e['url']),
-                author: _text(e['user_name'], 'เพื่อนร่วมทาง'),
-                sameRound: e['same_round'] == true,
-              ))
+          .map(
+            (e) => _ReviewPhoto(
+              url: ApiConfig.mediaUrl(e['url']),
+              author: _text(e['user_name'], 'เพื่อนร่วมทาง'),
+              sameRound: e['same_round'] == true,
+            ),
+          )
           .where((e) => e.url.isNotEmpty)
           .toList();
+
+  /// ตัวเด่นของการ์ดจบทริป — ระยะทางมาก่อน ถ้ารอบนั้นไม่ได้บันทึกไว้ก็ใช้จำนวนวัน
+  StoryCountdown get _recapHighlight => StoryCountdown.recap(
+    format: _fmt,
+    distanceKm: _num(widget.data['distance_km']),
+    days: _num(widget.data['duration_days']),
+  );
+
+  /// ตัวเลขรองท้ายการ์ด — ไม่เอาตัวที่ถูกเชิดเป็นตัวเด่นไปแล้วมาซ้ำ
+  List<StoryStat> get _recapStats {
+    final days = _num(widget.data['duration_days']);
+    final elevation = _num(widget.data['elevation_gain_m']);
+    final travelers = _num(widget.data['total_travelers']) ?? 0;
+    final distance = _num(widget.data['distance_km']);
+    final daysIsHeadline = distance == null || distance <= 0;
+
+    return [
+      if (!daysIsHeadline && days != null && days > 0)
+        StoryStat('${_fmt(days)} วัน', 'บนเส้นทาง'),
+      if (elevation != null && elevation > 0)
+        StoryStat('${_fmt(elevation)} ม.', 'ความสูงสะสม'),
+      if (travelers > 0) StoryStat('${_fmt(travelers)} คน', 'เพื่อนร่วมทาง'),
+    ];
+  }
 
   /// รูปพื้นหลังของสไลด์ที่ [index] — วนรูปที่มีให้แต่ละสไลด์ได้คนละใบ
   ///
@@ -188,69 +223,71 @@ class _RecapStoryState extends State<_RecapStory> {
     final travelers = _num(widget.data['total_travelers']) ?? 0;
     final diffLabel = _text(_trip['difficulty_label']);
 
-    final slides = <Widget>[
-      _IntroSlide(title: _tripTitle, date: _dateLabel),
-    ];
+    final slides = <Widget>[_IntroSlide(title: _tripTitle, date: _dateLabel)];
 
     if (days != null && days > 0) {
-      slides.add(_StatSlide(
-        emoji: '⛺️',
-        bigValue: _fmt(days),
-        unit: 'วัน',
-        headline: 'บนเส้นทางธรรมชาติ',
-        sub: 'ทุกวันคือความทรงจำ',
-      ));
+      slides.add(
+        _StatSlide(
+          emoji: '⛺️',
+          bigValue: _fmt(days),
+          unit: 'วัน',
+          headline: 'บนเส้นทางธรรมชาติ',
+          sub: 'ทุกวันคือความทรงจำ',
+        ),
+      );
     }
     if (distance != null && distance > 0) {
-      slides.add(_StatSlide(
-        emoji: '🥾',
-        bigValue: _fmt(distance),
-        unit: 'กม.',
-        headline: 'ระยะทางที่คุณพิชิต',
-        sub: 'ก้าวแล้วก้าวเล่า จนถึงเส้นชัย',
-      ));
+      slides.add(
+        _StatSlide(
+          emoji: '🥾',
+          bigValue: _fmt(distance),
+          unit: 'กม.',
+          headline: 'ระยะทางที่คุณพิชิต',
+          sub: 'ก้าวแล้วก้าวเล่า จนถึงเส้นชัย',
+        ),
+      );
     }
     if (elevation != null && elevation > 0) {
-      slides.add(_StatSlide(
-        emoji: '⛰️',
-        bigValue: _fmt(elevation),
-        unit: 'ม.',
-        headline: 'ความสูงสะสมที่ปีนขึ้น',
-        sub: 'สูงกว่าที่คิด แต่คุณทำได้',
-      ));
+      slides.add(
+        _StatSlide(
+          emoji: '⛰️',
+          bigValue: _fmt(elevation),
+          unit: 'ม.',
+          headline: 'ความสูงสะสมที่ปีนขึ้น',
+          sub: 'สูงกว่าที่คิด แต่คุณทำได้',
+        ),
+      );
     }
-    slides.add(_DifficultySlide(
-      difficultyLabel: diffLabel,
-      groupSize: group.toInt(),
-      travelers: travelers.toInt(),
-    ));
+    slides.add(
+      _DifficultySlide(
+        difficultyLabel: diffLabel,
+        groupSize: group.toInt(),
+        travelers: travelers.toInt(),
+      ),
+    );
 
     // ฟีดของรอบมาก่อน ถ้ารอบนี้ยังไม่มีใครโพสต์ก็ใช้รูปจากรีวิวแทน
     final gridPhotos = _photos.isNotEmpty
         ? _photos.take(6).toList()
         : _reviewPhotos.map((e) => e.url).take(6).toList();
     if (gridPhotos.isNotEmpty) {
-      slides.add(_PhotosSlide(
-        photos: gridPhotos,
-        fromReviews: _photos.isEmpty,
-      ));
+      slides.add(
+        _PhotosSlide(photos: gridPhotos, fromReviews: _photos.isEmpty),
+      );
     }
 
-    slides.add(_SummarySlide(
-      cardKey: _cardKey,
-      title: _tripTitle,
-      date: _dateLabel,
-      days: days,
-      distance: distance,
-      elevation: elevation,
-      travelers: travelers.toInt(),
-      difficultyLabel: diffLabel,
-      cover: ApiConfig.mediaUrl(_trip['cover_image']),
-      fmt: _fmt,
-      sharing: _sharing,
-      hasReviewed: widget.data['has_reviewed'] == true,
-      onShare: _share,
-    ));
+    slides.add(
+      _SummarySlide(
+        title: _tripTitle,
+        location: _text(_trip['location']),
+        date: _dateLabel,
+        highlight: _recapHighlight,
+        stats: _recapStats,
+        cover: ApiConfig.mediaUrl(_trip['cover_image']),
+        hasReviewed: widget.data['has_reviewed'] == true,
+        onShare: _share,
+      ),
+    );
 
     return slides;
   }
@@ -273,31 +310,21 @@ class _RecapStoryState extends State<_RecapStory> {
     }
   }
 
+  /// เปิด share sheet ใบเดียวกับการ์ดนับถอยหลังก่อนไป — ได้สไตล์ทั้งห้า
+  /// การจัดรูปของตัวเอง และแถบความโปร่งใสมาใช้กับการ์ดจบทริปด้วยทั้งชุด
   Future<void> _share() async {
-    if (_sharing) return;
     HapticFeedback.mediumImpact();
-    setState(() => _sharing = true);
-    try {
-      await shareWidgetAsPng(
-        boundaryKey: _cardKey,
-        fileName: 'luilaykhao_recap.png',
-        text: 'เพิ่งพิชิต "$_tripTitle" กับ ลุยเลเขา 🏔️ '
-            'มาลุยด้วยกันไหม? #ลุยเลเขา',
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'แชร์ไม่สำเร็จ ลองใหม่อีกครั้ง',
-              style: appFont(color: Colors.white),
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _sharing = false);
-    }
+
+    await showTripRecapShareSheet(
+      context,
+      tripTitle: _tripTitle,
+      location: _text(_trip['location']),
+      highlight: _recapHighlight,
+      dateLabel: _dateLabel,
+      stats: _recapStats,
+      coverImageUrl: ApiConfig.mediaUrl(_trip['cover_image']),
+      bookingRef: widget.bookingRef,
+    );
   }
 
   @override
@@ -351,7 +378,11 @@ class _RecapStoryState extends State<_RecapStory> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0x8C000000), Color(0x66000000), Color(0xD9000000)],
+                colors: [
+                  Color(0x8C000000),
+                  Color(0x66000000),
+                  Color(0xD9000000),
+                ],
                 stops: [0, 0.42, 1],
               ),
             ),
@@ -359,72 +390,72 @@ class _RecapStoryState extends State<_RecapStory> {
         SafeArea(
           child: Stack(
             children: [
-            // Tap zones: left = back, right = forward
-            Positioned.fill(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _prev,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _next,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            PageView(
-              controller: _pc,
-              onPageChanged: (i) => setState(() => _index = i),
-              children: _slides,
-            ),
-            // Progress bars
-            Positioned(
-              top: 10,
-              left: 12,
-              right: 12,
-              child: Row(
-                children: List.generate(_slides.length, (i) {
-                  return Expanded(
-                    child: Container(
-                      height: 3,
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        color: i <= _index
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              // Tap zones: left = back, right = forward
+              Positioned.fill(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _prev,
                       ),
                     ),
-                  );
-                }),
-              ),
-            ),
-            Positioned(
-              top: 20,
-              right: 12,
-              child: IconButton(
-                tooltip: 'ปิด',
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded, color: Colors.white),
-              ),
-            ),
-            // เครดิตเจ้าของรูป — ไม่รับ touch เพราะทั้งจอเป็นปุ่มปัดสไลด์
-            if (backdrop != null)
-              Positioned(
-                left: 28,
-                right: 28,
-                bottom: 14,
-                child: IgnorePointer(
-                  child: _PhotoCredit(photo: backdrop),
+                    Expanded(
+                      flex: 2,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _next,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              PageView(
+                controller: _pc,
+                onPageChanged: (i) => setState(() => _index = i),
+                children: _slides,
+              ),
+              // Progress bars
+              Positioned(
+                top: 10,
+                left: 12,
+                right: 12,
+                child: Row(
+                  children: List.generate(_slides.length, (i) {
+                    return Expanded(
+                      child: Container(
+                        height: 3,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: i <= _index
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusPill,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              Positioned(
+                top: 20,
+                right: 12,
+                child: IconButton(
+                  tooltip: 'ปิด',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                ),
+              ),
+              // เครดิตเจ้าของรูป — ไม่รับ touch เพราะทั้งจอเป็นปุ่มปัดสไลด์
+              if (backdrop != null)
+                Positioned(
+                  left: 28,
+                  right: 28,
+                  bottom: 14,
+                  child: IgnorePointer(child: _PhotoCredit(photo: backdrop)),
+                ),
             ],
           ),
         ),
@@ -434,7 +465,8 @@ class _RecapStoryState extends State<_RecapStory> {
 
   /// ความกว้างที่พอสำหรับเต็มจอ — เผื่อจอความละเอียดสูงแต่ไม่เกิน 1440
   static int _decodeWidth(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width *
+    final width =
+        MediaQuery.sizeOf(context).width *
         MediaQuery.devicePixelRatioOf(context);
     return width.clamp(720, 1440).round();
   }
@@ -737,9 +769,8 @@ class _PhotosSlide extends StatelessWidget {
                   fit: BoxFit.cover,
                   // ช่องในตารางกว้างราว 1/3 จอ ไม่ต้องถอดรหัสเต็มไฟล์
                   cacheWidth: 480,
-                  errorBuilder: (_, _, _) => Container(
-                    color: Colors.white.withValues(alpha: 0.12),
-                  ),
+                  errorBuilder: (_, _, _) =>
+                      Container(color: Colors.white.withValues(alpha: 0.12)),
                 ),
               );
             }).toList(),
@@ -750,184 +781,55 @@ class _PhotosSlide extends StatelessWidget {
   }
 }
 
+/// สไลด์สุดท้าย: การ์ดที่เอาไปลงสตอรี่ได้ + ปุ่มแชร์
+///
+/// การ์ดเป็นใบเดียวกับ [TripStoryCard] ที่ใช้ตอนนับถอยหลังก่อนไป จึงเป็นสัดส่วน
+/// 9:16 ตั้งแต่ต้น ไม่ใช่กล่องกว้างเท่าจอแบบเดิมที่พอลงสตอรี่แล้วโดนครอป และ
+/// ภาพที่ได้ก็ขนาดเท่ากันทุกเครื่อง
 class _SummarySlide extends StatelessWidget {
-  final GlobalKey cardKey;
   final String title;
+  final String location;
   final String date;
-  final num? days;
-  final num? distance;
-  final num? elevation;
-  final int travelers;
-  final String difficultyLabel;
+  final StoryCountdown highlight;
+  final List<StoryStat> stats;
   final String cover;
-  final String Function(num) fmt;
-  final bool sharing;
   final bool hasReviewed;
   final VoidCallback onShare;
 
   const _SummarySlide({
-    required this.cardKey,
     required this.title,
+    required this.location,
     required this.date,
-    required this.days,
-    required this.distance,
-    required this.elevation,
-    required this.travelers,
-    required this.difficultyLabel,
+    required this.highlight,
+    required this.stats,
     required this.cover,
-    required this.fmt,
-    required this.sharing,
     required this.hasReviewed,
     required this.onShare,
   });
 
   @override
   Widget build(BuildContext context) {
-    final stats = <List<String>>[
-      if (days != null && days! > 0) ['${fmt(days!)} วัน', 'บนเส้นทาง'],
-      if (distance != null && distance! > 0) ['${fmt(distance!)} กม.', 'ระยะทาง'],
-      if (elevation != null && elevation! > 0)
-        ['${fmt(elevation!)} ม.', 'ความสูงสะสม'],
-      ['$travelers คน', 'เพื่อนร่วมทาง'],
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 56, 20, 24),
+    return _SlidePad(
       child: Column(
         children: [
-          // ---- Shareable card (captured to PNG) ----
-          RepaintBoundary(
-            key: cardKey,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFEA580C), Color(0xFF7C2D12)],
+          // พรีวิวย่อให้พอดีสไลด์ ส่วนการ์ดจริงยังวาดที่ 360×640 เท่าเดิม
+          Expanded(
+            child: Center(
+              child: FittedBox(
+                child: TripStoryCard.recap(
+                  tripTitle: title,
+                  location: location,
+                  highlight: highlight,
+                  dateLabel: date,
+                  stats: stats,
+                  coverImage: cover.isEmpty ? null : NetworkImage(cover),
                 ),
-                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text('🏔️', style: TextStyle(fontSize: AppText.sizeH1)),
-                      const SizedBox(width: 8),
-                      Text(
-                        'ลุยเลเขา',
-                        style: appFont(
-                          color: Colors.white,
-                          fontSize: AppText.sizeSubtitle,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'TRIP RECAP',
-                        style: appFont(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          fontSize: AppText.sizeCaption,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  if (cover.isNotEmpty)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      child: AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: Image.network(
-                          cover,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            color: Colors.white.withValues(alpha: 0.12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  Text(
-                    title,
-                    style: appFont(
-                      color: Colors.white,
-                      fontSize: AppText.sizeH1,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  if (date.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      date,
-                      style: appFont(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: AppText.sizeLabel,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 18),
-                  Wrap(
-                    runSpacing: 14,
-                    children: stats.map((s) {
-                      return SizedBox(
-                        width: (MediaQuery.of(context).size.width - 40 - 44) / 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              s[0],
-                              style: appFont(
-                                color: Colors.white,
-                                fontSize: AppText.sizeH1,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            Text(
-                              s[1],
-                              style: appFont(
-                                color: Colors.white.withValues(alpha: 0.85),
-                                fontSize: AppText.sizeCaption,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 18),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surface(context).withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                    ),
-                    child: Text(
-                      'luilaykhao.com',
-                      style: appFont(
-                        color: Colors.white,
-                        fontSize: AppText.sizeCaption,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           ),
-          const SizedBox(height: 22),
-          // ---- Share button ----
+          const SizedBox(height: 20),
           GestureDetector(
-            onTap: sharing ? null : onShare,
+            onTap: onShare,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 15),
@@ -938,21 +840,14 @@ class _SummarySlide extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (sharing)
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFF7C2D12),
-                      ),
-                    )
-                  else
-                    const Icon(Icons.ios_share_rounded,
-                        size: 19, color: Color(0xFF7C2D12)),
+                  const Icon(
+                    Icons.ios_share_rounded,
+                    size: 19,
+                    color: Color(0xFF7C2D12),
+                  ),
                   const SizedBox(width: 8),
                   Text(
-                    sharing ? 'กำลังเตรียมรูป...' : 'แชร์สรุปทริป',
+                    'แชร์สรุปทริป',
                     style: appFont(
                       color: const Color(0xFF7C2D12),
                       fontSize: AppText.sizeSubtitle,
@@ -968,6 +863,7 @@ class _SummarySlide extends StatelessWidget {
             hasReviewed
                 ? 'ขอบคุณที่ร่วมเดินทางกับเรา 💚'
                 : 'อย่าลืมรีวิวทริปนี้ให้เพื่อน ๆ ด้วยนะ',
+            textAlign: TextAlign.center,
             style: appFont(
               color: Colors.white.withValues(alpha: 0.8),
               fontSize: AppText.sizeLabel,

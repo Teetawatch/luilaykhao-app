@@ -71,7 +71,7 @@
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 		<string>ใช้ตำแหน่งของคุณเพื่อแสดงจุดรับ-ส่งที่ใกล้ที่สุด ติดตามรถรับส่งระหว่างทริป บันทึกเส้นทางที่คุณเดิน และแชร์ตำแหน่งให้เพื่อนร่วมทริปรอบเดียวกันเห็นเมื่อคุณเปิดสวิตช์เอง โดยแอปอ่านตำแหน่งเฉพาะตอนที่คุณสั่งให้ทำงานเท่านั้น</string>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>ใช้รูปภาพเพื่ออัปโหลดโปรไฟล์ เอกสารที่ทริปขอ หรือหลักฐานการชำระเงิน</string>
+		<string>ใช้รูปภาพเพื่ออัปโหลดโปรไฟล์ เอกสารที่ทริปขอ หลักฐานการชำระเงิน และใส่รูปของคุณลงการ์ดแชร์ทริป</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>
 		<string>ใช้เพื่อบันทึกรูปภาพจากทริปลงในคลังรูปภาพของคุณ</string>
 		<key>NSCalendarsUsageDescription</key>
