@@ -167,7 +167,6 @@ bool _depositAvailable(Map<String, dynamic> booking) {
   if (deposit.isNotEmpty) return _asBool(deposit['available']);
   final schedule = asMap(booking['schedule']);
   if (!_asBool(schedule['deposit_enabled'])) return false;
-  if (_asBool(booking['is_join_trip'])) return false;
   return _depositAmount(booking) > 0;
 }
 
