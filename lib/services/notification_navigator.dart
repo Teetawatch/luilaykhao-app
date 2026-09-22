@@ -45,6 +45,10 @@ class NotificationNavigator {
       case 'weather_alert':
       case 'vehicle_departed':
       case 'vehicle_approaching':
+      // รถถึงจุดรับแล้ว / รถกำลังมารับ — สิ่งที่ต้องดูต่อคือใบจอง ซึ่งมีทั้ง
+      // ทะเบียน รูปจุดที่รถจอด และปุ่มโทรหาคนขับอยู่แล้ว ไม่ใช่ศูนย์แจ้งเตือน
+      case 'pickup_arrived':
+      case 'pickup_approaching':
       case 'safe_travels':
         _openBookingDetail(data);
       case 'passport_info_needed':
@@ -104,6 +108,8 @@ class NotificationNavigator {
       // ลูกค้าแจ้งว่าอาจมาสาย — คนที่ได้แจ้งเตือนนี้คือสตาฟของรอบนั้น สิ่งที่
       // เขาต้องทำต่อคือดูรายชื่อว่าเหลือใครอีกบ้าง ไม่ใช่มาอ่านซ้ำในศูนย์แจ้งเตือน
       case 'pickup_late':
+      // เตือนสตาฟว่ายังไม่ได้เปิดแชร์ตำแหน่งรถ — สวิตช์อยู่บนหน้ารายชื่อ
+      case 'staff_share_location':
         _openStaffManifest(data);
       case 'staff_assignment':
       case 'staff_shift_reminder':
