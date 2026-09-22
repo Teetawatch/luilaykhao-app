@@ -167,6 +167,10 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
         // กลับมาหน้าจอจึงเป็นจังหวะเดียวที่มันได้ข้อมูลใหม่ (มีตัวหน่วงในตัวอยู่
         // แล้ว การสลับแอปไปมาไม่ทำให้ยิงซ้ำ)
         unawaited(HomeWidgetService.instance.refresh());
+        // สตาฟ: ถึงวันเดินทางของรอบที่ตัวเองรับผิดชอบเมื่อไหร่ มือถือเครื่องนี้
+        // จะเป็น GPS ของรถให้เอง (และเลิกเองเมื่อรอบจบ) — ยิงถามเฉพาะวันที่มี
+        // รอบใกล้ ๆ จริงเท่านั้น
+        unawaited(app.refreshVehicleSharing());
       } else {
         unawaited(PushNotificationService.instance.clearBadge());
       }

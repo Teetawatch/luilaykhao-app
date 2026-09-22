@@ -678,11 +678,12 @@ class _ShareVehicleLocationCardState extends State<_ShareVehicleLocationCard> {
 
   Future<void> _toggle(bool on) async {
     if (!on) {
-      await _sharing.stop();
+      // ปิดแล้วต้องปิดจริง — ไม่ใช่ถูกเปิดกลับมาให้เองในอีกห้านาที
+      await _sharing.stop(remember: true);
       return;
     }
 
-    final ok = await _sharing.start(
+    final ok = await _sharing.startManually(
       api: context.read<AppProvider>().api,
       scheduleId: widget.scheduleId,
       plate: widget.plate,
@@ -737,7 +738,10 @@ class _ShareVehicleLocationCardState extends State<_ShareVehicleLocationCard> {
                                       '${sentAt.hour.toString().padLeft(2, '0')}:'
                                       '${sentAt.minute.toString().padLeft(2, '0')} น.'
                                 : 'กำลังส่งตำแหน่งแรก...')
-                          : 'เปิดตอนขึ้นรถ ลูกค้าจะเห็นว่ารถถึงไหนแล้ว',
+                          : _sharing.needsPermission
+                          // ครั้งเดียวในชีวิตการใช้งาน — หลังจากนี้เปิดเองทุกรอบ
+                          ? 'แตะเพื่ออนุญาตตำแหน่งครั้งเดียว แล้วรอบต่อ ๆ ไปจะเปิดให้เอง'
+                          : 'เปิดเองทุกวันเดินทาง · ปิดตรงนี้ได้ถ้าไม่ได้ไปกับรถ',
                       style: appFont(
                         fontSize: AppText.sizeCaption,
                         height: 1.35,

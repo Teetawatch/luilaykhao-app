@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_client.dart';
 import 'location_stream_hub.dart';
@@ -38,6 +39,9 @@ class VehicleLocationSharing extends ChangeNotifier {
     notificationText: 'ลูกค้าในรอบนี้เห็นว่ารถถึงไหนแล้ว',
   );
 
+  /// คีย์ของรอบที่สตาฟกดปิดเอง — เปิดอัตโนมัติจะไม่ไปแหย่มันอีก
+  static String _offKey(int scheduleId) => 'vehicle_share_off.$scheduleId';
+
   ApiClient? _api;
   int? _scheduleId;
   String? _plate;
@@ -49,6 +53,9 @@ class VehicleLocationSharing extends ChangeNotifier {
   DateTime? lastSentAt;
   String? error;
 
+  /// เปิดให้เองไม่ได้เพราะยังไม่เคยอนุญาตตำแหน่ง — การ์ดจะได้ขอแบบกดครั้งเดียว
+  bool needsPermission = false;
+
   bool get busy => _busy;
   bool get isSharing => _lease != null;
   int? get scheduleId => _scheduleId;
@@ -59,10 +66,15 @@ class VehicleLocationSharing extends ChangeNotifier {
   void debugClearUploadThrottle() => _lastUpload = null;
 
   /// เปิดแชร์ คืน true เมื่อเริ่มส่งแล้ว — ถ้าไม่สำเร็จดูเหตุผลที่ [error]
+  ///
+  /// [silent] = เปิดให้เองตอนถึงวันเดินทาง ไม่ใช่สตาฟกด จึงห้ามเด้งกล่องขอสิทธิ์
+  /// ขึ้นมาเองกลางงาน ถ้ายังไม่เคยอนุญาตก็เงียบไว้ แล้วให้การ์ดในหน้ารายชื่อเป็น
+  /// คนขอตอนที่สตาฟมองอยู่
   Future<bool> start({
     required ApiClient api,
     required int scheduleId,
     String? plate,
+    bool silent = false,
   }) async {
     if (isSharingFor(scheduleId)) return true;
     if (_busy) return false;
@@ -77,10 +89,15 @@ class VehicleLocationSharing extends ChangeNotifier {
         await _teardown();
       }
 
-      if (!await _ensurePermission()) {
-        error = 'ต้องอนุญาตให้เข้าถึงตำแหน่งก่อน จึงจะแชร์ตำแหน่งรถได้';
+      if (!await _ensurePermission(prompt: !silent)) {
+        error = silent
+            ? null
+            : 'ต้องอนุญาตให้เข้าถึงตำแหน่งก่อน จึงจะแชร์ตำแหน่งรถได้';
+        needsPermission = true;
         return false;
       }
+
+      needsPermission = false;
 
       _api = api;
       _scheduleId = scheduleId;
@@ -128,12 +145,74 @@ class VehicleLocationSharing extends ChangeNotifier {
   ///
   /// ไม่ต้องบอกเซิร์ฟเวอร์: พิกัดรถเป็นประวัติการเดินทางของรถคันนั้น ไม่ใช่
   /// หมุดของคน การหยุดส่งคือการหยุดเอง ตัวที่อ่านพิกัดจะถือว่าหมดอายุตามเวลา
-  Future<void> stop() async {
+  Future<void> stop({bool remember = false}) async {
+    final scheduleId = _scheduleId;
+
+    if (remember && scheduleId != null) {
+      await _rememberChoice(scheduleId, off: true);
+    }
+
     if (_lease == null) return;
 
     await _teardown();
     error = null;
     notifyListeners();
+  }
+
+  /// เปิดเองเมื่อถึงวันเดินทาง — เรียกได้บ่อยเท่าที่อยาก ไม่มีผลข้างเคียงถ้าไม่ถึงเวลา
+  ///
+  /// [dueScheduleId] มาจากเซิร์ฟเวอร์ (share_location_due) ไม่ใช่การคิดเวลาไทยเอง
+  /// ฝั่งแอป — กรอบเวลาของรอบมีที่มาที่เดียวคือ VehicleLocationService
+  Future<void> syncAuto({
+    required ApiClient api,
+    required int? dueScheduleId,
+    String? plate,
+  }) async {
+    if (dueScheduleId == null) {
+      // พ้นวันเดินทางแล้ว: เลิกส่งเอง ไม่ต้องรอให้ใครนึกขึ้นได้
+      if (isSharing) await stop();
+      return;
+    }
+
+    if (isSharingFor(dueScheduleId) || _busy) return;
+
+    if (await _isOff(dueScheduleId)) return;
+
+    await start(api: api, scheduleId: dueScheduleId, plate: plate, silent: true);
+  }
+
+  /// สตาฟกดเปิดเอง — ล้างการปิดที่จำไว้ แล้วขอสิทธิ์ได้ถ้ายังไม่เคยให้
+  Future<bool> startManually({
+    required ApiClient api,
+    required int scheduleId,
+    String? plate,
+  }) async {
+    await _rememberChoice(scheduleId, off: false);
+
+    return start(api: api, scheduleId: scheduleId, plate: plate);
+  }
+
+  Future<bool> _isOff(int scheduleId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      return prefs.getBool(_offKey(scheduleId)) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _rememberChoice(int scheduleId, {required bool off}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (off) {
+        await prefs.setBool(_offKey(scheduleId), true);
+      } else {
+        await prefs.remove(_offKey(scheduleId));
+      }
+    } catch (_) {
+      // จำไม่ได้ก็ไม่เป็นไร — อย่างมากคือรอบถัดไปมันเปิดเองอีกครั้ง
+    }
   }
 
   /// เลิกแชร์โดยไม่แตะเซิร์ฟเวอร์ — ใช้ตอนออกจากระบบ
@@ -217,11 +296,12 @@ class VehicleLocationSharing extends ChangeNotifier {
     lastSentAt = null;
   }
 
-  Future<bool> _ensurePermission() async {
+  Future<bool> _ensurePermission({bool prompt = true}) async {
     if (!await Geolocator.isLocationServiceEnabled()) return false;
 
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
+      if (!prompt) return false;
       permission = await Geolocator.requestPermission();
     }
 

@@ -1397,6 +1397,13 @@ class AppProvider extends ChangeNotifier {
           debugPrint('StaffTripPack prefetch failed: $e');
         }),
       );
+      // ถึงวันเดินทางแล้วให้มือถือของสตาฟเป็น GPS ของรถเอง ลูกค้าจะได้เห็นรถ
+      // โดยไม่มีใครต้องกดอะไรเพิ่มหน้างาน
+      unawaited(
+        syncVehicleSharing().catchError((Object e) {
+          debugPrint('syncVehicleSharing failed: $e');
+        }),
+      );
     }
 
     // การ์ด "วันเดินทาง" บนหน้าจอล็อก — เปิดให้เองตั้งแต่วันก่อนเดินทาง ผู้ใช้ไม่
@@ -2047,6 +2054,86 @@ class AppProvider extends ChangeNotifier {
       body: {'completed': completed},
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// รอบที่ถึงเวลาให้มือถือของสตาฟเป็น GPS ของรถแล้ว — เซิร์ฟเวอร์เป็นคนตัดสิน
+  /// (share_location_due) แอปแค่ทำตาม
+  Map<String, dynamic>? get _vehicleSharingDueRound {
+    for (final raw in staffSchedules) {
+      final s = raw is Map ? Map<String, dynamic>.from(raw) : null;
+      if (s == null || s['share_location_due'] != true) continue;
+      if (int.tryParse('${s['id']}') == null) continue;
+
+      return s;
+    }
+
+    return null;
+  }
+
+  /// เปิด/ปิดการแชร์ตำแหน่งรถให้ตรงกับรอบที่กำลังเดินทาง
+  ///
+  /// ลูกค้าต้องเห็นรถโดยที่สตาฟไม่ต้องทำอะไรเพิ่ม — สตาฟกำลังเช็คอินและดูแลคน
+  /// หน้างานอยู่ตอนรถออกพอดี การแชร์จึงเปิดเองเมื่อถึงวันเดินทางของรอบที่ตัวเอง
+  /// รับผิดชอบ และปิดเองเมื่อรอบจบ ยังปิดเองได้ทุกเมื่อจากการ์ดในหน้ารายชื่อ
+  /// (ปิดแล้วจำไว้ ไม่ใช่เปิดกลับมาให้ในอีกห้านาที)
+  Future<void> syncVehicleSharing() async {
+    final sharing = VehicleLocationSharing.instance;
+
+    if (!isLoggedIn || !canUseStaffCheckIn) {
+      await sharing.abandonLocally();
+
+      return;
+    }
+
+    final round = _vehicleSharingDueRound;
+
+    await sharing.syncAuto(
+      api: api,
+      dueScheduleId: round == null ? null : int.parse('${round['id']}'),
+      plate: round == null
+          ? null
+          : (round['vehicle'] as Map?)?['license_plate']?.toString(),
+    );
+  }
+
+  /// ดึงรอบของสตาฟใหม่แล้วซิงก์การแชร์ — ใช้ตอนกลับเข้าแอป เพราะ
+  /// share_location_due เป็นคำตอบ ณ เวลาที่โหลด ไม่ใช่ค่าที่เปลี่ยนเอง
+  ///
+  /// ยิงเฉพาะตอนที่มีรอบใกล้ ๆ จริง (เมื่อวาน–พรุ่งนี้) วันธรรมดาที่ไม่มีทริป
+  /// จะไม่มีคำขอเพิ่มสักครั้ง
+  Future<void> refreshVehicleSharing() async {
+    if (!isLoggedIn || !canUseStaffCheckIn) return;
+
+    if (_hasRoundAroundToday()) {
+      try {
+        final response = await api.get(ApiEndpoints.staffSchedulesMy);
+        final data = api.data(response) as Map?;
+        staffSchedules = List<dynamic>.from(data?['schedules'] ?? staffSchedules);
+        notifyListeners();
+      } catch (e) {
+        debugPrint('refreshVehicleSharing: โหลดรอบของสตาฟไม่สำเร็จ $e');
+      }
+    }
+
+    await syncVehicleSharing();
+  }
+
+  /// มีรอบที่เดินทางอยู่ในช่วงเมื่อวานถึงพรุ่งนี้ไหม (เทียบด้วยวันที่ล้วน ๆ)
+  bool _hasRoundAroundToday() {
+    final now = DateTime.now();
+    final from = DateTime(now.year, now.month, now.day - 1);
+    final to = DateTime(now.year, now.month, now.day + 1);
+
+    for (final raw in staffSchedules) {
+      final s = raw is Map ? raw : null;
+      final start = DateTime.tryParse('${s?['departure_date']}');
+      if (start == null) continue;
+      final end = DateTime.tryParse('${s?['return_date']}') ?? start;
+
+      if (!end.isBefore(from) && !start.isAfter(to)) return true;
+    }
+
+    return false;
   }
 
   /// สตาฟกด "รถถึงจุดนี้แล้ว" — รูปตรงที่จอดคือหัวใจ ไม่ใช่ของแถม
