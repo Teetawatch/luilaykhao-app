@@ -832,6 +832,33 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 _createPoll();
               },
             ),
+            // รูปในห้องนี้ถูกลบพร้อมห้องแชทหลังจบทริป (PurgeEndedTripChatsJob
+            // ฝั่งเซิร์ฟเวอร์ — ต้องแก้คู่กันถ้าเปลี่ยนจำนวนวัน) บอกตั้งแต่ตอนจะส่ง
+            // ดีกว่าให้ลูกค้ามารู้ตอนที่รูปหายไปแล้ว
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 14,
+                    color: AppTheme.mutedText(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'รูปที่ส่งในห้องนี้จะถูกลบพร้อมห้องแชท 3 วันหลังจบทริป '
+                      'อยากให้อยู่ถาวรลงในฟีดทริปได้ครับ',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 8),
           ],
         ),
