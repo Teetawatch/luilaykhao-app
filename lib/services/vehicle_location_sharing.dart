@@ -67,6 +67,9 @@ class VehicleLocationSharing extends ChangeNotifier {
   int? _scheduleId;
   String? _plate;
   String _mode = modePickup;
+
+  /// สตาฟกดสวิตช์เอง = ตั้งใจให้เครื่องนี้เป็นคนส่ง แม้เครื่องอื่นจะส่งอยู่
+  bool _takeover = false;
   LocationLease? _lease;
   DateTime? _lastUpload;
   bool _busy = false;
@@ -108,6 +111,7 @@ class VehicleLocationSharing extends ChangeNotifier {
     String? plate,
     bool silent = false,
     String mode = modePickup,
+    bool takeover = false,
   }) async {
     if (isSharingFor(scheduleId) && _mode == mode) return true;
     if (_busy) return false;
@@ -136,6 +140,7 @@ class VehicleLocationSharing extends ChangeNotifier {
       _scheduleId = scheduleId;
       _plate = plate;
       _mode = mode;
+      _takeover = takeover;
 
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -258,7 +263,14 @@ class VehicleLocationSharing extends ChangeNotifier {
   }) async {
     await _rememberChoice(scheduleId, off: false);
 
-    return start(api: api, scheduleId: scheduleId, plate: plate, mode: mode);
+    return start(
+      api: api,
+      scheduleId: scheduleId,
+      plate: plate,
+      mode: mode,
+      // กดเองแปลว่ารู้ตัวว่าจะเป็นคนส่ง — แย่งสิทธิ์จากเครื่องที่ค้างอยู่ได้
+      takeover: true,
+    );
   }
 
   Future<bool> _isOff(int scheduleId) async {
@@ -309,9 +321,12 @@ class VehicleLocationSharing extends ChangeNotifier {
       // ระหว่างทางเน็ตหลุดเป็นเรื่องปกติ — เก็บเงียบแล้วรอรอบถัดไป
       if (e.isNetworkError) return;
 
+      // 409 = เครื่องของทีมงานอีกคนถือสิทธิ์เป็น "รถคันนี้" อยู่ — ถอยออกมาเงียบ ๆ
+      // ดีกว่าให้หมุดบนแผนที่ลูกค้ากระโดดไปมาระหว่างสองเครื่อง
+      //
       // 403 = ไม่ใช่รอบของเราแล้ว, 422 = นอกช่วงวันเดินทาง/รอบไม่มีรถ
-      // ทั้งคู่ไม่มีทางหายเองในรอบหน้า ปล่อยสตรีมวิ่งต่อคือกินแบตทิ้งเปล่า ๆ
-      if (e.statusCode == 403 || e.statusCode == 422) {
+      // ทั้งหมดไม่มีทางหายเองในรอบหน้า ปล่อยสตรีมวิ่งต่อคือกินแบตทิ้งเปล่า ๆ
+      if (e.statusCode == 403 || e.statusCode == 409 || e.statusCode == 422) {
         error = e.message;
         await _teardown();
         notifyListeners();
@@ -337,11 +352,16 @@ class VehicleLocationSharing extends ChangeNotifier {
         'latitude': position.latitude,
         'longitude': position.longitude,
         'accuracy': position.accuracy,
+        if (_takeover) 'takeover': true,
         if (position.heading >= 0) 'heading': position.heading,
         // geolocator ให้ความเร็วเป็น m/s ส่วนฝั่งเซิร์ฟเวอร์คิด ETA เป็น กม./ชม.
         if (position.speed >= 0) 'speed': position.speed * 3.6,
       },
     );
+
+    // ใช้สิทธิ์แย่งได้ครั้งเดียวตอนเริ่ม — ถ้าติดค้างไว้ทุกครั้ง สองเครื่องที่ต่าง
+    // ก็กดสวิตช์เองจะแย่งกันไปมาไม่จบ
+    _takeover = false;
 
     lastSentAt = DateTime.now();
     notifyListeners();
@@ -361,6 +381,7 @@ class VehicleLocationSharing extends ChangeNotifier {
     _scheduleId = null;
     _plate = null;
     _mode = modePickup;
+    _takeover = false;
     _lastUpload = null;
     vanPosition = null;
     lastSentAt = null;
