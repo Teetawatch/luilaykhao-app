@@ -153,6 +153,37 @@ void main() {
     expect(sharing.isSharing, isFalse, reason: 'รอบจบแล้วต้องเลิกกินแบตเอง');
   });
 
+  test('it slows down once everyone is aboard, without restarting', () async {
+    await withApi((api) => sharing.syncAuto(api: api, dueScheduleId: 7));
+    expect(sharing.mode, VehicleLocationSharing.modePickup);
+
+    await withApi(
+      (api) => sharing.syncAuto(
+        api: api,
+        dueScheduleId: 7,
+        mode: VehicleLocationSharing.modeOnboard,
+      ),
+    );
+
+    expect(sharing.isSharingFor(7), isTrue, reason: 'ยังแชร์อยู่ แค่ช้าลง');
+    expect(sharing.isSaving, isTrue);
+  });
+
+  test('it speeds back up if a stop is reopened', () async {
+    await withApi(
+      (api) => sharing.syncAuto(
+        api: api,
+        dueScheduleId: 7,
+        mode: VehicleLocationSharing.modeOnboard,
+      ),
+    );
+    expect(sharing.isSaving, isTrue);
+
+    await withApi((api) => sharing.syncAuto(api: api, dueScheduleId: 7));
+
+    expect(sharing.isSaving, isFalse);
+  });
+
   test('a second sync on the same round does not restart it', () async {
     await withApi((api) => sharing.syncAuto(api: api, dueScheduleId: 7));
     final before = calls.length;

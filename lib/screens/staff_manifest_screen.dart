@@ -734,7 +734,8 @@ class _ShareVehicleLocationCardState extends State<_ShareVehicleLocationCard> {
                           ? 'กำลังแชร์ให้รอบอื่นอยู่ — เปิดตรงนี้จะย้ายมารอบนี้'
                           : on
                           ? (sentAt != null
-                                ? 'ลูกค้าเห็นรถอยู่ · ส่งล่าสุด '
+                                ? '${_sharing.isSaving ? 'รับครบแล้ว · โหมดประหยัดแบต' : 'ลูกค้าเห็นรถอยู่'} '
+                                      '· ส่งล่าสุด '
                                       '${sentAt.hour.toString().padLeft(2, '0')}:'
                                       '${sentAt.minute.toString().padLeft(2, '0')} น.'
                                 : 'กำลังส่งตำแหน่งแรก...')

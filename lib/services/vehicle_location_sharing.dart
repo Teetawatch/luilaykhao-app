@@ -25,18 +25,39 @@ class VehicleLocationSharing extends ChangeNotifier {
 
   static final VehicleLocationSharing instance = VehicleLocationSharing._();
 
+  /// ยังวิ่งเก็บคนอยู่ — คนที่ยืนรออยู่ข้างถนนต้องการตำแหน่งที่สด
+  static const String modePickup = 'pickup';
+
+  /// รับครบทุกจุดแล้ว — คนที่ยังดูอยู่คือคนที่บ้าน ส่งห่างขึ้นได้อีกมาก
+  static const String modeOnboard = 'onboard';
+
   /// ส่งพิกัดขึ้นเซิร์ฟเวอร์อย่างมากทุกกี่วินาที
   static const Duration uploadInterval = Duration(seconds: 12);
+
+  /// คาบตอนรับครบแล้ว — แบตของสตาฟต้องอยู่ถึงท้ายทริป ไม่ใช่แค่ถึงจุดรับสุดท้าย
+  static const Duration onboardUploadInterval = Duration(minutes: 3);
 
   /// ขยับน้อยกว่านี้ไม่ต้องส่ง (เมตร) — รถติดไฟแดงไม่ต้องยิงรัว
   static const int distanceFilterM = 25;
 
-  static const LocationNeed _need = LocationNeed(
+  static const int onboardDistanceFilterM = 300;
+
+  static const LocationNeed _pickupNeed = LocationNeed(
     accuracy: LocationAccuracy.high,
     distanceFilterM: distanceFilterM,
     keepAliveInBackground: true,
     notificationTitle: 'กำลังแชร์ตำแหน่งรถให้ลูกค้า',
-    notificationText: 'ลูกค้าในรอบนี้เห็นว่ารถถึงไหนแล้ว',
+    notificationText: 'ลูกค้าที่รออยู่เห็นว่ารถถึงไหนแล้ว',
+  );
+
+  /// โหมดประหยัดหลังรับครบ — ความละเอียดต่ำลงและกรองระยะกว้างขึ้น ทั้งสองอย่าง
+  /// คือสิ่งที่ทำให้ GPS กินแบตน้อยลงจริง ไม่ใช่แค่ส่ง API ห่างขึ้น
+  static const LocationNeed _onboardNeed = LocationNeed(
+    accuracy: LocationAccuracy.medium,
+    distanceFilterM: onboardDistanceFilterM,
+    keepAliveInBackground: true,
+    notificationTitle: 'กำลังแชร์ตำแหน่งรถ (โหมดประหยัดแบต)',
+    notificationText: 'คนที่บ้านยังติดตามรถได้ระหว่างทาง',
   );
 
   /// คีย์ของรอบที่สตาฟกดปิดเอง — เปิดอัตโนมัติจะไม่ไปแหย่มันอีก
@@ -45,6 +66,7 @@ class VehicleLocationSharing extends ChangeNotifier {
   ApiClient? _api;
   int? _scheduleId;
   String? _plate;
+  String _mode = modePickup;
   LocationLease? _lease;
   DateTime? _lastUpload;
   bool _busy = false;
@@ -58,6 +80,16 @@ class VehicleLocationSharing extends ChangeNotifier {
 
   bool get busy => _busy;
   bool get isSharing => _lease != null;
+
+  /// โหมดที่กำลังส่งอยู่ — [modePickup] หรือ [modeOnboard]
+  String get mode => _mode;
+
+  bool get isSaving => _lease != null && _mode == modeOnboard;
+
+  Duration get _interval =>
+      _mode == modeOnboard ? onboardUploadInterval : uploadInterval;
+
+  LocationNeed get _need => _mode == modeOnboard ? _onboardNeed : _pickupNeed;
   int? get scheduleId => _scheduleId;
   String? get plate => _plate;
   bool isSharingFor(int id) => _lease != null && _scheduleId == id;
@@ -75,8 +107,9 @@ class VehicleLocationSharing extends ChangeNotifier {
     required int scheduleId,
     String? plate,
     bool silent = false,
+    String mode = modePickup,
   }) async {
-    if (isSharingFor(scheduleId)) return true;
+    if (isSharingFor(scheduleId) && _mode == mode) return true;
     if (_busy) return false;
 
     _busy = true;
@@ -102,6 +135,7 @@ class VehicleLocationSharing extends ChangeNotifier {
       _api = api;
       _scheduleId = scheduleId;
       _plate = plate;
+      _mode = mode;
 
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -167,18 +201,52 @@ class VehicleLocationSharing extends ChangeNotifier {
     required ApiClient api,
     required int? dueScheduleId,
     String? plate,
+    String mode = modePickup,
   }) async {
     if (dueScheduleId == null) {
-      // พ้นวันเดินทางแล้ว: เลิกส่งเอง ไม่ต้องรอให้ใครนึกขึ้นได้
+      // พ้นช่วงเดินทางแล้ว: เลิกส่งเอง ไม่ต้องรอให้ใครนึกขึ้นได้
       if (isSharing) await stop();
       return;
     }
 
-    if (isSharingFor(dueScheduleId) || _busy) return;
+    if (_busy) return;
+
+    // รับครบทุกจุดแล้ว (หรือกลับมาเก็บคนต่อ) — สลับคาบการส่งโดยไม่ต้องเริ่มใหม่
+    if (isSharingFor(dueScheduleId)) {
+      if (_mode != mode) await _switchMode(mode);
+
+      return;
+    }
 
     if (await _isOff(dueScheduleId)) return;
 
-    await start(api: api, scheduleId: dueScheduleId, plate: plate, silent: true);
+    await start(
+      api: api,
+      scheduleId: dueScheduleId,
+      plate: plate,
+      silent: true,
+      mode: mode,
+    );
+  }
+
+  /// เปลี่ยนความถี่ระหว่างที่ยังแชร์อยู่ — สตรีมของ hub ถูกตั้งค่าตอน attach
+  /// จึงต้องคืนใบเดิมแล้วขอใหม่ ไม่ใช่แก้ค่าในที่
+  Future<void> _switchMode(String mode) async {
+    if (_mode == mode) return;
+
+    final lease = _lease;
+    _mode = mode;
+    _lastUpload = null;
+
+    _lease = await LocationStreamHub.instance.attach(
+      need: _need,
+      onPosition: _onPosition,
+      onError: (Object e) =>
+          debugPrint('[VehicleLocationSharing] stream error: $e'),
+    );
+
+    await lease?.cancel();
+    notifyListeners();
   }
 
   /// สตาฟกดเปิดเอง — ล้างการปิดที่จำไว้ แล้วขอสิทธิ์ได้ถ้ายังไม่เคยให้
@@ -186,10 +254,11 @@ class VehicleLocationSharing extends ChangeNotifier {
     required ApiClient api,
     required int scheduleId,
     String? plate,
+    String mode = modePickup,
   }) async {
     await _rememberChoice(scheduleId, off: false);
 
-    return start(api: api, scheduleId: scheduleId, plate: plate);
+    return start(api: api, scheduleId: scheduleId, plate: plate, mode: mode);
   }
 
   Future<bool> _isOff(int scheduleId) async {
@@ -223,7 +292,7 @@ class VehicleLocationSharing extends ChangeNotifier {
     notifyListeners();
 
     final last = _lastUpload;
-    if (last != null && DateTime.now().difference(last) < uploadInterval) {
+    if (last != null && DateTime.now().difference(last) < _interval) {
       return;
     }
     unawaited(_sendGuarded(position));
@@ -291,6 +360,7 @@ class VehicleLocationSharing extends ChangeNotifier {
     _api = null;
     _scheduleId = null;
     _plate = null;
+    _mode = modePickup;
     _lastUpload = null;
     vanPosition = null;
     lastSentAt = null;

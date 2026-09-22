@@ -2061,7 +2061,8 @@ class AppProvider extends ChangeNotifier {
   Map<String, dynamic>? get _vehicleSharingDueRound {
     for (final raw in staffSchedules) {
       final s = raw is Map ? Map<String, dynamic>.from(raw) : null;
-      if (s == null || s['share_location_due'] != true) continue;
+      final mode = s?['share_location_mode']?.toString();
+      if (s == null || mode == null || mode.isEmpty || mode == 'null') continue;
       if (int.tryParse('${s['id']}') == null) continue;
 
       return s;
@@ -2093,6 +2094,8 @@ class AppProvider extends ChangeNotifier {
       plate: round == null
           ? null
           : (round['vehicle'] as Map?)?['license_plate']?.toString(),
+      mode: round?['share_location_mode']?.toString() ??
+          VehicleLocationSharing.modePickup,
     );
   }
 
@@ -2101,10 +2104,20 @@ class AppProvider extends ChangeNotifier {
   ///
   /// ยิงเฉพาะตอนที่มีรอบใกล้ ๆ จริง (เมื่อวาน–พรุ่งนี้) วันธรรมดาที่ไม่มีทริป
   /// จะไม่มีคำขอเพิ่มสักครั้ง
+  /// ดึงรอบของสตาฟซ้ำเร็วที่สุดทุกกี่นาที — หน้ารายชื่อเป็น query ที่หนัก
+  /// (ไล่ผู้โดยสารทุกใบของทุกรอบ) การสลับแอปไปมาไม่ควรลากมันมาทุกครั้ง
+  static const Duration _staffRosterMinGap = Duration(minutes: 5);
+
+  DateTime? _lastStaffRosterFetch;
+
   Future<void> refreshVehicleSharing() async {
     if (!isLoggedIn || !canUseStaffCheckIn) return;
 
-    if (_hasRoundAroundToday()) {
+    final last = _lastStaffRosterFetch;
+    final stale = last == null || DateTime.now().difference(last) > _staffRosterMinGap;
+
+    if (stale && _hasRoundAroundToday()) {
+      _lastStaffRosterFetch = DateTime.now();
       try {
         final response = await api.get(ApiEndpoints.staffSchedulesMy);
         final data = api.data(response) as Map?;
