@@ -27,6 +27,7 @@ import '../services/trip_activity_service.dart';
 import '../services/staff_trip_pack.dart';
 import '../services/trip_day_pack.dart';
 import '../services/trip_live_location_service.dart';
+import '../services/vehicle_location_sharing.dart';
 import '../services/version_gate_service.dart';
 
 class AppProvider extends ChangeNotifier {
@@ -1268,6 +1269,9 @@ class AppProvider extends ChangeNotifier {
     // ลบบัญชีก็ผ่านทางนี้ ซึ่งโทเคนตายไปแล้ว (logout() ลบหมุดบนเซิร์ฟเวอร์ไป
     // ก่อนหน้านี้แล้ว) ใช้ pause ไม่ใช่ discard: เส้นทางที่บันทึกไว้ยังไม่ถูกทิ้ง
     await TripLocationSharing.instance.abandonLocally();
+    // ตำแหน่งรถที่สตาฟกำลังแชร์ก็ต้องดับไปพร้อมบัญชี ไม่งั้นเครื่องจะส่งพิกัด
+    // ของรอบที่เจ้าตัวออกจากระบบไปแล้วต่อจนแบตหมด
+    await VehicleLocationSharing.instance.abandonLocally();
     await TrekRecorderService.instance.pause();
     // ทริปของบัญชีที่ออกไปต้องไม่ค้างอยู่บนหน้าโฮมให้คนถัดไปที่หยิบเครื่องขึ้นมา
     // เห็น — วางไว้ที่นี่ ไม่ใช่ใน logout() เพราะการลบบัญชีก็ผ่านทางนี้เหมือนกัน
@@ -2041,6 +2045,38 @@ class AppProvider extends ChangeNotifier {
     final response = await api.post(
       'driver/schedules/$scheduleId/pickup-points/$pointId/complete',
       body: {'completed': completed},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// สตาฟกด "รถถึงจุดนี้แล้ว" — รูปตรงที่จอดคือหัวใจ ไม่ใช่ของแถม
+  ///
+  /// คนละปุ่มกับ [setPickupCompleted] ("รับครบแล้ว") โดยตั้งใจ: รถถึงคือนาทีที่
+  /// ลูกค้ายังยืนหาอยู่ รับครบคือนาทีที่ทุกคนขึ้นรถแล้ว
+  Future<Map<String, dynamic>> markPickupArrived(
+    int scheduleId,
+    int pointId, {
+    String? photoPath,
+    String? note,
+  }) async {
+    final path = 'staff/schedules/$scheduleId/pickup-points/$pointId/arrived';
+    final response = photoPath == null
+        ? await api.post(path, body: {'note': ?note})
+        : await api.postMultipart(
+            path,
+            fields: {'note': ?note},
+            files: {'photo': photoPath},
+          );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// กดผิดจุด — ถอนคืนทั้งรูปและข้อความที่ลงห้องแชทไปแล้ว
+  Future<Map<String, dynamic>> clearPickupArrival(
+    int scheduleId,
+    int pointId,
+  ) async {
+    final response = await api.delete(
+      'staff/schedules/$scheduleId/pickup-points/$pointId/arrived',
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }

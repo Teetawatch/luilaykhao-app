@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -10,6 +11,7 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../services/check_in_outbox.dart';
+import '../services/vehicle_location_sharing.dart';
 import '../utils/thai_date.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/skeleton.dart';
@@ -41,6 +43,9 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
   String? _error;
   bool _loading = true;
   final Set<int> _completingPoints = {};
+
+  /// จุดที่กำลังส่ง "รถถึงแล้ว" อยู่ — กันกดซ้ำระหว่างรออัปโหลดรูป
+  final Set<int> _arrivingPoints = {};
 
   /// กำลังอ่านรายชื่อชุดที่บันทึกไว้ (ไม่มีสัญญาณ) และบันทึกไว้เมื่อไหร่
   bool _fromCache = false;
@@ -197,6 +202,204 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _checkingIn.remove(ref));
+    }
+  }
+
+  /// "รถถึงจุดนี้แล้ว" — ถ่ายรูปตรงที่จอดแล้วลูกค้าที่รออยู่รู้ทันที
+  ///
+  /// แยกจาก "รับครบแล้ว" เพราะเป็นคนละนาที: อันนี้คือตอนรถเพิ่งจอดและยังไม่มี
+  /// ใครขึ้นรถ ซึ่งเป็นนาทีที่ลูกค้ากำลังเดินหารถอยู่พอดี
+  Future<void> _markPickupArrived(Map<String, dynamic> group) async {
+    final pointId = group['id'];
+    if (pointId is! int || _arrivingPoints.contains(pointId)) return;
+
+    final result = await _askForParkingPhoto(textOf(group['label'], 'จุดรับ'));
+    if (result == null || !mounted) return;
+
+    setState(() => _arrivingPoints.add(pointId));
+    try {
+      final data = await context.read<AppProvider>().markPickupArrived(
+        widget.scheduleId,
+        pointId,
+        photoPath: result.photoPath,
+        note: result.note,
+      );
+      if (!mounted) return;
+
+      final point = asList(data['points'])
+          .map(asMap)
+          .firstWhere((p) => p['id'] == pointId, orElse: () => {});
+      setState(() {
+        group['arrived_at'] = point['arrived_at'];
+        group['arrival_note'] = point['arrival_note'];
+        group['arrival_photo_url'] = point['arrival_photo_url'];
+      });
+
+      final notified = int.tryParse(textOf(data['notified'], '0')) ?? 0;
+      AppSnack.success(
+        context,
+        notified > 0
+            ? 'แจ้งลูกค้าที่รออยู่แล้ว $notified คน'
+            : 'บันทึกแล้ว — จุดนี้ไม่มีใครรออยู่',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppSnack.error(context, e is ApiException ? e.message : 'แจ้งไม่สำเร็จ');
+    } finally {
+      if (mounted) setState(() => _arrivingPoints.remove(pointId));
+    }
+  }
+
+  Future<void> _clearPickupArrival(Map<String, dynamic> group) async {
+    final pointId = group['id'];
+    if (pointId is! int || _arrivingPoints.contains(pointId)) return;
+
+    setState(() => _arrivingPoints.add(pointId));
+    try {
+      await context.read<AppProvider>().clearPickupArrival(
+        widget.scheduleId,
+        pointId,
+      );
+      if (!mounted) return;
+      setState(() {
+        group['arrived_at'] = null;
+        group['arrival_note'] = null;
+        group['arrival_photo_url'] = null;
+      });
+      AppSnack.success(context, 'ยกเลิกการแจ้งจุดนี้แล้ว');
+    } catch (e) {
+      if (!mounted) return;
+      AppSnack.error(context, e is ApiException ? e.message : 'ยกเลิกไม่สำเร็จ');
+    } finally {
+      if (mounted) setState(() => _arrivingPoints.remove(pointId));
+    }
+  }
+
+  /// ถามรูปจุดจอด + โน้ตสั้น ๆ ในชีตเดียว — สตาฟยืนอยู่ข้างรถ ไม่ใช่หน้าโต๊ะ
+  Future<_ParkingReport?> _askForParkingPhoto(String label) {
+    final noteController = TextEditingController();
+
+    return showModalBottomSheet<_ParkingReport>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          16,
+          20,
+          20 + MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'รถถึง$labelแล้ว',
+              style: appFont(
+                fontSize: AppText.sizeSubtitle,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'รูปตรงที่จอดช่วยลูกค้าได้มากที่สุด — ลานจอดที่มีรถสิบคัน '
+              'พิกัดบอกไม่ได้ว่าเป็นคันไหน',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                height: 1.45,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: noteController,
+              maxLength: 60,
+              textInputAction: TextInputAction.done,
+              style: appFont(fontSize: AppText.sizeLabel),
+              decoration: InputDecoration(
+                hintText: 'เช่น จอดตรงข้าม 7-11 ป้ายสีเขียว',
+                counterText: '',
+                hintStyle: appFont(
+                  fontSize: AppText.sizeLabel,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () async {
+                  final photo = await _pickParkingPhoto(ImageSource.camera);
+                  if (!sheetContext.mounted) return;
+                  if (photo == null) return;
+                  Navigator.pop(
+                    sheetContext,
+                    _ParkingReport(photo, noteController.text.trim()),
+                  );
+                },
+                icon: const Icon(Icons.photo_camera_rounded, size: 18),
+                label: Text(
+                  'ถ่ายรูปจุดจอด แล้วแจ้งลูกค้า',
+                  style: appFont(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final photo = await _pickParkingPhoto(ImageSource.gallery);
+                  if (!sheetContext.mounted) return;
+                  if (photo == null) return;
+                  Navigator.pop(
+                    sheetContext,
+                    _ParkingReport(photo, noteController.text.trim()),
+                  );
+                },
+                icon: const Icon(Icons.photo_library_rounded, size: 18),
+                label: Text(
+                  'เลือกรูปจากคลัง',
+                  style: appFont(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(
+                sheetContext,
+                _ParkingReport(null, noteController.text.trim()),
+              ),
+              child: Text(
+                'แจ้งโดยไม่ใส่รูป',
+                style: appFont(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(noteController.dispose);
+  }
+
+  Future<String?> _pickParkingPhoto(ImageSource source) async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        // รูปจุดจอดดูบนมือถือ ไม่ต้องคมระดับพิมพ์ — เน็ตข้างถนนช้ากว่าที่คิดเสมอ
+        maxWidth: 1600,
+        imageQuality: 78,
+      );
+      return picked?.path;
+    } catch (e) {
+      if (mounted) {
+        AppSnack.error(context, 'เปิดกล้องไม่สำเร็จ');
+      }
+      return null;
     }
   }
 
@@ -379,6 +582,13 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
         if (vehicle.isNotEmpty) ...[
           _VehicleCard(vehicle: vehicle),
           const SizedBox(height: 12),
+          // มือถือของสตาฟคือ GPS ของรถ — คนขับไม่ได้ใช้แอป ถ้าไม่มีใครเปิด
+          // ลูกค้าจะไม่เห็นหมุดรถและการ์ดวันเดินทางจะค้างอยู่ที่ "เตรียมตัว"
+          _ShareVehicleLocationCard(
+            scheduleId: widget.scheduleId,
+            plate: textOf(vehicle['license_plate']),
+          ),
+          const SizedBox(height: 12),
         ],
         // กลุ่ม "จอยทริป" ไม่ใช่จุดรับ จึงไม่นับรวมในตัวเลขจุดรับ
         _ManifestSummary(
@@ -426,6 +636,13 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
               queued: _queued,
               onCheckIn: _checkInFromManifest,
               busy: _completingPoints.contains(group['id']),
+              arrivalBusy: _arrivingPoints.contains(group['id']),
+              onMarkArrived: (group['id'] is int)
+                  ? () => _markPickupArrived(group)
+                  : null,
+              onClearArrival: (group['id'] is int)
+                  ? () => _clearPickupArrival(group)
+                  : null,
               onToggleComplete: (group['id'] is int)
                   ? (complete) => _togglePickupComplete(group, complete)
                   : null,
@@ -433,6 +650,111 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
             const SizedBox(height: 12),
           ],
       ],
+    );
+  }
+}
+
+/// สวิตช์ "แชร์ตำแหน่งรถ" — สตาฟกดเปิดเอง ไม่มีอะไรเปิดให้อัตโนมัติ
+///
+/// ตำแหน่งที่ส่งออกไปคือตำแหน่งของสตาฟเอง ตลอดเวลาที่เปิด การเปิดให้เองจึงไม่ใช่
+/// ทางเลือก ต่อให้สะดวกกว่าก็ตาม — แถบแจ้งเตือนค้างของระบบทำให้เจ้าตัวเห็นเสมอ
+/// ว่ากำลังส่งอยู่ และปิดได้ทุกเมื่อจากตรงนี้
+class _ShareVehicleLocationCard extends StatefulWidget {
+  final int scheduleId;
+  final String plate;
+
+  const _ShareVehicleLocationCard({
+    required this.scheduleId,
+    required this.plate,
+  });
+
+  @override
+  State<_ShareVehicleLocationCard> createState() =>
+      _ShareVehicleLocationCardState();
+}
+
+class _ShareVehicleLocationCardState extends State<_ShareVehicleLocationCard> {
+  VehicleLocationSharing get _sharing => VehicleLocationSharing.instance;
+
+  Future<void> _toggle(bool on) async {
+    if (!on) {
+      await _sharing.stop();
+      return;
+    }
+
+    final ok = await _sharing.start(
+      api: context.read<AppProvider>().api,
+      scheduleId: widget.scheduleId,
+      plate: widget.plate,
+    );
+
+    if (!mounted || ok) return;
+    AppSnack.error(context, _sharing.error ?? 'เปิดแชร์ตำแหน่งรถไม่สำเร็จ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _sharing,
+      builder: (context, _) {
+        final on = _sharing.isSharingFor(widget.scheduleId);
+        // แชร์ค้างอยู่ของรอบอื่น — บอกตรง ๆ ดีกว่าให้สวิตช์ปิดอยู่เฉย ๆ
+        final elsewhere = _sharing.isSharing && !on;
+        final sentAt = _sharing.lastSentAt;
+
+        return Container(
+          decoration: AppTheme.cardDecoration(context, radius: 18),
+          padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+          child: Row(
+            children: [
+              Icon(
+                on ? Icons.my_location_rounded : Icons.location_disabled_rounded,
+                size: 20,
+                color: on
+                    ? AppTheme.primaryColor
+                    : AppTheme.mutedText(context),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'แชร์ตำแหน่งรถให้ลูกค้า',
+                      style: appFont(
+                        fontSize: AppText.sizeLabel,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      elsewhere
+                          ? 'กำลังแชร์ให้รอบอื่นอยู่ — เปิดตรงนี้จะย้ายมารอบนี้'
+                          : on
+                          ? (sentAt != null
+                                ? 'ลูกค้าเห็นรถอยู่ · ส่งล่าสุด '
+                                      '${sentAt.hour.toString().padLeft(2, '0')}:'
+                                      '${sentAt.minute.toString().padLeft(2, '0')} น.'
+                                : 'กำลังส่งตำแหน่งแรก...')
+                          : 'เปิดตอนขึ้นรถ ลูกค้าจะเห็นว่ารถถึงไหนแล้ว',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        height: 1.35,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: on,
+                onChanged: _sharing.busy ? null : _toggle,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -807,9 +1129,25 @@ class _SummaryStat extends StatelessWidget {
 
 /// One pickup point with every passenger picked up there — full name, nickname,
 /// callable phone and per-passenger check-in status.
+/// สิ่งที่สตาฟกรอกในชีต "รถถึงแล้ว" — รูปอาจไม่มี โน้ตอาจว่าง แต่การกดต้องไม่สะดุด
+class _ParkingReport {
+  final String? photoPath;
+  final String? note;
+
+  _ParkingReport(this.photoPath, String note)
+    : note = note.trim().isEmpty ? null : note.trim();
+}
+
 class _PickupGroupCard extends StatelessWidget {
   final Map<String, dynamic> group;
   final bool busy;
+
+  /// กำลังส่ง "รถถึงแล้ว" ของจุดนี้อยู่
+  final bool arrivalBusy;
+
+  /// null เมื่อกลุ่มนี้ไม่ใช่จุดรับจริง (จอยทริป / หมุดที่ลูกค้าปักเอง)
+  final VoidCallback? onMarkArrived;
+  final VoidCallback? onClearArrival;
 
   /// Called with the desired completed state. Null when the pickup point has no
   /// id (e.g. the "ไม่ระบุจุดรับ" group), in which case no action is shown.
@@ -828,7 +1166,10 @@ class _PickupGroupCard extends StatelessWidget {
     required this.onCheckIn,
     this.queued = const {},
     this.busy = false,
+    this.arrivalBusy = false,
     this.onToggleComplete,
+    this.onMarkArrived,
+    this.onClearArrival,
   });
 
   @override
@@ -853,6 +1194,7 @@ class _PickupGroupCard extends StatelessWidget {
     final passengers = asList(group['passengers']).map(asMap).toList();
     final allIn = total > 0 && checkedIn >= total;
     final isCompleted = textOf(group['completed_at']).isNotEmpty;
+    final arrivedAt = textOf(group['arrived_at']);
 
     return Container(
       decoration: AppTheme.cardDecoration(context, radius: 18),
@@ -1093,6 +1435,16 @@ class _PickupGroupCard extends StatelessWidget {
               ],
             ),
           ),
+          // "รถถึงแล้ว" มาก่อน "รับครบแล้ว" ตามลำดับที่มันเกิดจริงหน้างาน
+          if (onMarkArrived != null && !isJoinGroup && !isCustom)
+            _PickupArrivalFooter(
+              arrivedAt: arrivedAt,
+              note: textOf(group['arrival_note']),
+              photoUrl: textOf(group['arrival_photo_url']),
+              busy: arrivalBusy,
+              onMark: onMarkArrived!,
+              onClear: onClearArrival,
+            ),
           if (onToggleComplete != null)
             _PickupCompleteFooter(
               completed: isCompleted,
@@ -1101,6 +1453,167 @@ class _PickupGroupCard extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// "รถถึงจุดนี้แล้ว" พร้อมรูปตรงที่จอด — ปุ่มที่สตาฟกดตอนยืนอยู่ข้างรถ
+///
+/// ขึ้นก่อน "รับครบแล้ว" เพราะมันเกิดก่อนเสมอ และเป็นปุ่มที่ลูกค้ารอผลอยู่จริง
+class _PickupArrivalFooter extends StatelessWidget {
+  final String arrivedAt;
+  final String note;
+  final String photoUrl;
+  final bool busy;
+  final VoidCallback onMark;
+  final VoidCallback? onClear;
+
+  const _PickupArrivalFooter({
+    required this.arrivedAt,
+    required this.note,
+    required this.photoUrl,
+    required this.busy,
+    required this.onMark,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final arrived = arrivedAt.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      decoration: BoxDecoration(
+        color: arrived
+            ? AppTheme.primaryColor.withValues(alpha: 0.05)
+            : Colors.transparent,
+        border: Border(
+          top: BorderSide(
+            color: AppTheme.border(context).withValues(alpha: 0.45),
+          ),
+        ),
+      ),
+      child: arrived ? _arrivedView(context) : _actionButton(context),
+    );
+  }
+
+  Widget _actionButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: busy ? null : onMark,
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+        ),
+        icon: busy
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.directions_bus_filled_rounded, size: 18),
+        label: Text(
+          busy ? 'กำลังแจ้ง...' : 'รถถึงจุดนี้แล้ว • แจ้งลูกค้า',
+          style: appFont(
+            fontSize: AppText.sizeLabel,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _arrivedView(BuildContext context) {
+    final at = DateTime.tryParse(arrivedAt)?.toLocal();
+    final time = at == null
+        ? ''
+        : ' ${at.hour.toString().padLeft(2, '0')}:'
+              '${at.minute.toString().padLeft(2, '0')} น.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.notifications_active_rounded,
+              size: 17,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'แจ้งลูกค้าว่ารถถึงแล้ว$time',
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: busy ? null : onMark,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 30),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                photoUrl.isEmpty ? 'เพิ่มรูป' : 'ถ่ายใหม่',
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (onClear != null)
+              TextButton(
+                onPressed: busy ? null : onClear,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: AppTheme.mutedText(context),
+                ),
+                child: Text(
+                  'ยกเลิก',
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        if (note.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2, left: 23),
+            child: Text(
+              note,
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+        if (photoUrl.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, left: 23),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              child: CachedNetworkImage(
+                imageUrl: photoUrl,
+                width: 96,
+                height: 72,
+                fit: BoxFit.cover,
+                memCacheWidth: 300,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

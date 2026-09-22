@@ -10,6 +10,7 @@ import '../models/tracking_model.dart';
 import '../providers/app_provider.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
+import 'find_my_van_card.dart';
 
 /// "ตอนนี้ต้องทำอะไร" — one line answering the only question a customer
 /// standing at the roadside actually has.
@@ -208,6 +209,24 @@ class _RightNowCardState extends State<RightNowCard> {
         ? 'จุดรับของคุณ'
         : _booking!.departurePoint.trim();
 
+    // สตาฟกดยืนยันว่ารถจอดถึงที่แล้ว — คำยืนยันของคนที่นั่งมากับรถชนะทุกอย่างที่
+    // คำนวณจาก GPS รวมถึงกรณีที่ไม่มีสัญญาณรถเลย ซึ่งเดิมขึ้นว่า "ยังไม่มีสัญญาณ"
+    // ทั้งที่รถจอดอยู่ตรงหน้าลูกค้าพอดี
+    if (booking != null && booking.vanIsHere) {
+      return _withVanCard(
+        booking,
+        _shell(
+          tone: AppTheme.primaryColor,
+          headline: 'รถถึงจุดรับแล้ว',
+          detail: (booking.pickupArrivalNote ?? '').trim().isEmpty
+              ? 'ขึ้นรถได้เลยที่ $pickupName'
+              : booking.pickupArrivalNote!.trim(),
+          actionLabel: _driverPhone.isEmpty ? 'เปิดแผนที่จุดรับ' : 'โทรหาคนขับ',
+          onAction: _driverPhone.isEmpty ? _openPickupInMaps : _callDriver,
+        ),
+      );
+    }
+
     // No fix on the van yet — say what is known instead of pretending.
     if (eta == null) {
       if (_booking == null) return const SizedBox.shrink();
@@ -253,12 +272,29 @@ class _RightNowCardState extends State<RightNowCard> {
         (eta.phase == TrackingPhase.imminent ||
             eta.phase == TrackingPhase.arrived);
 
-    return _shell(
+    final card = _shell(
       tone: tone,
       headline: headline,
       detail: detail,
       actionLabel: callable ? 'โทรหาคนขับ' : 'เปิดแผนที่จุดรับ',
       onAction: callable ? _callDriver : _openPickupInMaps,
+    );
+
+    // พอรถใกล้ถึง คำถามเปลี่ยนจาก "อีกนานไหม" เป็น "คันไหน" — ต่อการ์ดหารถไว้ใต้
+    // คำตอบเดิม ไม่ใช่แทนที่มัน
+    return eta.phase == TrackingPhase.imminent && booking != null
+        ? _withVanCard(booking, card, imminent: true)
+        : card;
+  }
+
+  /// วางการ์ด "คันไหนคือคันของเรา" ต่อท้ายคำตอบหลัก
+  Widget _withVanCard(BookingInfo booking, Widget card, {bool imminent = false}) {
+    return Column(
+      children: [
+        card,
+        const SizedBox(height: 12),
+        FindMyVanCard(booking: booking, imminent: imminent),
+      ],
     );
   }
 

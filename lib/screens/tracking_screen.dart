@@ -14,6 +14,7 @@ import '../models/schedule_route.dart';
 import '../models/tracking_model.dart';
 import '../providers/tracking_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/find_my_van_card.dart';
 import '../widgets/google_vehicle_map.dart';
 import '../widgets/route_map_card.dart';
 
@@ -768,6 +769,17 @@ class TrackingBottomSheet extends StatelessWidget {
                     ),
                   ],
                 ),
+                // "คันไหนคือคันของเรา" — ขึ้นเหนือรายละเอียดอื่นทั้งหมดเมื่อรถ
+                // จอดถึงที่แล้วหรือใกล้ถึง เพราะตอนนั้นคำถามเดียวที่เหลือคือคันไหน
+                if (booking != null) ...[
+                  FindMyVanCard(
+                    booking: booking!,
+                    imminent: phase == TrackingPhase.imminent ||
+                        phase == TrackingPhase.arrived,
+                  ),
+                  if (booking!.vanIsHere || phase == TrackingPhase.imminent)
+                    const SizedBox(height: 4),
+                ],
                 const SizedBox(height: 20),
                 Text(
                   booking?.tripTitle ?? tracking?.tripTitle ?? 'กำลังโหลดทริป',

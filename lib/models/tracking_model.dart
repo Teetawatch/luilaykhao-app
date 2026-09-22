@@ -76,6 +76,20 @@ class BookingInfo {
   final String? licensePlate;
   final String? shareUrl;
 
+  /// หน้าตาของรถ — ทะเบียนบอกว่าคันไหน สีกับรูปบอกว่า "คันนั้นแหละ" จากระยะสิบเมตร
+  final String? vehicleName;
+  final String? vehicleColor;
+  final String? vehiclePhotoUrl;
+  final String? driverPhotoUrl;
+
+  /// สตาฟกดว่ารถถึงจุดรับของเราแล้ว พร้อมรูปตรงที่จอดและโน้ตสั้น ๆ
+  final String? pickupArrivedAt;
+  final String? pickupArrivalNote;
+  final String? pickupArrivalPhotoUrl;
+
+  /// รถจอดรออยู่ที่จุดของเราแล้วจริง ๆ (สตาฟยืนยัน ไม่ใช่คำนวณจาก GPS)
+  bool get vanIsHere => (pickupArrivedAt ?? '').isNotEmpty;
+
   /// รอบที่บินไป ('flight') ไม่มีรถให้ติดตามและไม่มีจุดขึ้นรถ — หน้าจอที่พูดถึง
   /// "รถ" ต้องเปลี่ยนไปพูดถึงจุดนัดพบที่สนามบินแทน
   final String transportType;
@@ -104,6 +118,13 @@ class BookingInfo {
     this.driverPhone,
     this.licensePlate,
     this.shareUrl,
+    this.vehicleName,
+    this.vehicleColor,
+    this.vehiclePhotoUrl,
+    this.driverPhotoUrl,
+    this.pickupArrivedAt,
+    this.pickupArrivalNote,
+    this.pickupArrivalPhotoUrl,
     this.transportType = '',
     this.meetingPoint,
     this.meetingMapUrl,
@@ -145,6 +166,13 @@ class BookingInfo {
       driverPhone: json['driver_phone']?.toString(),
       licensePlate: json['license_plate']?.toString(),
       shareUrl: json['share_url']?.toString(),
+      vehicleName: json['vehicle_name']?.toString(),
+      vehicleColor: json['vehicle_color']?.toString(),
+      vehiclePhotoUrl: json['vehicle_photo']?.toString(),
+      driverPhotoUrl: json['driver_photo']?.toString(),
+      pickupArrivedAt: json['pickup_arrived_at']?.toString(),
+      pickupArrivalNote: json['pickup_arrival_note']?.toString(),
+      pickupArrivalPhotoUrl: json['pickup_arrival_photo_url']?.toString(),
       transportType: json['transport_type']?.toString() ?? '',
       meetingPoint: json['meeting_point']?.toString(),
       meetingMapUrl: json['meeting_map_url']?.toString(),
