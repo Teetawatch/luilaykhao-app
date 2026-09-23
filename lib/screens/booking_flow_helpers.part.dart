@@ -518,6 +518,21 @@ String? Function(String?) _requiredValidator(String message) {
   };
 }
 
+/// ชื่อผู้เดินทางต้องเป็นชื่อไทยตามบัตรประชาชน เพราะรายชื่อไปทำประกัน ซึ่งรับ
+/// เฉพาะชื่อไทย — ตรรกะและข้อความเดียวกับ App\Rules\ThaiName ฝั่ง backend
+String? _thaiNameValidator(String? value) {
+  final name = (value ?? '').replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (name.isEmpty) return 'กรุณากรอกชื่อ-นามสกุล';
+  if (!RegExp(r'^[\u0E00-\u0E7F .\-]+$').hasMatch(name) ||
+      !RegExp(r'[\u0E01-\u0E2E]').hasMatch(name)) {
+    return 'กรุณากรอกชื่อ-นามสกุลเป็นภาษาไทยตามบัตรประชาชน (ใช้ส่งทำประกันการเดินทาง)';
+  }
+  if (!name.contains(' ')) {
+    return 'กรุณากรอกทั้งชื่อและนามสกุล เว้นวรรคระหว่างชื่อกับนามสกุล';
+  }
+  return null;
+}
+
 String? Function(String?) _phoneValidator(String requiredMessage) {
   return _exactDigitsValidator(
     requiredMessage: requiredMessage,

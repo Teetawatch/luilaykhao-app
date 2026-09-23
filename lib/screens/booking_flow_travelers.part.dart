@@ -1686,10 +1686,10 @@ class _TravelerCard extends StatelessWidget {
               );
               final nameField = _PremiumTextField(
                 controller: controllers.name,
-                label: 'ชื่อ-นามสกุล',
+                label: 'ชื่อ-นามสกุล (ภาษาไทย)',
                 hint: 'สมชาย ลุยเลยเขา',
                 icon: Icons.person_rounded,
-                validator: _requiredValidator('กรุณากรอกชื่อ-นามสกุล'),
+                validator: _thaiNameValidator,
                 autofillHints: const [AutofillHints.name],
                 textInputAction: TextInputAction.next,
               );
