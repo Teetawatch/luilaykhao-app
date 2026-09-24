@@ -3387,6 +3387,7 @@ class AppProvider extends ChangeNotifier {
     int? ratingVehicle,
     int? ratingFood,
     int? ratingValue,
+    int? passengerId,
   }) async {
     await api.post(
       'reviews',
@@ -3400,6 +3401,8 @@ class AppProvider extends ChangeNotifier {
         'rating_vehicle': ?ratingVehicle,
         'rating_food': ?ratingFood,
         'rating_value': ?ratingValue,
+        // แอดมินรีวิวแทนลูกค้า — ผู้เดินทางที่รีวิวนี้จะขึ้นเป็นชื่อ
+        'passenger_id': ?passengerId,
       },
     );
     await loadPublicData();

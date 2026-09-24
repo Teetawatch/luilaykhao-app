@@ -74,6 +74,30 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
   static const _maxImages = 6;
   static const _maxVideos = 2;
 
+  /// ผู้เดินทางที่รีวิวในนามได้ — เซิร์ฟเวอร์ส่งมาเฉพาะใบที่แอดมินจองให้ลูกค้า
+  /// จากบัญชีตัวเอง (`review_as`) ใบของลูกค้าทั่วไปเป็นลิสต์ว่าง
+  List<({int id, String name})> _reviewAs = const [];
+  int? _passengerId;
+
+  @override
+  void initState() {
+    super.initState();
+    final app = context.read<AppProvider>();
+    for (final raw in app.bookings) {
+      if (raw is! Map || '${raw['id']}' != '${widget.bookingId}') continue;
+      final options = raw['review_as'];
+      if (options is! List) break;
+      _reviewAs = [
+        for (final o in options)
+          if (o is Map && int.tryParse('${o['passenger_id']}') != null)
+            (id: int.parse('${o['passenger_id']}'), name: '${o['name'] ?? ''}'),
+      ];
+      break;
+    }
+    // ค่าเริ่มต้นคือผู้เดินทางคนแรก ตรงกับที่เซิร์ฟเวอร์ใช้เมื่อไม่ได้เลือก
+    if (_reviewAs.isNotEmpty) _passengerId = _reviewAs.first.id;
+  }
+
   @override
   void dispose() {
     _commentController.dispose();
@@ -239,6 +263,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                 : null,
             ratingFood:
                 _categoryRatings['food']! > 0 ? _categoryRatings['food'] : null,
+            passengerId: _passengerId,
           );
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -249,6 +274,69 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
         _submitting = false;
       });
     }
+  }
+
+  /// แอดมินจองให้ลูกค้า — เลือกว่ารีวิวนี้ขึ้นเป็นชื่อผู้เดินทางคนไหน
+  Widget _buildReviewAs() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      decoration: BoxDecoration(
+        color: AppTheme.fieldSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'รีวิวในนามของ',
+            style: appFont(
+              fontSize: AppText.sizeLabel,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.onSurface(context),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'รีวิวจะแสดงเป็นชื่อลูกค้า ไม่ใช่ชื่อบัญชีที่จองให้',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final p in _reviewAs)
+                ChoiceChip(
+                  selected: _passengerId == p.id,
+                  onSelected: _submitting
+                      ? null
+                      : (_) => setState(() => _passengerId = p.id),
+                  showCheckmark: false,
+                  label: Text(p.name),
+                  selectedColor: AppTheme.primaryColor,
+                  backgroundColor: AppTheme.surface(context),
+                  side: BorderSide(
+                    color: _passengerId == p.id
+                        ? AppTheme.primaryColor
+                        : AppTheme.border(context),
+                  ),
+                  labelStyle: appFont(
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w700,
+                    color: _passengerId == p.id
+                        ? Colors.white
+                        : AppTheme.onSurface(context),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCategoryRow(String key) {
@@ -348,6 +436,10 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (_reviewAs.isNotEmpty) ...[
+                      _buildReviewAs(),
+                      const SizedBox(height: 14),
+                    ],
                     // ── Star rating (overall) ──────────────────────────
                     Text(
                 'ภาพรวม',
