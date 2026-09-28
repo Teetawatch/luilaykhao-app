@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/trip_medal.dart';
+import '../services/medal_look_storage.dart';
 import '../theme/app_theme.dart';
 import '../utils/share_card.dart';
 import 'app_snack.dart';
@@ -32,9 +35,13 @@ Future<void> showMedalShareSheet(BuildContext context, TripMedal medal) async {
 
   final medalUrl = medal.design.imageUrl;
   if (medalUrl != null && context.mounted) {
-    // ขนาด/สเกลต้องตรงกับที่ MedalStoryCard วาด ไม่งั้นแคชคนละตัว
+    // ขนาด/สเกลต้องตรงกับที่ MedalStoryCard ใช้ถอดรหัส ไม่งั้นแคชคนละตัว
     await warm(
-      medalImageProvider(medalUrl, kMedalStoryMedalSize, kShareCardPixelRatio),
+      medalImageProvider(
+        medalUrl,
+        kMedalStoryDecodeWidth,
+        kShareCardPixelRatio,
+      ),
     );
   }
 
@@ -59,6 +66,32 @@ Future<void> showMedalShareSheet(BuildContext context, TripMedal medal) async {
   );
 }
 
+/// ลายตารางหมากรุก 2×2 ช่อง (เทาอ่อน/ขาว) ขนาด 16px — พื้นหลังมาตรฐานของ
+/// "ภาพนี้โปร่งใส" ในโปรแกรมแต่งรูป
+final MemoryImage _checkerboard = MemoryImage(
+  Uint8List.fromList(const [
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, //
+    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, //
+    0x08, 0x00, 0x00, 0x00, 0x00, 0x57, 0xDD, 0x52, 0xF8, 0x00, 0x00, 0x00, //
+    0x0E, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0xF8, 0x7F, 0x83, 0xE1, //
+    0xC6, 0x7F, 0x00, 0x0B, 0x10, 0x03, 0xAF, 0x50, 0x3F, 0xB7, 0x5B, 0x00, //
+    0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82, //
+  ]),
+  scale: 1 / 8,
+);
+
+/// แท็บเครื่องมือใต้พรีวิว — แยกเป็นสามหมวดเพื่อให้ sheet ไม่สูงจนดันพรีวิว
+/// การ์ดให้เล็กจนมองไม่เห็นว่ากำลังปรับอะไร
+enum _Panel {
+  background('พื้นหลัง'),
+  layout('รูปแบบ'),
+  info('ข้อมูล');
+
+  const _Panel(this.label);
+
+  final String label;
+}
+
 class MedalShareSheet extends StatefulWidget {
   final TripMedal medal;
 
@@ -72,14 +105,104 @@ class MedalShareSheet extends StatefulWidget {
 }
 
 class _MedalShareSheetState extends State<MedalShareSheet> {
+  static const Size _cardFrame = Size(kStoryCardWidth, kStoryCardHeight);
+
   final GlobalKey _cardKey = GlobalKey();
-  MedalBackdrop _backdrop = MedalBackdrop.color;
+  MedalLook _look = MedalLook.defaults;
+  _Panel _panel = _Panel.background;
+
   ImageProvider? _ownPhoto;
   bool _usingOwnPhoto = false;
+  StoryPhotoFraming _framing = StoryPhotoFraming.none;
+  double? _tripPhotoAspect;
+
   bool _picking = false;
   bool _sharing = false;
 
+  // ค่าตั้งต้นของท่าทางหนึ่งครั้ง — คำนวณจากจุดเริ่มทุกเฟรม ไม่สะสมคลาดเคลื่อน
+  double _gestureScale = 1;
+  Offset _gestureOffset = Offset.zero;
+  Offset _gestureFocal = Offset.zero;
+
   ImageProvider? get _photo => _usingOwnPhoto ? _ownPhoto : widget.tripPhoto;
+
+  /// รูปแบบที่การ์ดวาดจริง — จำ "เส้นทาง" ไว้แต่เหรียญนี้ไม่มีเส้นทาง การ์ด
+  /// จะถอยไปเป็น "กลางการ์ด" ชิปที่ไฮไลต์ต้องตรงกับที่เห็น
+  MedalCardLayout get _effectiveLayout =>
+      _look.layout == MedalCardLayout.route && widget.medal.route == null
+      ? MedalCardLayout.centered
+      : _look.layout;
+
+  bool get _showsPhoto =>
+      _look.backdrop == MedalBackdrop.photo && _photo != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLook();
+
+    final trip = widget.tripPhoto;
+    if (trip != null) {
+      _resolveAspectRatio(trip).then((aspect) {
+        if (!mounted) return;
+        setState(() {
+          _tripPhotoAspect = aspect;
+          if (!_usingOwnPhoto) {
+            _framing = StoryPhotoFraming(aspectRatio: aspect);
+          }
+        });
+      });
+    }
+  }
+
+  Future<void> _loadLook() async {
+    final look = await MedalLookStorage.instance.read();
+    if (!mounted) return;
+
+    setState(() {
+      // จำไว้ว่าชอบพื้นรูป แต่รอบนี้ไม่มีรูปทริป (และรูปของตัวเองไม่ถูกจำ)
+      // — ถอยไปพื้นสีเหรียญ ไม่ให้การ์ดเปิดมาเป็นพื้นสีที่ไม่ได้เลือก
+      _look = look.backdrop == MedalBackdrop.photo && widget.tripPhoto == null
+          ? _copy(look, backdrop: MedalBackdrop.color)
+          : look;
+    });
+  }
+
+  MedalLook _copy(
+    MedalLook look, {
+    MedalBackdrop? backdrop,
+    MedalCardLayout? layout,
+    double? photoOpacity,
+    double? tone,
+    double? medalScale,
+    MedalCardParts? parts,
+  }) {
+    return MedalLook(
+      backdrop: backdrop ?? look.backdrop,
+      layout: layout ?? look.layout,
+      photoOpacity: photoOpacity ?? look.photoOpacity,
+      tone: tone ?? look.tone,
+      medalScale: medalScale ?? look.medalScale,
+      parts: parts ?? look.parts,
+    );
+  }
+
+  void _update(MedalLook look, {bool remember = true}) {
+    setState(() => _look = look);
+    if (remember) MedalLookStorage.instance.write(look);
+  }
+
+  void _resetLook() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _framing = StoryPhotoFraming(
+        aspectRatio: _usingOwnPhoto ? _framing.aspectRatio : _tripPhotoAspect,
+      );
+    });
+    _update(MedalLook.defaults);
+  }
+
+  // ── รูป ─────────────────────────────────────────────────────────────────
 
   /// รูปของเจ้าของการ์ด — ไม่เคยถูกอัปโหลดไปไหน ถูกวาดลงการ์ดในเครื่องแล้วกลาย
   /// เป็น PNG ที่เจ้าตัวเลือกเองว่าจะส่งต่อให้ใคร ย่อตั้งแต่ตอนเลือกเพราะการ์ด
@@ -99,14 +222,16 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
       if (picked == null || !mounted) return;
 
       final image = FileImage(File(picked.path));
-      await precacheImage(image, context);
+      final aspect = await _resolveAspectRatio(image);
       if (!mounted) return;
 
       setState(() {
         _ownPhoto = image;
         _usingOwnPhoto = true;
-        _backdrop = MedalBackdrop.photo;
+        // รูปใหม่เริ่มเฟรมใหม่เสมอ ค่าที่จัดไว้กับรูปเก่าไม่มีความหมายกับรูปนี้
+        _framing = StoryPhotoFraming(aspectRatio: aspect);
       });
+      _update(_copy(_look, backdrop: MedalBackdrop.photo));
     } catch (_) {
       if (mounted) AppSnack.error(context, 'เปิดรูปไม่สำเร็จ ลองใหม่อีกครั้ง');
     } finally {
@@ -114,18 +239,81 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
     }
   }
 
+  void _useTripPhoto() {
+    setState(() {
+      _usingOwnPhoto = false;
+      _framing = StoryPhotoFraming(aspectRatio: _tripPhotoAspect);
+    });
+    _update(_copy(_look, backdrop: MedalBackdrop.photo));
+  }
+
+  /// อ่านสัดส่วนรูปจริงและอุ่นแคชไปในตัว — ต้องรู้สัดส่วนก่อนถึงจะบอกได้ว่า
+  /// ลากรูปไปได้ไกลแค่ไหนโดยขอบไม่โผล่
+  Future<double?> _resolveAspectRatio(ImageProvider provider) {
+    final completer = Completer<double?>();
+    final stream = provider.resolve(ImageConfiguration.empty);
+    late final ImageStreamListener listener;
+
+    listener = ImageStreamListener(
+      (ImageInfo info, bool _) {
+        final ui.Image image = info.image;
+        if (!completer.isCompleted) {
+          completer.complete(
+            image.height == 0 ? null : image.width / image.height,
+          );
+        }
+        stream.removeListener(listener);
+      },
+      onError: (_, _) {
+        if (!completer.isCompleted) completer.complete(null);
+        stream.removeListener(listener);
+      },
+    );
+
+    stream.addListener(listener);
+
+    return completer.future;
+  }
+
+  void _onScaleStart(ScaleStartDetails details) {
+    _gestureScale = _framing.scale;
+    _gestureOffset = _framing.offset;
+    _gestureFocal = details.localFocalPoint;
+  }
+
+  /// [displayScale] คืออัตราที่พรีวิวถูกย่อให้พอดีจอ — นิ้วขยับบนจอ 10 พิกเซล
+  /// ไม่เท่ากับรูปขยับ 10 หน่วยบนการ์ด ต้องหารกลับก่อนเสมอ
+  void _onScaleUpdate(ScaleUpdateDetails details, double displayScale) {
+    if (!_showsPhoto || displayScale <= 0) return;
+
+    final candidate = _framing.copyWith(
+      scale: (_gestureScale * details.scale).clamp(1.0, 4.0),
+      offset:
+          _gestureOffset +
+          (details.localFocalPoint - _gestureFocal) / displayScale,
+    );
+
+    setState(() {
+      _framing = candidate.copyWith(offset: candidate.clampOffset(_cardFrame));
+    });
+  }
+
+  // ── แชร์ ────────────────────────────────────────────────────────────────
+
   Future<void> _share() async {
     if (_sharing) return;
     HapticFeedback.mediumImpact();
     setState(() => _sharing = true);
 
     try {
-      // เพิ่งสลับพื้นหลังก่อนกดแชร์ — รอให้เฟรมล่าสุดวาดจบก่อนจับภาพ
+      // เพิ่งปรับอะไรไปก่อนกดแชร์ — รอเฟรมล่าสุดวาดจบก่อนจับภาพ
       await WidgetsBinding.instance.endOfFrame;
 
       await shareWidgetAsPng(
         boundaryKey: _cardKey,
-        fileName: 'luilaykhao_medal.png',
+        fileName: _look.backdrop == MedalBackdrop.transparent
+            ? 'luilaykhao_medal_sticker.png'
+            : 'luilaykhao_medal.png',
         text: _shareText(),
       );
     } catch (_) {
@@ -136,7 +324,6 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
   }
 
   /// คำบรรยายของคนที่พิชิต ไม่ใช่คำขายของ — ลิงก์ท้ายเปิดหน้าเหรียญที่มีภาพ OG
-  /// พอโพสต์ลงฟีด/LINE แล้วพรีวิวจึงขึ้นเป็นเหรียญ ไม่ใช่กล่องเปล่า
   String _shareText() {
     final medal = widget.medal;
     final url = medal.shareUrl;
@@ -145,145 +332,515 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
         '${url.isEmpty ? '' : '\n$url'}\n#ลุยเลเขา';
   }
 
-  void _selectBackdrop(MedalBackdrop backdrop, {bool own = false}) {
-    HapticFeedback.selectionClick();
-    setState(() {
-      _backdrop = backdrop;
-      if (backdrop == MedalBackdrop.photo) _usingOwnPhoto = own;
-    });
-  }
+  // ── หน้าตา ──────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final hasTripPhoto = widget.tripPhoto != null;
-
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 44,
               height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
+              margin: const EdgeInsets.only(bottom: 14),
               decoration: BoxDecoration(
                 color: AppTheme.mutedText(context).withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               ),
             ),
-            Flexible(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // การ์ดวาดที่ 360×640 เสมอ (PNG 1080×1920 ทุกเครื่อง) ส่วนนี้
-                  // แค่ย่อตอนแสดงผลให้พอดีจอ — RepaintBoundary จับตามขนาดจริง
-                  final scale = math.min(
-                    constraints.maxWidth / kStoryCardWidth,
-                    constraints.maxHeight / kStoryCardHeight,
-                  );
-
-                  return Center(
-                    child: SizedBox(
-                      width: kStoryCardWidth * scale,
-                      height: kStoryCardHeight * scale,
-                      child: FittedBox(
-                        child: RepaintBoundary(
-                          key: _cardKey,
-                          child: MedalStoryCard(
-                            medal: widget.medal,
-                            backdrop: _backdrop,
-                            photo: _photo,
-                          ),
-                        ),
+            Flexible(child: _preview()),
+            const SizedBox(height: 12),
+            _PanelTabs(
+              selected: _panel,
+              onSelected: (panel) {
+                HapticFeedback.selectionClick();
+                setState(() => _panel = panel);
+              },
+            ),
+            const SizedBox(height: 10),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              alignment: Alignment.topCenter,
+              child: switch (_panel) {
+                _Panel.background => _backgroundPanel(),
+                _Panel.layout => _layoutPanel(),
+                _Panel.info => _infoPanel(),
+              },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: _resetLook,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.mutedText(context),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  child: Text(
+                    'ค่าเริ่มต้น',
+                    style: appFont(
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _sharing ? null : _share,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _BackdropChip(
-                    label: MedalBackdrop.color.label,
-                    active: _backdrop == MedalBackdrop.color,
-                    onTap: () => _selectBackdrop(MedalBackdrop.color),
-                  ),
-                  _BackdropChip(
-                    label: MedalBackdrop.paper.label,
-                    active: _backdrop == MedalBackdrop.paper,
-                    onTap: () => _selectBackdrop(MedalBackdrop.paper),
-                  ),
-                  if (hasTripPhoto)
-                    _BackdropChip(
-                      label: 'รูปทริป',
-                      active:
-                          _backdrop == MedalBackdrop.photo && !_usingOwnPhoto,
-                      onTap: () => _selectBackdrop(MedalBackdrop.photo),
+                    icon: _sharing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.ios_share_rounded, size: 18),
+                    label: Text(
+                      _sharing ? 'กำลังเตรียม...' : 'แชร์เหรียญ',
+                      style: appFont(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
-                  _BackdropChip(
-                    label: _ownPhoto == null ? 'ใช้รูปของคุณ' : 'รูปของคุณ',
-                    icon: Icons.photo_library_rounded,
-                    busy: _picking,
-                    active: _backdrop == MedalBackdrop.photo && _usingOwnPhoto,
-                    onTap: _ownPhoto == null
-                        ? _pickPhoto
-                        : () => _selectBackdrop(MedalBackdrop.photo, own: true),
-                    onLongPress: _pickPhoto,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            if (_ownPhoto != null) ...[
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
-                  onTap: _pickPhoto,
-                  child: Text(
-                    'เปลี่ยนรูป',
-                    style: appFont(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.primaryColor,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _preview() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // การ์ดวาดที่ 360×640 เสมอ (PNG 1080×1920 ทุกเครื่อง) ส่วนนี้แค่ย่อตอน
+        // แสดงผล — RepaintBoundary จับตามขนาดจริง ไม่ใช่ขนาดที่ย่อ
+        final scale = math.min(
+          constraints.maxWidth / kStoryCardWidth,
+          constraints.maxHeight / kStoryCardHeight,
+        );
+
+        return Center(
+          child: SizedBox(
+            width: kStoryCardWidth * scale,
+            height: kStoryCardHeight * scale,
+            child: GestureDetector(
+              onScaleStart: _showsPhoto ? _onScaleStart : null,
+              onScaleUpdate: _showsPhoto
+                  ? (details) => _onScaleUpdate(details, scale)
+                  : null,
+              child: FittedBox(
+                // ลายตารางหมากรุกอยู่ *นอก* RepaintBoundary — ให้เห็นว่าพื้นโปร่ง
+                // แต่ไม่ติดไปกับ PNG ที่แชร์ออกไป
+                child: DecoratedBox(
+                  decoration: _look.backdrop == MedalBackdrop.transparent
+                      ? BoxDecoration(
+                          image: DecorationImage(
+                            image: _checkerboard,
+                            repeat: ImageRepeat.repeat,
+                            // ไม่ให้ภาพ 2×2 ถูกเบลอเป็นสีเทาเรียบตอนขยาย
+                            filterQuality: FilterQuality.none,
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusXl,
+                          ),
+                        )
+                      : const BoxDecoration(),
+                  child: RepaintBoundary(
+                    key: _cardKey,
+                    child: MedalStoryCard(
+                      medal: widget.medal,
+                      backdrop: _look.backdrop,
+                      layout: _look.layout,
+                      photo: _photo,
+                      framing: _framing,
+                      photoOpacity: _look.photoOpacity,
+                      tone: _look.tone,
+                      medalScale: _look.medalScale,
+                      parts: _look.parts,
                     ),
                   ),
                 ),
               ),
-            ],
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _sharing ? null : _share,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                  ),
-                ),
-                icon: _sharing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.ios_share_rounded, size: 18),
-                label: Text(
-                  _sharing ? 'กำลังเตรียม...' : 'แชร์เหรียญ',
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _backgroundPanel() {
+    final backdrop = _look.backdrop;
+    final hasTripPhoto = widget.tripPhoto != null;
+
+    void pick(MedalBackdrop value) {
+      HapticFeedback.selectionClick();
+      _update(_copy(_look, backdrop: value));
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ChipRow(
+          children: [
+            _Pill(
+              label: MedalBackdrop.color.label,
+              swatch: medalBackdropColor(widget.medal.design.color, _look.tone),
+              active: backdrop == MedalBackdrop.color,
+              onTap: () => pick(MedalBackdrop.color),
+            ),
+            _Pill(
+              label: MedalBackdrop.dark.label,
+              swatch: const Color(0xFF0E1412),
+              active: backdrop == MedalBackdrop.dark,
+              onTap: () => pick(MedalBackdrop.dark),
+            ),
+            _Pill(
+              label: MedalBackdrop.paper.label,
+              swatch: const Color(0xFFFDFBF5),
+              active: backdrop == MedalBackdrop.paper,
+              onTap: () => pick(MedalBackdrop.paper),
+            ),
+            if (hasTripPhoto)
+              _Pill(
+                label: 'รูปทริป',
+                icon: Icons.landscape_rounded,
+                active: backdrop == MedalBackdrop.photo && !_usingOwnPhoto,
+                onTap: _useTripPhoto,
+              ),
+            _Pill(
+              label: MedalBackdrop.transparent.label,
+              icon: Icons.layers_clear_rounded,
+              active: backdrop == MedalBackdrop.transparent,
+              onTap: () => pick(MedalBackdrop.transparent),
+            ),
+            _Pill(
+              label: _ownPhoto == null ? 'ใช้รูปของคุณ' : 'รูปของคุณ',
+              icon: Icons.photo_library_rounded,
+              busy: _picking,
+              active: backdrop == MedalBackdrop.photo && _usingOwnPhoto,
+              onTap: () {
+                if (_ownPhoto == null) {
+                  _pickPhoto();
+                  return;
+                }
+                HapticFeedback.selectionClick();
+                setState(() => _usingOwnPhoto = true);
+                _update(_copy(_look, backdrop: MedalBackdrop.photo));
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        if (_showsPhoto) ...[
+          _SliderRow(
+            label: 'ความชัดของรูป',
+            value: _look.photoOpacity,
+            onChanged: (v) =>
+                _update(_copy(_look, photoOpacity: v), remember: false),
+            onSettled: () => _update(_look),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'ลากที่การ์ดเพื่อเลื่อนรูป · จีบนิ้วเพื่อซูม',
                   style: appFont(
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.mutedText(context),
                   ),
                 ),
+              ),
+              if (_usingOwnPhoto)
+                _TextAction(label: 'เปลี่ยนรูป', onTap: _pickPhoto),
+              if (!_framing.isDefault)
+                _TextAction(
+                  label: 'จัดรูปใหม่',
+                  onTap: () => setState(
+                    () => _framing = StoryPhotoFraming(
+                      aspectRatio: _framing.aspectRatio,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ] else if (backdrop == MedalBackdrop.transparent)
+          const _Hint(
+            'บันทึกรูปลงเครื่อง แล้วใน IG Story กดสติกเกอร์ → รูปภาพ '
+            'เพื่อวางเหรียญทับรูปของคุณ',
+          )
+        else if (backdrop == MedalBackdrop.color)
+          _SliderRow(
+            label: 'ความเข้มของสี',
+            value: _look.tone,
+            onChanged: (v) => _update(_copy(_look, tone: v), remember: false),
+            onSettled: () => _update(_look),
+          )
+        else
+          _Hint(
+            backdrop == MedalBackdrop.photo
+                ? 'ทริปนี้ยังไม่มีรูป — เลือก "ใช้รูปของคุณ" เพื่อใส่รูปพื้นหลัง'
+                : 'เลือกพื้นสีเหรียญหรือรูปถ่าย เพื่อปรับความเข้ม/ความชัด',
+          ),
+      ],
+    );
+  }
+
+  Widget _layoutPanel() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ChipRow(
+          children: [
+            for (final layout in MedalCardLayout.values)
+              if (layout != MedalCardLayout.route || widget.medal.route != null)
+                _Pill(
+                  label: layout.label,
+                  icon: layout == MedalCardLayout.route
+                      ? Icons.route_rounded
+                      : null,
+                  active: _effectiveLayout == layout,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    _update(_copy(_look, layout: layout));
+                  },
+                ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        _SliderRow(
+          label: 'ขนาดเหรียญ',
+          value:
+              (_look.medalScale - kMedalScaleMin) /
+              (kMedalScaleMax - kMedalScaleMin),
+          onChanged: (v) => _update(
+            _copy(
+              _look,
+              medalScale:
+                  kMedalScaleMin + v * (kMedalScaleMax - kMedalScaleMin),
+            ),
+            remember: false,
+          ),
+          onSettled: () => _update(_look),
+        ),
+      ],
+    );
+  }
+
+  Widget _infoPanel() {
+    final parts = _look.parts;
+
+    void toggle(MedalCardParts next) {
+      HapticFeedback.selectionClick();
+      _update(_copy(_look, parts: next));
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _Toggle(
+              label: 'ชื่อผู้พิชิต',
+              on: parts.holder,
+              onTap: () => toggle(parts.copyWith(holder: !parts.holder)),
+            ),
+            _Toggle(
+              label: 'สถานที่ · วันที่',
+              on: parts.meta,
+              onTap: () => toggle(parts.copyWith(meta: !parts.meta)),
+            ),
+            _Toggle(
+              label: widget.medal.personal != null
+                  ? 'ตัวเลขจาก GPS'
+                  : 'ระยะทาง/ความสูง',
+              on: parts.stats,
+              onTap: () => toggle(parts.copyWith(stats: !parts.stats)),
+            ),
+            if (widget.medal.attempt > 1)
+              _Toggle(
+                label: 'ครั้งที่ ${widget.medal.attempt}',
+                on: parts.attempt,
+                onTap: () => toggle(parts.copyWith(attempt: !parts.attempt)),
+              ),
+            if (widget.medal.records.isNotEmpty)
+              _Toggle(
+                label: 'สถิติส่วนตัว',
+                on: parts.records,
+                onTap: () => toggle(parts.copyWith(records: !parts.records)),
+              ),
+            _Toggle(
+              label: 'โลโก้',
+              on: parts.logo,
+              onTap: () => toggle(parts.copyWith(logo: !parts.logo)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const _Hint('เหรียญ ชื่อทริป และเลข Finisher อยู่บนการ์ดเสมอ'),
+      ],
+    );
+  }
+}
+
+// ── ชิ้นส่วนของ sheet ───────────────────────────────────────────────────────
+
+class _PanelTabs extends StatelessWidget {
+  final _Panel selected;
+  final ValueChanged<_Panel> onSelected;
+
+  const _PanelTabs({required this.selected, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        border: Border.all(color: AppTheme.border(context)),
+      ),
+      child: Row(
+        children: [
+          for (final panel in _Panel.values)
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onSelected(panel),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: panel == selected
+                        ? AppTheme.primaryColor
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  ),
+                  child: Text(
+                    panel.label,
+                    style: appFont(
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w800,
+                      color: panel == selected
+                          ? Colors.white
+                          : AppTheme.onSurface(context),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChipRow extends StatelessWidget {
+  final List<Widget> children;
+
+  const _ChipRow({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: children.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => children[i],
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final IconData? icon;
+  final Color? swatch;
+  final bool busy;
+
+  const _Pill({
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.icon,
+    this.swatch,
+    this.busy = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = active ? Colors.white : AppTheme.onSurface(context);
+
+    return GestureDetector(
+      onTap: busy ? null : onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: active
+              ? AppTheme.primaryColor
+              : AppTheme.subtleSurface(context),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          border: Border.all(
+            color: active ? AppTheme.primaryColor : AppTheme.border(context),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (busy)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else if (swatch != null)
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: swatch,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.border(context)),
+                ),
+              )
+            else if (icon != null)
+              Icon(icon, size: 16, color: fg),
+            if (busy || swatch != null || icon != null)
+              const SizedBox(width: 6),
+            Text(
+              label,
+              style: appFont(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: fg,
               ),
             ),
           ],
@@ -293,67 +850,167 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
   }
 }
 
-class _BackdropChip extends StatelessWidget {
+class _Toggle extends StatelessWidget {
   final String label;
-  final bool active;
+  final bool on;
   final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-  final IconData? icon;
-  final bool busy;
 
-  const _BackdropChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-    this.onLongPress,
-    this.icon,
-    this.busy = false,
-  });
+  const _Toggle({required this.label, required this.on, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final fg = active ? Colors.white : AppTheme.onSurface(context);
+    final fg = on ? AppTheme.primaryColor : AppTheme.mutedText(context);
 
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
+    return Semantics(
+      toggled: on,
+      button: true,
       child: GestureDetector(
-        onTap: busy ? null : onTap,
-        onLongPress: busy ? null : onLongPress,
+        onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: active
-                ? AppTheme.primaryColor
+            color: on
+                ? AppTheme.tintOf(context, AppTheme.primaryColor)
                 : AppTheme.subtleSurface(context),
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             border: Border.all(
-              color: active ? AppTheme.primaryColor : AppTheme.border(context),
+              color: on ? AppTheme.primaryColor : AppTheme.border(context),
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (busy)
-                const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else if (icon != null)
-                Icon(icon, size: 16, color: fg),
-              if (busy || icon != null) const SizedBox(width: 6),
+              Icon(
+                on ? Icons.check_circle_rounded : Icons.circle_outlined,
+                size: 16,
+                color: fg,
+              ),
+              const SizedBox(width: 6),
               Text(
                 label,
                 style: appFont(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: fg,
+                  color: on
+                      ? AppTheme.onSurface(context)
+                      : AppTheme.mutedText(context),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// แถบเลื่อน 0–1 — [onChanged] ทุกเฟรมที่ลาก [onSettled] ตอนปล่อยนิ้ว (ค่อยจำ)
+class _SliderRow extends StatelessWidget {
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+  final VoidCallback onSettled;
+
+  const _SliderRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.onSettled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 104,
+          child: Text(
+            label,
+            style: appFont(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+        ),
+        Expanded(
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 4,
+              activeTrackColor: AppTheme.primaryColor,
+              inactiveTrackColor: AppTheme.border(context),
+              thumbColor: AppTheme.primaryColor,
+              // แบนตามธีมของแอป — thumb มาตรฐานมีเงาติดมาด้วย
+              thumbShape: const RoundSliderThumbShape(
+                enabledThumbRadius: 9,
+                elevation: 0,
+                pressedElevation: 0,
+              ),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
+              overlayColor: AppTheme.primaryColor.withValues(alpha: 0.12),
+            ),
+            child: Slider(
+              value: value.clamp(0.0, 1.0),
+              onChanged: onChanged,
+              onChangeEnd: (_) {
+                HapticFeedback.selectionClick();
+                onSettled();
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TextAction extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _TextAction({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: Text(
+          label,
+          style: appFont(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.primaryColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Hint extends StatelessWidget {
+  final String text;
+
+  const _Hint(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: appFont(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.mutedText(context),
         ),
       ),
     );

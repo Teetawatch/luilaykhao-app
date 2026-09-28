@@ -73,12 +73,19 @@ class MedalArt extends StatelessWidget {
   /// ปี พ.ศ. ที่วิ่งรอบขอบเหรียญ — null = ไม่ใส่ปี (เช่น พรีวิวที่ยังไม่มีวันจบทริป)
   final int? year;
 
+  /// ความกว้าง (logical) ที่ใช้ถอดรหัสภาพออกแบบเอง แทน [size]
+  ///
+  /// การ์ดแชร์ปรับขนาดเหรียญได้ แต่ภาพต้องถูก precache ไว้ก่อนจับภาพด้วย
+  /// provider ตัวเดียวกันเป๊ะ — ตรึงขนาดถอดรหัสไว้ค่าเดียว แคชจึงตรงเสมอ
+  final double? imageDecodeWidth;
+
   const MedalArt({
     super.key,
     required this.design,
     required this.size,
     this.imageScale,
     this.year,
+    this.imageDecodeWidth,
   });
 
   @override
@@ -92,7 +99,7 @@ class MedalArt extends StatelessWidget {
         width: size,
         height: size * kMedalAspect,
         child: Image(
-          image: medalImageProvider(url, size, scale),
+          image: medalImageProvider(url, imageDecodeWidth ?? size, scale),
           fit: BoxFit.contain,
           filterQuality: FilterQuality.medium,
           gaplessPlayback: true,
@@ -404,36 +411,42 @@ class _MedalFrame extends StatelessWidget {
 
     // ตัวหนังสือบนเหรียญอยู่ในวงกลมขนาดตายตัว — ปล่อยให้ขยายตามการตั้งค่า
     // ตัวอักษรของเครื่องจะล้นดวง จึงตรึงไว้ที่ 1 เท่าเฉพาะในเหรียญ
+    //
+    // FittedBox: ถ้าที่ว่างแคบกว่า [size] ทั้งดวงต้องย่อลงพร้อมกัน — ไม่งั้นส่วนที่
+    // วาด (คิดจากความกว้างจริง) กับชื่อ/ไอคอน (วางตาม [size]) จะเหลื่อมกัน
     return MediaQuery.withNoTextScaling(
-      child: SizedBox(
-        width: size,
-        height: size * kMedalAspect,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _MedalPainter(
-                  color: color,
-                  ringText: medalRingText(year),
-                  ornaments: ornaments,
-                ),
-              ),
-            ),
-            if (body != null)
-              Positioned(
-                left: 22 * u,
-                top: 42 * u,
-                width: 56 * u,
-                height: 52 * u,
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: SizedBox(width: 56 * u, child: body),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: SizedBox(
+          width: size,
+          height: size * kMedalAspect,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _MedalPainter(
+                    color: color,
+                    ringText: medalRingText(year),
+                    ornaments: ornaments,
                   ),
                 ),
               ),
-            ...overlays,
-          ],
+              if (body != null)
+                Positioned(
+                  left: 22 * u,
+                  top: 42 * u,
+                  width: 56 * u,
+                  height: 52 * u,
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SizedBox(width: 56 * u, child: body),
+                    ),
+                  ),
+                ),
+              ...overlays,
+            ],
+          ),
         ),
       ),
     );

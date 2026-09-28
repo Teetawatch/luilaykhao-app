@@ -48,6 +48,127 @@ Color parseMedalColor(Object? raw) {
   return const Color(0xFF15803D);
 }
 
+/// รูปร่างเส้นทางของเหรียญ — ย่อลงกรอบสี่เหลี่ยมจัตุรัส 0–1 มาจากเซิร์ฟเวอร์แล้ว
+/// (MedalRouteService) ไม่มีพิกัดจริง ผู้วาดแค่คูณขนาดกล่อง
+@immutable
+class MedalRoute {
+  /// "recorded" = แทร็ก GPS ที่เดินจริง, "planned" = เส้นทางของทริป
+  final String source;
+  final List<Offset> points;
+
+  /// ความสูง (ม.) เรียงตามระยะทาง — null เมื่อแทร็กไม่มีข้อมูลความสูง
+  final List<int>? elevations;
+
+  const MedalRoute({
+    required this.source,
+    required this.points,
+    required this.elevations,
+  });
+
+  bool get isRecorded => source == 'recorded';
+
+  /// null เมื่อข้อมูลวาดไม่ได้ (จุดไม่พอ) — ผู้เรียกจะได้ไม่ต้องเช็คซ้ำ
+  static MedalRoute? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+
+    final points = <Offset>[];
+    for (final p in raw['points'] is List ? raw['points'] as List : const []) {
+      if (p is List && p.length >= 2 && p[0] is num && p[1] is num) {
+        points.add(
+          Offset(
+            (p[0] as num).toDouble().clamp(0.0, 1.0),
+            (p[1] as num).toDouble().clamp(0.0, 1.0),
+          ),
+        );
+      }
+    }
+
+    if (points.length < 2) return null;
+
+    final rawEle = raw['elevations'];
+    final elevations = rawEle is List
+        ? [
+            for (final e in rawEle)
+              if (e is num) e.round(),
+          ]
+        : null;
+
+    return MedalRoute(
+      source: '${raw['source'] ?? 'planned'}',
+      points: points,
+      elevations: elevations != null && elevations.length >= 2
+          ? elevations
+          : null,
+    );
+  }
+}
+
+/// ตัวเลขที่เดินจริงจาก GPS ของเจ้าของเหรียญ
+@immutable
+class MedalPersonal {
+  final double distanceKm;
+  final int elevationGainM;
+  final int movingSeconds;
+  final double? avgSpeedKmh;
+  final int? maxElevationM;
+
+  const MedalPersonal({
+    required this.distanceKm,
+    required this.elevationGainM,
+    required this.movingSeconds,
+    required this.avgSpeedKmh,
+    required this.maxElevationM,
+  });
+
+  static MedalPersonal? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+
+    final distance = double.tryParse('${raw['distance_km'] ?? ''}');
+    if (distance == null || distance <= 0) return null;
+
+    return MedalPersonal(
+      distanceKm: distance,
+      elevationGainM: int.tryParse('${raw['elevation_gain_m'] ?? 0}') ?? 0,
+      movingSeconds: int.tryParse('${raw['moving_seconds'] ?? 0}') ?? 0,
+      avgSpeedKmh: double.tryParse('${raw['avg_speed_kmh'] ?? ''}'),
+      maxElevationM: int.tryParse('${raw['max_elevation_m'] ?? ''}'),
+    );
+  }
+}
+
+/// เวลาเดิน "2 ชม. 15 น." / "45 น." — null เมื่อไม่มีเวลา
+String? formatMovingTime(int seconds) {
+  if (seconds < 60) return null;
+
+  final minutes = seconds ~/ 60;
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+
+  if (h == 0) return '$m น.';
+  return m == 0 ? '$h ชม.' : '$h ชม. $m น.';
+}
+
+/// เวลาเดินแบบสั้นสำหรับตัวเลขใหญ่บนการ์ด "5:30 ชม." / "45 น." (แบบ Strava
+/// "5h 30m") — แบบยาวกว้างเกินช่องเมื่อวางสามตัวเลขเรียงกัน
+String? formatMovingTimeShort(int seconds) {
+  if (seconds < 60) return null;
+
+  final minutes = seconds ~/ 60;
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+
+  if (h == 0) return '$m น.';
+  return '$h:${m.toString().padLeft(2, '0')} ชม.';
+}
+
+/// ป้ายสถิติส่วนตัวสูงสุด (ตรงกับคีย์ที่ MedalRouteService::records() คืน)
+String medalRecordLabel(String key) => switch (key) {
+  'distance' => 'เดินไกลที่สุดของฉัน',
+  'climb' => 'ไต่สะสมมากที่สุดของฉัน',
+  'altitude' => 'ขึ้นสูงที่สุดของฉัน',
+  _ => 'สถิติใหม่ของฉัน',
+};
+
 /// เหรียญพิชิตหนึ่งเหรียญในตู้ของผู้ใช้ (GET /me/medals)
 @immutable
 class TripMedal {
@@ -84,6 +205,15 @@ class TripMedal {
   /// ลิงก์สาธารณะ /m/{token} — ติดไปกับคำบรรยายตอนแชร์
   final String shareUrl;
 
+  /// รูปร่างเส้นทาง — null เมื่อไม่ได้บันทึก GPS และทริปก็ไม่มีไฟล์ GPX
+  final MedalRoute? route;
+
+  /// ตัวเลขที่เดินจริง — null เมื่อไม่ได้บันทึก GPS ในรอบนั้น
+  final MedalPersonal? personal;
+
+  /// สถิติส่วนตัวสูงสุดที่เหรียญนี้ถือ: distance / climb / altitude
+  final List<String> records;
+
   const TripMedal({
     required this.id,
     required this.seen,
@@ -108,6 +238,9 @@ class TripMedal {
     required this.attempt,
     required this.attemptsOfTrip,
     required this.shareUrl,
+    this.route,
+    this.personal,
+    this.records = const [],
   });
 
   /// ปี พ.ศ. ของวันที่พิชิต — ใช้กับตัวอักษรที่วิ่งรอบขอบเหรียญ
@@ -155,6 +288,9 @@ class TripMedal {
     attempt: attempt,
     attemptsOfTrip: attemptsOfTrip,
     shareUrl: shareUrl,
+    route: route,
+    personal: personal,
+    records: records,
   );
 
   factory TripMedal.fromJson(Map<String, dynamic> json) {
@@ -199,6 +335,12 @@ class TripMedal {
       attempt: int.tryParse(text(json['attempt'])) ?? 1,
       attemptsOfTrip: int.tryParse(text(json['attempts_of_trip'])) ?? 1,
       shareUrl: text(json['share_url']),
+      route: MedalRoute.fromJson(json['route']),
+      personal: MedalPersonal.fromJson(json['personal']),
+      records: [
+        for (final r in json['records'] is List ? json['records'] as List : [])
+          if (r is String && r.isNotEmpty) r,
+      ],
     );
   }
 }

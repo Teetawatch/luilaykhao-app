@@ -8,6 +8,7 @@ import '../models/trip_medal.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/medal_art.dart';
+import '../widgets/medal_route.dart';
 import '../widgets/medal_share_sheet.dart';
 import '../widgets/medal_story_card.dart' show medalBackdropColor;
 import 'trip_recap_screen.dart';
@@ -416,7 +417,9 @@ class MedalDetailScreen extends StatelessWidget {
                 ),
               ),
             ],
-            if (stats.isNotEmpty) ...[
+            // มีตัวเลขจาก GPS ของตัวเองแล้ว ส่วนเส้นทางด้านล่างโชว์ครบกว่า — ไม่ต้อง
+            // โชว์ตัวเลขประมาณของทริปซ้ำอีกชุด
+            if (stats.isNotEmpty && medal.personal == null) ...[
               const SizedBox(height: 22),
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -453,6 +456,10 @@ class MedalDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
+            ],
+            if (medal.route != null || medal.personal != null) ...[
+              const SizedBox(height: 22),
+              _RouteSection(medal: medal),
             ],
             const SizedBox(height: 26),
             FilledButton.icon(
@@ -501,6 +508,173 @@ class MedalDetailScreen extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// เส้นทาง + ตัวเลขที่เดินจริง + สถิติส่วนตัวสูงสุด ของเหรียญหนึ่งเหรียญ
+class _RouteSection extends StatelessWidget {
+  final TripMedal medal;
+
+  const _RouteSection({required this.medal});
+
+  @override
+  Widget build(BuildContext context) {
+    final route = medal.route;
+    final personal = medal.personal;
+    final soft = Colors.white.withValues(alpha: 0.7);
+
+    final figures = <(String, String)>[
+      if (personal != null) ...[
+        ('${_trim(personal.distanceKm)} กม.', 'ระยะทาง'),
+        if (formatMovingTime(personal.movingSeconds) case final time?)
+          (time, 'เวลาเดิน'),
+        if (personal.avgSpeedKmh != null)
+          ('${_trim(personal.avgSpeedKmh!)} กม./ชม.', 'ความเร็วเฉลี่ย'),
+        if (personal.elevationGainM > 0)
+          ('${_thousands(personal.elevationGainM)} ม.', 'ไต่ขึ้น'),
+        if ((personal.maxElevationM ?? 0) > 0)
+          ('${_thousands(personal.maxElevationM!)} ม.', 'จุดสูงสุด'),
+      ],
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                route?.isRecorded == false
+                    ? Icons.map_rounded
+                    : Icons.route_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                route?.isRecorded == false
+                    ? 'เส้นทางของทริป'
+                    : 'เส้นทางที่ฉันเดิน',
+                style: appFont(
+                  fontSize: AppText.sizeBody,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              if (personal != null)
+                Text(
+                  'จาก GPS ที่บันทึก',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w600,
+                    color: soft,
+                  ),
+                ),
+            ],
+          ),
+          if (route != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(height: 190, child: MedalRouteView(route: route)),
+          ],
+          if (route?.elevations case final elevations?) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 48,
+              child: MedalElevationView(elevations: elevations),
+            ),
+          ],
+          if (figures.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 18,
+              runSpacing: 12,
+              children: [
+                for (final (value, label) in figures)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w600,
+                          color: soft,
+                        ),
+                      ),
+                      Text(
+                        value,
+                        style: appFont(
+                          fontSize: AppText.sizeSubtitle,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ] else if (route != null && !route.isRecorded) ...[
+            const SizedBox(height: 10),
+            Text(
+              'ทริปหน้ากด "เริ่มบันทึก" ในหน้าวันเดินทาง แล้วการ์ดเหรียญจะใช้เส้นทางและตัวเลขที่คุณเดินจริง',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+                color: soft,
+                height: 1.45,
+              ),
+            ),
+          ],
+          if (medal.records.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final record in medal.records)
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(8, 5, 10, 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7CD78).withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.emoji_events_rounded,
+                          size: 15,
+                          color: Color(0xFFF7CD78),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            medalRecordLabel(record),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: appFont(
+                              fontSize: AppText.sizeCaption,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFF7CD78),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
