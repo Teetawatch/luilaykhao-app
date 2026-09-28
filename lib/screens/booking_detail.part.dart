@@ -261,6 +261,11 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     _tripCompleted(schedule)) ...[
                   _TripRecapButton(bookingRef: textOf(booking['booking_ref'])),
                   const SizedBox(height: 16),
+                  // เหรียญพิชิตของใบนี้ — ซ่อนตัวเองเมื่อยังไม่มี (ยังไม่ถึง 20:00
+                  // วันสุดท้าย หรือรอบที่เช็คอินแล้วแต่ใบนี้ไม่ได้เช็คอิน)
+                  _BookingMedalButton(
+                    bookingRef: textOf(booking['booking_ref']),
+                  ),
                 ],
 
                 // เก็บผู้ร่วมเดินทางเข้าสมุด — ตรงนี้ข้อมูลถูกกรอกครบไปแล้ว
@@ -2026,6 +2031,103 @@ class _TripRecapButton extends StatelessWidget {
             const Icon(Icons.auto_awesome_rounded,
                 size: 17, color: Colors.white),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "เหรียญพิชิต · Finisher #27" — พาไปดูเหรียญของใบจองนี้ โผล่เฉพาะเมื่อได้เหรียญแล้ว
+class _BookingMedalButton extends StatefulWidget {
+  final String bookingRef;
+
+  const _BookingMedalButton({required this.bookingRef});
+
+  @override
+  State<_BookingMedalButton> createState() => _BookingMedalButtonState();
+}
+
+class _BookingMedalButtonState extends State<_BookingMedalButton> {
+  TripMedal? _medal;
+
+  @override
+  void initState() {
+    super.initState();
+    _medal = _find(context.read<AppProvider>().medalCabinet);
+    _load();
+  }
+
+  TripMedal? _find(MedalCabinet? cabinet) {
+    for (final medal in cabinet?.medals ?? const <TripMedal>[]) {
+      if (medal.bookingRef == widget.bookingRef) return medal;
+    }
+    return null;
+  }
+
+  Future<void> _load() async {
+    try {
+      final cabinet = await context.read<AppProvider>().fetchMedals();
+      if (mounted) setState(() => _medal = _find(cabinet));
+    } catch (_) {
+      // ไม่มีเหรียญให้โชว์ก็แค่ไม่มีปุ่ม — ไม่ใช่เรื่องที่ต้องเตือนบนหน้าใบจอง
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final medal = _medal;
+    if (medal == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          MedalDetailScreen.open(context, medal);
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: AppTheme.cardDecoration(
+            context,
+            radius: AppTheme.radiusMd,
+          ),
+          child: Row(
+            children: [
+              MedalArt(design: medal.design, size: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'เหรียญพิชิตของคุณ',
+                      style: appFont(
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    Text(
+                      '${medal.finisherLabel} · แตะเพื่อดูและแชร์',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.mutedText(context),
+              ),
+            ],
+          ),
         ),
       ),
     );

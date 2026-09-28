@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -7,7 +9,10 @@ import '../widgets/app_snack.dart';
 import '../theme/app_theme.dart';
 import '../utils/share_card.dart';
 import '../utils/thai_date.dart';
+import '../models/trip_medal.dart';
+import '../widgets/medal_art.dart';
 import 'conquest_map_screen.dart';
+import 'medals_screen.dart';
 
 /// "สมุดสะสมการเดินทาง" (Passport) — a lifetime record of everywhere the
 /// customer has trekked with us: total trips, distance, elevation climbed, plus
@@ -120,6 +125,8 @@ class _PassportScreenState extends State<PassportScreen> {
       children: [
         _PassportHero(stats: stats),
         const SizedBox(height: 14),
+        const _MedalShelfEntry(),
+        const SizedBox(height: 14),
         _InthanonStrip(highlights: highlights),
         const SizedBox(height: 14),
         // ตัวเลขจาก GPS ของผู้ใช้เอง — ซ่อนตัวเองจนกว่าจะมีการบันทึกครั้งแรก
@@ -160,6 +167,133 @@ class _PassportScreenState extends State<PassportScreen> {
           children: [for (final b in badges) _BadgeTile(badge: b)],
         ),
       ],
+    );
+  }
+}
+
+// ─── ตู้เหรียญพิชิต ──────────────────────────────────────────────────────────
+
+/// ทางเข้าตู้เหรียญ — โชว์เหรียญล่าสุดเรียงกันให้เห็นว่ามีอะไรรออยู่ข้างใน
+///
+/// โหลดเองแยกจาก Passport เพราะเป็นคนละ endpoint — โหลดไม่ได้ก็ยังเป็นปุ่มเข้า
+/// ตู้เหรียญธรรมดา ไม่ทำให้ทั้งหน้าพัง
+class _MedalShelfEntry extends StatefulWidget {
+  const _MedalShelfEntry();
+
+  @override
+  State<_MedalShelfEntry> createState() => _MedalShelfEntryState();
+}
+
+class _MedalShelfEntryState extends State<_MedalShelfEntry> {
+  MedalCabinet? _cabinet;
+
+  @override
+  void initState() {
+    super.initState();
+    _cabinet = context.read<AppProvider>().medalCabinet;
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final cabinet = await context.read<AppProvider>().fetchMedals();
+      if (mounted) setState(() => _cabinet = cabinet);
+    } catch (_) {
+      // เงียบไว้ — ดูคอมเมนต์ของคลาส
+    }
+  }
+
+  Future<void> _open() async {
+    HapticFeedback.selectionClick();
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const MedalsScreen()),
+    );
+    // กลับมาจากตู้แล้วเหรียญอาจถูกเห็นไปแล้ว/มีเหรียญใหม่ — อ่านจากแคชที่ตู้อัปเดตไว้
+    if (mounted) setState(() => _cabinet = context.read<AppProvider>().medalCabinet);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final medals = _cabinet?.medals ?? const <TripMedal>[];
+    final unseen = _cabinet?.unseen.length ?? 0;
+
+    return GestureDetector(
+      onTap: _open,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+        decoration: AppTheme.cardDecoration(context, radius: AppTheme.radiusLg),
+        child: Row(
+          children: [
+            if (medals.isEmpty)
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.tintOf(context, kMedalGold),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.military_tech_rounded,
+                  color: kMedalGold,
+                ),
+              )
+            else
+              SizedBox(
+                // เหรียญซ้อนกันเหลื่อม ๆ สูงสุดสี่ดวง
+                width: 34.0 + (math.min(medals.length, 4) - 1) * 22.0,
+                height: 44,
+                child: Stack(
+                  children: [
+                    for (var i = math.min(medals.length, 4) - 1; i >= 0; i--)
+                      Positioned(
+                        left: i * 22.0,
+                        bottom: 0,
+                        child: MedalArt(design: medals[i].design, size: 34),
+                      ),
+                  ],
+                ),
+              ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ตู้เหรียญพิชิต',
+                    style: appFont(
+                      fontSize: AppText.sizeBody,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    medals.isEmpty
+                        ? 'เดินทริปจนจบเพื่อรับเหรียญแรกของคุณ'
+                        : unseen > 0
+                        ? 'มีเหรียญใหม่ $unseen เหรียญ · รวม ${medals.length} เหรียญ'
+                        : 'สะสมแล้ว ${medals.length} เหรียญ',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      fontWeight: FontWeight.w600,
+                      color: unseen > 0
+                          ? AppTheme.primaryColor
+                          : AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.mutedText(context),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

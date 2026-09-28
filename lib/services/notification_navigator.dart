@@ -8,6 +8,7 @@ import '../screens/chat_screen.dart';
 import '../screens/gift_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/join_booking_screen.dart';
+import '../screens/medals_screen.dart';
 import '../screens/payment_screen.dart';
 import '../screens/reset_password_screen.dart';
 import '../screens/trip_feed_screen.dart';
@@ -78,6 +79,9 @@ class NotificationNavigator {
       case 'review_invite':
         _switchTab(2);
         _reviewPrompter?.call(data);
+      case 'medal_earned':
+        // เหรียญพิชิตใหม่ — เปิดตู้เหรียญ (ฉากฉลองขึ้นเองถ้ายังไม่เคยเห็น)
+        _openMedals(data);
       case 'seat_alert':
         _switchTab(2);
       case 'trip_alert':
@@ -417,6 +421,15 @@ class NotificationNavigator {
         return true;
     }
     return false;
+  }
+
+  static void _openMedals(Map<String, dynamic> data) {
+    final medalId = int.tryParse('${data['medal_id'] ?? ''}');
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => MedalsScreen(focusMedalId: medalId)),
+      ),
+    );
   }
 
   static void _openResetPassword(Uri uri) {

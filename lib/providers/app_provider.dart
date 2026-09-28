@@ -9,6 +9,7 @@ import '../config/api_config.dart';
 import '../config/api_endpoints.dart';
 import '../models/pickup_vehicle_class.dart';
 import '../models/sos_alert.dart';
+import '../models/trip_medal.dart';
 import '../services/analytics_service.dart';
 import '../services/api_client.dart';
 import '../services/booking_draft_store.dart';
@@ -728,6 +729,61 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) ?? const {});
   }
 
+  // ── ตู้เหรียญพิชิต ──────────────────────────────────────────────────────
+
+  MedalCabinet? _medalCabinet;
+  DateTime? _medalCabinetAt;
+
+  /// ตู้เหรียญล่าสุดที่โหลดไว้ — หน้าใบจอง/Passport ใช้เช็คเร็ว ๆ ว่ามีเหรียญไหม
+  MedalCabinet? get medalCabinet => _medalCabinet;
+
+  /// ตู้เหรียญพิชิต (GET /me/medals)
+  ///
+  /// จำไว้หนึ่งนาที เพราะหน้า Passport หน้าใบจอง และตู้เหรียญเรียกต่อกันได้
+  /// ในไม่กี่วินาที — [force] ใช้ตอนดึงลงเพื่อรีเฟรช
+  Future<MedalCabinet> fetchMedals({bool force = false}) async {
+    final cached = _medalCabinet;
+    final at = _medalCabinetAt;
+
+    if (!force &&
+        cached != null &&
+        at != null &&
+        DateTime.now().difference(at) < const Duration(minutes: 1)) {
+      return cached;
+    }
+
+    final response = await api.get('me/medals');
+    final cabinet = MedalCabinet.fromJson(
+      Map<String, dynamic>.from(api.data(response) ?? const {}),
+    );
+
+    _medalCabinet = cabinet;
+    _medalCabinetAt = DateTime.now();
+
+    return cabinet;
+  }
+
+  /// ปิดฉากฉลองเหรียญใหม่ — ว่าง = ทุกเหรียญที่ยังไม่เคยเห็น
+  Future<void> markMedalsSeen([List<int> ids = const []]) async {
+    await api.post(
+      'me/medals/seen',
+      body: ids.isEmpty ? null : {'ids': ids},
+    );
+
+    final cached = _medalCabinet;
+    if (cached != null) {
+      _medalCabinet = ids.isEmpty
+          ? cached.markAllSeen()
+          : MedalCabinet(
+              medals: [
+                for (final m in cached.medals)
+                  ids.contains(m.id) ? m.markSeen() : m,
+              ],
+              tripsCount: cached.tripsCount,
+            );
+    }
+  }
+
   /// สร้างลิงก์ให้ผู้โดยสารคนหนึ่งกรอกข้อมูลของตัวเอง (ลิงก์เก่าจะใช้ไม่ได้ทันที)
   Future<Map<String, dynamic>> createPassengerInvite(
     String bookingRef,
@@ -1259,6 +1315,8 @@ class AppProvider extends ChangeNotifier {
     await SecureStorage.instance.deleteToken();
     api.token = null;
     user = null;
+    _medalCabinet = null;
+    _medalCabinetAt = null;
     await OfflineCache.instance.clearAccount();
     // แคชถูกล้างไปแล้ว แต่ตัวนับของคิว SOS อยู่ในหน่วยความจำ ถ้าไม่รีเซ็ต แถบ
     // "ยังส่งไม่สำเร็จ" ของบัญชีก่อนหน้าจะค้างให้คนที่ล็อกอินคนถัดไปเห็น

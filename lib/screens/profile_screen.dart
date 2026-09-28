@@ -47,6 +47,7 @@ import 'trip_detail_screen.dart' show TripDetailScreen;
 import 'referral_screen.dart' show ReferralScreen;
 import 'rewards_screen.dart' show RewardsScreen;
 import 'passport_screen.dart' show PassportScreen;
+import 'medals_screen.dart' show MedalsScreen;
 import 'my_tracks_screen.dart' show MyTracksScreen;
 import 'public_profile_settings_screen.dart'
     show PublicProfileSettingsScreen;
@@ -1127,6 +1128,12 @@ class TravelMenu extends StatelessWidget {
           label: 'สมุดสะสมการเดินทาง',
           subtitle: 'สถิติตลอดชีพ ระยะทาง ความสูงสะสม และตราสะสม',
           onTap: () => _pushPremium(context, const PassportScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.military_tech_rounded,
+          label: 'ตู้เหรียญพิชิต',
+          subtitle: 'เหรียญประจำตัวของทุกทริปที่เดินจบ พร้อมเลข Finisher แชร์ลงโซเชียลได้',
+          onTap: () => _pushPremium(context, const MedalsScreen()),
         ),
         _MenuItem(
           icon: Icons.route_rounded,

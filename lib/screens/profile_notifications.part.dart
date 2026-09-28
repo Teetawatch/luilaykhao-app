@@ -111,6 +111,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return;
     }
 
+    // เหรียญพิชิตใหม่ — เปิดตู้เหรียญแล้วชี้ไปที่เหรียญนั้น
+    if (type == 'medal_earned') {
+      _pushPremium(
+        context,
+        MedalsScreen(focusMedalId: int.tryParse(_cleanText(data['medal_id']))),
+      );
+      return;
+    }
+
     final bookingRef = _cleanText(data['booking_ref']);
     final tripSlug = _cleanText(data['trip_slug']);
 
