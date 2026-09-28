@@ -2099,6 +2099,8 @@ class _BookingMedalButtonState extends State<_BookingMedalButton> {
                 design: medal.design,
                 size: 40,
                 year: medal.buddhistYear,
+                shape: medal.shape,
+                finish: medal.finish,
               ),
               const SizedBox(width: 12),
               Expanded(

@@ -1,5 +1,72 @@
 import 'package:flutter/material.dart';
 
+/// ทรงของเหรียญแม่แบบ — เจ้าของเลือกได้ตอนแชร์ แล้วเซิร์ฟเวอร์จำไว้กับเหรียญ
+/// ใบนั้น (TripMedal.shape) ลิงก์ /m/ ภาพ OG และตู้เหรียญจึงวาดทรงเดียวกัน
+///
+/// ทุกทรงใช้แกนกลางเดียวกัน (ขอบรอบดวงสี ตัวอักษรวิ่ง ไอคอน ชื่อ ช่อใบไม้
+/// แถบป้าย) ต่างกันแค่กรอบนอกกับแถบเข้ม — ชื่อ/ไอคอนจึงวางที่เดิมได้ทุกทรง
+/// รายการต้องตรงกับ MedalGeometry::SHAPES
+enum MedalShape {
+  /// ขอบหยักทอง — ทรงมาตรฐาน
+  rosette('ขอบหยัก'),
+
+  /// เหรียญกลมเรียบ ขอบลายเม็ดแบบเหรียญกษาปณ์
+  coin('เหรียญกลม'),
+
+  /// ขอบแฉกรอบวงแบบตราประทับ
+  sunburst('ดาวแฉก'),
+
+  /// หกเหลี่ยมยอดแหลม
+  hexagon('หกเหลี่ยม'),
+
+  /// โล่
+  shield('โล่');
+
+  const MedalShape(this.label);
+
+  final String label;
+
+  /// ชื่อจากเซิร์ฟเวอร์ → ทรง; null/ไม่รู้จัก (เซิร์ฟเวอร์ใหม่กว่าแอป) = แบบของทริป
+  static MedalShape? fromName(Object? name) {
+    for (final shape in values) {
+      if (shape.name == name) return shape;
+    }
+    return null;
+  }
+}
+
+/// ผิวโลหะของเหรียญ — ได้จากการมาพิชิตทริปเดิมซ้ำ (เลือกเองไม่ได้)
+/// เกณฑ์ตรงกับ MedalFinish.php: ครั้งที่ 1–2 ทอง · 3–4 แพลทินัม · 5+ ดำทอง
+enum MedalFinish {
+  gold('ทอง', 1),
+  platinum('แพลทินัม', 3),
+  obsidian('ดำทอง', 5);
+
+  const MedalFinish(this.label, this.fromAttempt);
+
+  final String label;
+
+  /// ครั้งแรกที่ได้ผิวนี้
+  final int fromAttempt;
+
+  static MedalFinish forAttempt(int attempt) {
+    if (attempt >= obsidian.fromAttempt) return obsidian;
+    if (attempt >= platinum.fromAttempt) return platinum;
+    return gold;
+  }
+
+  /// เซิร์ฟเวอร์ส่งมาก่อน ไม่มี (เซิร์ฟเวอร์เก่า) ค่อยคิดจากครั้งที่เอง
+  static MedalFinish fromName(Object? name, {int attempt = 1}) {
+    for (final finish in values) {
+      if (finish.name == name) return finish;
+    }
+    return forAttempt(attempt);
+  }
+
+  /// ผิวถัดไป — null เมื่อเป็นผิวสูงสุดแล้ว
+  MedalFinish? get next => index + 1 < values.length ? values[index + 1] : null;
+}
+
 /// หน้าตาเหรียญของทริปหนึ่ง — เซิร์ฟเวอร์ (MedalDesign.php) เป็นคนตัดสิน
 /// ค่าตั้งต้นทั้งหมดแล้ว แอปแค่วาดตาม
 @immutable
@@ -218,6 +285,12 @@ class TripMedal {
   final int kudosCount;
   final List<String> kudosRecent;
 
+  /// ทรงที่เจ้าของเลือกไว้ — null = แบบของทริป (ภาพออกแบบเองถ้ามี ไม่งั้นขอบหยัก)
+  final MedalShape? shape;
+
+  /// ผิวตามครั้งที่มาพิชิตทริปนี้
+  final MedalFinish finish;
+
   const TripMedal({
     required this.id,
     required this.seen,
@@ -247,6 +320,8 @@ class TripMedal {
     this.records = const [],
     this.kudosCount = 0,
     this.kudosRecent = const [],
+    this.shape,
+    this.finish = MedalFinish.gold,
   });
 
   /// ปี พ.ศ. ของวันที่พิชิต — ใช้กับตัวอักษรที่วิ่งรอบขอบเหรียญ
@@ -270,36 +345,44 @@ class TripMedal {
     return location;
   }
 
-  TripMedal markSeen() => TripMedal(
-    id: id,
-    seen: true,
-    bookingRef: bookingRef,
-    finisherNo: finisherNo,
-    finisherLabel: finisherLabel,
-    earnedOn: earnedOn,
-    earnedLabel: earnedLabel,
-    dateLabel: dateLabel,
-    holderName: holderName,
-    design: design,
-    tripId: tripId,
-    tripTitle: tripTitle,
-    tripSlug: tripSlug,
-    location: location,
-    countryFlag: countryFlag,
-    countryName: countryName,
-    distanceKm: distanceKm,
-    elevationGainM: elevationGainM,
-    durationDays: durationDays,
-    coverImage: coverImage,
-    attempt: attempt,
-    attemptsOfTrip: attemptsOfTrip,
-    shareUrl: shareUrl,
-    route: route,
-    personal: personal,
-    records: records,
-    kudosCount: kudosCount,
-    kudosRecent: kudosRecent,
-  );
+  TripMedal markSeen() => _copy(seen: true, shape: shape);
+
+  /// ทรงใหม่ที่เซิร์ฟเวอร์ยืนยันแล้ว (null = แบบของทริป)
+  TripMedal withShape(MedalShape? shape) => _copy(seen: seen, shape: shape);
+
+  TripMedal _copy({required bool seen, required MedalShape? shape}) =>
+      TripMedal(
+        id: id,
+        seen: seen,
+        bookingRef: bookingRef,
+        finisherNo: finisherNo,
+        finisherLabel: finisherLabel,
+        earnedOn: earnedOn,
+        earnedLabel: earnedLabel,
+        dateLabel: dateLabel,
+        holderName: holderName,
+        design: design,
+        tripId: tripId,
+        tripTitle: tripTitle,
+        tripSlug: tripSlug,
+        location: location,
+        countryFlag: countryFlag,
+        countryName: countryName,
+        distanceKm: distanceKm,
+        elevationGainM: elevationGainM,
+        durationDays: durationDays,
+        coverImage: coverImage,
+        attempt: attempt,
+        attemptsOfTrip: attemptsOfTrip,
+        shareUrl: shareUrl,
+        route: route,
+        personal: personal,
+        records: records,
+        kudosCount: kudosCount,
+        kudosRecent: kudosRecent,
+        shape: shape,
+        finish: finish,
+      );
 
   factory TripMedal.fromJson(Map<String, dynamic> json) {
     final trip = json['trip'] is Map
@@ -317,6 +400,7 @@ class TripMedal {
 
     final finisherNo = int.tryParse(text(json['finisher_no'])) ?? 0;
     final dateLabel = text(json['date_label']);
+    final attempt = int.tryParse(text(json['attempt'])) ?? 1;
 
     return TripMedal(
       id: int.tryParse(text(json['id'])) ?? 0,
@@ -340,7 +424,7 @@ class TripMedal {
       elevationGainM: int.tryParse(text(trip['elevation_gain_m'])),
       durationDays: int.tryParse(text(trip['duration_days'])),
       coverImage: optional(trip['cover_image']),
-      attempt: int.tryParse(text(json['attempt'])) ?? 1,
+      attempt: attempt,
       attemptsOfTrip: int.tryParse(text(json['attempts_of_trip'])) ?? 1,
       shareUrl: text(json['share_url']),
       route: MedalRoute.fromJson(json['route']),
@@ -355,6 +439,8 @@ class TripMedal {
             in json['kudos_recent'] is List ? json['kudos_recent'] as List : [])
           if ('$n'.trim().isNotEmpty) '$n'.trim(),
       ],
+      shape: MedalShape.fromName(json['shape']),
+      finish: MedalFinish.fromName(json['finish'], attempt: attempt),
     );
   }
 }

@@ -58,6 +58,82 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('ทุกทรงวาดชื่อกับไอคอนในกรอบเดียวกัน ไม่ล้น', (tester) async {
+    for (final shape in MedalShape.values) {
+      await tester.pumpWidget(
+        _wrap(
+          MedalArt(design: medal.design, size: 200, year: 2569, shape: shape),
+        ),
+      );
+
+      expect(
+        find.text('เดินป่าลาวใต้ ที่ราบสูงโบลาเวน'),
+        findsOneWidget,
+        reason: shape.name,
+      );
+      expect(find.byIcon(Icons.coffee_rounded), findsOneWidget);
+      expect(tester.getSize(find.byType(MedalArt)), const Size(200, 236));
+      expect(tester.takeException(), isNull, reason: shape.name);
+    }
+  });
+
+  testWidgets('ทุกทรง × ทุกผิว วาดได้ไม่พัง และด้านหลังเป็นทรงเดียวกัน', (
+    tester,
+  ) async {
+    for (final shape in MedalShape.values) {
+      for (final finish in MedalFinish.values) {
+        await tester.pumpWidget(
+          _wrap(
+            MedalArt(
+              design: medal.design,
+              size: 160,
+              year: 2569,
+              shape: shape,
+              finish: finish,
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull, reason: '$shape/$finish');
+      }
+
+      final shaped = TripMedal.fromJson(
+        medalJson(overrides: {'shape': shape.name, 'finish': 'obsidian'}),
+      );
+      await tester.pumpWidget(_wrap(MedalBack(medal: shaped, size: 160)));
+      expect(find.text('#27'), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'back/$shape');
+    }
+  });
+
+  test('แต่ละผิวมีสีต่างกันจริง', () {
+    final bands = {for (final f in MedalFinish.values) f.palette.band};
+    expect(bands.length, MedalFinish.values.length);
+    expect(MedalFinish.obsidian.palette.bannerInk, isNotNull);
+    expect(MedalFinish.gold.palette.frame, kMedalGold);
+  });
+
+  testWidgets('เลือกทรงแล้ว ทริปที่มีภาพออกแบบเองก็วาดเป็นแม่แบบ', (
+    tester,
+  ) async {
+    final custom = MedalDesign(
+      name: 'โบลาเวน',
+      icon: 'coffee',
+      color: medal.design.color,
+      imageUrl: 'https://example.com/medal.png',
+    );
+
+    await tester.pumpWidget(
+      _wrap(MedalArt(design: custom, size: 120, shape: MedalShape.shield)),
+    );
+
+    expect(find.byType(Image), findsNothing);
+    expect(find.text('โบลาเวน'), findsOneWidget);
+
+    await tester.pumpWidget(_wrap(MedalArt(design: custom, size: 120)));
+
+    expect(find.byType(Image), findsOneWidget);
+  });
+
   test('ตัวอักษรรอบขอบตรงกับ MedalGeometry::ringText และใช้ปี พ.ศ.', () {
     expect(medal.buddhistYear, 2569);
     expect(medalRingText(2569), 'LUILAYKHAO  •  FINISHER  •  2569');

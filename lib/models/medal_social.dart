@@ -234,12 +234,16 @@ class YearReviewMedal {
   final String finisherLabel;
   final DateTime? earnedOn;
   final MedalDesign design;
+  final MedalShape? shape;
+  final MedalFinish finish;
 
   const YearReviewMedal({
     required this.id,
     required this.finisherLabel,
     required this.earnedOn,
     required this.design,
+    this.shape,
+    this.finish = MedalFinish.gold,
   });
 
   int? get buddhistYear => earnedOn == null ? null : earnedOn!.year + 543;
@@ -349,6 +353,8 @@ class YearReview {
                   ? Map<String, dynamic>.from(m['design'] as Map)
                   : const {},
             ),
+            shape: MedalShape.fromName(m['shape']),
+            finish: MedalFinish.fromName(m['finish']),
           ),
       ],
     );

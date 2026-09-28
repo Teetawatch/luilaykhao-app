@@ -20,6 +20,63 @@ const Color kMedalGold = Color(0xFFD9A441);
 /// ความสูงของเหรียญทั้งดวง (รวมริบบิ้น) ต่อความกว้าง
 const double kMedalAspect = 1.18;
 
+/// สีของแต่ละชั้นบนเหรียญแม่แบบตามผิว — ตรงกับ MedalFinish::PALETTES (PHP)
+@immutable
+class MedalPalette {
+  final Color frame;
+  final Color band;
+  final Color rim;
+  final Color ring;
+  final Color laurel;
+  final Color banner;
+
+  /// ตัวอักษรบนแถบป้าย — null = สีทริปแบบเข้ม
+  final Color? bannerInk;
+
+  const MedalPalette({
+    required this.frame,
+    required this.band,
+    required this.rim,
+    required this.ring,
+    required this.laurel,
+    required this.banner,
+    this.bannerInk,
+  });
+}
+
+extension MedalFinishPalette on MedalFinish {
+  MedalPalette get palette => switch (this) {
+    MedalFinish.gold => const MedalPalette(
+      frame: kMedalGold,
+      band: _goldDeep,
+      rim: kMedalGold,
+      ring: _ringInk,
+      laurel: _laurel,
+      banner: _bannerPaper,
+    ),
+    MedalFinish.platinum => const MedalPalette(
+      frame: Color(0xFFC9D2DC),
+      band: Color(0xFF6F8093),
+      rim: Color(0xFFC9D2DC),
+      ring: Color(0xFFF4F7FA),
+      laurel: Color(0xFFE6ECF2),
+      banner: Color(0xFFF4F7FA),
+    ),
+    MedalFinish.obsidian => const MedalPalette(
+      frame: kMedalGold,
+      band: Color(0xFF1C1916),
+      rim: kMedalGold,
+      ring: Color(0xFFF2C66D),
+      laurel: Color(0xFFF2C66D),
+      banner: Color(0xFF1C1916),
+      bannerInk: Color(0xFFF2C66D),
+    ),
+  };
+
+  /// สีตัวแทนของผิว — จุดสีในป้าย/ชิปที่บอกผิว
+  Color get swatch => palette.band;
+}
+
 /// ชื่อไอคอน (Material Symbols) จากเซิร์ฟเวอร์ → IconData
 ///
 /// รายการต้องตรงกับ MedalDesign::ICONS — ชื่อที่ไม่รู้จัก (เซิร์ฟเวอร์ใหม่กว่า
@@ -79,6 +136,13 @@ class MedalArt extends StatelessWidget {
   /// provider ตัวเดียวกันเป๊ะ — ตรึงขนาดถอดรหัสไว้ค่าเดียว แคชจึงตรงเสมอ
   final double? imageDecodeWidth;
 
+  /// ทรงของเหรียญแม่แบบ — null = แบบของทริปเอง (ภาพออกแบบเองถ้ามี ไม่งั้น
+  /// ขอบหยัก) ส่วนค่าที่ระบุจะวาดเป็นแม่แบบทรงนั้นแม้ทริปมีภาพออกแบบเอง
+  final MedalShape? shape;
+
+  /// ผิวของเหรียญแม่แบบ (ภาพออกแบบเองวาดตามภาพ ไม่เปลี่ยนสี)
+  final MedalFinish finish;
+
   const MedalArt({
     super.key,
     required this.design,
@@ -86,13 +150,15 @@ class MedalArt extends StatelessWidget {
     this.imageScale,
     this.year,
     this.imageDecodeWidth,
+    this.shape,
+    this.finish = MedalFinish.gold,
   });
 
   @override
   Widget build(BuildContext context) {
     final url = design.imageUrl;
 
-    if (url != null && url.isNotEmpty) {
+    if (shape == null && url != null && url.isNotEmpty) {
       final scale = imageScale ?? MediaQuery.devicePixelRatioOf(context);
 
       return SizedBox(
@@ -104,8 +170,12 @@ class MedalArt extends StatelessWidget {
           filterQuality: FilterQuality.medium,
           gaplessPlayback: true,
           // โหลดไม่ได้ (ออฟไลน์/ไฟล์หาย) — ยังมีเหรียญแม่แบบให้เห็น ไม่ใช่กรอบว่าง
-          errorBuilder: (_, _, _) =>
-              _TemplateMedal(design: design, size: size, year: year),
+          errorBuilder: (_, _, _) => _TemplateMedal(
+            design: design,
+            size: size,
+            year: year,
+            finish: finish,
+          ),
           frameBuilder: (_, child, frame, sync) {
             if (sync || frame != null) return child;
             return _MedalSilhouette(size: size, color: design.color);
@@ -114,7 +184,13 @@ class MedalArt extends StatelessWidget {
       );
     }
 
-    return _TemplateMedal(design: design, size: size, year: year);
+    return _TemplateMedal(
+      design: design,
+      size: size,
+      year: year,
+      shape: shape ?? MedalShape.rosette,
+      finish: finish,
+    );
   }
 }
 
@@ -138,6 +214,9 @@ class MedalBack extends StatelessWidget {
       color: medal.design.color,
       year: medal.buddhistYear,
       ornaments: false,
+      // ด้านหลังเป็นทรงเดียวกับด้านหน้า — พลิกแล้วไม่กลายเป็นอีกเหรียญ
+      shape: medal.shape ?? MedalShape.rosette,
+      finish: medal.finish,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -244,6 +323,8 @@ class _MedalFlipState extends State<MedalFlip>
                       design: widget.medal.design,
                       size: widget.size,
                       year: widget.medal.buddhistYear,
+                      shape: widget.medal.shape,
+                      finish: widget.medal.finish,
                     ),
             );
           },
@@ -278,6 +359,18 @@ const Rect _nameBox = Rect.fromLTWH(28, 62, 44, 15);
 const double _nameSize = 5.6;
 const double _bannerTextY = 87;
 const double _bannerTextSize = 5;
+
+// ทรงอื่นนอกจากขอบหยัก (ดู [MedalShape]) — คัดลอกจาก MedalGeometry::COIN_* /
+// STAR_* / HEX_* / SHIELD_* ทุกทรงอยู่ในผืน 100 × 118 และแถบเข้มห่างศูนย์กลาง
+// อย่างน้อย ~40.5 ให้ตัวอักษรรอบขอบไม่ล้น
+const int _coinBeads = 56;
+const double _coinBeadR = 42.5;
+const int _starPoints = 20;
+const double _starOuterR = 48;
+const double _starInnerR = 43.5;
+const double _hexOuterR = 50;
+const double _hexBandR = 47;
+const double _shieldBandInset = 3.5;
 
 const Color _goldDeep = Color(0xFFA87A2A);
 const Color _ringInk = Color(0xFFFCE9C0);
@@ -334,8 +427,16 @@ class _TemplateMedal extends StatelessWidget {
   final MedalDesign design;
   final double size;
   final int? year;
+  final MedalShape shape;
+  final MedalFinish finish;
 
-  const _TemplateMedal({required this.design, required this.size, this.year});
+  const _TemplateMedal({
+    required this.design,
+    required this.size,
+    this.year,
+    this.shape = MedalShape.rosette,
+    this.finish = MedalFinish.gold,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -346,6 +447,8 @@ class _TemplateMedal extends StatelessWidget {
       color: design.color,
       year: year,
       ornaments: true,
+      shape: shape,
+      finish: finish,
       overlays: [
         Positioned(
           left: 0,
@@ -392,6 +495,8 @@ class _MedalFrame extends StatelessWidget {
   final Color color;
   final int? year;
   final bool ornaments;
+  final MedalShape shape;
+  final MedalFinish finish;
   final Widget? child;
   final List<Widget> overlays;
 
@@ -400,6 +505,8 @@ class _MedalFrame extends StatelessWidget {
     required this.color,
     required this.year,
     required this.ornaments,
+    this.shape = MedalShape.rosette,
+    this.finish = MedalFinish.gold,
     this.child,
     this.overlays = const [],
   });
@@ -428,6 +535,8 @@ class _MedalFrame extends StatelessWidget {
                     color: color,
                     ringText: medalRingText(year),
                     ornaments: ornaments,
+                    shape: shape,
+                    palette: finish.palette,
                   ),
                 ),
               ),
@@ -516,11 +625,15 @@ class _MedalPainter extends CustomPainter {
   final Color color;
   final String ringText;
   final bool ornaments;
+  final MedalShape shape;
+  final MedalPalette palette;
 
   const _MedalPainter({
     required this.color,
     required this.ringText,
     required this.ornaments,
+    required this.shape,
+    required this.palette,
   });
 
   @override
@@ -559,27 +672,55 @@ class _MedalPainter extends CustomPainter {
       }
     }
 
-    // ขอบหยักทอง = วงฐาน + วงเล็กรอบ ๆ
-    final gold = Paint()..color = kMedalGold;
-    canvas.drawCircle(center, _rosetteR * u, gold);
-    for (var i = 0; i < _scallops; i++) {
-      final a = 2 * math.pi * i / _scallops;
-      canvas.drawCircle(
-        p(_cx + _rosetteR * math.cos(a), _cy + _rosetteR * math.sin(a)),
-        _scallopR * u,
-        gold,
-      );
+    // กรอบนอกทอง + แถบทองเข้มที่ตัวอักษรวิ่ง — ส่วนเดียวที่ต่างกันตามทรง
+    // แถบเข้มของทุกทรงต้องกว้างพอให้ตัวอักษรรอบขอบ (รัศมี ~40) ไม่ล้นออกนอกแถบ
+    final gold = Paint()..color = palette.frame;
+    final deep = Paint()..color = palette.band;
+
+    switch (shape) {
+      case MedalShape.rosette:
+        // ขอบหยักทอง = วงฐาน + วงเล็กรอบ ๆ
+        canvas.drawCircle(center, _rosetteR * u, gold);
+        for (var i = 0; i < _scallops; i++) {
+          final a = 2 * math.pi * i / _scallops;
+          canvas.drawCircle(
+            p(_cx + _rosetteR * math.cos(a), _cy + _rosetteR * math.sin(a)),
+            _scallopR * u,
+            gold,
+          );
+        }
+        canvas.drawCircle(center, _bandR * u, deep);
+      case MedalShape.coin:
+        // ขอบเรียบ + ลายเม็ดรอบวงแบบเหรียญกษาปณ์
+        canvas.drawCircle(center, _rosetteR * u, gold);
+        canvas.drawCircle(center, _bandR * u, deep);
+        for (var i = 0; i < _coinBeads; i++) {
+          final a = 2 * math.pi * i / _coinBeads;
+          canvas.drawCircle(
+            p(_cx + _coinBeadR * math.cos(a), _cy + _coinBeadR * math.sin(a)),
+            0.6 * u,
+            deep,
+          );
+        }
+      case MedalShape.sunburst:
+        canvas.drawPath(_starPath(u), gold);
+        canvas.drawCircle(center, _bandR * u, deep);
+      case MedalShape.hexagon:
+        canvas.drawPath(_hexagonPath(_hexOuterR, u), gold);
+        canvas.drawPath(_hexagonPath(_hexBandR, u), deep);
+      case MedalShape.shield:
+        canvas.drawPath(_shieldPath(0, u), gold);
+        canvas.drawPath(_shieldPath(_shieldBandInset, u), deep);
     }
 
-    canvas.drawCircle(center, _bandR * u, Paint()..color = _goldDeep);
-    canvas.drawCircle(center, _rimR * u, gold);
+    canvas.drawCircle(center, _rimR * u, Paint()..color = palette.rim);
     canvas.drawCircle(center, _discR * u, Paint()..color = color);
 
     _paintRingText(canvas, center, _ringTextR * u, _ringTextSize * u);
 
     if (!ornaments) return;
 
-    final leaf = Paint()..color = _laurel;
+    final leaf = Paint()..color = palette.laurel;
     for (final l in _leaves) {
       canvas
         ..save()
@@ -615,7 +756,7 @@ class _MedalPainter extends CustomPainter {
     for (var i = 2; i < banner.length; i += 2) {
       path.lineTo(banner[i] * u, banner[i + 1] * u);
     }
-    canvas.drawPath(path..close(), Paint()..color = _bannerPaper);
+    canvas.drawPath(path..close(), Paint()..color = palette.banner);
 
     final label = TextPainter(
       text: TextSpan(
@@ -623,7 +764,7 @@ class _MedalPainter extends CustomPainter {
         style: appFont(
           fontSize: _bannerTextSize * u,
           fontWeight: FontWeight.w800,
-          color: Color.lerp(color, Colors.black, 0.35),
+          color: palette.bannerInk ?? Color.lerp(color, Colors.black, 0.35),
           letterSpacing: 0.6 * u,
         ),
       ),
@@ -646,7 +787,7 @@ class _MedalPainter extends CustomPainter {
     final style = appFont(
       fontSize: fontSize,
       fontWeight: FontWeight.w800,
-      color: _ringInk,
+      color: palette.ring,
     );
     final glyphs = [
       for (final ch in ringText.characters)
@@ -681,7 +822,66 @@ class _MedalPainter extends CustomPainter {
   bool shouldRepaint(_MedalPainter old) =>
       old.color != color ||
       old.ringText != ringText ||
-      old.ornaments != ornaments;
+      old.ornaments != ornaments ||
+      old.shape != shape ||
+      old.palette != palette;
+}
+
+/// ขอบแฉกรอบวง — ปลายแฉกกับร่องสลับกัน ร่องยังอยู่นอกแถบเข้ม
+Path _starPath(double u) {
+  final path = Path();
+
+  for (var i = 0; i < _starPoints * 2; i++) {
+    final r = i.isEven ? _starOuterR : _starInnerR;
+    final a = -math.pi / 2 + math.pi * i / _starPoints;
+    final point = Offset(
+      (_cx + r * math.cos(a)) * u,
+      (_cy + r * math.sin(a)) * u,
+    );
+    if (i == 0) {
+      path.moveTo(point.dx, point.dy);
+    } else {
+      path.lineTo(point.dx, point.dy);
+    }
+  }
+
+  return path..close();
+}
+
+/// หกเหลี่ยมยอดแหลม รัศมีถึงมุม [radius] — ด้านข้างห่างศูนย์กลาง radius × cos 30°
+Path _hexagonPath(double radius, double u) {
+  final path = Path();
+
+  for (var i = 0; i < 6; i++) {
+    final a = -math.pi / 2 + math.pi / 3 * i;
+    final x = (_cx + radius * math.cos(a)) * u;
+    final y = (_cy + radius * math.sin(a)) * u;
+    if (i == 0) {
+      path.moveTo(x, y);
+    } else {
+      path.lineTo(x, y);
+    }
+  }
+
+  return path..close();
+}
+
+/// โล่ขอบบนโค้งขึ้นนิด ๆ ด้านข้างตรง ปลายล่างแหลม — [inset] หดเข้าทุกด้าน
+Path _shieldPath(double inset, double u) {
+  final left = (6 + inset) * u;
+  final right = (94 - inset) * u;
+  final top = (22 + inset) * u;
+  const shoulder = 72.0;
+  final curve = (106 - inset * 0.6) * u;
+  final tip = (117.5 - inset * 1.3) * u;
+
+  return Path()
+    ..moveTo(left, top)
+    ..quadraticBezierTo(_cx * u, top - 6 * u, right, top)
+    ..lineTo(right, shoulder * u)
+    ..quadraticBezierTo(right, curve, _cx * u, tip)
+    ..quadraticBezierTo(left, curve, left, shoulder * u)
+    ..close();
 }
 
 String _trimNumber(double value) {

@@ -106,6 +106,57 @@ void main() {
     expect(medal.design.isCustom, isTrue);
   });
 
+  test('อ่านทรงและผิวเหรียญ — ทรงไม่รู้จัก = แบบของทริป', () {
+    final medal = TripMedal.fromJson(
+      medalJson(overrides: {'shape': 'shield', 'finish': 'platinum'}),
+    );
+    expect(medal.shape, MedalShape.shield);
+    expect(medal.finish, MedalFinish.platinum);
+
+    final unknown = TripMedal.fromJson(
+      medalJson(overrides: {'shape': 'octagon', 'finish': 'diamond'}),
+    );
+    expect(unknown.shape, isNull);
+    // ผิวไม่รู้จัก/เซิร์ฟเวอร์เก่า: คิดจากครั้งที่เอง (ครั้งที่ 2 = ทอง)
+    expect(unknown.finish, MedalFinish.gold);
+
+    final fifth = TripMedal.fromJson(medalJson(overrides: {'attempt': 5}));
+    expect(fifth.finish, MedalFinish.obsidian);
+  });
+
+  test('ผิวตามครั้งที่: 1–2 ทอง · 3–4 แพลทินัม · 5+ ดำทอง', () {
+    expect(
+      [for (var i = 1; i <= 6; i++) MedalFinish.forAttempt(i)],
+      [
+        MedalFinish.gold,
+        MedalFinish.gold,
+        MedalFinish.platinum,
+        MedalFinish.platinum,
+        MedalFinish.obsidian,
+        MedalFinish.obsidian,
+      ],
+    );
+    expect(MedalFinish.gold.next, MedalFinish.platinum);
+    expect(MedalFinish.obsidian.next, isNull);
+  });
+
+  test('เปลี่ยนทรง/ทำเครื่องหมายเห็นแล้ว ไม่ทำข้อมูลอื่นหาย', () {
+    final medal = TripMedal.fromJson(
+      medalJson(overrides: {'shape': 'coin', 'finish': 'platinum'}),
+    );
+
+    final seen = medal.markSeen();
+    expect(seen.seen, isTrue);
+    expect(seen.shape, MedalShape.coin);
+    expect(seen.finish, MedalFinish.platinum);
+
+    final reshaped = seen.withShape(MedalShape.hexagon);
+    expect(reshaped.shape, MedalShape.hexagon);
+    expect(reshaped.seen, isTrue);
+    expect(reshaped.finisherNo, 27);
+    expect(seen.withShape(null).shape, isNull);
+  });
+
   test('ตู้เหรียญนับเหรียญที่ยังไม่เห็น และทำเครื่องหมายเห็นแล้วได้', () {
     final cabinet = MedalCabinet.fromJson({
       'medals': [

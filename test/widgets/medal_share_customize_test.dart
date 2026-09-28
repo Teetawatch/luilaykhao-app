@@ -70,6 +70,35 @@ void main() {
       },
     );
 
+    testWidgets('ทุกทรงเหรียญ × เหรียญใหญ่สุด ยังเป็น 360×640 ไม่ล้น', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+
+      for (final shape in MedalShape.values) {
+        for (final layout in MedalCardLayout.values) {
+          await tester.pumpWidget(
+            _wrap(
+              MedalStoryCard(
+                medal: longMedal,
+                layout: layout,
+                medalScale: kMedalScaleMax,
+                shape: shape,
+              ),
+            ),
+          );
+
+          final reason = '${shape.name}/${layout.name}';
+          expect(
+            tester.getSize(find.byType(MedalStoryCard)),
+            const Size(kStoryCardWidth, kStoryCardHeight),
+            reason: reason,
+          );
+          expect(tester.takeException(), isNull, reason: reason);
+        }
+      }
+    });
+
     testWidgets('ปิดชื่อ/สถิติ/ครั้งที่/โลโก้ได้ทีละอย่าง', (tester) async {
       _useTallSurface(tester);
 
@@ -152,9 +181,12 @@ void main() {
         tone: 0.2,
         medalScale: 1.2,
         parts: MedalCardParts(holder: false, logo: false),
+        shape: MedalShape.hexagon,
       );
 
       final back = MedalLook.fromJson(look.toJson());
+
+      expect(back.shape, MedalShape.hexagon);
 
       expect(back.backdrop, MedalBackdrop.photo);
       expect(back.layout, MedalCardLayout.corner);
@@ -172,7 +204,10 @@ void main() {
         'tone': 9,
         'medal_scale': 0.1,
         'parts': 'broken',
+        'shape': 'triangle',
       });
+
+      expect(look.shape, MedalShape.rosette);
 
       expect(look.backdrop, MedalLook.defaults.backdrop);
       expect(look.layout, MedalCardLayout.corner);
@@ -252,6 +287,226 @@ void main() {
       expect(reset.layout, MedalCardLayout.centered);
       expect(reset.parts, MedalCardParts.all);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('เลือกทรงเหรียญ แล้วค่าถูกจำ / ค่าเริ่มต้นกลับเป็นขอบหยัก', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      _useTallSurface(tester);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: MedalShareSheet(medal: medal)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      MedalStoryCard card() =>
+          tester.widget<MedalStoryCard>(find.byType(MedalStoryCard));
+
+      expect(card().shape, MedalShape.rosette);
+
+      await tester.tap(find.text('ทรงเหรียญ'));
+      await tester.pumpAndSettle();
+      // ทริปแม่แบบไม่มีตัวเลือก "แบบของทริป"
+      expect(find.text('แบบของทริป'), findsNothing);
+
+      await tester.tap(find.text('โล่'));
+      await tester.pumpAndSettle();
+      expect(card().shape, MedalShape.shield);
+      expect((await MedalLookStorage.instance.read()).shape, MedalShape.shield);
+
+      await tester.tap(find.text('ค่าเริ่มต้น'));
+      await tester.pumpAndSettle();
+      expect(card().shape, MedalShape.rosette);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('ทริปมีภาพเหรียญออกแบบเอง เปิดมาเป็นภาพนั้นแม้จำทรงไว้', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      await MedalLookStorage.instance.write(
+        const MedalLook(
+          backdrop: MedalBackdrop.color,
+          layout: MedalCardLayout.centered,
+          photoOpacity: 0.4,
+          tone: 0.5,
+          medalScale: 1,
+          parts: MedalCardParts.all,
+          shape: MedalShape.hexagon,
+        ),
+      );
+      _useTallSurface(tester);
+
+      final custom = TripMedal.fromJson(
+        medalJson(
+          overrides: {
+            'design': {
+              'name': 'โบลาเวน',
+              'icon': 'coffee',
+              'color': '#15803D',
+              'image_url': 'https://example.com/medal.png',
+            },
+          },
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: MedalShareSheet(medal: custom)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      MedalStoryCard card() =>
+          tester.widget<MedalStoryCard>(find.byType(MedalStoryCard));
+
+      expect(card().shape, isNull);
+
+      await tester.tap(find.text('ทรงเหรียญ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('หกเหลี่ยม'));
+      await tester.pumpAndSettle();
+      expect(card().shape, MedalShape.hexagon);
+
+      await tester.tap(find.text('แบบของทริป'));
+      await tester.pumpAndSettle();
+      expect(card().shape, isNull);
+      // กลับไปใช้ภาพของทริปไม่ลบทรงที่ชอบไว้
+      expect(
+        (await MedalLookStorage.instance.read()).shape,
+        MedalShape.hexagon,
+      );
+    });
+
+    testWidgets(
+      'เหรียญที่บันทึกทรงไว้เปิดมาเป็นทรงนั้น ไม่ใช่ทรงที่เครื่องจำ',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        await MedalLookStorage.instance.write(
+          const MedalLook(
+            backdrop: MedalBackdrop.color,
+            layout: MedalCardLayout.centered,
+            photoOpacity: 0.4,
+            tone: 0.5,
+            medalScale: 1,
+            parts: MedalCardParts.all,
+            shape: MedalShape.coin,
+          ),
+        );
+        _useTallSurface(tester);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MedalShareSheet(
+                medal: TripMedal.fromJson(
+                  medalJson(overrides: {'shape': 'shield'}),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.widget<MedalStoryCard>(find.byType(MedalStoryCard)).shape,
+          MedalShape.shield,
+        );
+      },
+    );
+
+    testWidgets(
+      'กดแชร์แล้วบันทึกทรงที่เลือก — ขอบหยักของทริปแม่แบบส่งเป็น null',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        _useTallSurface(tester);
+        final saved = <MedalShape?>[];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MedalShareSheet(
+                medal: TripMedal.fromJson(
+                  medalJson(overrides: {'shape': 'hexagon'}),
+                ),
+                onSaveShape: (shape) async {
+                  saved.add(shape);
+                  return shape;
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('ทรงเหรียญ'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('ขอบหยัก'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('แชร์เหรียญ'));
+        await tester.pump();
+
+        expect(saved, [null]);
+      },
+    );
+
+    testWidgets('ทรงไม่เปลี่ยนก็ไม่ยิงบันทึกซ้ำ', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      _useTallSurface(tester);
+      var calls = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MedalShareSheet(
+              medal: TripMedal.fromJson(
+                medalJson(overrides: {'shape': 'coin'}),
+              ),
+              onSaveShape: (shape) async {
+                calls++;
+                return shape;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('แชร์เหรียญ'));
+      await tester.pump();
+
+      expect(calls, 0);
+    });
+
+    testWidgets('บอกผิวเหรียญและต้องมาอีกกี่ครั้งถึงผิวถัดไป', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      _useTallSurface(tester);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MedalShareSheet(
+              medal: TripMedal.fromJson(
+                medalJson(overrides: {'attempt': 3, 'finish': 'platinum'}),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ทรงเหรียญ'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'ผิวแพลทินัม  ·  มาพิชิตครั้งที่ 3  ·  มาอีก 2 ครั้งได้ผิวดำทอง',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('จำพื้นรูปไว้แต่ทริปนี้ไม่มีรูป → เปิดมาเป็นพื้นสีเหรียญ', (

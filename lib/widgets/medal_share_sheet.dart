@@ -6,8 +6,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 import '../models/trip_medal.dart';
+import '../providers/app_provider.dart';
 import '../services/medal_look_storage.dart';
 import '../theme/app_theme.dart';
 import '../utils/share_card.dart';
@@ -21,7 +23,18 @@ import 'trip_story_card.dart';
 /// โหลดทุกรูปที่จะอยู่บนการ์ดให้เข้าแคชก่อนเปิดเสมอ (โลโก้ ภาพเหรียญออกแบบเอง
 /// รูปปกทริป) เพราะ `toImage` จับเฉพาะสิ่งที่วาดเสร็จแล้ว — รูปที่ยังโหลดไม่เสร็จ
 /// จะหายไปจาก PNG เงียบ ๆ (บทเรียนเดียวกับการ์ดนับถอยหลัง)
+///
+/// ใช้เหรียญใบล่าสุดในตู้ที่แคชไว้ถ้ามี — หน้าที่เปิด sheet อาจถือเหรียญรุ่นก่อน
+/// ที่เจ้าของจะเปลี่ยนทรงไปแล้วในการแชร์ครั้งก่อน
 Future<void> showMedalShareSheet(BuildContext context, TripMedal medal) async {
+  AppProvider? app;
+  try {
+    app = context.read<AppProvider>();
+  } catch (_) {
+    app = null;
+  }
+  medal = app?.cachedMedal(medal.id) ?? medal;
+
   Future<ImageProvider?> warm(ImageProvider provider) async {
     try {
       await precacheImage(provider, context);
@@ -62,7 +75,13 @@ Future<void> showMedalShareSheet(BuildContext context, TripMedal medal) async {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (_) => MedalShareSheet(medal: medal, tripPhoto: cover),
+    builder: (_) => MedalShareSheet(
+      medal: medal,
+      tripPhoto: cover,
+      onSaveShape: app == null
+          ? null
+          : (shape) => app!.saveMedalShape(medal.id, shape),
+    ),
   );
 }
 
@@ -80,10 +99,11 @@ final MemoryImage _checkerboard = MemoryImage(
   scale: 1 / 8,
 );
 
-/// แท็บเครื่องมือใต้พรีวิว — แยกเป็นสามหมวดเพื่อให้ sheet ไม่สูงจนดันพรีวิว
+/// แท็บเครื่องมือใต้พรีวิว — แยกเป็นหมวดเพื่อให้ sheet ไม่สูงจนดันพรีวิว
 /// การ์ดให้เล็กจนมองไม่เห็นว่ากำลังปรับอะไร
 enum _Panel {
   background('พื้นหลัง'),
+  shape('ทรงเหรียญ'),
   layout('รูปแบบ'),
   info('ข้อมูล');
 
@@ -98,7 +118,16 @@ class MedalShareSheet extends StatefulWidget {
   /// รูปปกทริปที่โหลดเข้าแคชแล้ว — null เมื่อทริปไม่มีรูปหรือโหลดไม่ได้
   final ImageProvider? tripPhoto;
 
-  const MedalShareSheet({super.key, required this.medal, this.tripPhoto});
+  /// บันทึกทรงเหรียญลงเซิร์ฟเวอร์ตอนกดแชร์ (คืนทรงที่เก็บจริง) — ลิงก์ /m/ กับ
+  /// ภาพ OG จะได้หน้าตาตรงกับการ์ด null = ไม่บันทึก (พรีวิว/เทส)
+  final Future<MedalShape?> Function(MedalShape? shape)? onSaveShape;
+
+  const MedalShareSheet({
+    super.key,
+    required this.medal,
+    this.tripPhoto,
+    this.onSaveShape,
+  });
 
   @override
   State<MedalShareSheet> createState() => _MedalShareSheetState();
@@ -119,6 +148,19 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
   bool _picking = false;
   bool _sharing = false;
 
+  /// ทรงบนการ์ด — null = แบบของทริป (ภาพออกแบบเอง/ขอบหยัก)
+  ///
+  /// เปิดมาเป็นทรงที่เหรียญใบนี้ถูกบันทึกไว้ ยังไม่เคยเลือก: ทริปที่มีภาพออกแบบ
+  /// เองเริ่มที่ภาพนั้น (ทรงที่ชอบไม่ควรทับงานที่ออกแบบมาเฉพาะทริป) ส่วนทริป
+  /// แม่แบบเริ่มที่ทรงที่เครื่องนี้จำไว้ ([MedalLook.shape])
+  late MedalShape? _shape = widget.medal.shape;
+
+  /// ทรงที่เซิร์ฟเวอร์เก็บไว้ตอนนี้ — ต่างจาก [_shape] ตอนกดแชร์ = ต้องบันทึก
+  late MedalShape? _savedShape = widget.medal.shape;
+
+  /// ผู้ใช้แตะเลือกทรงแล้ว — ค่าที่โหลดจากเครื่องมาทีหลังห้ามทับ
+  bool _shapeTouched = false;
+
   // ค่าตั้งต้นของท่าทางหนึ่งครั้ง — คำนวณจากจุดเริ่มทุกเฟรม ไม่สะสมคลาดเคลื่อน
   double _gestureScale = 1;
   Offset _gestureOffset = Offset.zero;
@@ -132,6 +174,15 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
       _look.layout == MedalCardLayout.route && widget.medal.route == null
       ? MedalCardLayout.centered
       : _look.layout;
+
+  bool get _hasTripArt => widget.medal.design.isCustom;
+
+  /// ทรงที่การ์ดวาดจริง — null = แบบของทริป
+  MedalShape? get _cardShape => _shape;
+
+  /// ทรงในรูปที่เซิร์ฟเวอร์เก็บ — ขอบหยักของทริปแม่แบบคือแบบของทริปเอง (null)
+  MedalShape? _stored(MedalShape? shape) =>
+      !_hasTripArt && shape == MedalShape.rosette ? null : shape;
 
   bool get _showsPhoto =>
       _look.backdrop == MedalBackdrop.photo && _photo != null;
@@ -165,6 +216,10 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
       _look = look.backdrop == MedalBackdrop.photo && widget.tripPhoto == null
           ? _copy(look, backdrop: MedalBackdrop.color)
           : look;
+
+      if (!_shapeTouched && widget.medal.shape == null && !_hasTripArt) {
+        _shape = look.shape;
+      }
     });
   }
 
@@ -176,6 +231,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
     double? tone,
     double? medalScale,
     MedalCardParts? parts,
+    MedalShape? shape,
   }) {
     return MedalLook(
       backdrop: backdrop ?? look.backdrop,
@@ -184,6 +240,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
       tone: tone ?? look.tone,
       medalScale: medalScale ?? look.medalScale,
       parts: parts ?? look.parts,
+      shape: shape ?? look.shape,
     );
   }
 
@@ -198,6 +255,8 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
       _framing = StoryPhotoFraming(
         aspectRatio: _usingOwnPhoto ? _framing.aspectRatio : _tripPhotoAspect,
       );
+      _shape = _hasTripArt ? null : MedalShape.rosette;
+      _shapeTouched = true;
     });
     _update(MedalLook.defaults);
   }
@@ -305,6 +364,9 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
     HapticFeedback.mediumImpact();
     setState(() => _sharing = true);
 
+    // บันทึกทรงก่อนแชร์ — คนที่กดลิงก์ในโพสต์ต้องเห็นเหรียญทรงเดียวกับการ์ด
+    final shapeSaved = await _saveShape();
+
     try {
       // เพิ่งปรับอะไรไปก่อนกดแชร์ — รอเฟรมล่าสุดวาดจบก่อนจับภาพ
       await WidgetsBinding.instance.endOfFrame;
@@ -316,10 +378,35 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
             : 'luilaykhao_medal.png',
         text: _shareText(),
       );
+      if (!shapeSaved && mounted) {
+        AppSnack.error(
+          context,
+          'บันทึกทรงเหรียญไม่สำเร็จ ลิงก์เหรียญยังเป็นทรงเดิม ลองแชร์อีกครั้ง',
+        );
+      }
     } catch (_) {
       if (mounted) AppSnack.error(context, 'แชร์ไม่สำเร็จ ลองใหม่อีกครั้ง');
     } finally {
       if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  /// true เมื่อเซิร์ฟเวอร์มีทรงตรงกับการ์ดแล้ว (หรือไม่มีอะไรต้องบันทึก)
+  ///
+  /// บันทึกไม่ได้ (ออฟไลน์/เซิร์ฟเวอร์ช้า) ก็ยังแชร์ต่อ — รูปการ์ดเป็นของเจ้าของ
+  /// อยู่แล้ว เสียแค่ลิงก์ที่ยังเป็นทรงเดิม ซึ่งบอกให้รู้หลังแชร์
+  Future<bool> _saveShape() async {
+    final save = widget.onSaveShape;
+    final wanted = _stored(_shape);
+
+    if (save == null || wanted == _savedShape) return true;
+
+    try {
+      final saved = await save(wanted).timeout(const Duration(seconds: 8));
+      _savedShape = saved;
+      return saved == wanted;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -368,6 +455,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
               alignment: Alignment.topCenter,
               child: switch (_panel) {
                 _Panel.background => _backgroundPanel(),
+                _Panel.shape => _shapePanel(),
                 _Panel.layout => _layoutPanel(),
                 _Panel.info => _infoPanel(),
               },
@@ -476,6 +564,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
                       tone: _look.tone,
                       medalScale: _look.medalScale,
                       parts: _look.parts,
+                      shape: _cardShape,
                     ),
                   ),
                 ),
@@ -601,6 +690,71 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
                 ? 'ทริปนี้ยังไม่มีรูป — เลือก "ใช้รูปของคุณ" เพื่อใส่รูปพื้นหลัง'
                 : 'เลือกพื้นสีเหรียญหรือรูปถ่าย เพื่อปรับความเข้ม/ความชัด',
           ),
+      ],
+    );
+  }
+
+  Widget _shapePanel() {
+    final medal = widget.medal;
+    final design = medal.design;
+    final year = medal.buddhistYear;
+    final current = _cardShape;
+
+    void pick(MedalShape? shape) {
+      HapticFeedback.selectionClick();
+      setState(() {
+        _shape = shape;
+        _shapeTouched = true;
+      });
+      // จำเป็นรสนิยมของเครื่อง เฉพาะทรงแม่แบบ — "แบบของทริป" เป็นของทริปนั้น
+      if (shape != null) _update(_copy(_look, shape: shape));
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: _ShapeTile.height,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              if (_hasTripArt)
+                _ShapeTile(
+                  label: 'แบบของทริป',
+                  active: current == null,
+                  onTap: () => pick(null),
+                  child: MedalArt(
+                    design: design,
+                    size: _ShapeTile.medalSize,
+                    year: year,
+                  ),
+                ),
+              for (final shape in MedalShape.values)
+                _ShapeTile(
+                  label: shape.label,
+                  // ทริปแม่แบบ: "แบบของทริป" กับขอบหยักคืออันเดียวกัน
+                  active:
+                      current == shape ||
+                      (current == null &&
+                          !_hasTripArt &&
+                          shape == MedalShape.rosette),
+                  onTap: () => pick(shape),
+                  child: MedalArt(
+                    design: design,
+                    size: _ShapeTile.medalSize,
+                    year: year,
+                    shape: shape,
+                    finish: medal.finish,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        _FinishNote(medal: medal),
+        const _Hint(
+          'กดแชร์แล้ว ทรงนี้จะใช้กับเหรียญใบนี้ทุกที่ '
+          'ทั้งตู้เหรียญและลิงก์ที่เพื่อนกดเข้ามาดู',
+        ),
       ],
     );
   }
@@ -752,6 +906,121 @@ class _PanelTabs extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// ผิวเหรียญใบนี้ + ต้องมาอีกกี่ครั้งถึงผิวถัดไป — ผิวเลือกเองไม่ได้ ต้องเดินไปให้ได้
+class _FinishNote extends StatelessWidget {
+  final TripMedal medal;
+
+  const _FinishNote({required this.medal});
+
+  @override
+  Widget build(BuildContext context) {
+    final finish = medal.finish;
+    final next = finish.next;
+    final left = next == null ? 0 : next.fromAttempt - medal.attempt;
+
+    final text = [
+      'ผิว${finish.label}',
+      if (medal.attempt > 1) 'มาพิชิตครั้งที่ ${medal.attempt}',
+      if (next != null && left > 0) 'มาอีก $left ครั้งได้ผิว${next.label}',
+    ].join('  ·  ');
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: finish.swatch,
+              shape: BoxShape.circle,
+              border: Border.all(color: finish.palette.frame, width: 2),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: appFont(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ตัวเลือกทรงเหรียญ — โชว์เหรียญจริงย่อส่วนในสีของทริป ไม่ใช่ไอคอนแทน
+/// เพราะคนเลือกจากหน้าตา ไม่ใช่จากชื่อทรง
+class _ShapeTile extends StatelessWidget {
+  static const double medalSize = 46;
+  static const double height = 92;
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final Widget child;
+
+  const _ShapeTile({
+    required this.label,
+    required this.active,
+    required this.onTap,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: active,
+      label: 'ทรง$label',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          width: 76,
+          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: active
+                ? AppTheme.tintOf(context, AppTheme.primaryColor)
+                : AppTheme.subtleSurface(context),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            border: Border.all(
+              color: active ? AppTheme.primaryColor : AppTheme.border(context),
+              width: active ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ExcludeSemantics(child: child),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: active
+                      ? AppTheme.onSurface(context)
+                      : AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

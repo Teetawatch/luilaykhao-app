@@ -95,6 +95,7 @@ class _MedalsScreenState extends State<MedalsScreen> {
       if (wantsShare) {
         await showMedalShareSheet(context, fresh.first);
         if (!mounted) return;
+        _adoptSavedShapes();
       }
     }
 
@@ -104,9 +105,31 @@ class _MedalsScreenState extends State<MedalsScreen> {
     for (final medal in _cabinet?.medals ?? const <TripMedal>[]) {
       if (medal.id == focusId) {
         await MedalDetailScreen.open(context, medal);
+        if (mounted) _adoptSavedShapes();
         break;
       }
     }
+  }
+
+  /// ทรงที่เพิ่งบันทึกตอนแชร์ (อยู่ในตู้ที่ provider แคชไว้) — รับมาเฉพาะทรง
+  /// ไม่รับทั้งตู้ เพราะสถานะ "เห็นแล้ว" ในหน้านี้อาจใหม่กว่าของ provider
+  void _adoptSavedShapes() {
+    final cabinet = _cabinet;
+    if (cabinet == null) return;
+
+    final app = context.read<AppProvider>();
+    setState(() {
+      _cabinet = MedalCabinet(
+        medals: [
+          for (final m in cabinet.medals)
+            if (app.cachedMedal(m.id) case final latest?)
+              m.withShape(latest.shape)
+            else
+              m,
+        ],
+        tripsCount: cabinet.tripsCount,
+      );
+    });
   }
 
   @override
@@ -200,7 +223,10 @@ class _MedalsScreenState extends State<MedalsScreen> {
                     width: tileWidth,
                     child: _MedalTile(
                       medal: medal,
-                      onTap: () => MedalDetailScreen.open(context, medal),
+                      onTap: () async {
+                        await MedalDetailScreen.open(context, medal);
+                        if (mounted) _adoptSavedShapes();
+                      },
                     ),
                   ),
               ],
@@ -351,6 +377,8 @@ class _MedalTile extends StatelessWidget {
                   design: medal.design,
                   size: math.min(constraints.maxWidth * 0.72, 130),
                   year: medal.buddhistYear,
+                  shape: medal.shape,
+                  finish: medal.finish,
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -415,6 +443,12 @@ class MedalDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ใบล่าสุดในตู้ที่แคชไว้ — เปลี่ยนทรงตอนแชร์แล้วเหรียญบนหน้านี้ต้องเปลี่ยนตาม
+    final medal =
+        context.select<AppProvider, TripMedal?>(
+          (app) => app.cachedMedal(this.medal.id),
+        ) ??
+        this.medal;
     final background = medalBackdropColor(medal.design.color);
     final soft = Colors.white.withValues(alpha: 0.75);
     final width = MediaQuery.sizeOf(context).width;
@@ -529,7 +563,11 @@ class MedalDetailScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                   ),
                   child: Text(
-                    'มาพิชิตครั้งที่ ${medal.attempt} จาก ${medal.attemptsOfTrip} ครั้ง',
+                    [
+                      'มาพิชิตครั้งที่ ${medal.attempt} จาก ${medal.attemptsOfTrip} ครั้ง',
+                      if (medal.finish != MedalFinish.gold)
+                        'เหรียญ${medal.finish.label}',
+                    ].join('  ·  '),
                     style: appFont(
                       fontSize: AppText.sizeCaption,
                       fontWeight: FontWeight.w700,
@@ -946,6 +984,8 @@ class _MedalUnlockViewState extends State<_MedalUnlockView>
                         design: medal.design,
                         size: size,
                         year: medal.buddhistYear,
+                        shape: medal.shape,
+                        finish: medal.finish,
                       ),
                     ),
                   ],

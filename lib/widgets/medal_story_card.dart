@@ -207,6 +207,9 @@ class MedalStoryCard extends StatelessWidget {
 
   final MedalCardParts parts;
 
+  /// ทรงเหรียญบนการ์ด — null = แบบของทริปเอง ดู [MedalArt.shape]
+  final MedalShape? shape;
+
   const MedalStoryCard({
     super.key,
     required this.medal,
@@ -218,6 +221,7 @@ class MedalStoryCard extends StatelessWidget {
     this.tone = kMedalToneDefault,
     this.medalScale = 1,
     this.parts = MedalCardParts.all,
+    this.shape,
   });
 
   bool get _onPaper => backdrop == MedalBackdrop.paper;
@@ -542,6 +546,8 @@ class MedalStoryCard extends StatelessWidget {
       imageScale: kShareCardPixelRatio,
       imageDecodeWidth: kMedalStoryDecodeWidth,
       year: medal.buddhistYear,
+      shape: shape,
+      finish: medal.finish,
     );
   }
 

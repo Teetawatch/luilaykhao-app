@@ -489,6 +489,8 @@ class _MedalsSlide extends StatelessWidget {
                                 design: medal.design,
                                 size: size * 0.86,
                                 year: medal.buddhistYear,
+                                shape: medal.shape,
+                                finish: medal.finish,
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -730,6 +732,8 @@ class _YearStoryCard extends StatelessWidget {
                                           design: medal.design,
                                           size: 46,
                                           year: medal.buddhistYear,
+                                          shape: medal.shape,
+                                          finish: medal.finish,
                                           imageScale: kShareCardPixelRatio,
                                           imageDecodeWidth:
                                               _cardMedalDecodeWidth,

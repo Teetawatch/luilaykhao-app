@@ -253,6 +253,8 @@ class _MedalShelfEntryState extends State<_MedalShelfEntry> {
                           design: medals[i].design,
                           size: 34,
                           year: medals[i].buddhistYear,
+                          shape: medals[i].shape,
+                          finish: medals[i].finish,
                         ),
                       ),
                   ],

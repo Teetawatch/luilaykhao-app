@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/trip_medal.dart';
 import '../widgets/medal_story_card.dart';
 
 /// หน้าตาการ์ดแชร์เหรียญที่เจ้าของเลือกไว้ล่าสุด — ทุกอย่างยกเว้นรูปของตัวเอง
@@ -23,6 +24,11 @@ class MedalLook {
 
   final MedalCardParts parts;
 
+  /// ทรงเหรียญแม่แบบที่ชอบ — ใช้เป็นจุดเริ่มเฉพาะเหรียญที่ยังไม่เคยเลือกทรง
+  /// บนทริปแม่แบบ เหรียญที่บันทึกทรงไว้แล้ว (TripMedal.shape) หรือทริปที่มีภาพ
+  /// ออกแบบเองจะเปิดมาตามนั้นก่อนเสมอ (ดู MedalShareSheet)
+  final MedalShape shape;
+
   const MedalLook({
     required this.backdrop,
     required this.layout,
@@ -30,6 +36,7 @@ class MedalLook {
     required this.tone,
     required this.medalScale,
     required this.parts,
+    this.shape = MedalShape.rosette,
   });
 
   static const defaults = MedalLook(
@@ -48,6 +55,7 @@ class MedalLook {
     'tone': tone,
     'medal_scale': medalScale,
     'parts': parts.toJson(),
+    'shape': shape.name,
   };
 
   /// อ่านของที่เก็บไว้ — ค่าที่ไม่รู้จัก/เสีย (เวอร์ชันเก่า/ใหม่กว่า) ตกไปใช้ค่าตั้งต้น
@@ -81,6 +89,7 @@ class MedalLook {
         kMedalScaleMax,
       ),
       parts: parts is Map ? MedalCardParts.fromJson(parts) : MedalCardParts.all,
+      shape: byName(MedalShape.values, json['shape'], defaults.shape),
     );
   }
 }

@@ -764,6 +764,40 @@ class AppProvider extends ChangeNotifier {
     return cabinet;
   }
 
+  /// เปลี่ยนทรงเหรียญ (null = แบบของทริป) — ลิงก์ /m/ ภาพ OG และโปรไฟล์
+  /// สาธารณะวาดตามนี้ คืนทรงที่เซิร์ฟเวอร์เก็บจริง (ขอบหยักของทริปแม่แบบถูก
+  /// เก็บเป็น null) แล้วอัปเดตตู้ที่แคชไว้ให้ทุกหน้าที่โชว์เหรียญนี้เห็นทรงใหม่
+  Future<MedalShape?> saveMedalShape(int medalId, MedalShape? shape) async {
+    final response = await api.put(
+      'me/medals/$medalId',
+      body: {'shape': shape?.name},
+    );
+    final data = Map<String, dynamic>.from(api.data(response) ?? const {});
+    final saved = MedalShape.fromName(data['shape']);
+
+    final cached = _medalCabinet;
+    if (cached != null) {
+      _medalCabinet = MedalCabinet(
+        medals: [
+          for (final m in cached.medals)
+            m.id == medalId ? m.withShape(saved) : m,
+        ],
+        tripsCount: cached.tripsCount,
+      );
+      notifyListeners();
+    }
+
+    return saved;
+  }
+
+  /// เหรียญใบล่าสุดในตู้ที่แคชไว้ — null เมื่อยังไม่เคยโหลดหรือไม่มีใบนี้
+  TripMedal? cachedMedal(int medalId) {
+    for (final m in _medalCabinet?.medals ?? const <TripMedal>[]) {
+      if (m.id == medalId) return m;
+    }
+    return null;
+  }
+
   /// ใครพิชิตรอบเดียวกับเหรียญ [medalId] ของเรา + ปรบมือให้กัน
   Future<MedalRound> fetchMedalRound(int medalId) async {
     final response = await api.get('me/medals/$medalId/round');
