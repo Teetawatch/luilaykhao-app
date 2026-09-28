@@ -2095,7 +2095,11 @@ class _BookingMedalButtonState extends State<_BookingMedalButton> {
           ),
           child: Row(
             children: [
-              MedalArt(design: medal.design, size: 40),
+              MedalArt(
+                design: medal.design,
+                size: 40,
+                year: medal.buddhistYear,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

@@ -110,6 +110,12 @@ class TripMedal {
     required this.shareUrl,
   });
 
+  /// ปี พ.ศ. ของวันที่พิชิต — ใช้กับตัวอักษรที่วิ่งรอบขอบเหรียญ
+  int? get buddhistYear {
+    final on = earnedOn;
+    return on == null ? null : on.year + 543;
+  }
+
   /// บรรทัดสถานที่ใต้ชื่อเหรียญ — ทริปต่างประเทศใช้ธง+ชื่อประเทศแทนจังหวัด
   String get placeLabel {
     final flag = countryFlag;

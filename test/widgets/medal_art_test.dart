@@ -45,14 +45,23 @@ void main() {
     expect(medalIconFor('something-new'), Icons.landscape_rounded);
   });
 
-  testWidgets('เหรียญแม่แบบวาดชื่อ ไอคอน และคำว่า FINISHER', (tester) async {
-    await tester.pumpWidget(_wrap(MedalArt(design: medal.design, size: 200)));
+  testWidgets('เหรียญแม่แบบวาดชื่อกับไอคอน ในกรอบสัดส่วนเหรียญ', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(MedalArt(design: medal.design, size: 200, year: 2569)),
+    );
 
     expect(find.text('เดินป่าลาวใต้ ที่ราบสูงโบลาเวน'), findsOneWidget);
-    expect(find.text('FINISHER'), findsOneWidget);
     expect(find.byIcon(Icons.coffee_rounded), findsOneWidget);
     expect(tester.getSize(find.byType(MedalArt)), const Size(200, 236));
     expect(tester.takeException(), isNull);
+  });
+
+  test('ตัวอักษรรอบขอบตรงกับ MedalGeometry::ringText และใช้ปี พ.ศ.', () {
+    expect(medal.buddhistYear, 2569);
+    expect(medalRingText(2569), 'LUILAYKHAO  •  FINISHER  •  2569');
+    expect(medalRingText(null), 'LUILAYKHAO  •  FINISHER');
   });
 
   testWidgets('ชื่อยาวมากไม่ล้นดวงเหรียญ', (tester) async {

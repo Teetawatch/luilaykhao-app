@@ -132,6 +132,7 @@ class MedalStoryCard extends StatelessWidget {
                                   design: medal.design,
                                   size: kMedalStoryMedalSize,
                                   imageScale: kShareCardPixelRatio,
+                                  year: medal.buddhistYear,
                                 ),
                                 const SizedBox(height: 22),
                                 // ถ่างตัวอักษรเฉพาะส่วนอังกฤษ — ข้อความไทยที่ถูกถ่างจะถูกฉีก

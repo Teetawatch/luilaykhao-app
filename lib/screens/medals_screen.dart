@@ -227,6 +227,7 @@ class _MedalTile extends StatelessWidget {
                 MedalArt(
                   design: medal.design,
                   size: math.min(constraints.maxWidth * 0.72, 130),
+                  year: medal.buddhistYear,
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -643,7 +644,11 @@ class _MedalUnlockViewState extends State<_MedalUnlockView>
                           child: child,
                         );
                       },
-                      child: MedalArt(design: medal.design, size: size),
+                      child: MedalArt(
+                        design: medal.design,
+                        size: size,
+                        year: medal.buddhistYear,
+                      ),
                     ),
                   ],
                 ),

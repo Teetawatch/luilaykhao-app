@@ -249,7 +249,11 @@ class _MedalShelfEntryState extends State<_MedalShelfEntry> {
                       Positioned(
                         left: i * 22.0,
                         bottom: 0,
-                        child: MedalArt(design: medals[i].design, size: 34),
+                        child: MedalArt(
+                          design: medals[i].design,
+                          size: 34,
+                          year: medals[i].buddhistYear,
+                        ),
                       ),
                   ],
                 ),
