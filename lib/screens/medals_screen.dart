@@ -8,10 +8,13 @@ import '../models/trip_medal.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/medal_art.dart';
+import '../widgets/medal_round_section.dart';
 import '../widgets/medal_route.dart';
 import '../widgets/medal_share_sheet.dart';
 import '../widgets/medal_story_card.dart' show medalBackdropColor;
+import 'challenges_screen.dart';
 import 'trip_recap_screen.dart';
+import 'year_review_screen.dart';
 
 /// ตู้เหรียญพิชิต — เหรียญประจำตัวของทุกทริปที่เดินจบจริง (GET /me/medals)
 ///
@@ -153,7 +156,10 @@ class _MedalsScreenState extends State<MedalsScreen> {
     if (cabinet.medals.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         children: const [
+          // ชาเลนจ์ยังมีประโยชน์แม้ยังไม่มีเหรียญ — เป็นเป้าให้ทริปแรก
+          _ShortcutRow(showYearReview: false),
           _MessageState(
             icon: Icons.military_tech_rounded,
             title: 'ยังไม่มีเหรียญในตู้',
@@ -169,6 +175,8 @@ class _MedalsScreenState extends State<MedalsScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
       children: [
+        const _ShortcutRow(showYearReview: true),
+        const SizedBox(height: 18),
         Text(
           '${cabinet.medals.length} เหรียญ จาก ${cabinet.tripsCount} ทริป',
           style: appFont(
@@ -200,6 +208,120 @@ class _MedalsScreenState extends State<MedalsScreen> {
           },
         ),
       ],
+    );
+  }
+}
+
+/// ทางลัดสองปุ่มบนสุดของตู้เหรียญ: ชาเลนจ์ และสรุปทั้งปี
+class _ShortcutRow extends StatelessWidget {
+  final bool showYearReview;
+
+  const _ShortcutRow({required this.showYearReview});
+
+  @override
+  Widget build(BuildContext context) {
+    final year = DateTime.now().year + 543;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _Shortcut(
+            icon: Icons.emoji_events_rounded,
+            color: const Color(0xFFB45309),
+            title: 'ชาเลนจ์',
+            subtitle: 'เป้าเดือนนี้ & ปีนี้',
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ChallengesScreen())),
+          ),
+        ),
+        if (showYearReview) ...[
+          const SizedBox(width: 10),
+          Expanded(
+            child: _Shortcut(
+              icon: Icons.auto_awesome_rounded,
+              color: AppTheme.primaryColor,
+              title: 'สรุปปี $year',
+              subtitle: 'ปีนี้คุณไปไกลแค่ไหน',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const YearReviewScreen()),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _Shortcut extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _Shortcut({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: AppTheme.cardDecoration(context, radius: AppTheme.radiusMd),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppTheme.tintOf(context, color),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 19, color: color),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      fontSize: AppText.sizeBody,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -461,6 +583,8 @@ class MedalDetailScreen extends StatelessWidget {
               const SizedBox(height: 22),
               _RouteSection(medal: medal),
             ],
+            const SizedBox(height: 14),
+            MedalRoundSection(medal: medal),
             const SizedBox(height: 26),
             FilledButton.icon(
               onPressed: () {

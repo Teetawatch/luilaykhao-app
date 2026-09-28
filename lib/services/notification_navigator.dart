@@ -8,7 +8,9 @@ import '../screens/chat_screen.dart';
 import '../screens/gift_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/join_booking_screen.dart';
+import '../screens/challenges_screen.dart';
 import '../screens/medals_screen.dart';
+import '../screens/year_review_screen.dart';
 import '../screens/payment_screen.dart';
 import '../screens/reset_password_screen.dart';
 import '../screens/trip_feed_screen.dart';
@@ -80,8 +82,25 @@ class NotificationNavigator {
         _switchTab(2);
         _reviewPrompter?.call(data);
       case 'medal_earned':
-        // เหรียญพิชิตใหม่ — เปิดตู้เหรียญ (ฉากฉลองขึ้นเองถ้ายังไม่เคยเห็น)
+      // เหรียญพิชิตใหม่ / มีคนปรบมือให้ — เปิดตู้เหรียญแล้วชี้ไปที่เหรียญนั้น
+      case 'medal_kudos':
         _openMedals(data);
+      case 'challenge_completed':
+        _withNav(
+          (nav) => nav.push(
+            MaterialPageRoute(builder: (_) => const ChallengesScreen()),
+          ),
+        );
+      case 'year_review':
+        _withNav(
+          (nav) => nav.push(
+            MaterialPageRoute(
+              builder: (_) => YearReviewScreen(
+                year: int.tryParse('${data['year'] ?? ''}'),
+              ),
+            ),
+          ),
+        );
       case 'seat_alert':
         _switchTab(2);
       case 'trip_alert':

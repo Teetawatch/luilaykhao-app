@@ -9,6 +9,7 @@ import '../config/api_config.dart';
 import '../config/api_endpoints.dart';
 import '../models/pickup_vehicle_class.dart';
 import '../models/sos_alert.dart';
+import '../models/medal_social.dart';
 import '../models/trip_medal.dart';
 import '../services/analytics_service.dart';
 import '../services/api_client.dart';
@@ -761,6 +762,43 @@ class AppProvider extends ChangeNotifier {
     _medalCabinetAt = DateTime.now();
 
     return cabinet;
+  }
+
+  /// ใครพิชิตรอบเดียวกับเหรียญ [medalId] ของเรา + ปรบมือให้กัน
+  Future<MedalRound> fetchMedalRound(int medalId) async {
+    final response = await api.get('me/medals/$medalId/round');
+    return MedalRound.fromJson(
+      Map<String, dynamic>.from(api.data(response) ?? const {}),
+    );
+  }
+
+  /// ปรบมือ/เลิกปรบมือ — คืนสถานะที่เซิร์ฟเวอร์ยืนยันแล้ว
+  Future<({bool kudoed, int count})> toggleMedalKudos(int medalId) async {
+    final response = await api.post('me/medals/$medalId/kudos');
+    final data = Map<String, dynamic>.from(api.data(response) ?? const {});
+
+    return (
+      kudoed: data['kudoed'] == true,
+      count: int.tryParse('${data['kudos_count'] ?? 0}') ?? 0,
+    );
+  }
+
+  Future<ChallengeBoard> fetchChallenges() async {
+    final response = await api.get('me/challenges');
+    return ChallengeBoard.fromJson(
+      Map<String, dynamic>.from(api.data(response) ?? const {}),
+    );
+  }
+
+  /// [year] เป็น ค.ศ. — null = ปีปัจจุบัน
+  Future<YearReview> fetchYearReview([int? year]) async {
+    final response = await api.get(
+      'me/year-review',
+      query: year == null ? null : {'year': '$year'},
+    );
+    return YearReview.fromJson(
+      Map<String, dynamic>.from(api.data(response) ?? const {}),
+    );
   }
 
   /// ปิดฉากฉลองเหรียญใหม่ — ว่าง = ทุกเหรียญที่ยังไม่เคยเห็น

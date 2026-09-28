@@ -214,6 +214,10 @@ class TripMedal {
   /// สถิติส่วนตัวสูงสุดที่เหรียญนี้ถือ: distance / climb / altitude
   final List<String> records;
 
+  /// เพื่อนร่วมรอบปรบมือให้กี่คน + ชื่อล่าสุด (ไม่เกินสามคน)
+  final int kudosCount;
+  final List<String> kudosRecent;
+
   const TripMedal({
     required this.id,
     required this.seen,
@@ -241,6 +245,8 @@ class TripMedal {
     this.route,
     this.personal,
     this.records = const [],
+    this.kudosCount = 0,
+    this.kudosRecent = const [],
   });
 
   /// ปี พ.ศ. ของวันที่พิชิต — ใช้กับตัวอักษรที่วิ่งรอบขอบเหรียญ
@@ -291,6 +297,8 @@ class TripMedal {
     route: route,
     personal: personal,
     records: records,
+    kudosCount: kudosCount,
+    kudosRecent: kudosRecent,
   );
 
   factory TripMedal.fromJson(Map<String, dynamic> json) {
@@ -340,6 +348,12 @@ class TripMedal {
       records: [
         for (final r in json['records'] is List ? json['records'] as List : [])
           if (r is String && r.isNotEmpty) r,
+      ],
+      kudosCount: int.tryParse(text(json['kudos_count'])) ?? 0,
+      kudosRecent: [
+        for (final n
+            in json['kudos_recent'] is List ? json['kudos_recent'] as List : [])
+          if ('$n'.trim().isNotEmpty) '$n'.trim(),
       ],
     );
   }

@@ -48,6 +48,8 @@ import 'referral_screen.dart' show ReferralScreen;
 import 'rewards_screen.dart' show RewardsScreen;
 import 'passport_screen.dart' show PassportScreen;
 import 'medals_screen.dart' show MedalsScreen;
+import 'challenges_screen.dart' show ChallengesScreen;
+import 'year_review_screen.dart' show YearReviewScreen;
 import 'my_tracks_screen.dart' show MyTracksScreen;
 import 'public_profile_settings_screen.dart'
     show PublicProfileSettingsScreen;
@@ -1134,6 +1136,18 @@ class TravelMenu extends StatelessWidget {
           label: 'ตู้เหรียญพิชิต',
           subtitle: 'เหรียญประจำตัวของทุกทริปที่เดินจบ พร้อมเลข Finisher แชร์ลงโซเชียลได้',
           onTap: () => _pushPremium(context, const MedalsScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.emoji_events_rounded,
+          label: 'ชาเลนจ์',
+          subtitle: 'เป้ารายเดือนและรายปี เช่น เดินให้ครบ 100 กม. ในปีนี้',
+          onTap: () => _pushPremium(context, const ChallengesScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.auto_awesome_rounded,
+          label: 'สรุปปีของฉัน',
+          subtitle: 'ทริป ระยะทาง ความสูง และเหรียญทั้งปี แชร์เป็นสตอรี่ได้',
+          onTap: () => _pushPremium(context, const YearReviewScreen()),
         ),
         _MenuItem(
           icon: Icons.route_rounded,

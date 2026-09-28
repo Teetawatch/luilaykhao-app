@@ -111,8 +111,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return;
     }
 
-    // เหรียญพิชิตใหม่ — เปิดตู้เหรียญแล้วชี้ไปที่เหรียญนั้น
-    if (type == 'medal_earned') {
+    if (type == 'challenge_completed') {
+      _pushPremium(context, const ChallengesScreen());
+      return;
+    }
+
+    if (type == 'year_review') {
+      _pushPremium(
+        context,
+        YearReviewScreen(year: int.tryParse(_cleanText(data['year']))),
+      );
+      return;
+    }
+
+    // เหรียญพิชิตใหม่ / มีคนปรบมือให้ — เปิดตู้เหรียญแล้วชี้ไปที่เหรียญนั้น
+    if (type == 'medal_earned' || type == 'medal_kudos') {
       _pushPremium(
         context,
         MedalsScreen(focusMedalId: int.tryParse(_cleanText(data['medal_id']))),
