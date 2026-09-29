@@ -105,6 +105,9 @@ class ApiEndpoints {
 
   // Bookings
   static const bookings = 'bookings';
+
+  /// เงื่อนไขก่อนจองฉบับที่ใช้อยู่ — ชุดเดียวกับเว็บและ LINE
+  static const legalPolicy = 'legal/policy';
   static const bookingsGuestLookup = 'bookings/guest-lookup';
   static const bookingsGuestLookupByName = 'bookings/guest-lookup-by-name';
   static const reviewsUploadImage = 'reviews/upload-image';

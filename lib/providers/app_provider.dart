@@ -2389,6 +2389,15 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// เงื่อนไขก่อนจองที่ประกาศใช้อยู่ {terms_version, booking_terms, ...}
+  ///
+  /// ไม่แคช — ลูกค้าต้องเห็นฉบับล่าสุดทุกครั้งที่กดจอง ไม่งั้นเซิร์ฟเวอร์จะปฏิเสธ
+  /// ใบจองที่ยอมรับฉบับเก่า แล้วลูกค้าก็กดซ้ำไปเจอข้อความเดิมวนไม่จบ
+  Future<Map<String, dynamic>> fetchLegalPolicy() async {
+    final response = await api.get(ApiEndpoints.legalPolicy);
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
   Future<Map<String, dynamic>> createBooking(
     Map<String, dynamic> payload,
   ) async {

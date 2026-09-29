@@ -783,10 +783,120 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     ),
                   ],
                 ],
+                // เงื่อนไขที่ลูกค้ากดยอมรับตอนจอง — ย้อนอ่านได้ว่าตกลงอะไรไว้
+                // (เช่น รอบถูกเลื่อนเพราะน้ำป่า ได้สิทธิ์อะไร) ใบที่ไม่ได้กด
+                // ยอมรับ (แอดมินจองแทน) ไม่มีแถวนี้ เพราะไม่มีอะไรให้อ้าง
+                if (_acceptedTermsLines(booking).isNotEmpty) ...[
+                  const Divider(height: 28),
+                  _BookingActionCard(
+                    icon: Icons.gavel_rounded,
+                    color: AppTheme.slate600,
+                    title: 'เงื่อนไขที่คุณยอมรับไว้',
+                    subtitle: _acceptedTermsSubtitle(booking),
+                    onTap: () => _openAcceptedTerms(context, booking),
+                  ),
+                ],
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  List<String> _acceptedTermsLines(Map<String, dynamic> booking) {
+    final terms = asMap(booking['terms_acceptance']);
+    if (textOf(terms['status'], 'none') == 'none') return const [];
+    return asList(terms['lines'])
+        .map((line) => textOf(line))
+        .where((line) => line.isNotEmpty)
+        .toList();
+  }
+
+  String _acceptedTermsSubtitle(Map<String, dynamic> booking) {
+    final terms = asMap(booking['terms_acceptance']);
+    final version = DateTime.tryParse(textOf(terms['version']));
+    final acceptedAt = DateTime.tryParse(textOf(terms['accepted_at']));
+    return [
+      if (version != null) 'ฉบับวันที่ ${thaiDateShort(version)}',
+      if (acceptedAt != null)
+        'ยอมรับเมื่อ ${thaiDateTimeShort(acceptedAt.toLocal())} น.',
+    ].join(' · ');
+  }
+
+  Future<void> _openAcceptedTerms(
+    BuildContext context,
+    Map<String, dynamic> booking,
+  ) async {
+    final lines = _acceptedTermsLines(booking);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusXl),
+        ),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'เงื่อนไขที่คุณยอมรับไว้',
+                  style: appFont(
+                    fontSize: AppText.sizeTitle,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _acceptedTermsSubtitle(booking),
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    color: AppTheme.mutedText(sheetContext),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                for (var i = 0; i < lines.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 22,
+                          child: Text(
+                            '${i + 1}.',
+                            style: appFont(
+                              fontSize: AppText.sizeBody,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            lines[i],
+                            style: appFont(
+                              fontSize: AppText.sizeBody,
+                              height: 1.55,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

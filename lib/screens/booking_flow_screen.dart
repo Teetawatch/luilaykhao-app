@@ -13,6 +13,7 @@ import '../services/api_client.dart';
 import '../services/realtime_service.dart';
 import '../utils/thai_date.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/booking_terms_sheet.dart';
 import '../widgets/document_attach_field.dart';
 import '../widgets/min_tap_target.dart';
 import '../widgets/pickup_vehicle_guide.dart';
@@ -1647,6 +1648,41 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     }
   }
 
+  /// โหลดเงื่อนไขฉบับล่าสุดแล้วให้ลูกค้ากดยอมรับ — คืนเวอร์ชันที่ยอมรับ
+  /// หรือ null เมื่อโหลดไม่ได้หรือลูกค้าปิดแผ่น
+  Future<String?> _confirmTerms() async {
+    setState(() => _submitting = true);
+    Map<String, dynamic> policy;
+    try {
+      policy = await context.read<AppProvider>().fetchLegalPolicy();
+    } catch (_) {
+      policy = const {};
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+    if (!mounted) return null;
+
+    final version = textOf(policy['terms_version']);
+    final lines = asList(policy['booking_terms'])
+        .map((line) => textOf(line))
+        .where((line) => line.isNotEmpty)
+        .toList();
+
+    // อ่านเงื่อนไขไม่ได้ = ห้ามให้กดยอมรับสิ่งที่เราเองยังไม่รู้ว่าคืออะไร
+    if (version.isEmpty || lines.isEmpty) {
+      AppSnack.error(context, 'โหลดเงื่อนไขการจองไม่สำเร็จ กรุณาลองอีกครั้งครับ');
+      return null;
+    }
+
+    final accepted = await BookingTermsSheet.show(
+      context,
+      lines: lines,
+      version: version,
+      summary: '${_passengers.length} ท่าน · ${money(_pricing.total)}',
+    );
+    return accepted ? version : null;
+  }
+
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (_scheduleId == null) {
@@ -1734,11 +1770,27 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       return;
     }
 
+    // ลูกค้าต้องเห็นและกดยอมรับเงื่อนไขก่อนทุกครั้ง — แอดมินที่จองแทนลูกค้า
+    // ข้ามไป เพราะคนที่กดไม่ใช่เจ้าของใบจอง การประทับว่า "ยอมรับแล้ว" ให้
+    // ทั้งที่ลูกค้าไม่เคยเห็นคือหลักฐานปลอม ใบจองแบบนั้นจึงไม่มีบันทึก
+    String? termsVersion;
+    if (!_isAdmin) {
+      termsVersion = await _confirmTerms();
+      if (termsVersion == null || !mounted) return;
+    }
+
     setState(() => _submitting = true);
     final app = context.read<AppProvider>();
     try {
       await _lockSelectedSeatsIfNeeded();
       final booking = await app.createBooking({
+        // หลักฐานการยอมรับเงื่อนไข — เซิร์ฟเวอร์เก็บข้อความ เวลา ช่องทาง และ
+        // เครื่องไว้กับใบจอง ฉบับที่ส่งต้องตรงฉบับปัจจุบัน ไม่งั้นถูกปฏิเสธ
+        if (termsVersion != null) ...{
+          'accepted_terms': true,
+          'terms_version': termsVersion,
+          'consent_channel': 'app',
+        },
         'schedule_id': _scheduleId,
         // ปักหมุดเอง = ไม่ส่ง region/จุดตายตัว ไม่งั้น backend จับคู่จุดตายตัวแล้วมองข้ามหมุด
         'pickup_point_id': (_isJoinTrip || _customPickup != null) ? null : _pickupPointId,
