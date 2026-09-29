@@ -459,7 +459,7 @@ class _StaffToolbar extends StatelessWidget {
     final trip = _toMap(schedule['trip']);
     final tripTitle = _cleanText(trip['title'], fallback: 'ทริป');
 
-    // เครื่องมือของสตาฟมี 8 อย่าง — เรียงแถวเดียวป้ายจะโดนตัดจนอ่านไม่ออก
+    // เครื่องมือของสตาฟมี 9 อย่าง — เรียงแถวเดียวป้ายจะโดนตัดจนอ่านไม่ออก
     // จึงตัด 4 ช่องต่อแถวแล้วให้ล้นลงแถวถัดไปเอง
     final tools = <Widget>[
       _StaffToolTile(
@@ -487,6 +487,15 @@ class _StaffToolbar extends StatelessWidget {
         onTap: () => _pushPremium(
           context,
           StaffOutstandingScreen(scheduleId: scheduleId, title: tripTitle),
+        ),
+      ),
+      _StaffToolTile(
+        icon: Icons.shopping_cart_outlined,
+        label: 'ซื้อของ',
+        color: const Color(0xFFEA580C),
+        onTap: () => _pushPremium(
+          context,
+          StaffShoppingScreen(scheduleId: scheduleId, title: tripTitle),
         ),
       ),
       _StaffToolTile(
@@ -1467,6 +1476,20 @@ class _StaffScheduleAction extends StatelessWidget {
                 ),
               ),
             ),
+          // ของที่ต้องซื้อก่อนออกเดินทาง — ต้องเปิดได้จากการ์ดของรอบข้างหน้าด้วย
+          // เพราะแถบเครื่องมือด้านบนผูกกับรอบที่ใกล้ที่สุดรอบเดียว
+          if (hasSchedule) ...[
+            divider(),
+            _StaffActionRow(
+              icon: Icons.shopping_cart_outlined,
+              label: 'ของที่ต้องซื้อก่อนออกทริป',
+              color: const Color(0xFFEA580C),
+              onTap: () => _pushPremium(
+                context,
+                StaffShoppingScreen(scheduleId: scheduleId, title: tripTitle),
+              ),
+            ),
+          ],
           // Passenger manifest — names, callable phones and pickup points so
           // staff can run the roll-call and coordinate pickups in the field.
           if (hasSchedule) ...[

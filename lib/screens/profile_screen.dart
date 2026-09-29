@@ -35,6 +35,7 @@ import 'incident_list_screen.dart' show IncidentListScreen;
 import 'staff_ledger_screen.dart' show StaffLedgerScreen;
 import 'staff_outstanding_screen.dart' show StaffOutstandingScreen;
 import 'staff_rentals_screen.dart' show StaffRentalsScreen;
+import 'staff_shopping_screen.dart' show StaffShoppingScreen;
 import 'schedule_itinerary_screen.dart' show ScheduleItineraryScreen;
 import 'wishlist_screen.dart';
 import 'waitlist_screen.dart';

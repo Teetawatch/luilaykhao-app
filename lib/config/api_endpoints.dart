@@ -249,4 +249,16 @@ class ApiEndpoints {
       'staff/schedules/$scheduleId/ledger';
   static String staffLedgerEntry(int scheduleId, int entryId) =>
       'staff/schedules/$scheduleId/ledger/$entryId';
+
+  /// ใบซื้อของก่อนออกทริป — ติ๊กของที่ซื้อแล้ว + ส่งรายงานพร้อมรูป
+  static String staffShopping(int scheduleId) =>
+      'staff/schedules/$scheduleId/shopping';
+  static String staffShoppingItems(int scheduleId) =>
+      'staff/schedules/$scheduleId/shopping/items';
+  static String staffShoppingItem(int scheduleId, int itemId) =>
+      'staff/schedules/$scheduleId/shopping/items/$itemId';
+  static String staffShoppingBought(int scheduleId, int itemId) =>
+      'staff/schedules/$scheduleId/shopping/items/$itemId/bought';
+  static String staffShoppingReport(int scheduleId) =>
+      'staff/schedules/$scheduleId/shopping/report';
 }

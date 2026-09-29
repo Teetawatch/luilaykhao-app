@@ -697,6 +697,7 @@ String _notificationTypeLabel(String type) {
     'vehicle_approaching' => 'รถใกล้ถึงแล้ว',
     'staff_assignment' => 'มอบหมายงาน',
     'staff_shift_reminder' => 'เตรียมงานนำทริป',
+    'shopping_report' || 'shopping_report_reopened' => 'ซื้อของก่อนออกทริป',
     _ => 'การแจ้งเตือน',
   };
 }
@@ -727,6 +728,8 @@ IconData _notificationIcon(String type) {
     'vehicle_approaching' => Icons.directions_bus_rounded,
     'staff_assignment' => Icons.assignment_ind_rounded,
     'staff_shift_reminder' => Icons.backpack_rounded,
+    'shopping_report' ||
+    'shopping_report_reopened' => Icons.shopping_cart_rounded,
     _ => Icons.notifications_none_rounded,
   };
 }

@@ -2153,6 +2153,84 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(data);
   }
 
+  /// ใบซื้อของของรอบ — คืน `{schedule, headcount, summary, locked, items, report}`
+  /// รอบแรกที่เปิด เซิร์ฟเวอร์ก๊อปรายการประจำทริปมาให้เอง
+  Future<Map<String, dynamic>> loadStaffShopping(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.staffShopping(scheduleId));
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    return Map<String, dynamic>.from(data);
+  }
+
+  /// ติ๊ก/เลิกติ๊ก "ซื้อแล้ว" — คืนใบซื้อของชุดใหม่ทั้งใบ
+  Future<Map<String, dynamic>> markStaffShoppingItem(
+    int scheduleId,
+    int itemId, {
+    required bool bought,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.staffShoppingBought(scheduleId, itemId),
+      body: {'bought': bought},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// เพิ่มของเฉพาะรอบนี้ (ไม่แตะรายการประจำทริป)
+  Future<Map<String, dynamic>> addStaffShoppingItem(
+    int scheduleId, {
+    required String name,
+    double? quantity,
+    String? unit,
+    String? note,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.staffShoppingItems(scheduleId),
+      body: {
+        'name': name,
+        'quantity': ?quantity,
+        if (unit != null && unit.isNotEmpty) 'unit': unit,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ลบของที่ตัวเองเพิ่มไว้
+  Future<Map<String, dynamic>> deleteStaffShoppingItem(
+    int scheduleId,
+    int itemId,
+  ) async {
+    final response = await api.delete(
+      ApiEndpoints.staffShoppingItem(scheduleId, itemId),
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ส่งรายงานซื้อของ — [photoPaths] ต้องมีอย่างน้อยหนึ่งรูป (เซิร์ฟเวอร์บังคับ)
+  /// ใส่ [totalAmount] + [addToLedger] แล้วยอดจะลงบัญชีหน้างานให้เลย
+  Future<Map<String, dynamic>> submitStaffShoppingReport(
+    int scheduleId, {
+    required List<String> photoPaths,
+    double? totalAmount,
+    String? note,
+    bool addToLedger = false,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.staffShoppingReport(scheduleId),
+      fields: {
+        'total_amount': ?totalAmount,
+        if (note != null && note.isNotEmpty) 'note': note,
+        // multipart ส่งทุกอย่างเป็นข้อความ — กฎ boolean ของ Laravel รับ "1"/"0"
+        // แต่ไม่รับ "true"
+        'add_to_ledger': addToLedger ? '1' : '0',
+      },
+      files: {
+        for (var i = 0; i < photoPaths.length; i++) 'photos[$i]': photoPaths[i],
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   /// ส่งลิงก์ชำระเงินซ้ำให้ลูกค้าที่ค้างชำระ (email / sms)
   Future<void> sendStaffPaymentLink(
     int scheduleId,
@@ -3535,10 +3613,14 @@ class AppProvider extends ChangeNotifier {
         'passenger_id': ?passengerId,
       },
     );
-    await loadPublicData();
-    await loadMyReviews();
-    // รีโหลดรายการจองด้วย เพื่อให้ can_review อัปเดต (ปุ่มรีวิวหายหลังรีวิวแล้ว)
-    await loadAccountData();
+    // รีวิวบันทึกแล้วตั้งแต่ POST ผ่าน — รีโหลดพัง (เช่น สัญญาณหลุด) ต้องไม่
+    // กลายเป็น "ส่งไม่สำเร็จ" ไม่งั้นลูกค้ากดส่งซ้ำแล้วเจอ "รีวิวไปแล้ว"
+    try {
+      await loadPublicData();
+      await loadMyReviews();
+      // รีโหลดรายการจองด้วย เพื่อให้ can_review อัปเดต (ปุ่มรีวิวหายหลังรีวิวแล้ว)
+      await loadAccountData();
+    } catch (_) {}
     await AnalyticsService.instance.logReviewSubmitted(bookingId, rating);
     if (rating >= 4) {
       unawaited(RatingPromptService.instance.maybeRequest());

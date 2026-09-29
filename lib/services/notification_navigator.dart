@@ -21,6 +21,7 @@ import '../screens/support_chat_screen.dart';
 import '../screens/travel_documents_screen.dart';
 import '../screens/trip_detail_screen.dart' show TripDetailScreen;
 import '../screens/staff_manifest_screen.dart';
+import '../screens/staff_shopping_screen.dart';
 import '../screens/waitlist_screen.dart';
 import 'sos_alarm_service.dart';
 
@@ -134,6 +135,9 @@ class NotificationNavigator {
       // เตือนสตาฟว่ายังไม่ได้เปิดแชร์ตำแหน่งรถ — สวิตช์อยู่บนหน้ารายชื่อ
       case 'staff_share_location':
         _openStaffManifest(data);
+      // แอดมินตีกลับรายงานซื้อของ — เปิดใบซื้อของของรอบนั้นให้แก้แล้วส่งใหม่ได้เลย
+      case 'shopping_report_reopened':
+        _openStaffShopping(data);
       case 'staff_assignment':
       case 'staff_shift_reminder':
         // ไม่มีหน้าตารางงานสตาฟในแอปลูกค้า — เปิดศูนย์แจ้งเตือนให้อ่านรายละเอียด
@@ -279,6 +283,21 @@ class NotificationNavigator {
             scheduleId: id,
             title: '${data['trip_title'] ?? ''}',
           ),
+        ),
+      ),
+    );
+  }
+
+  static void _openStaffShopping(Map<String, dynamic> data) {
+    final id = int.tryParse('${data['schedule_id']}') ?? 0;
+    if (id == 0) {
+      _openNotifications();
+      return;
+    }
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => StaffShoppingScreen(scheduleId: id, title: ''),
         ),
       ),
     );
