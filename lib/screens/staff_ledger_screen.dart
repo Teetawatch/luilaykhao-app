@@ -12,6 +12,7 @@ import '../utils/thai_date.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
+import '../widgets/travel_widgets.dart' show PrimaryCTAButton;
 import 'staff_check_in_screen.dart' show asList, asMap, money, textOf;
 
 /// สมุดบัญชีหน้างานของรอบเดินทาง
@@ -1346,28 +1347,13 @@ class _LedgerFormSheetState extends State<_LedgerFormSheet> {
               style: appFont(fontSize: AppText.sizeBody),
             ),
             const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: FilledButton(
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        _isEdit ? 'บันทึกการแก้ไข' : 'บันทึกรายการ',
-                        style: appFont(
-                          fontSize: AppText.sizeSubtitle,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-              ),
+            PrimaryCTAButton(
+              label: _saving
+                  ? 'กำลังบันทึก...'
+                  : (_isEdit ? 'บันทึกการแก้ไข' : 'บันทึกรายการ'),
+              icon: Icons.check_circle_outline_rounded,
+              loading: _saving,
+              onPressed: _save,
             ),
           ],
         ),

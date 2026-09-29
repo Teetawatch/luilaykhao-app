@@ -161,7 +161,7 @@ void main() {
     await tester.tap(find.text('รีวิว'));
     await tester.pumpAndSettle();
 
-    expect(find.text('รีวิวทริปนี้'), findsOneWidget);
+    expect(find.text('ทริปนี้เป็นยังไงบ้าง?'), findsOneWidget);
   });
 
   // ยกเลิกแล้วแต่จ่ายเงินไปแล้ว ยังต้องติดตามเงินคืน จึงไม่ใช่ประวัติที่ปิดจบ

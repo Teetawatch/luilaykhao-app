@@ -91,49 +91,6 @@ class PackageListSection extends StatelessWidget {
   }
 }
 
-class PrimaryCTAButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  const PrimaryCTAButton({
-    super.key,
-    required this.label,
-    required this.icon,
-    this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 56, // Modern tall button
-      decoration: const BoxDecoration(
-      ),
-      child: FilledButton.icon(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          ),
-          elevation: 0,
-        ),
-        icon: Icon(icon, size: 24),
-        label: Text(
-          label,
-          style: appFont(
-            fontSize: AppText.sizeTitle,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _PlannerSelectFrame extends StatelessWidget {
   final IconData icon;
   final String label;

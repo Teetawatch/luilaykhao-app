@@ -323,21 +323,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      FilledButton.icon(
-                        onPressed: _saving ? null : _save,
-                        icon: _saving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.save_outlined),
-                        label: Text(
-                          _saving ? 'กำลังบันทึก...' : 'บันทึกโปรไฟล์',
-                        ),
+                      PrimaryCTAButton(
+                        label: _saving
+                            ? 'กำลังบันทึก...'
+                            : 'บันทึกการเปลี่ยนแปลง',
+                        icon: Icons.check_circle_outline_rounded,
+                        loading: _saving,
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          _save();
+                        },
                       ),
                     ],
                   ),

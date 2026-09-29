@@ -144,7 +144,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               PrimaryCTAButton(
                 label: _saving ? 'กำลังบันทึก...' : 'บันทึกรหัสผ่านใหม่',
                 icon: Icons.lock_reset_rounded,
-                onPressed: _saving ? null : _submit,
+                onPressed: _submit,
+                loading: _saving,
               ),
             ],
           ],

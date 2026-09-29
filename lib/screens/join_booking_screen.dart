@@ -222,28 +222,11 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 50,
-              child: FilledButton.icon(
-                onPressed: _loading ? null : _lookup,
-                icon: _loading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.search_rounded, size: 18),
-                label: Text(
-                  _loading ? 'กำลังตรวจสอบ...' : 'ตรวจสอบคำเชิญ',
-                  style: appFont(
-                    fontSize: AppText.sizeBody,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
+            PrimaryCTAButton(
+              label: _loading ? 'กำลังตรวจสอบ...' : 'ตรวจสอบคำเชิญ',
+              icon: Icons.search_rounded,
+              loading: _loading,
+              onPressed: _lookup,
             ),
             if (_error != null) ...[
               const SizedBox(height: 16),
@@ -267,7 +250,8 @@ class _JoinBookingScreenState extends State<JoinBookingScreen> {
                 PrimaryCTAButton(
                   label: _joining ? 'กำลังเข้าร่วม...' : 'เข้าร่วมการจองนี้',
                   icon: Icons.group_add_rounded,
-                  onPressed: _joining ? null : _join,
+                  onPressed: _join,
+                  loading: _joining,
                 ),
             ],
             if (preview == null && _error == null) ...[

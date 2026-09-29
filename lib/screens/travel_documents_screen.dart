@@ -232,32 +232,11 @@ class _TravelDocumentsScreenState extends State<TravelDocumentsScreen> {
                     );
                   }),
                   const SizedBox(height: 6),
-                  FilledButton(
-                    onPressed: _saving ? null : _save,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      ),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            'บันทึกเอกสารเดินทาง',
-                            style: appFont(
-                              color: Colors.white,
-                              fontSize: AppText.sizeBody,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                  PrimaryCTAButton(
+                    label: _saving ? 'กำลังบันทึก...' : 'บันทึกเอกสารเดินทาง',
+                    icon: Icons.check_circle_outline_rounded,
+                    loading: _saving,
+                    onPressed: _save,
                   ),
                   const SizedBox(height: 10),
                   Text(

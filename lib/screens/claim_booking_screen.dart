@@ -215,7 +215,8 @@ class _ClaimBookingScreenState extends State<ClaimBookingScreen> {
             PrimaryCTAButton(
               label: _submitting ? 'กำลังตรวจสอบ...' : 'ผูกเข้าบัญชีของฉัน',
               icon: Icons.link_rounded,
-              onPressed: _submitting ? null : _submit,
+              onPressed: _submit,
+              loading: _submitting,
             ),
             const SizedBox(height: 26),
             const _FieldLabel('หาเลขที่การจองไม่เจอ?'),

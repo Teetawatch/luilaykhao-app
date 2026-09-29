@@ -451,7 +451,8 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
             ? PrimaryCTAButton(
                 label: _busy ? 'กำลังสร้างลิงก์...' : 'สร้างลิงก์คำเชิญ',
                 icon: Icons.person_add_alt_1_rounded,
-                onPressed: _busy ? null : _createInvite,
+                onPressed: _createInvite,
+                loading: _busy,
               )
             : const _NoteLine(
                 icon: Icons.groups_rounded,

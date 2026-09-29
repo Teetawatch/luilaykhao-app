@@ -297,26 +297,12 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
           ),
           const SizedBox(height: 28),
 
-          FilledButton.icon(
-            onPressed: _submitting ? null : _submit,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            icon: _submitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.report_rounded),
-            label: Text(
-              _submitting ? 'กำลังส่ง...' : 'ส่งแจ้งเหตุ',
-              style: appFont(fontWeight: FontWeight.w800, color: Colors.white),
-            ),
+          PrimaryCTAButton(
+            label: _submitting ? 'กำลังส่ง...' : 'ส่งแจ้งเหตุ',
+            icon: Icons.report_rounded,
+            color: AppTheme.errorColor,
+            loading: _submitting,
+            onPressed: _submit,
           ),
         ],
       ),

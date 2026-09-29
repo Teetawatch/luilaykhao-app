@@ -130,7 +130,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   PrimaryCTAButton(
                     label: _sending ? 'กำลังส่ง...' : 'ส่งลิงก์ตั้งรหัสผ่านใหม่',
                     icon: Icons.send_rounded,
-                    onPressed: _sending ? null : _submit,
+                    onPressed: _submit,
+                    loading: _sending,
                   ),
                   const SizedBox(height: 18),
                   Text(

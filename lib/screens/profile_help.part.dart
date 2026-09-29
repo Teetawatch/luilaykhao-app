@@ -183,19 +183,14 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      FilledButton.icon(
-                        onPressed: _sending ? null : _send,
-                        icon: _sending
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.send_outlined),
-                        label: Text(_sending ? 'กำลังส่ง...' : 'ส่งข้อความ'),
+                      PrimaryCTAButton(
+                        label: _sending ? 'กำลังส่ง...' : 'ส่งข้อความ',
+                        icon: Icons.send_rounded,
+                        loading: _sending,
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          _send();
+                        },
                       ),
                     ],
                   ),

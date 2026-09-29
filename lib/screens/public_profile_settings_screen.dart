@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state_view.dart';
+import '../widgets/travel_widgets.dart' show PrimaryCTAButton;
 
 /// โปรไฟล์นักเดินสาธารณะ — เปิด/ปิด และแชร์ลิงก์ /u/{handle}
 ///
@@ -179,16 +180,11 @@ class _PublicProfileSettingsScreenState
                   ),
                 ),
                 const SizedBox(height: 8),
-                FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: const Icon(Icons.check_rounded, size: 18),
-                  label: Text(
-                    _saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า',
-                    style: appFont(
-                      fontSize: AppText.sizeBody,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                PrimaryCTAButton(
+                  label: _saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า',
+                  icon: Icons.check_circle_outline_rounded,
+                  loading: _saving,
+                  onPressed: _save,
                 ),
                 if (_enabled && url.isNotEmpty) ...[
                   const SizedBox(height: 24),

@@ -244,18 +244,11 @@ class _TripReadinessSectionState extends State<TripReadinessSection> {
         ],
       ),
       const SizedBox(height: 14),
-      SizedBox(
-        width: double.infinity,
-        child: FilledButton(
-          onPressed: _saving ? null : _saveBaseline,
-          child: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('ดูว่าทริปนี้ไหวไหม'),
-        ),
+      PrimaryCTAButton(
+        label: _saving ? 'กำลังคำนวณ...' : 'ดูว่าทริปนี้ไหวไหม',
+        icon: Icons.insights_rounded,
+        loading: _saving,
+        onPressed: _saveBaseline,
       ),
       const SizedBox(height: 10),
       Text(

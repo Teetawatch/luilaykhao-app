@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/travel_widgets.dart' show PrimaryCTAButton;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Storage keys & helpers
@@ -420,32 +421,11 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
 
                   const SizedBox(height: 32),
                   // ── Save button ──────────────────────────────────────────
-                  SizedBox(
-                    height: 56,
-                    child: FilledButton.icon(
-                      onPressed: _saving ? null : _save,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-                        ),
-                      ),
-                      icon: _saving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.save_rounded, size: 20),
-                      label: Text(
-                        _saving ? 'กำลังบันทึก...' : 'บันทึก Wallet',
-                        style: appFont(
-                          fontWeight: FontWeight.w900,
-                          fontSize: AppText.sizeSubtitle,
-                        ),
-                      ),
-                    ),
+                  PrimaryCTAButton(
+                    label: _saving ? 'กำลังบันทึก...' : 'บันทึก Wallet',
+                    icon: Icons.check_circle_outline_rounded,
+                    loading: _saving,
+                    onPressed: _save,
                   ),
                 ],
               ),

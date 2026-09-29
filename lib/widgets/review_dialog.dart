@@ -1,13 +1,31 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_endpoints.dart';
 import '../providers/app_provider.dart';
+import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import 'app_snack.dart';
+import 'travel_widgets.dart' show PrimaryCTAButton;
 
+const _starColor = Color(0xFFFFB400);
+
+/// คำบรรยายใต้ดาว — index 0 = 1 ดาว
+const _ratingWords = [
+  'ไม่ประทับใจ',
+  'พอใช้',
+  'ดี',
+  'ดีมาก',
+  'ประทับใจมาก',
+];
+
+/// Post-trip review, shown as a bottom sheet. After a successful send the sheet
+/// swaps to a thank-you state instead of closing silently, so the traveller
+/// knows the review actually went through.
 class ReviewSubmissionDialog extends StatefulWidget {
   final int bookingId;
   final String tripTitle;
@@ -26,12 +44,19 @@ class ReviewSubmissionDialog extends StatefulWidget {
     required int bookingId,
     required String tripTitle,
   }) async {
-    final result = await showDialog<bool>(
+    final result = await showModalBottomSheet<bool>(
       context: context,
-      builder: (_) => ReviewSubmissionDialog(
-        bookingId: bookingId,
-        tripTitle: tripTitle,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusXl),
+        ),
       ),
+      builder: (_) =>
+          ReviewSubmissionDialog(bookingId: bookingId, tripTitle: tripTitle),
     );
     return result ?? false;
   }
@@ -41,6 +66,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
   final _commentController = TextEditingController();
   int _rating = 5;
   bool _submitting = false;
+  bool _submitted = false;
   String? _error;
 
   // Optional per-category ratings (0 = ไม่ระบุ)
@@ -107,6 +133,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
   Future<void> _pickImages() async {
     final remaining = _maxImages - _selectedImages.length;
     if (remaining <= 0) return;
+    HapticFeedback.selectionClick();
 
     final picker = ImagePicker();
     final picked = await picker.pickMultiImage(
@@ -145,16 +172,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
     } catch (_) {
       if (mounted) {
         setState(() => _uploadingFlags[index] = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('อัปโหลดรูปภาพล้มเหลว',
-                style: appFont()),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          ),
-        );
+        AppSnack.error(context, 'อัปโหลดรูปภาพล้มเหลว');
       }
       return;
     }
@@ -171,6 +189,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
 
   Future<void> _pickVideo() async {
     if (_selectedVideos.length >= _maxVideos) return;
+    HapticFeedback.selectionClick();
 
     final picker = ImagePicker();
     final picked = await picker.pickVideo(
@@ -203,16 +222,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
     } catch (_) {
       if (mounted) {
         setState(() => _videoUploadingFlags[index] = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('อัปโหลดวิดีโอล้มเหลว (ไฟล์อาจใหญ่เกิน 50MB)',
-                style: appFont()),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          ),
-        );
+        AppSnack.error(context, 'อัปโหลดวิดีโอล้มเหลว (ไฟล์อาจใหญ่เกิน 50MB)');
       }
       return;
     }
@@ -231,6 +241,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
       _uploadingFlags.any((f) => f) || _videoUploadingFlags.any((f) => f);
 
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
     final comment = _commentController.text.trim();
     if (comment.length < 4) {
       setState(() => _error = 'กรุณาเขียนรีวิวอย่างน้อย 4 ตัวอักษร');
@@ -266,20 +277,181 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
             passengerId: _passengerId,
           );
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _submitting = false;
+        _submitted = true;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = e is ApiException ? e.message : e.toString();
         _submitting = false;
       });
     }
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.92;
+    return PopScope(
+      // กันปัดทิ้งกลางคันตอนกำลังส่ง ไม่งั้นไม่รู้ว่าส่งถึงหรือเปล่า
+      canPop: !_submitting,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.bottomCenter,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              child: _submitted
+                  ? _ReviewSuccessView(
+                      key: const ValueKey('success'),
+                      tripTitle: widget.tripTitle,
+                      rating: _rating,
+                      onDone: () => Navigator.of(context).pop(true),
+                    )
+                  : _buildForm(context),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForm(BuildContext context) {
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return Column(
+      key: const ValueKey('form'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Header ─────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ทริปนี้เป็นยังไงบ้าง?',
+                      style: appFont(
+                        fontSize: AppText.sizeTitle,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.tripTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        fontSize: AppText.sizeLabel,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'ปิด',
+                onPressed: _submitting
+                    ? null
+                    : () => Navigator.of(context).pop(false),
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── Scrollable body ────────────────────────────────────────────
+        Flexible(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_reviewAs.isNotEmpty) ...[
+                  _buildReviewAs(),
+                  const SizedBox(height: 16),
+                ],
+                _buildOverallRating(),
+                const SizedBox(height: 20),
+                const _SectionLabel('ให้คะแนนแยกหมวด', optional: true),
+                const SizedBox(height: 8),
+                _buildCategories(),
+                const SizedBox(height: 20),
+                const _SectionLabel('เล่าประสบการณ์ของคุณ'),
+                const SizedBox(height: 8),
+                _buildComment(),
+                const SizedBox(height: 12),
+                const _SectionLabel('รูปและวิดีโอ', optional: true),
+                const SizedBox(height: 8),
+                _buildMediaStrip(),
+              ],
+            ),
+          ),
+        ),
+
+        // ── Footer ─────────────────────────────────────────────────────
+        Container(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            12 + (keyboardOpen ? 0 : MediaQuery.paddingOf(context).bottom),
+          ),
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: AppTheme.border(context).withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                _ErrorBanner(message: _error!),
+                const SizedBox(height: 10),
+              ],
+              PrimaryCTAButton(
+                label: _submitting
+                    ? 'กำลังส่งรีวิว...'
+                    : _anyUploading
+                    ? 'รออัปโหลดให้เสร็จก่อน...'
+                    : 'ส่งรีวิว',
+                icon: Icons.send_rounded,
+                loading: _submitting,
+                onPressed: _anyUploading ? null : _submit,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   /// แอดมินจองให้ลูกค้า — เลือกว่ารีวิวนี้ขึ้นเป็นชื่อผู้เดินทางคนไหน
   Widget _buildReviewAs() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
         color: AppTheme.fieldSurface(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -339,46 +511,152 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
     );
   }
 
+  Widget _buildOverallRating() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+      decoration: BoxDecoration(
+        color: AppTheme.tintOf(context, _starColor),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final value = i + 1;
+              final filled = value <= _rating;
+              return Semantics(
+                button: true,
+                selected: value == _rating,
+                label: 'ให้ $value ดาว',
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _submitting
+                      ? null
+                      : () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _rating = value);
+                        },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: AnimatedScale(
+                      scale: filled ? 1 : 0.86,
+                      duration: const Duration(milliseconds: 160),
+                      curve: Curves.easeOutBack,
+                      child: Icon(
+                        filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                        size: 44,
+                        color: filled
+                            ? _starColor
+                            : AppTheme.mutedText(context).withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 4),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 160),
+            child: Text(
+              _ratingWords[_rating - 1],
+              key: ValueKey(_rating),
+              style: appFont(
+                fontSize: AppText.sizeBody,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.onTintOf(context, AppTheme.warningColor),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategories() {
+    final keys = _categoryLabels.keys.toList();
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.7),
+        ),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < keys.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                indent: 14,
+                endIndent: 14,
+                color: AppTheme.border(context).withValues(alpha: 0.5),
+              ),
+            _buildCategoryRow(keys[i]),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildCategoryRow(String key) {
     final value = _categoryRatings[key]!;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
       child: Row(
         children: [
-          Icon(_categoryIcons[key],
-              size: 16, color: AppTheme.mutedText(context)),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 78,
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppTheme.tintOf(context, AppTheme.primaryColor),
+              borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+            ),
+            child: Icon(
+              _categoryIcons[key],
+              size: 17,
+              color: AppTheme.onTintOf(context, AppTheme.primaryColor),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
             child: Text(
               _categoryLabels[key]!,
               style: appFont(
-                fontSize: AppText.sizeLabel,
-                fontWeight: FontWeight.w700,
+                fontSize: AppText.sizeBody,
+                fontWeight: FontWeight.w600,
                 color: AppTheme.onSurface(context),
               ),
             ),
           ),
-          const Spacer(),
           ...List.generate(5, (i) {
             final star = i + 1;
             final filled = star <= value;
-            return GestureDetector(
-              onTap: _submitting
-                  ? null
-                  : () => setState(() {
-                        // Tapping the current value clears it (back to optional).
-                        _categoryRatings[key] = value == star ? 0 : star;
-                      }),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                child: Icon(
-                  filled ? Icons.star_rounded : Icons.star_outline_rounded,
-                  size: 22,
-                  color: filled
-                      ? const Color(0xFFFFB400)
-                      : AppTheme.mutedText(context).withValues(alpha: 0.5),
+            return Semantics(
+              button: true,
+              label: '${_categoryLabels[key]} $star ดาว',
+              child: GestureDetector(
+                onTap: _submitting
+                    ? null
+                    : () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          // Tapping the current value clears it (back to optional).
+                          _categoryRatings[key] = value == star ? 0 : star;
+                        });
+                      },
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.all(3),
+                  child: Icon(
+                    filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                    size: 24,
+                    color: filled
+                        ? _starColor
+                        : AppTheme.mutedText(context).withValues(alpha: 0.4),
+                  ),
                 ),
               ),
             );
@@ -388,484 +666,459 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.of(context).size.height * 0.85;
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusLg)),
-      backgroundColor: AppTheme.surface(context),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 420, maxHeight: maxHeight),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Header (fixed) ─────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
-              child: Column(
-                children: [
-                  Text(
-                    'รีวิวทริปนี้',
-                    textAlign: TextAlign.center,
-                    style: appFont(
-                      color: AppTheme.onSurface(context),
-                      fontSize: AppText.sizeH2,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.tripTitle,
-                    textAlign: TextAlign.center,
-                    style: appFont(
-                      color: AppTheme.mutedText(context),
-                      fontSize: AppText.sizeLabel,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+  Widget _buildComment() {
+    final radius = BorderRadius.circular(AppTheme.radiusMd);
+    return TextField(
+      controller: _commentController,
+      enabled: !_submitting,
+      minLines: 3,
+      maxLines: 5,
+      maxLength: 500,
+      textCapitalization: TextCapitalization.sentences,
+      onChanged: (_) {
+        if (_error != null) setState(() => _error = null);
+      },
+      style: appFont(
+        fontSize: AppText.sizeBody,
+        color: AppTheme.onSurface(context),
+        height: 1.5,
+      ),
+      decoration: InputDecoration(
+        hintText: 'ประทับใจตรงไหน วิว อาหาร หรือทีมงาน '
+            'เล่าให้เพื่อนนักเดินทางคนต่อไปฟังได้เลย',
+        hintMaxLines: 3,
+        hintStyle: appFont(
+          fontSize: AppText.sizeBody,
+          color: AppTheme.mutedText(context).withValues(alpha: 0.8),
+          height: 1.5,
+        ),
+        filled: true,
+        fillColor: AppTheme.fieldSurface(context),
+        contentPadding: const EdgeInsets.all(14),
+        border: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: const BorderSide(
+            color: AppTheme.primaryColor,
+            width: 1.4,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaStrip() {
+    final tiles = <Widget>[
+      if (_selectedImages.length < _maxImages)
+        _AddMediaTile(
+          icon: Icons.add_photo_alternate_outlined,
+          label: 'เพิ่มรูป',
+          count: '${_selectedImages.length}/$_maxImages',
+          onTap: _submitting ? null : _pickImages,
+        ),
+      if (_selectedVideos.length < _maxVideos)
+        _AddMediaTile(
+          icon: Icons.video_call_outlined,
+          label: 'เพิ่มวิดีโอ',
+          count: '${_selectedVideos.length}/$_maxVideos',
+          onTap: _submitting ? null : _pickVideo,
+        ),
+      for (var i = 0; i < _selectedImages.length; i++)
+        _MediaThumb(
+          uploading: _uploadingFlags[i],
+          uploaded: _uploadedUrls[i].isNotEmpty,
+          removeLabel: 'ลบรูปนี้',
+          onRemove: _submitting ? null : () => _removeImage(i),
+          child: Image.file(
+            _selectedImages[i],
+            fit: BoxFit.cover,
+            cacheWidth: 240,
+          ),
+        ),
+      for (var i = 0; i < _selectedVideos.length; i++)
+        _MediaThumb(
+          uploading: _videoUploadingFlags[i],
+          uploaded: _uploadedVideoUrls[i].isNotEmpty,
+          removeLabel: 'ลบวิดีโอนี้',
+          onRemove: _submitting ? null : () => _removeVideo(i),
+          child: const ColoredBox(
+            color: AppTheme.slate900,
+            child: Center(
+              child: Icon(
+                Icons.play_circle_fill_rounded,
+                color: Colors.white,
+                size: 28,
               ),
             ),
+          ),
+        ),
+    ];
 
-            // ── Scrollable body ────────────────────────────────────────
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_reviewAs.isNotEmpty) ...[
-                      _buildReviewAs(),
-                      const SizedBox(height: 14),
-                    ],
-                    // ── Star rating (overall) ──────────────────────────
-                    Text(
-                'ภาพรวม',
-                textAlign: TextAlign.center,
+    return SizedBox(
+      height: _MediaThumb.size + 8,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        // เผื่อที่ให้ปุ่มลบที่ยื่นออกมุมขวาบน
+        padding: const EdgeInsets.only(top: 8, right: 8),
+        clipBehavior: Clip.none,
+        itemCount: tiles.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (_, i) => tiles[i],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  final bool optional;
+
+  const _SectionLabel(this.text, {this.optional = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = AppTheme.mutedText(context);
+    return Text.rich(
+      TextSpan(
+        text: text,
+        children: [
+          if (optional)
+            TextSpan(
+              text: '  ·  ไม่บังคับ',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w500,
+                color: muted.withValues(alpha: 0.75),
+              ),
+            ),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: appFont(
+        fontSize: AppText.sizeLabel,
+        fontWeight: FontWeight.w700,
+        color: muted,
+      ),
+    );
+  }
+}
+
+class _AddMediaTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String count;
+  final VoidCallback? onTap;
+
+  const _AddMediaTile({
+    required this.icon,
+    required this.label,
+    required this.count,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(AppTheme.radiusSm);
+    return Material(
+      color: AppTheme.fieldSurface(context),
+      borderRadius: radius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: radius,
+        child: Container(
+          width: _MediaThumb.size,
+          height: _MediaThumb.size,
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: AppTheme.border(context).withValues(alpha: 0.8),
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22, color: AppTheme.primaryColor),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  fontSize: AppText.sizeLabel,
-                  fontWeight: FontWeight.w800,
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+              Text(
+                count,
+                style: appFont(
+                  fontSize: AppText.sizeMicro,
+                  fontWeight: FontWeight.w600,
                   color: AppTheme.mutedText(context),
                 ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (i) {
-                  final value = i + 1;
-                  final filled = value <= _rating;
-                  return IconButton(
-                    onPressed: _submitting
-                        ? null
-                        : () => setState(() => _rating = value),
-                    tooltip: 'ให้ $value ดาว',
-                    icon: Icon(
-                      filled
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
-                      color: filled
-                          ? const Color(0xFFFFB400)
-                          : AppTheme.mutedText(context),
-                      size: 36,
-                    ),
-                  );
-                }),
-              ),
-
-              // ── Category breakdown (optional) ────────────────────────
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.fieldSurface(context),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                ),
-                child: Column(
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'ให้คะแนนแยกหมวด (ไม่บังคับ)',
-                        style: appFont(
-                          fontSize: AppText.sizeCaption,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.mutedText(context),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    ..._categoryLabels.keys.map(_buildCategoryRow),
-                  ],
-                ),
-              ),
-
-              // ── Comment ──────────────────────────────────────────────
-              const SizedBox(height: 12),
-              TextField(
-                controller: _commentController,
-                enabled: !_submitting,
-                maxLines: 4,
-                maxLength: 500,
-                decoration: InputDecoration(
-                  hintText: 'เล่าประสบการณ์ของคุณ…',
-                  filled: true,
-                  fillColor: AppTheme.fieldSurface(context),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    borderSide:
-                        BorderSide(color: AppTheme.border(context)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    borderSide: const BorderSide(
-                      color: AppTheme.primaryColor,
-                      width: 1.4,
-                    ),
-                  ),
-                ),
-              ),
-
-              // ── Photo picker ─────────────────────────────────────────
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Text(
-                    'รูปภาพ (${_selectedImages.length}/$_maxImages)',
-                    style: appFont(
-                      fontSize: AppText.sizeLabel,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.mutedText(context),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (_selectedImages.length < _maxImages)
-                    TextButton.icon(
-                      onPressed: _submitting ? null : _pickImages,
-                      icon: const Icon(Icons.add_photo_alternate_outlined,
-                          size: 17),
-                      label: Text('เพิ่มรูป',
-                          style: appFont(
-                              fontWeight: FontWeight.w800)),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.primaryColor,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        minimumSize: const Size(0, 32),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
-                ],
-              ),
-
-              if (_selectedImages.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 86,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _selectedImages.length,
-                    separatorBuilder: (context, i) => const SizedBox(width: 8),
-                    itemBuilder: (_, index) {
-                      final uploading = _uploadingFlags[index];
-                      final uploaded =
-                          _uploadedUrls[index].isNotEmpty;
-                      return Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                            child: Image.file(
-                              _selectedImages[index],
-                              width: 82,
-                              height: 82,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          // Upload state overlay
-                          if (uploading || !uploaded)
-                            Positioned.fill(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                                child: Container(
-                                  color: Colors.black.withValues(
-                                      alpha: uploading ? 0.45 : 0.25),
-                                  child: uploading
-                                      ? const Center(
-                                          child: SizedBox(
-                                            width: 22,
-                                            height: 22,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.2,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        )
-                                      : const Center(
-                                          child: Icon(
-                                            Icons.error_outline_rounded,
-                                            color: Colors.white,
-                                            size: 22,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
-                          // Success badge
-                          if (uploaded && !uploading)
-                            Positioned(
-                              bottom: 4,
-                              right: 4,
-                              child: Container(
-                                width: 18,
-                                height: 18,
-                                decoration: const BoxDecoration(
-                                  color: AppTheme.primaryColor,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.check_rounded,
-                                  color: Colors.white,
-                                  size: 12,
-                                ),
-                              ),
-                            ),
-                          // Remove button
-                          Positioned(
-                            top: -6,
-                            right: -6,
-                            // A bare glyph with no text; without a label a
-                            // screen reader announces nothing at all.
-                            child: Semantics(
-                              button: true,
-                              label: 'ลบรูปนี้',
-                              child: GestureDetector(
-                                onTap: _submitting
-                                    ? null
-                                    : () => _removeImage(index),
-                                child: Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.errorColor,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppTheme.surface(context),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: const Icon(Icons.close_rounded,
-                                      color: Colors.white, size: 12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ],
-
-              // ── Video picker ─────────────────────────────────────────
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    'วิดีโอ (${_selectedVideos.length}/$_maxVideos)',
-                    style: appFont(
-                      fontSize: AppText.sizeLabel,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.mutedText(context),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (_selectedVideos.length < _maxVideos)
-                    TextButton.icon(
-                      onPressed: _submitting ? null : _pickVideo,
-                      icon: const Icon(Icons.video_call_outlined, size: 18),
-                      label: Text('เพิ่มวิดีโอ',
-                          style: appFont(fontWeight: FontWeight.w800)),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.primaryColor,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        minimumSize: const Size(0, 32),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
-                ],
-              ),
-
-              if (_selectedVideos.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 86,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _selectedVideos.length,
-                    separatorBuilder: (context, i) => const SizedBox(width: 8),
-                    itemBuilder: (_, index) {
-                      final uploading = _videoUploadingFlags[index];
-                      final uploaded = _uploadedVideoUrls[index].isNotEmpty;
-                      return Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            width: 120,
-                            height: 82,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [const Color(0xFF1E293B), AppTheme.onSurface(context)],
-                              ),
-                            ),
-                            child: Center(
-                              child: uploading
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Icon(
-                                      uploaded
-                                          ? Icons.play_circle_fill_rounded
-                                          : Icons.error_outline_rounded,
-                                      color: Colors.white,
-                                      size: 30,
-                                    ),
-                            ),
-                          ),
-                          if (uploaded && !uploading)
-                            Positioned(
-                              bottom: 4,
-                              right: 4,
-                              child: Container(
-                                width: 18,
-                                height: 18,
-                                decoration: const BoxDecoration(
-                                  color: AppTheme.primaryColor,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.check_rounded,
-                                  color: Colors.white,
-                                  size: 12,
-                                ),
-                              ),
-                            ),
-                          Positioned(
-                            top: -6,
-                            right: -6,
-                            child: Semantics(
-                              button: true,
-                              label: 'ลบวิดีโอนี้',
-                              child: GestureDetector(
-                                onTap: _submitting
-                                    ? null
-                                    : () => _removeVideo(index),
-                                child: Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.errorColor,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppTheme.surface(context),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: const Icon(Icons.close_rounded,
-                                      color: Colors.white, size: 12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ],
-
-                    // ── Error ──────────────────────────────────────────
-                    if (_error != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        _error!,
-                        style: appFont(
-                          color: AppTheme.errorColor,
-                          fontSize: AppText.sizeLabel,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-
-            // ── Actions (fixed footer) ─────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _submitting
-                        ? null
-                        : () => Navigator.of(context).pop(false),
-                    child: Text(
-                      'ยกเลิก',
-                      style: appFont(
-                        color: AppTheme.mutedText(context),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: (_submitting || _anyUploading) ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      disabledBackgroundColor: AppTheme.primaryColor.withValues(
-                        alpha: 0.40,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 22,
-                        vertical: 12,
-                      ),
-                    ),
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            'ส่งรีวิว',
-                            style: appFont(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _MediaThumb extends StatelessWidget {
+  static const double size = 80;
+
+  final Widget child;
+  final bool uploading;
+  final bool uploaded;
+  final String removeLabel;
+  final VoidCallback? onRemove;
+
+  const _MediaThumb({
+    required this.child,
+    required this.uploading,
+    required this.uploaded,
+    required this.removeLabel,
+    this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(AppTheme.radiusSm);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: ClipRRect(borderRadius: radius, child: child),
+          ),
+          // Upload state overlay
+          if (uploading || !uploaded)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  color: Colors.black.withValues(alpha: uploading ? 0.45 : 0.3),
+                ),
+                child: Center(
+                  child: uploading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.error_outline_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                ),
+              ),
+            ),
+          // Success badge
+          if (uploaded && !uploading)
+            Positioned(
+              bottom: 5,
+              left: 5,
+              child: Container(
+                width: 18,
+                height: 18,
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 12,
+                ),
+              ),
+            ),
+          // Remove button — a bare glyph with no text; without a label a
+          // screen reader announces nothing at all.
+          Positioned(
+            top: -7,
+            right: -7,
+            child: Semantics(
+              button: true,
+              label: removeLabel,
+              child: GestureDetector(
+                onTap: onRemove,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: AppTheme.slate900,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppTheme.surface(context),
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  final String message;
+
+  const _ErrorBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = AppTheme.onTintOf(context, AppTheme.dangerColor);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: AppTheme.dangerTint(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline_rounded, size: 18, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w600,
+                color: fg,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown in place of the form once the review is saved. Reviews go live on
+/// the trip page immediately (`reviews.is_approved` defaults to true), so the
+/// copy can say so plainly.
+class _ReviewSuccessView extends StatelessWidget {
+  final String tripTitle;
+  final int rating;
+  final VoidCallback onDone;
+
+  const _ReviewSuccessView({
+    super.key,
+    required this.tripTitle,
+    required this.rating,
+    required this.onDone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        8,
+        24,
+        16 + MediaQuery.paddingOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.4, end: 1),
+            duration: const Duration(milliseconds: 520),
+            curve: Curves.elasticOut,
+            builder: (context, scale, child) =>
+                Transform.scale(scale: scale, child: child),
+            child: Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppTheme.tintOf(context, AppTheme.primaryColor),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 36,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'ส่งรีวิวเรียบร้อยแล้ว',
+            textAlign: TextAlign.center,
+            style: appFont(
+              fontSize: AppText.sizeH2,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.onSurface(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 1; i <= 5; i++)
+                Icon(
+                  i <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                  size: 22,
+                  color: i <= rating
+                      ? _starColor
+                      : AppTheme.mutedText(context).withValues(alpha: 0.4),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'ขอบคุณที่มาเล่าให้ฟังนะครับ รีวิวของคุณขึ้นบนหน้าทริป '
+            '"$tripTitle" แล้ว และจะช่วยให้เพื่อนนักเดินทางคนต่อไป'
+            'ตัดสินใจได้ง่ายขึ้น',
+            textAlign: TextAlign.center,
+            style: appFont(
+              fontSize: AppText.sizeBody,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.mutedText(context),
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 24),
+          PrimaryCTAButton(
+            label: 'เสร็จสิ้น',
+            icon: Icons.check_circle_outline_rounded,
+            onPressed: onDone,
+          ),
+        ],
       ),
     );
   }

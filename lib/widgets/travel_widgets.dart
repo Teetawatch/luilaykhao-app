@@ -203,64 +203,77 @@ class Skeleton extends StatelessWidget {
   }
 }
 
+/// The app's one full-width primary action — "บันทึก", "ส่ง", "ยืนยัน" at the
+/// foot of a form or sheet. Flat solid colour, [AppTheme.radiusMd] corners.
+///
+/// While [loading] the button stays in its own colour (slightly faded) with a
+/// spinner in place of the icon, so it reads as "working" rather than greyed
+/// out as unavailable. Pass the "กำลัง..." wording through [label] yourself.
 class PrimaryCTAButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final double height;
   final Color? color;
+  final bool loading;
 
   const PrimaryCTAButton({
     super.key,
     required this.label,
     this.onPressed,
     this.icon,
-    this.height = 56,
+    this.height = 54,
     this.color,
+    this.loading = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(height / 2),
-        gradient: onPressed != null
-            ? LinearGradient(
-                colors: [
-                  color ?? AppTheme.primaryColor,
-                  (color ?? AppTheme.primaryColor).withValues(alpha: 0.8),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: onPressed == null ? Colors.grey[300] : null,
-      ),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(height / 2),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+    final base = color ?? AppTheme.primaryColor;
+    final dark = AppTheme.isDark(context);
+
+    return FilledButton(
+      onPressed: loading ? null : onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: base,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: loading
+            ? base.withValues(alpha: 0.72)
+            : (dark ? AppTheme.slate700 : AppTheme.slate200),
+        disabledForegroundColor: loading
+            ? Colors.white
+            : (dark ? AppTheme.slate400 : AppTheme.slate600),
+        minimumSize: Size.fromHeight(height),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         ),
+        textStyle: AppText.button(),
+      ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 180),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          key: ValueKey(loading),
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
+            if (loading)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: Colors.white,
+                ),
+              )
+            else if (icon != null)
               Icon(icon, size: 20),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              label,
-              style: appFont(
-                fontSize: AppText.sizeSubtitle,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
+            if (loading || icon != null) const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
