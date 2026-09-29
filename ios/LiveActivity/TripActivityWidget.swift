@@ -152,6 +152,13 @@ enum TripActivityStyle {
     case "onboard": return "checkmark.seal.fill"
     // ขึ้นรถแล้ว การ์ดเดินตามกำหนดการต่อ — หมุดคือ "จุดถัดไป" ไม่ใช่ตำแหน่งรถ
     case "itinerary": return "mappin.and.ellipse"
+    // รอบที่ไม่มีกำหนดการ — บอกได้แค่ว่าวันที่เท่าไหร่ของทริป
+    case "trip_day": return "map.fill"
+    case "announcement": return "megaphone.fill"
+    // ขากลับ — รถกำลังพากลับไปส่งที่จุดเดิม
+    case "returning": return "house.fill"
+    case "dropoff_soon": return "bus.fill"
+    case "dropoff": return "flag.checkered"
     case "enroute": return "location.fill"
     case "preparing": return "backpack.fill"
     // ขั้นของรอบที่บินไป — ไทม์ไลน์สนามบิน ไม่ใช่รถตู้วิ่งมารับ

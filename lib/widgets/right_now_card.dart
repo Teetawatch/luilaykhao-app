@@ -6,8 +6,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:provider/provider.dart';
 
+import '../config/api_endpoints.dart';
 import '../models/tracking_model.dart';
+import '../models/trip_activity_state.dart';
 import '../providers/app_provider.dart';
+import '../providers/tracking_provider.dart';
+import '../screens/schedule_announcements_screen.dart';
+import '../screens/schedule_itinerary_screen.dart';
+import '../screens/tracking_screen.dart' show TrackingMapPage;
+import '../services/api_client.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
 import 'find_my_van_card.dart';
@@ -35,17 +42,35 @@ class _RightNowCardState extends State<RightNowCard> {
   /// The van moves; a minute is often enough to change the answer.
   static const Duration _refreshEvery = Duration(seconds: 60);
 
+  /// ขั้นที่เซิร์ฟเวอร์เป็นเจ้าของคำตอบ — หลังขึ้นรถแล้ว (และตอนมีประกาศจาก
+  /// ทีมงาน) การ์ดนี้ไม่มีอะไรต้องคิดเอง พูดประโยคเดียวกับการ์ดบนหน้าจอล็อกทุกคำ
+  ///
+  /// เดิมการ์ดนี้ไม่รู้ว่าเช็คอินแล้ว ขึ้นรถไปแล้วก็ยังนับ ETA ไปจุดรับต่อ
+  static const _serverStages = {
+    'onboard',
+    'itinerary',
+    'trip_day',
+    'announcement',
+    'returning',
+    'dropoff_soon',
+    'dropoff',
+  };
+
   final _tracking = TrackingService();
+  late final ApiClient _api;
 
   BookingInfo? _booking;
   VehicleTracking? _vehicle;
+  TripActivityState? _activity;
   Timer? _timer;
   bool _loaded = false;
+  bool _openingTracking = false;
 
   @override
   void initState() {
     super.initState();
-    _tracking.authToken = context.read<AppProvider>().api.token;
+    _api = context.read<AppProvider>().api;
+    _tracking.authToken = _api.token;
     _load();
     _timer = Timer.periodic(_refreshEvery, (_) => _load());
   }
@@ -57,6 +82,7 @@ class _RightNowCardState extends State<RightNowCard> {
   }
 
   Future<void> _load() async {
+    final activityFuture = _fetchActivity();
     final booking = await _tracking.fetchBookingInfo(widget.bookingRef);
     if (!mounted) return;
 
@@ -65,13 +91,139 @@ class _RightNowCardState extends State<RightNowCard> {
     if (vehicleId > 0) {
       vehicle = await _tracking.fetchVehicleLocation(vehicleId);
     }
+    final activity = await activityFuture;
     if (!mounted) return;
 
     setState(() {
       _booking = booking ?? _booking;
       _vehicle = vehicle ?? _vehicle;
+      // โหลดไม่สำเร็จ (บนดอยสัญญาณหาย) ให้คงคำตอบเดิมไว้ ไม่ใช่ถอยกลับไปนับ
+      // ETA ไปจุดรับทั้งที่นั่งอยู่บนรถแล้ว
+      if (activity.ok) _activity = activity.state;
       _loaded = true;
     });
+  }
+
+  /// state เดียวกับที่การ์ดบนหน้าจอล็อกได้ — `ok: false` เมื่อโหลดไม่สำเร็จ
+  /// ซึ่งต่างจาก `state: null` ที่แปลว่า "เซิร์ฟเวอร์บอกว่าไม่มีการ์ดแล้ว"
+  Future<({bool ok, TripActivityState? state})> _fetchActivity() async {
+    try {
+      final response = await _api.get(
+        ApiEndpoints.bookingLiveActivity(widget.bookingRef),
+      );
+      final data = _api.data(response);
+      final raw = data is Map ? data['state'] : null;
+      return (
+        ok: true,
+        state: TripActivityState.fromJson(
+          raw is Map ? Map<String, dynamic>.from(raw) : null,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[RightNowCard] activity state failed: $e');
+      return (ok: false, state: null);
+    }
+  }
+
+  void _openItinerary(TripActivityState state) {
+    if (state.scheduleId <= 0) return;
+    HapticFeedback.selectionClick();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScheduleItineraryScreen(
+          scheduleId: state.scheduleId,
+          tripTitle: state.tripTitle ?? '',
+        ),
+      ),
+    );
+  }
+
+  void _openAnnouncements(TripActivityState state) {
+    if (state.scheduleId <= 0) return;
+    HapticFeedback.selectionClick();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScheduleAnnouncementsScreen(
+          scheduleId: state.scheduleId,
+          tripTitle: state.tripTitle ?? '',
+        ),
+      ),
+    );
+  }
+
+  /// ขากลับ — แผนที่ติดตามรถตัวเดิม จุดรับของเราก็คือจุดส่งขากลับ
+  Future<void> _openTracking() async {
+    if (_openingTracking) return;
+    HapticFeedback.selectionClick();
+
+    final provider = context.read<TrackingProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    setState(() => _openingTracking = true);
+    provider.stopTracking();
+    await provider.startTracking(widget.bookingRef, authToken: _api.token);
+    if (!mounted) return;
+    setState(() => _openingTracking = false);
+
+    if (provider.errorMessage.isNotEmpty || provider.booking == null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            provider.errorMessage.isNotEmpty
+                ? provider.errorMessage
+                : 'ยังไม่มีข้อมูลติดตามรถสำหรับรอบนี้',
+          ),
+        ),
+      );
+      return;
+    }
+
+    navigator.push(
+      MaterialPageRoute(builder: (_) => const TrackingMapPage()),
+    );
+  }
+
+  /// การ์ดหลังขึ้นรถ — ข้อความทั้งหมดมาจากเซิร์ฟเวอร์ ที่นี่เลือกแค่ไอคอน สี
+  /// และปุ่มที่คนอ่านบรรทัดนั้นน่าจะอยากกดต่อ
+  Widget _activityCard(BuildContext context, TripActivityState state) {
+    final (IconData icon, Color tone) = switch (state.stage) {
+      'announcement' => (Icons.campaign_rounded, AppTheme.warningColor),
+      'dropoff_soon' => (Icons.directions_bus_rounded, AppTheme.errorColor),
+      'returning' => (Icons.home_rounded, AppTheme.primaryColor),
+      'dropoff' => (Icons.flag_rounded, AppTheme.primaryColor),
+      'itinerary' => (Icons.place_rounded, AppTheme.primaryColor),
+      'trip_day' => (Icons.map_rounded, AppTheme.primaryColor),
+      _ => (Icons.verified_rounded, AppTheme.primaryColor),
+    };
+
+    final (String? label, VoidCallback? onAction) = switch (state.stage) {
+      'announcement' => ('อ่านประกาศ', () => _openAnnouncements(state)),
+      'returning' || 'dropoff_soon' => (
+        'ติดตามรถ',
+        _openingTracking ? null : _openTracking,
+      ),
+      'dropoff' => (null, null),
+      _ => ('ดูกำหนดการ', () => _openItinerary(state)),
+    };
+
+    final showProgress = const {
+      'itinerary',
+      'returning',
+      'dropoff_soon',
+    }.contains(state.stage);
+
+    return _shell(
+      tone: tone,
+      icon: icon,
+      headline: state.headline,
+      detail: state.detail,
+      actionLabel: label,
+      onAction: onAction,
+      progress: showProgress ? state.progress : null,
+    );
   }
 
   ETAResult? get _eta {
@@ -196,6 +348,11 @@ class _RightNowCardState extends State<RightNowCard> {
   Widget build(BuildContext context) {
     if (!_loaded) return const SizedBox.shrink();
 
+    final activity = _activity;
+    if (activity != null && _serverStages.contains(activity.stage)) {
+      return _activityCard(context, activity);
+    }
+
     final booking = _booking;
 
     // รอบที่บินไป: ไม่มีรถ ไม่มีจุดขึ้นรถ ไม่มี ETA — การ์ดเดิมจะขึ้นว่า
@@ -302,9 +459,10 @@ class _RightNowCardState extends State<RightNowCard> {
     required Color tone,
     required String headline,
     required String detail,
-    required String actionLabel,
-    required VoidCallback onAction,
+    String? actionLabel,
+    VoidCallback? onAction,
     IconData icon = Icons.directions_bus_rounded,
+    double? progress,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -347,18 +505,32 @@ class _RightNowCardState extends State<RightNowCard> {
               color: AppTheme.mutedText(context),
             ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: onAction,
-              style: FilledButton.styleFrom(
-                backgroundColor: tone,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+          if (progress != null) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              child: LinearProgressIndicator(
+                value: progress.clamp(0.0, 1.0),
+                minHeight: 6,
+                color: tone,
+                backgroundColor: tone.withValues(alpha: 0.15),
               ),
-              child: Text(actionLabel),
             ),
-          ),
+          ],
+          if (actionLabel != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: onAction,
+                style: FilledButton.styleFrom(
+                  backgroundColor: tone,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: Text(actionLabel),
+              ),
+            ),
+          ],
         ],
       ),
     );

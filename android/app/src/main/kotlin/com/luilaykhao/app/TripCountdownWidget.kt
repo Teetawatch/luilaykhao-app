@@ -295,8 +295,9 @@ class TripCountdownWidget : AppWidgetProvider() {
         }
 
         private fun iconFor(stage: String): Int = when (stage) {
-            "arriving", "approaching", "enroute", "arrived" -> R.drawable.ic_widget_bus
-            "onboard" -> R.drawable.ic_widget_check
+            "arriving", "approaching", "enroute", "arrived",
+            "returning", "dropoff_soon" -> R.drawable.ic_widget_bus
+            "onboard", "dropoff" -> R.drawable.ic_widget_check
             "preparing", "meetup", "boarding" -> R.drawable.ic_widget_backpack
             else -> R.drawable.ic_widget_mountain
         }

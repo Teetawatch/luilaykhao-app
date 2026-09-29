@@ -12,7 +12,9 @@ import Foundation
 @available(iOS 16.2, *)
 struct TripActivityAttributes: ActivityAttributes {
   public struct ContentState: Codable, Hashable {
-    /// countdown | preparing | enroute | approaching | arriving | arrived | onboard | ended
+    /// countdown | preparing | enroute | approaching | arriving | arrived | onboard
+    /// | itinerary | trip_day | announcement | returning | dropoff_soon | dropoff | ended
+    /// (รอบบินเพิ่ม meetup | boarding) — ขั้นที่ไม่รู้จักวาดได้เสมอ ใช้ไอคอนตั้งต้น
     var stage: String
     /// บรรทัดใหญ่ — "รถถึงใน 8 นาที"
     var headline: String

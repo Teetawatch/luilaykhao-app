@@ -426,6 +426,12 @@ enum HomeWidgetPalette {
     case "preparing": return "backpack.fill"
     case "meetup": return "person.2.wave.2.fill"
     case "boarding": return "airplane.departure"
+    // ช่วงกลางทริป — ต้องตรงกับ TripActivityStyle.icon ของการ์ดบนหน้าจอล็อก
+    case "itinerary": return "mappin.and.ellipse"
+    case "announcement": return "megaphone.fill"
+    case "returning": return "house.fill"
+    case "dropoff_soon": return "bus.fill"
+    case "dropoff": return "flag.checkered"
     default: return "mountain.2.fill"
     }
   }
