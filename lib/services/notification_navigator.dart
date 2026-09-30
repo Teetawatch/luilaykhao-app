@@ -59,6 +59,8 @@ class NotificationNavigator {
       case 'trip_postponed':
       case 'trip_postponed_reminder':
       case 'trip_postponed_new_round':
+      // ทีมงานย้อนการเลื่อน (กดผิดรอบ) — เดินทางตามเดิม ใบจองคือที่ยืนยันได้
+      case 'trip_resumed':
       case 'booking_rescheduled':
         _openBookingDetail(data);
       case 'passport_info_needed':
@@ -132,6 +134,7 @@ class NotificationNavigator {
         _openWaitlist();
       // รอบที่รอคิวถูกยกเลิก — พาไปดูรอบอื่นของทริปเดียวกัน
       case 'waitlist_round_cancelled':
+      case 'waitlist_round_reopened':
         _openTripFromData(data);
       case 'promo':
       // แคมเปญวันพิเศษลดทั้งเว็บ ไม่ได้ผูกกับทริปใดทริปหนึ่ง — พาไปหน้ารวมทริป

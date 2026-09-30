@@ -498,6 +498,7 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
       'trip_postponed' ||
       'trip_postponed_reminder' ||
       'trip_postponed_new_round' => Icons.thunderstorm_rounded,
+      'trip_resumed' => Icons.event_available_rounded,
       'booking_reminder' || 'trip_reminder' => Icons.calendar_month_rounded,
       'seat_alert' => Icons.local_fire_department_rounded,
       'sos_alert' => Icons.sos_rounded,

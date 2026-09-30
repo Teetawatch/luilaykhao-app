@@ -680,6 +680,7 @@ String _notificationTypeLabel(String type) {
     'trip_postponed' ||
     'trip_postponed_reminder' ||
     'trip_postponed_new_round' => 'เลือกรอบใหม่',
+    'trip_resumed' => 'เดินทางตามกำหนด',
     'booking_reminder' || 'trip_reminder' => 'แจ้งเตือนทริป',
     'payment' || 'payment_confirmed' => 'การชำระเงิน',
     'payment_rejected' => 'ชำระเงินไม่สำเร็จ',
@@ -731,6 +732,7 @@ IconData _notificationIcon(String type) {
     'trip_postponed' ||
     'trip_postponed_reminder' ||
     'trip_postponed_new_round' => Icons.thunderstorm_rounded,
+    'trip_resumed' => Icons.event_available_rounded,
     'vehicle_approaching' => Icons.directions_bus_rounded,
     'staff_assignment' => Icons.assignment_ind_rounded,
     'staff_shift_reminder' => Icons.backpack_rounded,

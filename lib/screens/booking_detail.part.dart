@@ -5959,7 +5959,20 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
   Widget _scheduleCard(Map<String, dynamic> sched) {
     final id = textOf(sched['id']);
     final selected = id == textOf(_selected?['id']) && id.isNotEmpty;
-    final avail = int.tryParse(textOf(sched['available_seats'])) ?? 0;
+    // ที่นั่งกันไว้ให้ใบนี้ในรอบนี้ (เหตุสุดวิสัย) — ตัวเลขสาธารณะหักออกไปแล้ว
+    // รวมของเจ้าของเองด้วย จึงต้องบวกคืน ส่วนที่กันไว้ให้คนอื่นเลือกไม่ได้
+    final hold = asList(asMap(widget.booking['force_majeure'])['holds'])
+        .map(asMap)
+        .where((h) => textOf(h['schedule_id']) == textOf(sched['id']))
+        .firstOrNull;
+    final heldForMe = int.tryParse(textOf(hold?['seat_count'])) ?? 0;
+    final publicSeats =
+        int.tryParse(textOf(sched['bookable_seats'])) ??
+        int.tryParse(textOf(sched['available_seats'])) ??
+        0;
+    final avail = _asBool(widget.booking['is_join_trip'])
+        ? (int.tryParse(textOf(sched['available_seats'])) ?? 0)
+        : publicSeats + heldForMe;
     final enough = avail >= _passengerCount;
 
     final dep = DateTime.tryParse(textOf(sched['departure_date']));
@@ -6072,6 +6085,29 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                         ),
                       ],
                     ),
+                    if (hold != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.lock_clock_rounded,
+                            size: 13,
+                            color: AppTheme.warningColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'กันที่ไว้ให้คุณ $heldForMe ที่ ถึง ${textOf(hold['expires_label'])}',
+                              style: appFont(
+                                fontSize: AppText.sizeCaption,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.warningColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
