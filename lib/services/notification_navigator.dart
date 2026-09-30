@@ -54,6 +54,12 @@ class NotificationNavigator {
       case 'pickup_arrived':
       case 'pickup_approaching':
       case 'safe_travels':
+      // รอบเดิมออกไม่ได้เพราะเหตุสุดวิสัย / เตือนเส้นตาย / เปิดรอบใหม่แล้ว —
+      // ปุ่ม "เลือกรอบใหม่" อยู่บนสุดของใบจอง
+      case 'trip_postponed':
+      case 'trip_postponed_reminder':
+      case 'trip_postponed_new_round':
+      case 'booking_rescheduled':
         _openBookingDetail(data);
       case 'passport_info_needed':
       case 'passport_expiring':
@@ -124,6 +130,9 @@ class NotificationNavigator {
       case 'waitlist_offered':
       case 'waitlist_expired':
         _openWaitlist();
+      // รอบที่รอคิวถูกยกเลิก — พาไปดูรอบอื่นของทริปเดียวกัน
+      case 'waitlist_round_cancelled':
+        _openTripFromData(data);
       case 'promo':
       // แคมเปญวันพิเศษลดทั้งเว็บ ไม่ได้ผูกกับทริปใดทริปหนึ่ง — พาไปหน้ารวมทริป
       // ที่ราคาลดแล้วทุกใบ ไม่ใช่หน้าทริปเดียว

@@ -330,8 +330,15 @@ bool _isCancelledBooking(Map<String, dynamic> booking) {
   return ['cancelled', 'refunded'].contains(textOf(booking['status']));
 }
 
+/// รอบเดิมถูกยกเลิกเพราะเหตุสุดวิสัย (น้ำป่า พายุ อุทยานปิด) และยังไม่ได้เลือก
+/// รอบใหม่ — ใบจองยัง confirmed แต่ไม่ใช่ทริปที่ "ผ่านมาแล้ว" หรือ "กำลังจะไป"
+/// ตามวันที่ของรอบเดิม ต้องค้างอยู่ในแท็บที่กำลังจะถึงจนกว่าจะเลือกรอบ
+bool _awaitsNewRound(Map<String, dynamic> booking) =>
+    asMap(booking['force_majeure'])['awaiting'] == true;
+
 bool _isPastBooking(Map<String, dynamic> booking) {
   if (_isCancelledBooking(booking)) return false;
+  if (_awaitsNewRound(booking)) return false;
   if (textOf(booking['status']) == 'completed') return true;
 
   final end = _bookingReturnDate(booking);
@@ -350,6 +357,7 @@ bool _isUpcomingBooking(Map<String, dynamic> booking) {
 String _statusKey(Map<String, dynamic> booking) {
   final status = textOf(booking['status']);
   if (_isCancelledBooking(booking)) return 'cancelled';
+  if (_awaitsNewRound(booking)) return 'awaiting';
   if (status == 'pending') return 'pending';
   if (_isPastBooking(booking) || status == 'completed') return 'completed';
 
@@ -366,6 +374,7 @@ String _statusKey(Map<String, dynamic> booking) {
 
 String _countdownText(Map<String, dynamic> booking) {
   final status = textOf(booking['status']);
+  if (_awaitsNewRound(booking)) return 'รอบเดิมยกเลิก · เลือกรอบใหม่';
   if (status == 'pending') return 'รอชำระเงินเพื่อยืนยันที่นั่ง';
   if (_isCancelledBooking(booking)) return 'รายการนี้ถูกยกเลิก';
 

@@ -261,6 +261,62 @@ void main() {
     expect(find.text('ใส่รหัสคำเชิญ'), findsOneWidget);
   });
 
+  // รอบเดิมโดนน้ำป่า (วันที่ผ่านไปแล้ว) — ต้องไม่กลายเป็น "ทริปที่จบแล้ว"
+  // แต่เป็นการ์ดเต็มที่บอกให้เลือกรอบใหม่
+  Map<String, dynamic> postponed({bool canChoose = true, bool owner = true}) {
+    return booking(
+      status: 'confirmed',
+      departureDate: '2020-01-10',
+      passengerCount: 2,
+      viewerIsOwner: owner,
+    )..addAll({
+        'can_reschedule': canChoose,
+        'reschedule_mode': 'force_majeure',
+        'reschedule_latest_departure': '2099-07-10',
+        'force_majeure': {
+          'reason': 'น้ำป่าไหลหลาก',
+          'original_departure_label': '10 มกราคม 2563',
+          'until': '2099-07-10',
+          'until_label': '10 กรกฎาคม 2642',
+          'awaiting': true,
+          'can_choose': canChoose,
+          'expired': !canChoose,
+          'days_left': canChoose ? 30 : -1,
+          'resolved_at': null,
+        },
+      });
+  }
+
+  testWidgets('รอบที่ถูกเลื่อนเพราะเหตุสุดวิสัย เป็นการ์ดเต็มให้เลือกรอบใหม่', (
+    tester,
+  ) async {
+    await pump(tester, [postponed()]);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('รอเลือกรอบใหม่'), findsWidgets);
+    expect(find.textContaining('เลือกรอบใหม่ได้ฟรีถึง 10 กรกฎาคม 2642'), findsOneWidget);
+    expect(find.text('เลือกรอบใหม่'), findsOneWidget);
+    // ไม่ใช่ทริปที่จบไปแล้ว
+    expect(find.text('ยินดีที่ได้พบกันครับ'), findsNothing);
+  });
+
+  testWidgets('เพื่อนร่วมทริปไม่เห็นปุ่มเลือกรอบ (ผู้จองเป็นคนเลือก)', (
+    tester,
+  ) async {
+    await pump(tester, [postponed(owner: false)]);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('เลือกรอบใหม่'), findsNothing);
+  });
+
+  testWidgets('เลยกำหนดเลือกรอบแล้ว บอกให้ทักทีมงาน', (tester) async {
+    await pump(tester, [postponed(canChoose: false)]);
+
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('เลยกำหนดเลือกรอบใหม่แล้ว'), findsOneWidget);
+    expect(find.text('เลือกรอบใหม่'), findsNothing);
+  });
+
   testWidgets('renders the empty state for someone with no bookings', (
     tester,
   ) async {

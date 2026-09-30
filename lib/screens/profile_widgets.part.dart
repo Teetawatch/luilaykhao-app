@@ -677,6 +677,9 @@ String _notificationTypeLabel(String type) {
   return switch (type) {
     'booking' || 'booking_confirmed' => 'การจอง',
     'booking_cancelled' => 'ยกเลิกการจอง',
+    'trip_postponed' ||
+    'trip_postponed_reminder' ||
+    'trip_postponed_new_round' => 'เลือกรอบใหม่',
     'booking_reminder' || 'trip_reminder' => 'แจ้งเตือนทริป',
     'payment' || 'payment_confirmed' => 'การชำระเงิน',
     'payment_rejected' => 'ชำระเงินไม่สำเร็จ',
@@ -725,6 +728,9 @@ IconData _notificationIcon(String type) {
     'trip_post_comment' => Icons.mode_comment_rounded,
     'booking' || 'booking_confirmed' => Icons.confirmation_number_rounded,
     'booking_cancelled' => Icons.cancel_rounded,
+    'trip_postponed' ||
+    'trip_postponed_reminder' ||
+    'trip_postponed_new_round' => Icons.thunderstorm_rounded,
     'vehicle_approaching' => Icons.directions_bus_rounded,
     'staff_assignment' => Icons.assignment_ind_rounded,
     'staff_shift_reminder' => Icons.backpack_rounded,
@@ -745,7 +751,10 @@ Color _notificationColor(String type) {
     'loyalty' => const Color(0xFFEA580C),
     'payment' || 'payment_confirmed' => AppTheme.primaryColor,
     'payment_rejected' || 'booking_cancelled' => AppTheme.errorColor,
-    'installment_due' => const Color(0xFFD97706),
+    'installment_due' ||
+    'trip_postponed' ||
+    'trip_postponed_reminder' ||
+    'trip_postponed_new_round' => const Color(0xFFD97706),
     'split_share_created' || 'split_share_reminder' => const Color(0xFFD97706),
     'split_all_paid' => const Color(0xFF059669),
     'trip_post_liked' => const Color(0xFFE11D48),
@@ -908,11 +917,17 @@ String _formatCompact(int value) {
   return value.toString();
 }
 
+/// รอบเดิมถูกยกเลิกเพราะเหตุสุดวิสัย ยังไม่ได้เลือกรอบใหม่ — ไม่ใช่ทั้งทริป
+/// "วันนี้" และทริปที่ "ผ่านมาแล้ว" แต่ยังเป็นเรื่องที่ต้องทำ (นับเป็นกำลังจะถึง)
+bool _awaitsNewRound(Map<String, dynamic> booking) =>
+    asMap(booking['force_majeure'])['awaiting'] == true;
+
 bool _isTripToday(Map<String, dynamic> booking) {
   final status = _cleanText(booking['status']).toLowerCase();
   if (status == 'cancelled' || status == 'refunded' || status == 'completed') {
     return false;
   }
+  if (_awaitsNewRound(booking)) return false;
   final schedule = asMap(booking['schedule']);
   // ใช้วันออกรถจริง — รอบที่รถออกคืนก่อนวันทริปถือว่า "เดินทางวันนี้"
   // ตั้งแต่วันที่รถออก
@@ -929,6 +944,7 @@ bool _isUpcomingBooking(Map<String, dynamic> booking) {
   if (status == 'cancelled' || status == 'refunded' || status == 'completed') {
     return false;
   }
+  if (_awaitsNewRound(booking)) return true;
 
   final schedule = asMap(booking['schedule']);
   final date = scheduleDepartsAt(schedule) ??
@@ -946,6 +962,7 @@ bool _isPastBooking(Map<String, dynamic> booking) {
   final status = _cleanText(booking['status']).toLowerCase();
   if (status == 'completed') return true;
   if (status == 'cancelled' || status == 'refunded') return false;
+  if (_awaitsNewRound(booking)) return false;
 
   final schedule = asMap(booking['schedule']);
   final rawReturn = _cleanText(

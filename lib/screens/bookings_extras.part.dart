@@ -362,7 +362,7 @@ class BookingStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final key = _statusKey(booking);
     final color = switch (key) {
-      'pending' => const Color(0xFFD97706),
+      'pending' || 'awaiting' => const Color(0xFFD97706),
       'near' => const Color(0xFF047857),
       'completed' => const Color(0xFF315A9D),
       'cancelled' => AppTheme.mutedText(context),
@@ -370,6 +370,7 @@ class BookingStatusChip extends StatelessWidget {
     };
     final label = switch (key) {
       'pending' => 'รอชำระเงิน',
+      'awaiting' => 'รอเลือกรอบใหม่',
       'near' => 'ใกล้เดินทาง',
       'completed' => 'เสร็จสิ้น',
       'cancelled' => 'ยกเลิก',
@@ -842,7 +843,8 @@ class _BookingActionDeck extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = textOf(booking['status']);
     final schedule = asMap(booking['schedule']);
-    final confirmed = status == 'confirmed';
+    // รอบที่ถูกยกเลิกเพราะเหตุสุดวิสัยไม่มีรถ ไม่มีวันเดินทางให้ติดตาม/เชิญ/SOS
+    final confirmed = status == 'confirmed' && !_awaitsNewRound(booking);
     final showSos = confirmed && _isWithinTripWindow(schedule);
     final canModify = _asBool(booking['can_modify']);
     final canReschedule = _asBool(booking['can_reschedule']);
@@ -927,10 +929,11 @@ class _BookingActionDeck extends StatelessWidget {
           textOf(booking['slip_ocr_status']).isEmpty)
         _CancelPendingButton(booking: booking),
       // เปลี่ยนวันได้เฉพาะเมื่อยังไม่เคยใช้สิทธิ์ และก่อนเดินทางอย่างน้อย 20 วัน
-      if (canReschedule)
+      // (หรือรอบเดิมถูกยกเลิกเพราะเหตุสุดวิสัย — เลือกรอบใหม่ได้ ไม่ติดกติกานี้)
+      if (canReschedule && booking['viewer_is_owner'] != false)
         _ActionChipButton(
           icon: Icons.event_repeat_rounded,
-          label: 'เปลี่ยนวัน',
+          label: _awaitsNewRound(booking) ? 'เลือกรอบใหม่' : 'เปลี่ยนวัน',
           onPressed: () => _openReschedule(context),
         ),
     ];
@@ -946,7 +949,14 @@ class _BookingActionDeck extends StatelessWidget {
     );
     if (changed == true && context.mounted) {
       await app.loadAccountData();
-      if (context.mounted) showSnack(context, 'เปลี่ยนวันเดินทางสำเร็จ');
+      if (context.mounted) {
+        showSnack(
+          context,
+          _awaitsNewRound(booking)
+              ? 'ได้รอบเดินทางใหม่แล้ว'
+              : 'เปลี่ยนวันเดินทางสำเร็จ',
+        );
+      }
     }
   }
 

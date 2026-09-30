@@ -35,7 +35,7 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (status) {
       'confirmed' => AppTheme.accentColor,
-      'pending' => AppTheme.warningColor,
+      'pending' || 'awaiting_new_round' => AppTheme.warningColor,
       'cancelled' => AppTheme.errorColor,
       _ => AppTheme.primaryColor,
     };
@@ -45,6 +45,8 @@ class _StatusChip extends StatelessWidget {
       'paid' => 'ชำระแล้ว',
       'cancelled' => 'ยกเลิก',
       'completed' => 'จบทริป',
+      // รอบเดิมถูกยกเลิกเพราะเหตุสุดวิสัย ยังไม่ได้เลือกรอบใหม่
+      'awaiting_new_round' => 'รอเลือกรอบใหม่',
       _ => status,
     };
     return Container(
@@ -493,6 +495,9 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
       'payment_rejected' => Icons.money_off_rounded,
       'booking' || 'booking_confirmed' => Icons.confirmation_number_rounded,
       'booking_cancelled' => Icons.cancel_rounded,
+      'trip_postponed' ||
+      'trip_postponed_reminder' ||
+      'trip_postponed_new_round' => Icons.thunderstorm_rounded,
       'booking_reminder' || 'trip_reminder' => Icons.calendar_month_rounded,
       'seat_alert' => Icons.local_fire_department_rounded,
       'sos_alert' => Icons.sos_rounded,

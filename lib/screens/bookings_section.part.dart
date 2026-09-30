@@ -966,6 +966,15 @@ class ReservationCard extends StatelessWidget {
                   // Meta strip
                   _BookingMetaStrip(booking: booking),
 
+                  // รอบเดิมออกไม่ได้ (เหตุสุดวิสัย) — บอกตั้งแต่บนการ์ด ไม่ต้องเปิดดู
+                  if (_awaitsNewRound(booking)) ...[
+                    const SizedBox(height: 10),
+                    _ForceMajeureListNote(
+                      booking: booking,
+                      onTap: () => _openDetail(context, bookingRef),
+                    ),
+                  ],
+
                   // Actual vehicle departure (e.g. leaves the night before the
                   // trip day) — shown only when the round defines departs_at.
                   if (!isCancelled && scheduleDepartsAt(schedule) != null) ...[
@@ -999,7 +1008,9 @@ class ReservationCard extends StatelessWidget {
                   ),
 
                   // Compact check-in (confirmed upcoming only)
-                  if (status == 'confirmed' && isUpcoming) ...[
+                  if (status == 'confirmed' &&
+                      isUpcoming &&
+                      !_awaitsNewRound(booking)) ...[
                     const SizedBox(height: 12),
                     _CompactCheckInRow(
                       booking: booking,
@@ -2280,6 +2291,69 @@ class _CompactCheckInRow extends StatelessWidget {
                   ],
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// แถบบนการ์ดในรายการจอง: รอบเดิมถูกยกเลิกเพราะเหตุสุดวิสัย — เลือกรอบใหม่ได้ถึงเมื่อไหร่
+class _ForceMajeureListNote extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final VoidCallback onTap;
+
+  const _ForceMajeureListNote({required this.booking, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final fm = asMap(booking['force_majeure']);
+    final reason = textOf(fm['reason']);
+    final text = fm['can_choose'] == true
+        ? 'ออกเดินทางไม่ได้${reason.isNotEmpty ? 'เนื่องจาก$reason' : ''} · '
+              'เลือกรอบใหม่ได้ฟรีถึง ${textOf(fm['until_label'])}'
+        : 'ออกเดินทางไม่ได้ · เลยกำหนดเลือกรอบใหม่แล้ว ทักทีมงานได้เลย';
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppTheme.warningColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          border: Border.all(
+            color: AppTheme.warningColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.thunderstorm_rounded,
+              size: 18,
+              color: AppTheme.warningColor,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                text,
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w700,
+                  height: 1.4,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: AppTheme.warningColor,
+            ),
           ],
         ),
       ),

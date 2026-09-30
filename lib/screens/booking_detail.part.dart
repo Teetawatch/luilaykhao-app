@@ -92,6 +92,12 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
             }
             return 'full';
           }();
+          // รอบเดิมถูกยกเลิกเพราะเหตุสุดวิสัย ยังไม่ได้เลือกรอบใหม่ — ใบจองยัง
+          // confirmed (เงินยังอยู่) แต่ทุกอย่างของ "วันเดินทาง" ไม่มีความหมายแล้ว
+          final awaitingNewRound =
+              asMap(booking['force_majeure'])['awaiting'] == true;
+          final liveConfirmed =
+              textOf(booking['status']) == 'confirmed' && !awaitingNewRound;
           final bookingPaymentType = textOf(booking['payment_type']);
           final balanceUnpaid =
               bookingPaymentType == 'deposit' &&
@@ -123,6 +129,15 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 20),
 
+                // รอบเดิมออกไม่ได้ (น้ำป่า/พายุ/อุทยานปิด) — เรื่องแรกที่ต้องเห็น
+                if (asMap(booking['force_majeure']).isNotEmpty) ...[
+                  _ForceMajeureCard(
+                    booking: booking,
+                    onChoose: () => _openReschedule(context, booking),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
                 // เอกสารเดินทางที่ยังขาด — บนสุดเหนือทุกอย่าง เพราะไม่มีพาสปอร์ต
                 // คือออกตั๋วไม่ได้ ต่างจากเรื่องอื่นในหน้านี้ที่รอได้
                 if (textOf(booking['status']) != 'cancelled') ...[
@@ -150,7 +165,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 // สรุปการเดินทาง — ตอบ 4 คำถามที่ลูกค้าถามซ้ำที่สุด (ขึ้นรถกี่โมง /
                 // รอที่ไหน / รถทะเบียนอะไร / เบอร์ใคร) ไว้บนสุดตั้งแต่วันจอง
                 // ไม่ใช่รอให้ใกล้เดินทางแล้วค่อยโผล่
-                if (textOf(booking['status']) == 'confirmed' &&
+                if (liveConfirmed &&
                     !_isTripFinished(schedule)) ...[
                   _TripSummaryCard(booking: booking, schedule: schedule),
                   const SizedBox(height: 20),
@@ -159,7 +174,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 // Trip Day hub — a single gateway to ETA, today's itinerary,
                 // chat, checklist, weather, staff & SOS once the trip is near
                 // (from 3 days before through the return date).
-                if (textOf(booking['status']) == 'confirmed' &&
+                if (liveConfirmed &&
                     (_isPreTripWindow(schedule) ||
                         _isWithinTripWindow(schedule))) ...[
                   _TripDayEntryCard(booking: booking),
@@ -168,14 +183,14 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
 
                 // Flexi-Price (Go Together) — ข้อเสนอ "ไปต่อกันไหม?" เมื่อรอบคนไม่ครบ
                 // การ์ดจัดการ visibility/spacing ของตัวเอง (ซ่อนเมื่อไม่มีข้อเสนอ)
-                if (textOf(booking['status']) == 'confirmed' &&
+                if (liveConfirmed &&
                     !_isTripFinished(schedule))
                   _FlexiOfferCard(bookingRef: widget.bookingRef),
 
                 // ช่วยกันเปิดรอบ — ชวนเพื่อนมาเติมที่นั่งที่ยังขาด ต้องอยู่บนใบจอง
                 // ไม่ใช่แค่หน้าวันเดินทาง เพราะกว่าจะถึงวันนั้นก็สายเกินจะหาคนเพิ่ม
                 // การ์ดซ่อนตัวเอง (พร้อมระยะห่าง) เมื่อรอบครบแล้ว/ยังไกล/เต็มแล้ว
-                if (textOf(booking['status']) == 'confirmed' &&
+                if (liveConfirmed &&
                     !_isTripFinished(schedule) &&
                     (int.tryParse(textOf(schedule['id'])) ?? 0) > 0)
                   RallyCard(
@@ -184,28 +199,28 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   ),
 
                 // Check-in card (confirmed only)
-                if (textOf(booking['status']) == 'confirmed') ...[
+                if (liveConfirmed) ...[
                   _BookingCheckInCard(booking: booking),
                   const SizedBox(height: 20),
                 ],
 
                 // Pre-trip checklist — available the whole time the trip is
                 // still ahead, so travellers can prepare well in advance.
-                if (textOf(booking['status']) == 'confirmed' &&
+                if (liveConfirmed &&
                     !_isTripFinished(schedule)) ...[
                   _ChecklistEntryRow(booking: booking),
                   const SizedBox(height: 20),
                 ],
 
                 // Pre-trip Briefing Card — confirmed, 0-3 days before departure
-                if (textOf(booking['status']) == 'confirmed' &&
+                if (liveConfirmed &&
                     _isPreTripWindow(schedule)) ...[
                   _PreTripBriefingCard(booking: booking, schedule: schedule),
                   const SizedBox(height: 20),
                 ],
 
                 // SOS button — confirmed bookings, only during the trip window
-                if (textOf(booking['status']) == 'confirmed' &&
+                if (liveConfirmed &&
                     _isWithinTripWindow(schedule)) ...[
                   SosButton(
                     scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
@@ -243,7 +258,11 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _StatusChip(status: textOf(booking['status'])),
+                    _StatusChip(
+                      status: awaitingNewRound
+                          ? 'awaiting_new_round'
+                          : textOf(booking['status']),
+                    ),
                     _Chip('เดินทาง ${departureText(schedule)}'),
                     _Chip(money(booking['total_amount'])),
                   ],
@@ -258,6 +277,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
 
                 // สรุปทริป (Recap) — โผล่หลังจบทริปแล้ว ให้แชร์อวดเพื่อน
                 if (textOf(booking['status']) != 'cancelled' &&
+                    !awaitingNewRound &&
                     _tripCompleted(schedule)) ...[
                   _TripRecapButton(bookingRef: textOf(booking['booking_ref'])),
                   const SizedBox(height: 16),
@@ -281,6 +301,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
 
                 // เพิ่มลงปฏิทิน — กันลืมรอบ โดยเฉพาะรอบที่รถออกคืนก่อนวันทริป
                 if (textOf(booking['status']) != 'cancelled' &&
+                    !awaitingNewRound &&
                     _realDepartureDate(schedule) != null) ...[
                   _AddToCalendarButton(booking: booking, schedule: schedule),
                   const SizedBox(height: 16),
@@ -719,6 +740,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
 
                 // แชร์รูปเข้าฟีดสาธารณะของทริป — หลังทริปจบ (backend ตรวจสิทธิ์อีกชั้น)
                 if (_isPastBooking(booking) &&
+                    !awaitingNewRound &&
                     textOf(trip['slug']).isNotEmpty &&
                     ['confirmed', 'completed']
                         .contains(textOf(booking['status']))) ...[
@@ -746,6 +768,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 // Booking modification — เปลี่ยนวันเดินทาง / จุดรับ (ในช่วงที่อนุญาต)
                 if (_asBool(booking['can_reschedule']) ||
                     _asBool(booking['can_modify']) ||
+                    awaitingNewRound ||
                     textOf(booking['rescheduled_at']).isNotEmpty) ...[
                   const SizedBox(height: 8),
                   const Divider(height: 28),
@@ -754,7 +777,17 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     title: 'แก้ไขการจอง',
                   ),
                   const SizedBox(height: 10),
-                  if (_asBool(booking['can_reschedule']))
+                  if (_asBool(booking['can_reschedule']) &&
+                      textOf(booking['reschedule_mode']) == 'force_majeure')
+                    _BookingActionCard(
+                      icon: Icons.event_repeat_rounded,
+                      color: AppTheme.warningColor,
+                      title: 'เลือกรอบเดินทางใหม่',
+                      subtitle:
+                          'รอบเดิมยกเลิก · ฟรี ราคาเดิม · ถึง ${textOf(asMap(booking['force_majeure'])['until_label'])}',
+                      onTap: () => _openReschedule(context, booking),
+                    )
+                  else if (_asBool(booking['can_reschedule']))
                     _BookingActionCard(
                       icon: Icons.event_repeat_rounded,
                       color: AppTheme.primaryColor,
@@ -767,7 +800,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   // ไม่ให้หายไปเฉย ๆ จนลูกค้าสงสัยว่าทำไมทำไม่ได้
                   else
                     _BookingActionNote(
-                      text: textOf(booking['rescheduled_at']).isNotEmpty
+                      text: awaitingNewRound
+                          ? 'เลยกำหนดเลือกรอบใหม่แล้ว · ทักทีมงานเพื่อช่วยดูแลต่อ'
+                          : textOf(booking['rescheduled_at']).isNotEmpty
                           ? 'เปลี่ยนวันเดินทางได้ครั้งเดียว · ใช้สิทธิ์ไปแล้ว'
                           : 'เลยกำหนดเปลี่ยนวันเดินทางแล้ว · ต้องแจ้งก่อนเดินทางอย่างน้อย 20 วัน',
                     ),
@@ -934,7 +969,14 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
     );
     if (changed == true && mounted) {
       _reload();
-      if (context.mounted) showSnack(context, 'เปลี่ยนวันเดินทางสำเร็จ');
+      if (context.mounted) {
+        showSnack(
+          context,
+          textOf(booking['reschedule_mode']) == 'force_majeure'
+              ? 'ได้รอบเดินทางใหม่แล้ว'
+              : 'เปลี่ยนวันเดินทางสำเร็จ',
+        );
+      }
     }
   }
 
@@ -952,6 +994,121 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
       _reload();
       if (context.mounted) showSnack(context, 'เปลี่ยนจุดรับสำเร็จ');
     }
+  }
+}
+
+/// รอบเดิมออกเดินทางไม่ได้เพราะเหตุสุดวิสัย (น้ำป่า พายุ อุทยานปิด) — เงื่อนไข
+/// ข้อ 6: เลือกรอบใหม่ของทริปเดิมได้ฟรี ราคาเดิม ภายในกรอบเวลา ข้อมูลทั้งหมด
+/// (เหตุผล เส้นตาย เหลือกี่วัน) มาจาก `booking.force_majeure` ของเซิร์ฟเวอร์
+class _ForceMajeureCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final VoidCallback onChoose;
+
+  const _ForceMajeureCard({required this.booking, required this.onChoose});
+
+  @override
+  Widget build(BuildContext context) {
+    final fm = asMap(booking['force_majeure']);
+    final awaiting = fm['awaiting'] == true;
+    final canChoose = fm['can_choose'] == true;
+    final reason = textOf(fm['reason']);
+    final untilLabel = textOf(fm['until_label']);
+    final daysLeft = int.tryParse(textOf(fm['days_left']));
+    final isOwner = booking['viewer_is_owner'] != false;
+    final color = awaiting ? AppTheme.warningColor : AppTheme.primaryColor;
+
+    final String body;
+    if (!awaiting) {
+      body =
+          'รอบเดิม ${textOf(fm['original_departure_label'])} ออกเดินทางไม่ได้'
+          '${reason.isNotEmpty ? ' เนื่องจาก$reason' : ''} · ย้ายมารอบนี้เรียบร้อยแล้ว';
+    } else if (!canChoose) {
+      body =
+          'เลยกำหนดเลือกรอบใหม่แล้ว ($untilLabel) ทักทีมงานได้เลยครับ '
+          'เราจะช่วยดูแลต่อ';
+    } else {
+      body =
+          'ยอดที่ชำระไว้ยังอยู่ครบ เลือกรอบใหม่ของทริปนี้ได้ฟรี ราคาเดิม '
+          'ภายใน $untilLabel${daysLeft != null ? ' (เหลือ $daysLeft วัน)' : ''}';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                awaiting
+                    ? Icons.thunderstorm_rounded
+                    : Icons.event_available_rounded,
+                size: 20,
+                color: color,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  awaiting ? 'รอบนี้ออกเดินทางไม่ได้' : 'ได้รอบเดินทางใหม่แล้ว',
+                  style: appFont(
+                    fontSize: AppText.sizeSubtitle,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (awaiting && reason.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'เนื่องจาก$reason',
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Text(
+            body,
+            style: appFont(
+              fontSize: AppText.sizeLabel,
+              fontWeight: FontWeight.w600,
+              height: 1.45,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+          if (awaiting && canChoose) ...[
+            const SizedBox(height: 12),
+            if (isOwner && _asBool(booking['can_reschedule']))
+              PrimaryCTAButton(
+                label: 'เลือกรอบใหม่',
+                icon: Icons.event_repeat_rounded,
+                height: 48,
+                color: AppTheme.warningColor,
+                onPressed: onChoose,
+              )
+            else if (!isOwner)
+              Text(
+                'ผู้จองเป็นคนเลือกรอบใหม่ให้ทั้งกลุ่มครับ',
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -5276,6 +5433,19 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
   bool _submitting = false;
   final Set<String> _selectedSeats = {};
 
+  /// ให้ระบบจัดที่นั่งว่างให้เอง (ค่าตั้งต้น) — เลือกเองได้ถ้าอยากได้ที่เดิม ๆ
+  bool _autoSeats = true;
+
+  /// รอบเดิมถูกยกเลิกเพราะเหตุสุดวิสัย — สิทธิ์แยกจากการเลื่อนปกติ (ไม่ติด 20 วัน)
+  bool get _isForceMajeure =>
+      textOf(widget.booking['reschedule_mode']) == 'force_majeure';
+
+  /// รอบใหม่ต้องออกเดินทางไม่เกินวันนี้ (YYYY-MM-DD) — null = ไม่จำกัด
+  String? get _latestDeparture {
+    final value = textOf(widget.booking['reschedule_latest_departure']);
+    return value.isEmpty ? null : value;
+  }
+
   Map<String, dynamic> get _schedule => asMap(widget.booking['schedule']);
   String get _tripSlug => textOf(asMap(_schedule['trip'])['slug']);
   String get _tripTitle => textOf(asMap(_schedule['trip'])['title'], 'ทริป');
@@ -5305,7 +5475,8 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
   /// ระหว่างยังโหลดไม่เสร็จถือว่ามี เพื่อไม่ให้ปุ่มยืนยันเปิดก่อนรู้คำตอบ
   bool get _targetHasSeatMap => _seatsData?['has_seat_map'] != false;
 
-  bool get _needsSeatChoice => _isSeatBased && _targetHasSeatMap;
+  bool get _needsSeatChoice =>
+      _isSeatBased && !_autoSeats && _targetHasSeatMap;
 
   bool get _canSubmit {
     if (_submitting || _selected == null) return false;
@@ -5319,17 +5490,22 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
       _seatsData = null;
       _selectedSeats.clear();
     });
-    if (_isSeatBased) {
-      final id = int.tryParse(textOf(sched['id'])) ?? 0;
-      setState(() => _loadingSeats = true);
-      try {
-        final data = await context.read<AppProvider>().seats(id);
-        if (mounted) setState(() => _seatsData = data);
-      } catch (e) {
-        if (mounted) showSnack(context, e.toString());
-      } finally {
-        if (mounted) setState(() => _loadingSeats = false);
+    if (_isSeatBased && !_autoSeats) await _loadSeatsFor(sched);
+  }
+
+  Future<void> _loadSeatsFor(Map<String, dynamic> sched) async {
+    final id = int.tryParse(textOf(sched['id'])) ?? 0;
+    setState(() => _loadingSeats = true);
+    try {
+      final data = await context.read<AppProvider>().seats(id);
+      // ผู้ใช้อาจสลับไปรอบอื่นระหว่างรอ — ทิ้งผังของรอบเก่า
+      if (mounted && identical(_selected, sched)) {
+        setState(() => _seatsData = data);
       }
+    } catch (e) {
+      if (mounted) showSnack(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _loadingSeats = false);
     }
   }
 
@@ -5351,7 +5527,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
       await context.read<AppProvider>().rescheduleBooking(
         _ref,
         targetScheduleId: int.tryParse(textOf(target['id'])) ?? 0,
-        seatIds: _selectedSeats.toList(),
+        seatIds: _autoSeats ? const [] : _selectedSeats.toList(),
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -5390,7 +5566,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            'เปลี่ยนวันเดินทาง',
+            _isForceMajeure ? 'เลือกรอบเดินทางใหม่' : 'เปลี่ยนวันเดินทาง',
             style: appFont(
               fontSize: AppText.sizeH2,
               fontWeight: FontWeight.w900,
@@ -5421,14 +5597,20 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                   _stepLabel('1', 'เลือกรอบเดินทางใหม่'),
                   const SizedBox(height: 10),
                   _scheduleList(),
-                  if (_selected != null && _needsSeatChoice) ...[
+                  if (_selected != null && _isSeatBased) ...[
                     const SizedBox(height: 20),
                     _stepLabel(
                       '2',
-                      'เลือกที่นั่งใหม่  ${_selectedSeats.length}/$_passengerCount',
+                      _needsSeatChoice
+                          ? 'เลือกที่นั่งใหม่  ${_selectedSeats.length}/$_passengerCount'
+                          : 'ที่นั่งในรอบใหม่',
                     ),
-                    const SizedBox(height: 12),
-                    _seatSection(),
+                    const SizedBox(height: 10),
+                    _seatModeToggle(),
+                    if (!_autoSeats) ...[
+                      const SizedBox(height: 12),
+                      _seatSection(),
+                    ],
                   ],
                   // รอบใหม่บินไป — ไม่มีที่นั่งให้เลือก ทีมงานแจ้งเลขให้ทีหลัง
                   if (_selected != null &&
@@ -5551,8 +5733,124 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
     );
   }
 
+  // ── ที่นั่ง: ให้ระบบจัดให้ (ค่าตั้งต้น) หรือเลือกเอง ───────────────────────
+  Widget _seatModeToggle() {
+    Widget option(String label, bool auto) {
+      final on = _autoSeats == auto;
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          onTap: _submitting
+              ? null
+              : () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _autoSeats = auto;
+                    _selectedSeats.clear();
+                  });
+                  final target = _selected;
+                  if (!auto && target != null && _seatsData == null) {
+                    _loadSeatsFor(target);
+                  }
+                },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: on
+                  ? AppTheme.primaryColor.withValues(alpha: 0.08)
+                  : AppTheme.subtleSurface(context),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(
+                color: on
+                    ? AppTheme.primaryColor
+                    : AppTheme.border(context).withValues(alpha: 0.6),
+                width: on ? 2 : 1,
+              ),
+            ),
+            child: Text(
+              label,
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w800,
+                color: on
+                    ? AppTheme.primaryColor
+                    : AppTheme.mutedText(context),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            option('จัดให้อัตโนมัติ', true),
+            const SizedBox(width: 8),
+            option('เลือกที่นั่งเอง', false),
+          ],
+        ),
+        if (_autoSeats) ...[
+          const SizedBox(height: 8),
+          Text(
+            'ระบบจะเลือกที่นั่งที่ว่างให้ $_passengerCount ที่',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   // ── The reschedule rules, stated plainly so there's no confusion ───────────
   Widget _rulesNotice() {
+    if (_isForceMajeure) {
+      final fm = asMap(widget.booking['force_majeure']);
+      final reason = textOf(fm['reason']);
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.warningColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(
+            color: AppTheme.warningColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.thunderstorm_rounded,
+              size: 16,
+              color: AppTheme.warningColor,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (reason.isNotEmpty)
+                    _bullet('รอบเดิมออกเดินทางไม่ได้ เนื่องจาก$reason'),
+                  _bullet('ราคาเดิม ไม่มีค่าธรรมเนียม · ยอดที่ชำระไว้ย้ายตามไปทั้งหมด'),
+                  _bullet(
+                    'เลือกรอบที่ออกเดินทางได้ถึง ${textOf(fm['until_label'])}',
+                  ),
+                  _bullet('ไม่นับรวมกับสิทธิ์เลื่อนวันเดินทางตามปกติ'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final deadline = _deadline;
     final deadlineText = deadline != null
         ? thaiDateShort(deadline)
@@ -5620,11 +5918,16 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
             child: Center(child: CircularProgressIndicator()),
           );
         }
+        final latest = _latestDeparture;
         final options = snapshot.data!
             .map((e) => asMap(e))
             .where(
               (s) =>
-                  (int.tryParse(textOf(s['id'])) ?? 0) != _currentScheduleId,
+                  (int.tryParse(textOf(s['id'])) ?? 0) != _currentScheduleId &&
+                  textOf(s['status'], 'open') == 'open' &&
+                  // สิทธิ์เหตุสุดวิสัยครอบคลุมเฉพาะรอบในกรอบเวลา
+                  (latest == null ||
+                      textOf(s['departure_date']).compareTo(latest) <= 0),
             )
             .toList();
         if (options.isEmpty) {
@@ -5636,7 +5939,9 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             ),
             child: Text(
-              'ไม่มีรอบเดินทางอื่นให้เลือกในขณะนี้',
+              _isForceMajeure
+                  ? 'ตอนนี้ยังไม่มีรอบที่เปิดในช่วงนี้\nเปิดรอบใหม่เมื่อไหร่ เราจะแจ้งให้ทราบทันทีครับ'
+                  : 'ไม่มีรอบเดินทางอื่นให้เลือกในขณะนี้',
               textAlign: TextAlign.center,
               style: appFont(
                 fontSize: AppText.sizeLabel,
@@ -5928,7 +6233,9 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                     ),
                   )
                 : const Icon(Icons.check_rounded),
-            label: const Text('ยืนยันเปลี่ยนวันเดินทาง'),
+            label: Text(
+              _isForceMajeure ? 'ยืนยันรอบใหม่' : 'ยืนยันเปลี่ยนวันเดินทาง',
+            ),
           ),
         ),
       ],

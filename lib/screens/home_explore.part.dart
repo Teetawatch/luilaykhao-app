@@ -3713,6 +3713,8 @@ class _OutstandingPaymentBanner extends StatelessWidget {
   static double _outstanding(Map<String, dynamic> booking) {
     final status = textOf(booking['status']);
     if (status == 'cancelled') return 0;
+    // รอเลือกรอบใหม่ (เหตุสุดวิสัย) — ระบบพักการทวงไว้ กำหนดใหม่ตามรอบที่เลือก
+    if (_awaitsNewRound(booking)) return 0;
 
     final balance = double.tryParse('${booking['balance_amount'] ?? 0}') ?? 0;
     if (balance > 0 && booking['balance_paid_at'] == null) return balance;
@@ -3871,6 +3873,11 @@ class _HomeNextTripCard extends StatelessWidget {
     final isPending = textOf(booking['status']) == 'pending';
 
     final (String countLabel, Color countColor) = switch (days) {
+      // รอบเดิมถูกยกเลิกเพราะเหตุสุดวิสัย — วันที่เดิมไม่มีความหมายแล้ว
+      _ when _awaitsNewRound(booking) => (
+        'เลือกรอบใหม่',
+        const Color(0xFFD97706),
+      ),
       null => ('รอวันเดินทาง', AppTheme.primaryColor),
       < 0 => ('กำลังเดินทาง', const Color(0xFF16A34A)),
       0 => ('เดินทางวันนี้!', const Color(0xFF16A34A)),

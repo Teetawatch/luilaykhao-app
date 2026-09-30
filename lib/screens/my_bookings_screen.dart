@@ -140,7 +140,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                               .where(_isPastBooking)
                               .length,
                           provinceCount: _provincesVisited(allBookings),
-                          nextTrip: upcoming.firstOrNull,
+                          // ใบที่รอเลือกรอบใหม่ไม่มีวันเดินทางให้นับถอยหลัง
+                          nextTrip: upcoming
+                              .where((b) => !_awaitsNewRound(b))
+                              .firstOrNull,
                         ),
                         const SizedBox(height: 24),
                         ReservationSegmentTabs(
