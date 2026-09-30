@@ -16,7 +16,6 @@ import '../widgets/app_snack.dart';
 import '../widgets/booking_terms_sheet.dart';
 import '../widgets/document_attach_field.dart';
 import '../widgets/min_tap_target.dart';
-import '../widgets/pickup_vehicle_guide.dart';
 import '../theme/app_theme.dart';
 import '../services/booking_draft_store.dart';
 import '../widgets/saved_traveller_picker.dart';
@@ -472,8 +471,6 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _offerDraft();
-      // ไกด์ประเภทรถรับ-ส่ง — โหลดเงียบ ๆ ล้มก็ไม่กระทบขั้นตอนจอง
-      context.read<AppProvider>().ensurePickupVehicleClasses();
     });
   }
 
@@ -1429,8 +1426,6 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             isInternational: _isInternational,
             minPassportExpiry: _minPassportExpiry,
             documentRequirements: _documentRequirements,
-            schedulePrice:
-                num.tryParse(textOf(_selectedSchedule['price'])) ?? 0,
             onAddPassenger: _addPassenger,
             onRemovePassenger: _removePassenger,
             onUseProfile: _fillPassengerFromProfile,
