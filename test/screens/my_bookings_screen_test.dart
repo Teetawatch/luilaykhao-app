@@ -317,6 +317,93 @@ void main() {
     expect(find.text('เลือกรอบใหม่'), findsNothing);
   });
 
+  // รอบไม่ได้ออกเพราะผู้ร่วมทริปไม่ครบ — เลือกรอบใหม่ หรือรับเงินคืนเต็มจำนวน
+  Map<String, dynamic> underfilled({bool canChoose = true, bool owner = true}) {
+    final b = postponed(canChoose: canChoose, owner: owner);
+    b['force_majeure'] = {
+      ...Map<String, dynamic>.from(b['force_majeure'] as Map),
+      'kind': 'underfilled',
+      'state': 'awaiting',
+      'reason': 'ผู้ร่วมเดินทางไม่ครบตามจำนวนขั้นต่ำ',
+      'decide_by': '2099-01-24',
+      'decide_by_label': '24 มกราคม 2642',
+      'can_request_refund': true,
+      'refund_amount': 3500,
+      'refund_banks': ['พร้อมเพย์', 'กสิกรไทย'],
+    };
+    return b;
+  }
+
+  testWidgets('รอบคนไม่ครบ บอกทางเลือกคืนเงินและกำหนดตัดสินใจ ไม่พูดถึงเหตุสุดวิสัย', (
+    tester,
+  ) async {
+    await pump(tester, [underfilled()]);
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.textContaining('เลือกรอบใหม่ฟรีหรือรับเงินคืน ภายใน 24 มกราคม 2642'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('เลือกรอบใหม่ได้ฟรีถึง'), findsNothing);
+    expect(find.byIcon(Icons.thunderstorm_rounded), findsNothing);
+    expect(find.text('เลือกรอบใหม่'), findsOneWidget);
+    expect(find.text('ขอคืนเงิน'), findsOneWidget);
+  });
+
+  testWidgets('กดขอคืนเงินแล้วเปิดฟอร์มบัญชี ปุ่มยืนยันกดไม่ได้จนกรอกครบ', (
+    tester,
+  ) async {
+    // จอสูงพอให้ทั้งการ์ดและชีตอยู่ในจอ (ค่าตั้งต้น 800x600 เตี้ยเกิน)
+    tester.view.physicalSize = const Size(800, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pump(tester, [underfilled()]);
+
+    await tester.ensureVisible(find.text('ขอคืนเงิน'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ขอคืนเงิน'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('ขอรับเงินคืนเต็มจำนวน'), findsOneWidget);
+    expect(find.textContaining('฿3,500'), findsWidgets);
+
+    ButtonStyleButton? submit() {
+      final finder = find.ancestor(
+        of: find.text('ยกเลิกและขอรับเงินคืน'),
+        matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+      );
+      final widgets = finder
+          .evaluate()
+          .map((e) => e.widget)
+          .whereType<ButtonStyleButton>();
+      return widgets.isEmpty ? null : widgets.first;
+    }
+
+    expect(submit()?.onPressed, isNull);
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('กสิกรไทย').last);
+    await tester.pumpAndSettle();
+    expect(find.text('กสิกรไทย'), findsOneWidget); // เลือกแล้วเมนูปิด เหลือค่าในช่อง
+    await tester.enterText(find.widgetWithText(TextField, 'เลขบัญชี'), '123-4-56789-0');
+    expect(submit()?.onPressed, isNull); // ยังไม่มีชื่อบัญชี
+    await tester.enterText(find.widgetWithText(TextField, 'ชื่อบัญชี'), 'สมชาย ใจดี');
+    await tester.pump();
+
+    expect(submit()?.onPressed, isNotNull);
+  });
+
+  testWidgets('รอบคนไม่ครบที่เลยกำหนด ยังกรอกบัญชีรับเงินคืนได้', (tester) async {
+    await pump(tester, [underfilled(canChoose: false)]);
+
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('เลยกำหนดเลือกรอบแล้ว เราจะคืนเงินให้'), findsOneWidget);
+    expect(find.text('เลือกรอบใหม่'), findsNothing);
+    expect(find.text('ขอคืนเงิน'), findsOneWidget);
+  });
+
   testWidgets('renders the empty state for someone with no bookings', (
     tester,
   ) async {

@@ -936,7 +936,37 @@ class _BookingActionDeck extends StatelessWidget {
           label: _awaitsNewRound(booking) ? 'เลือกรอบใหม่' : 'เปลี่ยนวัน',
           onPressed: () => _openReschedule(context),
         ),
+      // รอบคนไม่ครบ — รับเงินคืนเต็มจำนวนแทนรอบใหม่ได้
+      if (asMap(booking['force_majeure'])['can_request_refund'] == true &&
+          booking['viewer_is_owner'] != false)
+        _ActionChipButton(
+          icon: Icons.currency_exchange_rounded,
+          label: _refundAmountOf(booking) > 0 ? 'ขอคืนเงิน' : 'ยกเลิก',
+          onPressed: () => _openRefund(context),
+        ),
     ];
+  }
+
+  Future<void> _openRefund(BuildContext context) async {
+    final app = context.read<AppProvider>();
+    final done = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PostponementRefundSheet(booking: booking),
+    );
+    if (done == true && context.mounted) {
+      await app.loadAccountData();
+      if (context.mounted) {
+        final amount = _refundAmountOf(booking);
+        showSnack(
+          context,
+          amount > 0
+              ? 'รับเรื่องแล้ว เราจะโอนคืน ${money(amount)} ภายใน 3–7 วันทำการ'
+              : 'ยกเลิกการจองแล้ว',
+        );
+      }
+    }
   }
 
   Future<void> _openReschedule(BuildContext context) async {

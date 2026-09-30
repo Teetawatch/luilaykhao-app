@@ -129,11 +129,12 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                 ),
                 const SizedBox(height: 20),
 
-                // รอบเดิมออกไม่ได้ (น้ำป่า/พายุ/อุทยานปิด) — เรื่องแรกที่ต้องเห็น
+                // รอบเดิมออกไม่ได้ (น้ำป่า/พายุ/อุทยานปิด หรือคนไม่ครบ) — เรื่องแรกที่ต้องเห็น
                 if (asMap(booking['force_majeure']).isNotEmpty) ...[
                   _ForceMajeureCard(
                     booking: booking,
                     onChoose: () => _openReschedule(context, booking),
+                    onRefund: () => _openPostponementRefund(context, booking),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -783,8 +784,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                       icon: Icons.event_repeat_rounded,
                       color: AppTheme.warningColor,
                       title: 'เลือกรอบเดินทางใหม่',
-                      subtitle:
-                          'รอบเดิมยกเลิก · ฟรี ราคาเดิม · ถึง ${textOf(asMap(booking['force_majeure'])['until_label'])}',
+                      subtitle: _isUnderfilledBooking(booking)
+                          ? 'รอบเดิมยกเลิก · ฟรี ราคาเดิม · ตัดสินใจได้ถึง ${textOf(asMap(booking['force_majeure'])['decide_by_label'])}'
+                          : 'รอบเดิมยกเลิก · ฟรี ราคาเดิม · ถึง ${textOf(asMap(booking['force_majeure'])['until_label'])}',
                       onTap: () => _openReschedule(context, booking),
                     )
                   else if (_asBool(booking['can_reschedule']))
@@ -800,12 +802,29 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   // ไม่ให้หายไปเฉย ๆ จนลูกค้าสงสัยว่าทำไมทำไม่ได้
                   else
                     _BookingActionNote(
-                      text: awaitingNewRound
+                      text: awaitingNewRound && _isUnderfilledBooking(booking)
+                          ? 'เลยกำหนดเลือกรอบใหม่แล้ว · เราจะคืนเงินเต็มจำนวนให้'
+                          : awaitingNewRound
                           ? 'เลยกำหนดเลือกรอบใหม่แล้ว · ทักทีมงานเพื่อช่วยดูแลต่อ'
                           : textOf(booking['rescheduled_at']).isNotEmpty
                           ? 'เปลี่ยนวันเดินทางได้ครั้งเดียว · ใช้สิทธิ์ไปแล้ว'
                           : 'เลยกำหนดเปลี่ยนวันเดินทางแล้ว · ต้องแจ้งก่อนเดินทางอย่างน้อย 20 วัน',
                     ),
+                  // รอบคนไม่ครบ — รับเงินคืนเต็มจำนวนแทนรอบใหม่ (ไม่ใช่นโยบายยกเลิกปกติ)
+                  if (asMap(booking['force_majeure'])['can_request_refund'] ==
+                          true &&
+                      booking['viewer_is_owner'] != false) ...[
+                    const SizedBox(height: 10),
+                    _BookingActionCard(
+                      icon: Icons.currency_exchange_rounded,
+                      color: AppTheme.warningColor,
+                      title: _refundActionTitle(booking),
+                      subtitle: _refundAmountOf(booking) > 0
+                          ? 'คืนเต็มจำนวน ${money(_refundAmountOf(booking))} รวมมัดจำ · การจองจะถูกยกเลิก'
+                          : 'ยังไม่มียอดที่ชำระ · ยกเลิกได้ทันที',
+                      onTap: () => _openPostponementRefund(context, booking),
+                    ),
+                  ],
                   if (_asBool(booking['can_modify']) &&
                       asList(schedule['pickup_points']).isNotEmpty) ...[
                     const SizedBox(height: 10),
@@ -961,12 +980,26 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
     BuildContext context,
     Map<String, dynamic> booking,
   ) async {
+    var switchToRefund = false;
     final changed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _RescheduleSheet(booking: booking),
+      builder: (sheetContext) => _RescheduleSheet(
+        booking: booking,
+        onRequestRefund:
+            asMap(booking['force_majeure'])['can_request_refund'] == true
+            ? () {
+                switchToRefund = true;
+                Navigator.pop(sheetContext, false);
+              }
+            : null,
+      ),
     );
+    if (switchToRefund) {
+      if (context.mounted) await _openPostponementRefund(context, booking);
+      return;
+    }
     if (changed == true && mounted) {
       _reload();
       if (context.mounted) {
@@ -975,6 +1008,31 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
           textOf(booking['reschedule_mode']) == 'force_majeure'
               ? 'ได้รอบเดินทางใหม่แล้ว'
               : 'เปลี่ยนวันเดินทางสำเร็จ',
+        );
+      }
+    }
+  }
+
+  /// รอบคนไม่ครบ — ยกเลิกและขอรับเงินคืนเต็มจำนวน
+  Future<void> _openPostponementRefund(
+    BuildContext context,
+    Map<String, dynamic> booking,
+  ) async {
+    final done = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PostponementRefundSheet(booking: booking),
+    );
+    if (done == true && mounted) {
+      _reload();
+      if (context.mounted) {
+        final amount = _refundAmountOf(booking);
+        showSnack(
+          context,
+          amount > 0
+              ? 'รับเรื่องแล้ว เราจะโอนคืน ${money(amount)} ภายใน 3–7 วันทำการ'
+              : 'ยกเลิกการจองแล้ว',
         );
       }
     }
@@ -998,35 +1056,84 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
 }
 
 /// รอบเดิมออกเดินทางไม่ได้เพราะเหตุสุดวิสัย (น้ำป่า พายุ อุทยานปิด) — เงื่อนไข
-/// ข้อ 6: เลือกรอบใหม่ของทริปเดิมได้ฟรี ราคาเดิม ภายในกรอบเวลา ข้อมูลทั้งหมด
-/// (เหตุผล เส้นตาย เหลือกี่วัน) มาจาก `booking.force_majeure` ของเซิร์ฟเวอร์
+/// ข้อ 6: เลือกรอบใหม่ของทริปเดิมได้ฟรี ราคาเดิม ภายในกรอบเวลา — หรือไม่ได้ออก
+/// เพราะผู้ร่วมทริปไม่ครบ (kind = underfilled) ซึ่งเลือกรับเงินคืนเต็มจำนวนแทนได้
+/// ข้อมูลทั้งหมด (เหตุผล เส้นตาย ยอดคืน) มาจาก `booking.force_majeure` ของเซิร์ฟเวอร์
 class _ForceMajeureCard extends StatelessWidget {
   final Map<String, dynamic> booking;
   final VoidCallback onChoose;
+  final VoidCallback onRefund;
 
-  const _ForceMajeureCard({required this.booking, required this.onChoose});
+  const _ForceMajeureCard({
+    required this.booking,
+    required this.onChoose,
+    required this.onRefund,
+  });
 
   @override
   Widget build(BuildContext context) {
     final fm = asMap(booking['force_majeure']);
+    final state = textOf(fm['state']);
     final awaiting = fm['awaiting'] == true;
     final canChoose = fm['can_choose'] == true;
+    final canRefund = fm['can_request_refund'] == true;
+    final underfilled = _isUnderfilledBooking(booking);
     final reason = textOf(fm['reason']);
     final untilLabel = textOf(fm['until_label']);
+    final decideByLabel = textOf(fm['decide_by_label']);
     final daysLeft = int.tryParse(textOf(fm['days_left']));
+    final refundAmount = _refundAmountOf(booking);
     final isOwner = booking['viewer_is_owner'] != false;
+    final refundState = underfilled &&
+            (state == 'refund_requested' || state == 'refunded')
+        ? state
+        : null;
     final color = awaiting ? AppTheme.warningColor : AppTheme.primaryColor;
 
+    final String title;
+    final IconData icon;
     final String body;
-    if (!awaiting) {
+    if (refundState != null) {
+      icon = Icons.currency_exchange_rounded;
+      title = refundState == 'refunded'
+          ? 'โอนเงินคืนแล้ว'
+          : 'รับเรื่องคืนเงินแล้ว';
+      final accountLabel = textOf(fm['refund_account_label']);
+      body = refundState == 'refunded'
+          ? 'โอนคืน ${money(refundAmount)} เรียบร้อยแล้วครับ'
+          : refundAmount <= 0
+          ? 'ยกเลิกการจองแล้ว ไม่มียอดที่ต้องคืน'
+          : accountLabel.isNotEmpty
+          ? 'จะโอนคืน ${money(refundAmount)} เข้า $accountLabel ภายใน 3–7 วันทำการครับ'
+          : 'จะโอนคืน ${money(refundAmount)} ทีมงานจะติดต่อขอเลขบัญชีรับเงินคืนครับ';
+    } else if (!awaiting) {
+      icon = Icons.event_available_rounded;
+      title = state == 'moved' || state.isEmpty
+          ? 'ได้รอบเดินทางใหม่แล้ว'
+          : 'รอบเดิมถูกยกเลิก';
       body =
-          'รอบเดิม ${textOf(fm['original_departure_label'])} ออกเดินทางไม่ได้'
-          '${reason.isNotEmpty ? ' เนื่องจาก$reason' : ''} · ย้ายมารอบนี้เรียบร้อยแล้ว';
+          'รอบเดิม ${textOf(fm['original_departure_label'])} '
+          '${underfilled ? 'ไม่ได้ออกเดินทาง' : 'ออกเดินทางไม่ได้'}'
+          '${reason.isNotEmpty ? ' เนื่องจาก$reason' : ''}'
+          '${state == 'moved' || state.isEmpty ? ' · ย้ายมารอบนี้เรียบร้อยแล้ว' : ''}';
     } else if (!canChoose) {
+      icon = underfilled ? Icons.groups_rounded : Icons.thunderstorm_rounded;
+      title = underfilled ? 'รอบนี้ไม่ได้ออกเดินทาง' : 'รอบนี้ออกเดินทางไม่ได้';
+      body = underfilled
+          ? 'เลยกำหนดเลือกรอบใหม่แล้ว ($decideByLabel) เราจะคืนเงินเต็มจำนวนให้ครับ '
+                'กรอกบัญชีรับเงินไว้ได้เลย จะได้เร็วขึ้น'
+          : 'เลยกำหนดเลือกรอบใหม่แล้ว ($untilLabel) ทักทีมงานได้เลยครับ '
+                'เราจะช่วยดูแลต่อ';
+    } else if (underfilled) {
+      icon = Icons.groups_rounded;
+      title = 'รอบนี้ไม่ได้ออกเดินทาง';
       body =
-          'เลยกำหนดเลือกรอบใหม่แล้ว ($untilLabel) ทักทีมงานได้เลยครับ '
-          'เราจะช่วยดูแลต่อ';
+          'เลือกรอบใหม่ของทริปนี้ได้ฟรี ราคาเดิม หรือขอรับเงินคืนเต็มจำนวน'
+          '${refundAmount > 0 ? ' ${money(refundAmount)}' : ''} '
+          'ภายใน $decideByLabel${daysLeft != null ? ' (เหลือ $daysLeft วัน)' : ''}';
     } else {
+      icon = Icons.thunderstorm_rounded;
+      title = 'รอบนี้ออกเดินทางไม่ได้';
       body =
           'ยอดที่ชำระไว้ยังอยู่ครบ เลือกรอบใหม่ของทริปนี้ได้ฟรี ราคาเดิม '
           'ภายใน $untilLabel${daysLeft != null ? ' (เหลือ $daysLeft วัน)' : ''}';
@@ -1045,17 +1152,11 @@ class _ForceMajeureCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                awaiting
-                    ? Icons.thunderstorm_rounded
-                    : Icons.event_available_rounded,
-                size: 20,
-                color: color,
-              ),
+              Icon(icon, size: 20, color: color),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  awaiting ? 'รอบนี้ออกเดินทางไม่ได้' : 'ได้รอบเดินทางใหม่แล้ว',
+                  title,
                   style: appFont(
                     fontSize: AppText.sizeSubtitle,
                     fontWeight: FontWeight.w800,
@@ -1086,27 +1187,318 @@ class _ForceMajeureCard extends StatelessWidget {
               color: AppTheme.mutedText(context),
             ),
           ),
-          if (awaiting && canChoose) ...[
+          if (awaiting && !isOwner) ...[
             const SizedBox(height: 12),
-            if (isOwner && _asBool(booking['can_reschedule']))
+            Text(
+              'ผู้จองเป็นคนเลือกรอบใหม่ให้ทั้งกลุ่มครับ',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+          ] else if (awaiting) ...[
+            if (canChoose && _asBool(booking['can_reschedule'])) ...[
+              const SizedBox(height: 12),
               PrimaryCTAButton(
                 label: 'เลือกรอบใหม่',
                 icon: Icons.event_repeat_rounded,
                 height: 48,
                 color: AppTheme.warningColor,
                 onPressed: onChoose,
-              )
-            else if (!isOwner)
-              Text(
-                'ผู้จองเป็นคนเลือกรอบใหม่ให้ทั้งกลุ่มครับ',
-                style: appFont(
-                  fontSize: AppText.sizeCaption,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.mutedText(context),
-                ),
               ),
+            ],
+            if (canRefund) ...[
+              const SizedBox(height: 8),
+              if (canChoose)
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: OutlinedButton.icon(
+                    onPressed: onRefund,
+                    icon: const Icon(Icons.currency_exchange_rounded, size: 18),
+                    label: Text(
+                      _refundActionTitle(booking),
+                      style: appFont(fontWeight: FontWeight.w800),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.warningColor,
+                      side: BorderSide(
+                        color: AppTheme.warningColor.withValues(alpha: 0.5),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                PrimaryCTAButton(
+                  label: refundAmount > 0
+                      ? 'กรอกบัญชีรับเงินคืน'
+                      : 'ยกเลิกการจอง',
+                  icon: Icons.currency_exchange_rounded,
+                  height: 48,
+                  color: AppTheme.warningColor,
+                  onPressed: onRefund,
+                ),
+            ],
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// รอบเดิมไม่ได้ออกเพราะผู้ร่วมทริปไม่ครบ (ไม่ใช่เหตุสุดวิสัย) — รับเงินคืนแทนได้
+bool _isUnderfilledBooking(Map<String, dynamic> booking) =>
+    textOf(asMap(booking['force_majeure'])['kind']) == 'underfilled';
+
+/// ยอดคืนเต็มจำนวน (ทุกบาทที่จ่ายมา รวมมัดจำ) ที่เซิร์ฟเวอร์คำนวณให้
+double _refundAmountOf(Map<String, dynamic> booking) =>
+    double.tryParse(textOf(asMap(booking['force_majeure'])['refund_amount'])) ??
+    0;
+
+String _refundActionTitle(Map<String, dynamic> booking) =>
+    _refundAmountOf(booking) > 0 ? 'ขอรับเงินคืนเต็มจำนวน' : 'ยกเลิกการจอง';
+
+/// รอบคนไม่ครบ — ยกเลิกและขอรับเงินคืนเต็มจำนวน พร้อมบัญชีรับเงิน
+/// รายการธนาคารมาจากเซิร์ฟเวอร์ (ชุดเดียวกับเว็บ LIFF และลิงก์ในอีเมล)
+class _PostponementRefundSheet extends StatefulWidget {
+  final Map<String, dynamic> booking;
+
+  const _PostponementRefundSheet({required this.booking});
+
+  @override
+  State<_PostponementRefundSheet> createState() =>
+      _PostponementRefundSheetState();
+}
+
+class _PostponementRefundSheetState extends State<_PostponementRefundSheet> {
+  final _numberController = TextEditingController();
+  final _nameController = TextEditingController();
+  String? _bank;
+  bool _submitting = false;
+  String? _error;
+
+  double get _amount => _refundAmountOf(widget.booking);
+  bool get _promptPay => _bank == 'พร้อมเพย์';
+  List<String> get _banks => asList(
+    asMap(widget.booking['force_majeure'])['refund_banks'],
+  ).map((b) => textOf(b)).where((b) => b.isNotEmpty).toList();
+
+  @override
+  void initState() {
+    super.initState();
+    _numberController.addListener(_refresh);
+    _nameController.addListener(_refresh);
+  }
+
+  void _refresh() => setState(() {});
+
+  @override
+  void dispose() {
+    _numberController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  bool get _canSubmit =>
+      !_submitting &&
+      (_amount <= 0 ||
+          (_bank != null &&
+              _numberController.text.trim().isNotEmpty &&
+              _nameController.text.trim().isNotEmpty));
+
+  Future<void> _submit() async {
+    if (!_canSubmit) return;
+    final app = context.read<AppProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          _amount > 0 ? 'ยืนยันขอรับเงินคืน?' : 'ยืนยันยกเลิกการจอง?',
+          style: appFont(
+            fontWeight: FontWeight.w800,
+            fontSize: AppText.sizeTitle,
+          ),
+        ),
+        content: Text(
+          _amount > 0
+              ? 'ยกเลิกการจองและขอรับเงินคืน ${money(_amount)} เข้า '
+                    '$_bank ${_numberController.text.trim()} '
+                    'ยกเลิกแล้วย้อนกลับไม่ได้'
+              : 'ยกเลิกแล้วย้อนกลับไม่ได้',
+          style: appFont(fontSize: AppText.sizeBody, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('ไม่ใช่', style: appFont(fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'ยืนยัน',
+              style: appFont(
+                fontWeight: FontWeight.w800,
+                color: AppTheme.warningColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    HapticFeedback.selectionClick();
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await app.requestPostponementRefund(
+        textOf(widget.booking['booking_ref']),
+        bank: _amount > 0 ? _bank : null,
+        accountNumber: _amount > 0 ? _numberController.text.trim() : null,
+        accountName: _amount > 0 ? _nameController.text.trim() : null,
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      // เลขบัญชีผิด ฯลฯ — ฟอร์มเดิมยังอยู่ให้แก้
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+          _error = e.toString();
+        });
+      }
+    }
+  }
+
+  InputDecoration _decoration(String label, {String? hint}) => InputDecoration(
+    labelText: label,
+    hintText: hint,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.background(context),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusXl),
+        ),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+      ),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.border(context),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _amount > 0 ? 'ขอรับเงินคืนเต็มจำนวน' : 'ยกเลิกการจอง',
+              style: appFont(
+                fontSize: AppText.sizeTitle,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _amount > 0
+                  ? 'คืน ${money(_amount)} (รวมมัดจำ) การจองนี้จะถูกยกเลิก '
+                        'และเราจะโอนคืนเข้าบัญชีด้านล่างภายใน 3–7 วันทำการ'
+                  : 'การจองนี้ยังไม่มียอดที่ชำระ กดยืนยันเพื่อยกเลิกได้เลยครับ',
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w600,
+                height: 1.45,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+            if (_amount > 0) ...[
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _bank,
+                isExpanded: true,
+                decoration: _decoration('ธนาคาร / พร้อมเพย์'),
+                items: _banks
+                    .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                    .toList(),
+                onChanged: _submitting
+                    ? null
+                    : (value) => setState(() => _bank = value),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _numberController,
+                enabled: !_submitting,
+                keyboardType: TextInputType.number,
+                decoration: _decoration(
+                  _promptPay ? 'เบอร์มือถือ / เลขบัตรประชาชน' : 'เลขบัญชี',
+                  hint: _promptPay ? 'เช่น 081-234-5678' : 'เช่น 123-4-56789-0',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _nameController,
+                enabled: !_submitting,
+                maxLength: 120,
+                decoration: _decoration(
+                  'ชื่อบัญชี',
+                  hint: 'ชื่อ-นามสกุลตามบัญชี',
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              'ยกเลิกแล้วย้อนกลับไม่ได้ ถ้าอยากไปรอบอื่นแทน ปิดหน้านี้แล้วกด "เลือกรอบใหม่" ได้เลยครับ',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.warningColor,
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.errorColor,
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            PrimaryCTAButton(
+              label: _amount > 0 ? 'ยกเลิกและขอรับเงินคืน' : 'ยืนยันยกเลิก',
+              icon: Icons.currency_exchange_rounded,
+              height: 50,
+              color: AppTheme.warningColor,
+              loading: _submitting,
+              onPressed: _canSubmit ? _submit : null,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -5419,7 +5811,10 @@ class _StaffPhotoView extends StatelessWidget {
 class _RescheduleSheet extends StatefulWidget {
   final Map<String, dynamic> booking;
 
-  const _RescheduleSheet({required this.booking});
+  /// รอบคนไม่ครบ — ปิดชีตนี้แล้วเปิดชีตขอรับเงินคืนแทน (null = ไม่มีทางเลือกนี้)
+  final VoidCallback? onRequestRefund;
+
+  const _RescheduleSheet({required this.booking, this.onRequestRefund});
 
   @override
   State<_RescheduleSheet> createState() => _RescheduleSheetState();
@@ -5436,7 +5831,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
   /// ให้ระบบจัดที่นั่งว่างให้เอง (ค่าตั้งต้น) — เลือกเองได้ถ้าอยากได้ที่เดิม ๆ
   bool _autoSeats = true;
 
-  /// รอบเดิมถูกยกเลิกเพราะเหตุสุดวิสัย — สิทธิ์แยกจากการเลื่อนปกติ (ไม่ติด 20 วัน)
+  /// รอบเดิมถูกยกเลิก (เหตุสุดวิสัย/คนไม่ครบ) — สิทธิ์แยกจากการเลื่อนปกติ (ไม่ติด 20 วัน)
   bool get _isForceMajeure =>
       textOf(widget.booking['reschedule_mode']) == 'force_majeure';
 
@@ -5813,6 +6208,7 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
     if (_isForceMajeure) {
       final fm = asMap(widget.booking['force_majeure']);
       final reason = textOf(fm['reason']);
+      final underfilled = _isUnderfilledBooking(widget.booking);
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(12),
@@ -5826,8 +6222,8 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.thunderstorm_rounded,
+            Icon(
+              underfilled ? Icons.groups_rounded : Icons.thunderstorm_rounded,
               size: 16,
               color: AppTheme.warningColor,
             ),
@@ -5837,12 +6233,35 @@ class _RescheduleSheetState extends State<_RescheduleSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (reason.isNotEmpty)
-                    _bullet('รอบเดิมออกเดินทางไม่ได้ เนื่องจาก$reason'),
+                    _bullet(
+                      underfilled
+                          ? 'รอบเดิมไม่ได้ออกเดินทาง เนื่องจาก$reason'
+                          : 'รอบเดิมออกเดินทางไม่ได้ เนื่องจาก$reason',
+                    ),
                   _bullet('ราคาเดิม ไม่มีค่าธรรมเนียม · ยอดที่ชำระไว้ย้ายตามไปทั้งหมด'),
                   _bullet(
                     'เลือกรอบที่ออกเดินทางได้ถึง ${textOf(fm['until_label'])}',
                   ),
+                  if (underfilled)
+                    _bullet(
+                      'ตัดสินใจได้ถึง ${textOf(fm['decide_by_label'])}',
+                    ),
                   _bullet('ไม่นับรวมกับสิทธิ์เลื่อนวันเดินทางตามปกติ'),
+                  if (widget.onRequestRefund != null)
+                    InkWell(
+                      onTap: _submitting ? null : widget.onRequestRefund,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'ไม่สะดวกรอบไหนเลย? ขอรับเงินคืนเต็มจำนวนแทน',
+                          style: appFont(
+                            fontSize: AppText.sizeLabel,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.warningColor,
+                          ).copyWith(decoration: TextDecoration.underline),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

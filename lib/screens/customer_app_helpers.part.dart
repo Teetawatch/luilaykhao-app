@@ -495,10 +495,12 @@ class _InAppNotificationBannerState extends State<_InAppNotificationBanner>
       'payment_rejected' => Icons.money_off_rounded,
       'booking' || 'booking_confirmed' => Icons.confirmation_number_rounded,
       'booking_cancelled' => Icons.cancel_rounded,
+      // ใช้ทั้งเหตุสุดวิสัยและรอบคนไม่ครบ — ไอคอนกลาง ๆ ไม่ใช่พายุ
       'trip_postponed' ||
       'trip_postponed_reminder' ||
-      'trip_postponed_new_round' => Icons.thunderstorm_rounded,
+      'trip_postponed_new_round' => Icons.event_repeat_rounded,
       'trip_resumed' => Icons.event_available_rounded,
+      'trip_refund_requested' => Icons.currency_exchange_rounded,
       'booking_reminder' || 'trip_reminder' => Icons.calendar_month_rounded,
       'seat_alert' => Icons.local_fire_department_rounded,
       'sos_alert' => Icons.sos_rounded,

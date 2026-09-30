@@ -2441,6 +2441,26 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// รอบไม่ได้ออกเพราะผู้ร่วมทริปไม่ครบ — ยกเลิกและขอรับเงินคืนเต็มจำนวน
+  /// บัญชีรับเงินจำเป็นเมื่อมียอดที่ชำระแล้ว (เซิร์ฟเวอร์ตรวจเลขบัญชีเอง)
+  Future<Map<String, dynamic>> requestPostponementRefund(
+    String ref, {
+    String? bank,
+    String? accountNumber,
+    String? accountName,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.bookingPostponementRefund(ref),
+      body: {
+        'bank': ?bank,
+        'account_number': ?accountNumber,
+        'account_name': ?accountName,
+      },
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   /// เปลี่ยนจุดรับของการจอง (คงราคาเดิม)
   Future<Map<String, dynamic>> changeBookingPickup(
     String ref, {

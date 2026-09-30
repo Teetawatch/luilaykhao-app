@@ -118,6 +118,9 @@ class ApiEndpoints {
   /// ลิงก์การ์ดนับถอยหลังสำหรับแชร์ (POST — ครั้งแรกเป็นการสร้างโทเคน)
   static String bookingStoryLink(String ref) => 'bookings/\$ref/story-link';
   static String bookingReschedule(String ref) => 'bookings/$ref/reschedule';
+  /// รอบไม่ได้ออกเพราะผู้ร่วมทริปไม่ครบ — ขอรับเงินคืนเต็มจำนวนแทนรอบใหม่
+  static String bookingPostponementRefund(String ref) =>
+      'bookings/$ref/postponement/refund';
   static String bookingChangePickup(String ref) =>
       'bookings/$ref/change-pickup';
 

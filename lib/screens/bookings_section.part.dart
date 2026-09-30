@@ -2309,7 +2309,13 @@ class _ForceMajeureListNote extends StatelessWidget {
   Widget build(BuildContext context) {
     final fm = asMap(booking['force_majeure']);
     final reason = textOf(fm['reason']);
-    final text = fm['can_choose'] == true
+    final underfilled = _isUnderfilledBooking(booking);
+    final text = underfilled
+        ? (fm['can_choose'] == true
+              ? 'ไม่ได้ออกเดินทาง${reason.isNotEmpty ? 'เนื่องจาก$reason' : ''} · '
+                    'เลือกรอบใหม่ฟรีหรือรับเงินคืน ภายใน ${textOf(fm['decide_by_label'])}'
+              : 'ไม่ได้ออกเดินทาง · เลยกำหนดเลือกรอบแล้ว เราจะคืนเงินให้')
+        : fm['can_choose'] == true
         ? 'ออกเดินทางไม่ได้${reason.isNotEmpty ? 'เนื่องจาก$reason' : ''} · '
               'เลือกรอบใหม่ได้ฟรีถึง ${textOf(fm['until_label'])}'
         : 'ออกเดินทางไม่ได้ · เลยกำหนดเลือกรอบใหม่แล้ว ทักทีมงานได้เลย';
@@ -2332,8 +2338,8 @@ class _ForceMajeureListNote extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(
-              Icons.thunderstorm_rounded,
+            Icon(
+              underfilled ? Icons.groups_rounded : Icons.thunderstorm_rounded,
               size: 18,
               color: AppTheme.warningColor,
             ),
