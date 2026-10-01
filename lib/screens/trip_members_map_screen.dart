@@ -7,6 +7,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/trip_live_location_service.dart';
 import '../theme/app_theme.dart';
@@ -166,9 +167,10 @@ class _TripMembersMapScreenState extends State<TripMembersMapScreen> {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate:
-                                'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-                            subdomains: const ['a', 'b', 'c', 'd'],
+                            urlTemplate: ApiConfig.mapTileUrl,
+                            tileProvider: NetworkTileProvider(
+                              headers: ApiConfig.mapTileHeaders,
+                            ),
                             userAgentPackageName: 'com.luilaykhao.app',
                           ),
                           MarkerLayer(

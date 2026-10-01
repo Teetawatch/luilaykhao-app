@@ -44,3 +44,6 @@ app.*.map.json
 **/GoogleService-Info.plist
 # Google Maps API key (ไม่เข้า git) — ดู README/คำสั่ง build
 ios/Flutter/Secrets.xcconfig
+
+# คีย์ที่ห้ามขึ้น git (CARTO ฯลฯ) — ใช้คู่กับ --dart-define-from-file
+/dart_defines/secrets.json

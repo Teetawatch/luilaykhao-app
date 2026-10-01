@@ -356,9 +356,10 @@ class _RouteMap extends StatelessWidget {
       ),
       children: [
         TileLayer(
-          urlTemplate:
-              'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-          subdomains: const ['a', 'b', 'c', 'd'],
+          urlTemplate: ApiConfig.mapTileUrl,
+          tileProvider: NetworkTileProvider(
+            headers: ApiConfig.mapTileHeaders,
+          ),
           userAgentPackageName: 'com.luilaykhao.app',
         ),
         if (line.length >= 2)

@@ -62,6 +62,29 @@ class ApiConfig {
   /// แผนที่ OSM เดิม ดีกว่าปล่อยให้ลูกค้าที่กำลังรอรถเจอจอเทาว่างเปล่า
   static bool get useGoogleMaps => googleMapsApiKey.isNotEmpty;
 
+  /// คีย์ CARTO Basemaps — ตั้งแต่ ก.ย. 2026 CARTO ไม่เสิร์ฟ tile ให้คำขอที่
+  /// ไม่มีคีย์แล้ว (ได้ภาพลายน้ำ "API KEY REQUIRED" แทนแผนที่ ทั้งที่ตอบ 200)
+  static const String cartoApiKey = String.fromEnvironment(
+    'CARTO_API_KEY',
+    defaultValue: '',
+  );
+
+  /// tile ของแผนที่ flutter_map ทุกจอ — แก้ที่นี่ที่เดียว
+  static String get mapTileUrl {
+    const base =
+        'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
+    if (cartoApiKey.isEmpty) return base;
+    return '$base?key=${Uri.encodeQueryComponent(cartoApiKey)}';
+  }
+
+  /// คีย์ CARTO ของเราจำกัดให้ใช้ได้เฉพาะโดเมน luilaykhao.com (ตอบ 403 ถ้าไม่มี
+  /// Referer) แต่แอปมือถือไม่ส่ง Referer เอง เลยต้องแนบให้ทุกคำขอ tile
+  /// ใช้โดเมนจริงตายตัว ไม่ใช่ siteUrl — build dev ชี้ localhost ซึ่งคีย์ไม่รับ
+  /// คืน Map ใหม่ทุกครั้ง เพราะ TileLayer จะเติม User-Agent ลงไปเอง
+  static Map<String, String> get mapTileHeaders => {
+    'Referer': 'https://luilaykhao.com/',
+  };
+
   static String get siteUrl {
     final uri = Uri.parse(baseUrl);
     return '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';

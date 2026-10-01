@@ -394,9 +394,10 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
       ),
       children: [
         TileLayer(
-          urlTemplate:
-              'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-          subdomains: const ['a', 'b', 'c', 'd'],
+          urlTemplate: ApiConfig.mapTileUrl,
+          tileProvider: NetworkTileProvider(
+            headers: ApiConfig.mapTileHeaders,
+          ),
           userAgentPackageName: 'com.luilaykhao.app',
         ),
         PolylineLayer(polylines: _routeLines(vehicleLocation)),

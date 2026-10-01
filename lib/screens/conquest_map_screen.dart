@@ -191,9 +191,10 @@ class _ConquestMapScreenState extends State<ConquestMapScreen> {
         ),
         children: [
           TileLayer(
-            urlTemplate:
-                'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-            subdomains: const ['a', 'b', 'c', 'd'],
+            urlTemplate: ApiConfig.mapTileUrl,
+            tileProvider: NetworkTileProvider(
+              headers: ApiConfig.mapTileHeaders,
+            ),
             userAgentPackageName: 'com.luilaykhao.app',
           ),
           // Faint line through the trips in the order they were walked — the

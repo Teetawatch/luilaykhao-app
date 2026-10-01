@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../config/api_config.dart';
 import '../theme/app_theme.dart';
 
 /// แผนที่ให้ลูกค้าปักหมุดจุดรับเอง (อยู่ในเส้นทางผ่านที่รับได้)
@@ -130,9 +131,10 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                   ),
                   children: [
                     TileLayer(
-                      urlTemplate:
-                          'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-                      subdomains: const ['a', 'b', 'c', 'd'],
+                      urlTemplate: ApiConfig.mapTileUrl,
+                      tileProvider: NetworkTileProvider(
+                        headers: ApiConfig.mapTileHeaders,
+                      ),
                       userAgentPackageName: 'com.luilaykhao.app',
                     ),
                   ],

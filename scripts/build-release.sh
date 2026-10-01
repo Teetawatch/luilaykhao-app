@@ -18,6 +18,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 DEFINES_FILE="dart_defines/prod.json"
+# คีย์ที่ห้ามขึ้น git (gitignored) — อ่านคู่กับ prod.json ตอน build
+SECRETS_FILE="dart_defines/secrets.json"
 TARGET="${1:-all}"
 
 EXPECTED_BASE_URL="$(
@@ -25,6 +27,19 @@ EXPECTED_BASE_URL="$(
 )"
 
 echo "==> ใช้ค่าจาก $DEFINES_FILE (API_BASE_URL=$EXPECTED_BASE_URL)"
+
+# ไม่มีคีย์ CARTO = แผนที่ flutter_map ทุกจอกลายเป็นลายน้ำ "API KEY REQUIRED"
+# (CARTO เริ่มบังคับคีย์ ก.ย. 2026) — หยุดตั้งแต่ก่อน build ดีกว่าไปเจอในสโตร์
+if [ "$TARGET" != "verify" ]; then
+  CARTO_KEY="$(
+    python3 -c "import json,os,sys; p=sys.argv[1]; print(json.load(open(p)).get('CARTO_API_KEY', '') if os.path.exists(p) else '')" "$SECRETS_FILE"
+  )"
+  if [ -z "$CARTO_KEY" ]; then
+    echo "!! ไม่มี CARTO_API_KEY ใน $SECRETS_FILE — แผนที่จะขึ้น 'API KEY REQUIRED'" >&2
+    echo '   สร้างไฟล์เป็น {"CARTO_API_KEY": "<คีย์>"} (ไฟล์นี้ไม่ขึ้น git)' >&2
+    exit 1
+  fi
+fi
 
 # ตรวจ AOT snapshot ว่ามีสตริง base URL ตรงเป๊ะ และไม่มีเศษคำสั่ง build หลุดเข้าไป
 verify_snapshot() {
@@ -81,13 +96,15 @@ verify_appbundle() {
 
 build_ipa() {
   echo "==> flutter build ipa"
-  flutter build ipa --release --dart-define-from-file="$DEFINES_FILE"
+  flutter build ipa --release --dart-define-from-file="$DEFINES_FILE" \
+    --dart-define-from-file="$SECRETS_FILE"
   verify_ipa
 }
 
 build_appbundle() {
   echo "==> flutter build appbundle"
-  flutter build appbundle --release --dart-define-from-file="$DEFINES_FILE"
+  flutter build appbundle --release --dart-define-from-file="$DEFINES_FILE" \
+    --dart-define-from-file="$SECRETS_FILE"
   verify_appbundle
 }
 
