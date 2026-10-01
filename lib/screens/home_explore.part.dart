@@ -27,7 +27,7 @@ const double _kHeroHeightMax = 440.0;
 const double _kHeroOverlap = 64.0;
 
 /// Clear space between the bottom of the hero content and that overlapping card.
-const double _kHeroContentClearance = 48.0;
+const double _kHeroContentClearance = 30.0;
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -329,15 +329,6 @@ class _HeroHeaderState extends State<HeroHeader> {
     super.dispose();
   }
 
-  /// Time-of-day greeting shown above the hero search bar.
-  ({String text, String emoji}) _timeGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return (text: 'อรุณสวัสดิ์', emoji: '☀️');
-    if (hour < 16) return (text: 'สวัสดีตอนบ่าย', emoji: '⛅');
-    if (hour < 19) return (text: 'สวัสดีตอนเย็น', emoji: '🌅');
-    return (text: 'สวัสดีตอนค่ำ', emoji: '🌙');
-  }
-
   /// Opens the dedicated results page with the typed query (standard-app
   /// behaviour) instead of filtering the home in place.
   void _submitSearch() {
@@ -370,8 +361,7 @@ class _HeroHeaderState extends State<HeroHeader> {
     // down from the top bar the block lands.
     final contentBottom =
         _kHeroOverlap + _kHeroContentClearance + (compactWidth ? 0 : 8);
-    final titleSize = (size.width * 0.058).clamp(20.0, 26.0).toDouble();
-    final greeting = _timeGreeting();
+    final titleSize = (size.width * 0.066).clamp(22.0, 28.0).toDouble();
 
     return SizedBox(
       height: heroHeight,
@@ -399,9 +389,11 @@ class _HeroHeaderState extends State<HeroHeader> {
                     },
                     itemBuilder: (_, i) => _HeroSlideImage(url: images[i]),
                   ),
-                // Two-ended scrim: a light wash up top keeps the nav bar legible
-                // and a strong wash at the bottom anchors the greeting/headline/
-                // search — the middle stays fully clear so the photo reads crisp.
+                // Two-ended scrim: a wash up top keeps the name/bell legible over
+                // a bright sky, and a long, eased ramp at the bottom carries the
+                // headline/search so no text needs a drop shadow — the middle
+                // stays clear so the photo reads crisp. Admin slides are busy
+                // (signboards, faces), so the bottom has to do real work.
                 // (No full-image blur, which is what made the hero look murky.)
                 //
                 // IgnorePointer สำคัญ: DecoratedBox ที่มี BoxDecoration จะกินทัช
@@ -412,13 +404,19 @@ class _HeroHeaderState extends State<HeroHeader> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
+                        // Stops are fractions of the full hero, whose last
+                        // _kHeroOverlap pt sit under the card — so the dark
+                        // ramp has to start by ~0.35 to be behind the
+                        // headline (~0.43), not hidden below the fold.
                         colors: [
-                          Color(0x4D000000),
-                          Colors.transparent,
-                          Colors.transparent,
-                          Color(0x9E000000),
+                          Color(0x99000000),
+                          Color(0x6B000000),
+                          Color(0x24000000),
+                          Color(0x8C000000),
+                          Color(0xB8000000),
+                          Color(0xD1000000),
                         ],
-                        stops: [0.0, 0.22, 0.45, 1.0],
+                        stops: [0.0, 0.24, 0.32, 0.46, 0.68, 1.0],
                       ),
                     ),
                   ),
@@ -435,22 +433,9 @@ class _HeroHeaderState extends State<HeroHeader> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Time-of-day greeting eyebrow — light personal context that
-                // leads the eye into the primary search action below.
-                Text(
-                  '${greeting.text} ${greeting.emoji}',
-                  style: appFont(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    fontSize: AppText.sizeBody,
-                    fontWeight: FontWeight.w600,
-                    shadows: const [
-                      Shadow(color: Color(0x4D000000), blurRadius: 6),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                // Short, functional headline — one scannable line instead of the
-                // old two-line marketing copy, so the search bar reads sooner.
+                // One headline, no eyebrow: the top bar already greets by name,
+                // and a second "สวัสดีตอนค่ำ 🌙" half a screen lower read as an
+                // unedited draft. Short and functional so the search reads sooner.
                 Text(
                   'วันนี้อยากไปลุยที่ไหน?',
                   maxLines: 2,
@@ -460,18 +445,11 @@ class _HeroHeaderState extends State<HeroHeader> {
                     fontSize: titleSize,
                     height: 1.2,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                    shadows: const [
-                      Shadow(
-                        color: Color(0x59000000),
-                        blurRadius: 8,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
+                    letterSpacing: -0.4,
                   ),
                 ),
                 if (widget.showSearch) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   // Primary action: full-width search bar anchored at the bottom
                   // of the hero. Submitting opens a dedicated results page.
                   _HeroSearchField(
@@ -481,67 +459,96 @@ class _HeroHeaderState extends State<HeroHeader> {
                       MaterialPageRoute(builder: (_) => const AllTripsScreen()),
                     ),
                   ),
+                  const SizedBox(height: 10),
+                ] else
                   const SizedBox(height: 12),
-                  // Secondary AI trip-finder entry, demoted below the search so
-                  // it complements rather than competes with the primary action.
-                  _HeroFinderChip(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const TripFinderScreen(),
+                // Secondary row: the AI trip-finder link on the left, slide dots
+                // on the right — one line on shared edges instead of two loose
+                // elements stacked in the corner over the photo.
+                Row(
+                  children: [
+                    if (widget.showSearch)
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _HeroFinderChip(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const TripFinderScreen(),
+                              ),
+                            );
+                          },
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                      )
+                    else
+                      const Spacer(),
+                    if (images.length > 1)
+                      _HeroSlideDots(
+                        count: images.length,
+                        index: _index,
+                        onTap: (i) {
+                          HapticFeedback.selectionClick();
+                          _pageController.animateToPage(
+                            i,
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
-          // Slide indicator dots (only with more than one slide).
-          if (images.length > 1)
-            Positioned(
-              left: horizontalPadding,
-              // Kept above the overlapping card too, however low the content
-              // block sits.
-              bottom: (contentBottom - 26).clamp(
-                _kHeroOverlap + 6,
-                double.infinity,
-              ),
-              child: Row(
-                children: List.generate(images.length, (i) {
-                  final active = i == _index;
-                  return GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      _pageController.animateToPage(
-                        i,
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                    // แตะโดนง่ายขึ้นโดยไม่ต้องขยายจุดให้ใหญ่ผิดสัดส่วน
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.only(right: 6),
-                        width: active ? 20 : 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface(context).withValues(
-                            alpha: active ? 0.95 : 0.5,
-                          ),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
+        ],
+      ),
+    );
+  }
+}
+
+/// Slide position for the hero — small and quiet, right-aligned on the same
+/// line as the finder link. Each dot keeps a padded hit area so it stays
+/// tappable without drawing it bigger.
+class _HeroSlideDots extends StatelessWidget {
+  final int count;
+  final int index;
+  final ValueChanged<int> onTap;
+
+  const _HeroSlideDots({
+    required this.count,
+    required this.index,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'ภาพที่ ${index + 1} จาก $count',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(count, (i) {
+          final active = i == index;
+          return GestureDetector(
+            onTap: () => onTap(i),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 10),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+                width: active ? 16 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: active ? 1 : 0.45),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                ),
               ),
             ),
-        ],
+          );
+        }),
       ),
     );
   }
@@ -685,12 +692,23 @@ class _HeroTopBar extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            // Thin ring lifts the photo avatar off a busy
+                            // hero; it fades to a hairline once the bar
+                            // turns solid on scroll.
                             Container(
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
                                 color: AppTheme.surface(context),
                                 shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Color.lerp(
+                                    Colors.white.withValues(alpha: 0.85),
+                                    AppTheme.outlineColor,
+                                    backgroundProgress,
+                                  )!,
+                                  width: 2,
+                                ),
                               ),
                               child: ClipOval(
                                 child: avatar.isNotEmpty
@@ -740,7 +758,7 @@ class _HeroTopBar extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                       style: appFont(
                                         color: Color.lerp(
-                                          Colors.white.withValues(alpha: 0.85),
+                                          Colors.white.withValues(alpha: 0.92),
                                           AppTheme.textSecondary,
                                           backgroundProgress,
                                         ),
@@ -770,8 +788,17 @@ class _HeroTopBar extends StatelessWidget {
                             duration: const Duration(milliseconds: 180),
                             width: 44,
                             height: 44,
-                            color: Colors.white.withValues(
-                              alpha: 0.22 + (0.50 * backgroundProgress),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(
+                                alpha: 0.18 + (0.54 * backgroundProgress),
+                              ),
+                              border: Border.all(
+                                color: Colors.white.withValues(
+                                  alpha: 0.30 * (1 - backgroundProgress),
+                                ),
+                                width: 1,
+                              ),
                             ),
                             child: IconButton(
                               tooltip: 'การแจ้งเตือน',
@@ -886,7 +913,7 @@ class _HeaderTripWeather extends StatelessWidget {
     final ref = textOf(booking['booking_ref']);
 
     final baseColor = Color.lerp(
-      Colors.white.withValues(alpha: 0.85),
+      Colors.white.withValues(alpha: 0.92),
       AppTheme.textSecondary,
       backgroundProgress,
     )!;
@@ -1050,15 +1077,18 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
   Widget build(BuildContext context) {
     final hasText = widget.controller.text.isNotEmpty;
 
+    // Solid white slab on the photo: no hairline border at rest (a grey line
+    // against a dark scrim just looks dirty), only the green focus ring.
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
+      height: 52,
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
-          color: _focused ? const Color(0xFF059669) : AppTheme.border(context),
-          width: _focused ? 1.5 : 1,
+          color: _focused ? const Color(0xFF059669) : Colors.transparent,
+          width: 1.5,
         ),
       ),
       child: Row(
@@ -1066,7 +1096,7 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
           GestureDetector(
             onTap: () => widget.onSubmitted(widget.controller.text),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 0, 0),
+              padding: const EdgeInsets.fromLTRB(16, 0, 0, 0),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 180),
                 child: Icon(
@@ -1074,13 +1104,13 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
                   key: ValueKey(_focused),
                   color: _focused
                       ? const Color(0xFF059669)
-                      : AppTheme.mutedText(context),
-                  size: 18,
+                      : AppTheme.onSurface(context),
+                  size: 22,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: widget.controller,
@@ -1090,15 +1120,15 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
               cursorColor: const Color(0xFF059669),
               style: appFont(
                 color: AppTheme.onSurface(context),
-                fontSize: AppText.sizeBody,
+                fontSize: AppText.sizeSubtitle - 1,
                 fontWeight: FontWeight.w600,
               ),
               decoration: InputDecoration(
                 isDense: true,
-                hintText: 'ค้นหาทริป ปลายทาง หรือกิจกรรม',
+                hintText: 'ค้นหาทริปหรือปลายทาง',
                 hintStyle: appFont(
-                  color: AppTheme.onSurface(context).withValues(alpha: 0.42),
-                  fontSize: AppText.sizeBody,
+                  color: AppTheme.onSurface(context).withValues(alpha: 0.45),
+                  fontSize: AppText.sizeSubtitle - 1,
                   fontWeight: FontWeight.w500,
                 ),
                 border: InputBorder.none,
@@ -1132,36 +1162,35 @@ class _HeroSearchFieldState extends State<_HeroSearchField> {
               )),
             ),
           const SizedBox(width: 6),
-          // Tonal iOS-style filter button — same visual language as the field
-          // so the bar reads as a single control.
+          // Filter sits behind a hairline divider rather than in its own
+          // tinted tile, so the bar reads as one control with two ends.
+          Container(
+            width: 1,
+            height: 24,
+            color: AppTheme.border(context),
+          ),
           GestureDetector(
             onTap: widget.onFilterTap,
             behavior: HitTestBehavior.opaque,
-            child: MinTapTarget(
+            child: const MinTapTarget(
               semanticLabel: 'ตัวกรองทริป',
-              child: Container(
-              margin: const EdgeInsets.all(5),
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFF059669).withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-              ),
-              child: const Icon(
+              child: Icon(
                 Icons.tune_rounded,
                 color: Color(0xFF047857),
-                size: 18,
+                size: 22,
               ),
-            )),
+            ),
           ),
+          const SizedBox(width: 6),
         ],
       ),
     );
   }
 }
 
-/// Secondary AI trip-finder entry shown under the hero search bar. Styled as a
-/// translucent glass chip so it reads as a helper, not a competing search.
+/// Secondary AI trip-finder entry under the hero search bar. A quiet text
+/// link rather than a glass pill: it shares a line with the slide dots and
+/// should read as "or…", never as a second search box.
 class _HeroFinderChip extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -1169,48 +1198,58 @@ class _HeroFinderChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Material(
-        color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-              border: Border.all(
-                color: AppTheme.surface(context).withValues(alpha: 0.35),
-                width: 1,
+    return Semantics(
+      button: true,
+      label: 'ผู้ช่วยหาทริป ไม่รู้จะไปไหน ให้ช่วยแนะนำ',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          // Taller hit area than the text; the row it sits in is 26pt.
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.auto_awesome_rounded,
+                size: 15,
+                color: Color(0xFF6EE7B7),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 13,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'ผู้ช่วยหาทริป',
-                  style: appFont(
-                    color: Colors.white,
-                    fontSize: AppText.sizeCaption,
-                    fontWeight: FontWeight.w700,
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'ไม่รู้จะไปไหน? ',
+                        style: appFont(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: AppText.sizeLabel,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'ให้ผู้ช่วยแนะนำ',
+                        style: appFont(
+                          color: Colors.white,
+                          fontSize: AppText.sizeLabel,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 3),
-                const Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 12,
-                  color: Colors.white,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 2),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
+            ],
           ),
         ),
       ),
