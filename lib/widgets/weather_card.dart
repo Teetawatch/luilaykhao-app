@@ -123,7 +123,7 @@ class WeatherCard extends StatelessWidget {
                   color: AppTheme.surface(context).withValues(alpha: 0.16),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(_iconFor(code), color: Colors.white, size: 30),
+                child: Icon(iconFor(code), color: Colors.white, size: 30),
               ),
             ],
           ),
@@ -265,7 +265,7 @@ class WeatherCard extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
-                child: Icon(_iconFor(code), color: Colors.white, size: 22),
+                child: Icon(iconFor(code), color: Colors.white, size: 22),
               ),
               const SizedBox(width: 11),
               Expanded(
@@ -425,7 +425,9 @@ class WeatherCard extends StatelessWidget {
     };
   }
 
-  IconData _iconFor(String conditionCode) {
+  /// Glyph for an OpenWeather condition code — shared with the home header's
+  /// next-trip weather line so both read the same sky.
+  static IconData iconFor(String conditionCode) {
     final group = conditionCode.isNotEmpty ? conditionCode[0] : '';
     return switch (group) {
       '2' => Icons.thunderstorm_rounded,

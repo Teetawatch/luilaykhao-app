@@ -112,6 +112,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final notificationCount = app.notifications
         .where((item) => asMap(item)['is_read'] != true)
         .length;
+    final weatherTrip = _nextTripWithWeather(app);
     final hasFilter = _activeType != null;
     final showTrips =
         (hasFilter
@@ -242,6 +243,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               child: _HeroTopBar(
                 user: app.user,
                 notificationCount: notificationCount,
+                weatherTrip: weatherTrip,
                 backgroundProgress: _topBarProgress,
                 onNotificationsTap: openNotifications,
                 onProfileTap: NotificationNavigator.goToProfile,
@@ -582,9 +584,35 @@ class _HeroGradientFallback extends StatelessWidget {
   }
 }
 
+/// The soonest upcoming booking whose departure-day forecast the backend
+/// attached (it only does so for the nearest trip inside the ~6-day window).
+/// Null → the header keeps its generic tagline.
+Map<String, dynamic>? _nextTripWithWeather(AppProvider app) {
+  if (!app.isLoggedIn) return null;
+  final upcoming = app.bookings
+      .map(asMap)
+      .where((b) => _isUpcomingBooking(b) && !_awaitsNewRound(b))
+      .toList()
+    ..sort((a, b) {
+      final ad = bookingTravelDate(a) ?? DateTime(2100);
+      final bd = bookingTravelDate(b) ?? DateTime(2100);
+      return ad.compareTo(bd);
+    });
+  for (final booking in upcoming) {
+    if (asMap(asMap(booking['schedule'])['weather']).isNotEmpty) {
+      return booking;
+    }
+  }
+  return null;
+}
+
 class _HeroTopBar extends StatelessWidget {
   final Map<String, dynamic>? user;
   final int notificationCount;
+
+  /// Next booking carrying `schedule.weather` — swaps the generic tagline for
+  /// "ภูชี้ฟ้า · พรุ่งนี้ · ☁ 24° ฝน 60%".
+  final Map<String, dynamic>? weatherTrip;
   final double backgroundProgress;
   final VoidCallback onNotificationsTap;
   final VoidCallback onProfileTap;
@@ -592,6 +620,7 @@ class _HeroTopBar extends StatelessWidget {
   const _HeroTopBar({
     required this.user,
     required this.notificationCount,
+    this.weatherTrip,
     required this.backgroundProgress,
     required this.onNotificationsTap,
     required this.onProfileTap,
@@ -644,71 +673,90 @@ class _HeroTopBar extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: onProfileTap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppTheme.surface(context),
-                            shape: BoxShape.circle,
-                          ),
-                          child: ClipOval(
-                            child: avatar.isNotEmpty
-                                ? Image.network(avatar, fit: BoxFit.cover)
-                                : Image.asset(
-                                    'logo.png',
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => Center(
-                                      child: Text(
-                                        initial,
-                                        style: const TextStyle(
-                                          color: AppTheme.primaryColor,
-                                          fontWeight: FontWeight.w800,
+                  // Bounded width so the tagline/next-trip weather line can
+                  // ellipsize instead of shoving the bell off-screen; Align
+                  // keeps the profile tap target hugging its content.
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: GestureDetector(
+                        onTap: onProfileTap,
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppTheme.surface(context),
+                                shape: BoxShape.circle,
+                              ),
+                              child: ClipOval(
+                                child: avatar.isNotEmpty
+                                    ? Image.network(avatar, fit: BoxFit.cover)
+                                    : Image.asset(
+                                        'logo.png',
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => Center(
+                                          child: Text(
+                                            initial,
+                                            style: const TextStyle(
+                                              color: AppTheme.primaryColor,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'สวัสดี, $firstName',
-                              style: appFont(
-                                color: textColor,
-                                fontSize: AppText.sizeTitle,
-                                height: 1.1,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.2,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'พร้อมออกเดินทางครั้งใหม่?',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: appFont(
-                                color: Color.lerp(
-                                  Colors.white.withValues(alpha: 0.85),
-                                  AppTheme.textSecondary,
-                                  backgroundProgress,
-                                ),
-                                fontSize: AppText.sizeLabel,
-                                fontWeight: FontWeight.w500,
+                            const SizedBox(width: 12),
+                            Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'สวัสดี, $firstName',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: appFont(
+                                      color: textColor,
+                                      fontSize: AppText.sizeTitle,
+                                      height: 1.1,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  if (weatherTrip != null)
+                                    _HeaderTripWeather(
+                                      booking: weatherTrip!,
+                                      backgroundProgress: backgroundProgress,
+                                    )
+                                  else
+                                    Text(
+                                      'พร้อมออกเดินทางครั้งใหม่?',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: appFont(
+                                        color: Color.lerp(
+                                          Colors.white.withValues(alpha: 0.85),
+                                          AppTheme.textSecondary,
+                                          backgroundProgress,
+                                        ),
+                                        fontSize: AppText.sizeLabel,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 12),
                   // Badge sits in an outer Stack so the count isn't clipped by
                   // the bell's ClipOval. The bell is the home for the unread
                   // notification count (not the bottom "บัญชี" tab).
@@ -777,6 +825,156 @@ class _HeroTopBar extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The header's second line when the next trip has a forecast:
+/// "ภูชี้ฟ้า · พรุ่งนี้ · ☁ 24° ฝน 60%". The trip title is what gives way on a
+/// narrow screen — the weather part never truncates. A rough forecast turns
+/// the weather part into an amber/rose pill so it's noticed on the days that
+/// matter and stays quiet otherwise. Tapping opens that booking.
+class _HeaderTripWeather extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final double backgroundProgress;
+
+  const _HeaderTripWeather({
+    required this.booking,
+    required this.backgroundProgress,
+  });
+
+  static const _weekdays = [
+    'จันทร์',
+    'อังคาร',
+    'พุธ',
+    'พฤหัส',
+    'ศุกร์',
+    'เสาร์',
+    'อาทิตย์',
+  ];
+
+  /// The forecast's own date (the destination's departure day), not
+  /// departs_at — a van leaving Friday 23:30 should still say Saturday's sky.
+  static String? _dayLabel(String forecastDate) {
+    final date = DateTime.tryParse(forecastDate);
+    if (date == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final days = DateTime(date.year, date.month, date.day)
+        .difference(today)
+        .inDays;
+    if (days < 0) return null;
+    if (days == 0) return 'วันนี้';
+    if (days == 1) return 'พรุ่งนี้';
+    // Forecasts only reach ~6 days out, so the weekday is unambiguous.
+    return '${_weekdays[date.weekday - 1]}นี้';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final schedule = asMap(booking['schedule']);
+    final weather = asMap(schedule['weather']);
+    final title = textOf(asMap(schedule['trip'])['title'], 'ทริปของคุณ');
+    final day = _dayLabel(textOf(weather['forecast_date']));
+    final code = textOf(weather['condition_code']);
+    final severity = textOf(weather['severity'], 'none');
+    final tempMax = num.tryParse(weather['temp_max']?.toString() ?? '');
+    final pop = num.tryParse(weather['pop']?.toString() ?? '') ?? 0;
+    final popPercent = (pop * 100).round();
+    final ref = textOf(booking['booking_ref']);
+
+    final baseColor = Color.lerp(
+      Colors.white.withValues(alpha: 0.85),
+      AppTheme.textSecondary,
+      backgroundProgress,
+    )!;
+    final pillColor = switch (severity) {
+      'warning' => AppTheme.errorColor,
+      'advisory' => AppTheme.warningColor,
+      _ => null,
+    };
+    final weatherColor = pillColor != null ? Colors.white : baseColor;
+
+    final weatherText = [
+      if (tempMax != null) '${tempMax.round()}°',
+      if (popPercent >= 30) 'ฝน $popPercent%',
+    ].join(' ');
+
+    final textStyle = appFont(
+      color: baseColor,
+      fontSize: AppText.sizeLabel,
+      fontWeight: FontWeight.w600,
+    );
+
+    Widget weatherPart = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(WeatherCard.iconFor(code), size: 14, color: weatherColor),
+        if (weatherText.isNotEmpty) ...[
+          const SizedBox(width: 3),
+          Text(
+            weatherText,
+            maxLines: 1,
+            style: textStyle.copyWith(
+              color: weatherColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ],
+    );
+    if (pillColor != null) {
+      weatherPart = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+        decoration: BoxDecoration(
+          color: pillColor,
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        ),
+        child: weatherPart,
+      );
+    }
+
+    void openBooking() {
+      if (ref.isEmpty) return;
+      HapticFeedback.selectionClick();
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => BookingDetailSheet(bookingRef: ref),
+      );
+    }
+
+    final desc = textOf(weather['description_th']);
+    return Semantics(
+      button: true,
+      label: [
+        'พยากรณ์อากาศทริป $title',
+        ?day,
+        if (desc.isNotEmpty) desc,
+        if (tempMax != null) 'สูงสุด ${tempMax.round()} องศา',
+        if (popPercent >= 30) 'โอกาสฝน $popPercent เปอร์เซ็นต์',
+      ].join(' '),
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: openBooking,
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textStyle,
+              ),
+            ),
+            Text(day != null ? ' · $day · ' : ' · ', style: textStyle),
+            weatherPart,
+          ],
         ),
       ),
     );
