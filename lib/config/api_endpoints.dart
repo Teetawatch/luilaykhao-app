@@ -142,6 +142,14 @@ class ApiEndpoints {
   static String bookingInviteAccept(String token) =>
       'booking-invites/$token/accept';
 
+  // ส่งต่อที่นั่ง — คนที่ไปไม่ได้ออกลิงก์ให้คนอื่นมารับที่นั่งแทน
+  static String bookingHandovers(String ref) => 'bookings/$ref/handovers';
+  static String bookingHandover(String ref, int id) =>
+      'bookings/$ref/handovers/$id';
+  static String seatHandover(String token) => 'seat-handovers/$token';
+  static String seatHandoverClaim(String token) =>
+      'seat-handovers/$token/claim';
+
   // ใบจองที่ทีมงานเปิดให้ก่อนลูกค้ามีบัญชี — ผูกเข้าบัญชีตัวเองด้วยเลขที่จอง
   static const String claimableBookings = 'me/claimable-bookings';
   static const String claimBooking = 'bookings/claim';

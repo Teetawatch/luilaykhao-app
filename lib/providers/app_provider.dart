@@ -2575,6 +2575,56 @@ class AppProvider extends ChangeNotifier {
     return data;
   }
 
+  // ─── ส่งต่อที่นั่ง ─────────────────────────────────────────────────────────
+
+  /// ที่นั่งที่ผู้ใช้ส่งต่อได้ + ลิงก์ที่เปิดค้าง + ประวัติ (กติกาทั้งหมดมาจากเซิร์ฟเวอร์)
+  Future<Map<String, dynamic>> seatHandovers(String ref) async {
+    final response = await api.get(ApiEndpoints.bookingHandovers(ref));
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// ออกลิงก์ส่งต่อที่นั่งของผู้เดินทางหนึ่งคน — ลิงก์เก่าของที่นั่งเดียวกันใช้ไม่ได้อีก
+  Future<Map<String, dynamic>> createSeatHandover(
+    String ref, {
+    required int passengerId,
+    bool transfersOwnership = false,
+    String? note,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.bookingHandovers(ref),
+      body: {
+        'passenger_id': passengerId,
+        'transfers_ownership': transfersOwnership,
+        'note': ?note,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<void> cancelSeatHandover(String ref, int handoverId) async {
+    await api.delete(ApiEndpoints.bookingHandover(ref, handoverId));
+  }
+
+  /// พรีวิวลิงก์ส่งต่อที่นั่งก่อนรับ (พร้อมข้อมูลโปรไฟล์ไว้เติมฟอร์ม)
+  Future<Map<String, dynamic>> previewSeatHandover(String token) async {
+    final response = await api.get(ApiEndpoints.seatHandover(token));
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// รับที่นั่ง แล้วรีโหลดรายการจองให้เห็นทริปที่เพิ่งได้มา
+  Future<Map<String, dynamic>> claimSeatHandover(
+    String token,
+    Map<String, dynamic> traveller,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.seatHandoverClaim(token),
+      body: {...traveller, 'channel': 'app'},
+    );
+    final data = Map<String, dynamic>.from(api.data(response) as Map);
+    await loadAccountData();
+    return data;
+  }
+
   // ─── การจองที่ทีมงานจองให้ ───────────────────────────────────────────────
 
   /// จำนวนใบจองที่ "น่าจะ" เป็นของผู้ใช้ (เบอร์ตรงกับใบที่ทีมงานเปิดให้)

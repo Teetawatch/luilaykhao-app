@@ -681,6 +681,105 @@ class _BookingMembersSectionState extends State<_BookingMembersSection> {
   }
 }
 
+/// ทางเข้าหน้า "ส่งต่อที่นั่ง" — คนที่ไปไม่ได้ส่งที่นั่งให้คนอื่นไปแทน โชว์เมื่อ
+/// เซิร์ฟเวอร์บอกว่าผู้ใช้คนนี้ส่งต่อได้ (booking.seat_handover.available)
+class _SeatHandoverEntryCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _SeatHandoverEntryCard({required this.booking});
+
+  Future<void> _open(BuildContext context) async {
+    HapticFeedback.selectionClick();
+    final provider = context.read<AppProvider>();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => SeatHandoverScreen(booking: booking)),
+    );
+    // ส่งต่อแล้วใบจองอาจย้ายออกจากบัญชี หรือมีลิงก์ค้างเพิ่ม — รีโหลดให้ตรงความจริง
+    await provider.loadAccountData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final handover = asMap(booking['seat_handover']);
+    final open = int.tryParse(textOf(handover['open_count'])) ?? 0;
+    final deadline = textOf(handover['deadline_label']);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _open(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            border: Border.all(
+              color: (open > 0 ? AppTheme.warningColor : AppTheme.border(context))
+                  .withValues(alpha: 0.5),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.swap_horiz_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ไปไม่ได้? ส่งต่อที่นั่ง',
+                      style: appFont(
+                        color: AppTheme.onSurface(context),
+                        fontSize: AppText.sizeSubtitle,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      open > 0
+                          ? 'มีลิงก์รอคนรับ $open ที่ — แตะเพื่อส่งซ้ำหรือยกเลิก'
+                          : deadline.isNotEmpty
+                          ? 'ส่งลิงก์ให้คนอื่นไปแทนได้ถึง $deadline'
+                          : 'ส่งลิงก์ให้คนอื่นไปแทน ที่นั่งไม่สูญเปล่า',
+                      style: appFont(
+                        color: open > 0
+                            ? AppTheme.warningColor
+                            : AppTheme.mutedText(context),
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.primaryColor,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// ทางเข้าหน้าเชิญเพื่อน — วางไว้ทั้งในชีตรายละเอียดและบนการ์ดการจอง เพราะเดิม
 /// เป็นแค่ปุ่มเล็ก ๆ ท้ายชีต คนส่วนใหญ่จึงไม่รู้ว่าเชิญเพื่อนเข้าการจองได้
 class _InviteFriendsEntryCard extends StatelessWidget {
@@ -875,6 +974,8 @@ class _BookingActionDeck extends StatelessWidget {
             );
           },
         ),
+      if (asMap(booking['seat_handover'])['available'] == true)
+        _SeatHandoverEntryCard(booking: booking),
       if (showSos)
         SosButton(
           scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,

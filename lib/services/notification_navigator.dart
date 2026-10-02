@@ -7,6 +7,7 @@ import '../providers/app_provider.dart';
 import '../screens/chat_screen.dart';
 import '../screens/gift_screen.dart';
 import '../screens/group_room_screen.dart';
+import '../screens/handover_claim_screen.dart';
 import '../screens/join_booking_screen.dart';
 import '../screens/challenges_screen.dart';
 import '../screens/medals_screen.dart';
@@ -62,6 +63,11 @@ class NotificationNavigator {
       // ทีมงานย้อนการเลื่อน (กดผิดรอบ) — เดินทางตามเดิม ใบจองคือที่ยืนยันได้
       case 'trip_resumed':
       case 'booking_rescheduled':
+      // ส่งต่อที่นั่ง — คนรับ/เจ้าของ/คนส่ง ดูต่อที่ใบจอง ส่วนคนที่ถูกถอดออก
+      // ไม่มีใบจองให้เปิดแล้ว (_openBookingDetail ตกไปแท็บการจองเอง)
+      case 'seat_handover_received':
+      case 'seat_handover_claimed':
+      case 'seat_handover_removed':
         _openBookingDetail(data);
       case 'passport_info_needed':
       case 'passport_expiring':
@@ -144,6 +150,8 @@ class NotificationNavigator {
       // ลูกค้าแจ้งว่าอาจมาสาย — คนที่ได้แจ้งเตือนนี้คือสตาฟของรอบนั้น สิ่งที่
       // เขาต้องทำต่อคือดูรายชื่อว่าเหลือใครอีกบ้าง ไม่ใช่มาอ่านซ้ำในศูนย์แจ้งเตือน
       case 'pickup_late':
+      // เปลี่ยนตัวผู้เดินทาง — สตาฟต้องดูรายชื่อบนรถชุดใหม่
+      case 'seat_handover_staff':
       // เตือนสตาฟว่ายังไม่ได้เปิดแชร์ตำแหน่งรถ — สวิตช์อยู่บนหน้ารายชื่อ
       case 'staff_share_location':
         _openStaffManifest(data);
@@ -429,6 +437,11 @@ class NotificationNavigator {
         _openGift(segments[1]);
         return true;
       }
+      // ลิงก์ส่งต่อที่นั่ง — คนรับมีแอปก็รับในแอปเลย
+      if (segments.length >= 2 && segments.first == 'handover') {
+        _openHandover(segments[1]);
+        return true;
+      }
       // ลิงก์ตั้งรหัสผ่านใหม่จากอีเมล — เป็นหน้าเว็บใน SPA ด้วย แต่ถ้าเปิดบน
       // เครื่องที่มีแอปอยู่ ให้จบในแอปเลย ผู้ใช้จะได้ล็อกอินต่อได้ทันที
       if (segments.isNotEmpty && segments.first == 'reset-password') {
@@ -469,6 +482,11 @@ class NotificationNavigator {
         if (code == null) return false;
         _openGift(code);
         return true;
+      case 'handover':
+        final token = _firstSegment(uri.pathSegments);
+        if (token == null) return false;
+        _openHandover(token);
+        return true;
     }
     return false;
   }
@@ -498,6 +516,14 @@ class NotificationNavigator {
     _withNav(
       (nav) => nav.push(
         MaterialPageRoute(builder: (_) => GiftScreen(initialCode: code)),
+      ),
+    );
+  }
+
+  static void _openHandover(String token) {
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => HandoverClaimScreen(token: token)),
       ),
     );
   }

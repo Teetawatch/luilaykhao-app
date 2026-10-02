@@ -325,6 +325,12 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   const SizedBox(height: 16),
                 ],
 
+                // ส่งต่อที่นั่ง — คนที่ไปไม่ได้ส่งที่นั่งให้คนอื่นไปแทน
+                if (asMap(booking['seat_handover'])['available'] == true) ...[
+                  _SeatHandoverEntryCard(booking: booking),
+                  const SizedBox(height: 16),
+                ],
+
                 // ผู้จอง — รูปโปรไฟล์ลูกค้า + ชื่อ (self-spaces; hides if no user)
                 _BookingCustomerRow(booking: booking),
 
