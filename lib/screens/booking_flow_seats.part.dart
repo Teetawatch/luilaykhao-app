@@ -355,8 +355,9 @@ class SeatSelectionSection extends StatelessWidget {
     // ที่นั่งที่ผู้ใช้คนนี้ถืออยู่เอง — ต้องอธิบายให้ชัด ไม่งั้นอ่านว่าโดนคนอื่นจองไป
     final ownSeatIds = <String>[
       for (final item in asList(map['seats']))
-        if (_seatOwnedByCurrentUser(asMap(item))) textOf(asMap(item)['id']),
-    ]..sort();
+        if (_seatOwnedByCurrentUser(asMap(item)))
+          textOf(asMap(item)['label'], textOf(asMap(item)['id'])),
+    ];
     final showBody = !isLoading && error == null && hasSeatMap;
 
     return _SectionShell(
@@ -567,7 +568,7 @@ class _SelectedSeatSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final seats = selectedSeatIds.toList()..sort();
+    final seats = _orderedSeatIds(seatMap, selectedSeatIds);
     final hasSelection = seats.isNotEmpty;
 
     return Container(
@@ -614,56 +615,98 @@ class _SelectedSeatSummary extends StatelessWidget {
             ],
           ),
           if (hasSelection) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
+            // ไม่ใช้ MinTapTarget — มันเป็นกล่อง 44×44 ตายตัว ชิป "A10 ✕" กว้าง
+            // เกินนั้นเลยถูกบีบจนล้น ที่นี่ขยายแค่ความสูงของพื้นที่แตะแทน
             Wrap(
               spacing: 8,
-              runSpacing: 8,
-              children: seats.map((id) {
-                final seat = _seatById(seatMap, id);
-
-                return MinTapTarget(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    onTap: seat == null
-                        ? null
-                        : () {
-                            HapticFeedback.selectionClick();
-                            onRemove(seat);
-                          },
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
-                      decoration: BoxDecoration(
-                        color: _softAccent,
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.radiusPill,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            textOf(seat?['label'], id),
-                            style: appFont(
-                              color: Colors.white,
-                              fontSize: AppText.sizeCaption,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          const Icon(
-                            Icons.close_rounded,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ],
-                      ),
-                    ),
+              children: [
+                for (final id in seats)
+                  _SelectedSeatChip(
+                    label: textOf(_seatById(seatMap, id)?['label'], id),
+                    // ที่นั่งที่หายไปจากผังหลังโหลดใหม่ก็ต้องเอาออกได้ ไม่งั้น
+                    // ชิปค้างอยู่และนับเป็นผู้เดินทางไปตลอด
+                    onRemove: () =>
+                        onRemove(_seatById(seatMap, id) ?? {'id': id}),
                   ),
-                );
-              }).toList(),
+              ],
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// เรียงที่นั่งตามลำดับในผัง (หน้ารถ → ท้ายรถ, ซ้าย → ขวา) — เรียงตามตัวอักษร
+/// จะได้ A1, A10, A2, D2 ซึ่งไม่ตรงกับที่เห็นบนผัง
+List<String> _orderedSeatIds(
+  Map<String, dynamic> seatMap,
+  Set<String> selectedSeatIds,
+) {
+  final order = <String, int>{};
+  for (final item in asList(seatMap['seats'])) {
+    order.putIfAbsent(textOf(asMap(item)['id']), () => order.length);
+  }
+  return selectedSeatIds.toList()..sort((a, b) {
+    final byMap = (order[a] ?? order.length).compareTo(
+      order[b] ?? order.length,
+    );
+    return byMap != 0 ? byMap : a.compareTo(b);
+  });
+}
+
+class _SelectedSeatChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onRemove;
+
+  const _SelectedSeatChip({required this.label, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'เอาที่นั่ง $label ออก',
+      excludeSemantics: true,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onRemove,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: MinTapTarget.minSize),
+            child: Center(
+              widthFactor: 1,
+              // Ink วาดลงบน Material — ripple จึงขึ้นทับสีชิปให้เห็นได้
+              child: Ink(
+                padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
+                decoration: const ShapeDecoration(
+                  color: _softAccent,
+                  shape: StadiumBorder(),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: appFont(
+                        color: Colors.white,
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    const Icon(
+                      Icons.close_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

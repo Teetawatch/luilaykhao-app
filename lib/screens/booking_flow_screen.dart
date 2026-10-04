@@ -967,7 +967,12 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     final id = textOf(seat['id']);
     // ล็อกของตัวเองแตะเลือก/ยกเลิกได้ — ปุ่มเปิดให้แตะอยู่แล้ว ถ้ากันไว้ตรงนี้
     // การแตะจะเงียบสนิทและที่นั่งของตัวเองกลายเป็นที่นั่งที่แตะไม่ได้
-    if (id.isEmpty || (!_isSeatAvailable(seat) && !_seatLockedByCurrentUser(seat))) {
+    // ส่วนที่เลือกไว้แล้วเอาออกได้เสมอ แม้ผังที่โหลดใหม่จะบอกว่าถูกจองไปแล้ว
+    // ไม่งั้นชิปในสรุปที่นั่งกดไม่ออก และนับเป็นผู้เดินทางค้างไว้
+    if (id.isEmpty ||
+        (!_selectedSeatIds.contains(id) &&
+            !_isSeatAvailable(seat) &&
+            !_seatLockedByCurrentUser(seat))) {
       return;
     }
 
