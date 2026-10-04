@@ -35,6 +35,7 @@ import 'incident_list_screen.dart' show IncidentListScreen;
 import 'staff_ledger_screen.dart' show StaffLedgerScreen;
 import 'staff_outstanding_screen.dart' show StaffOutstandingScreen;
 import 'staff_rentals_screen.dart' show StaffRentalsScreen;
+import 'packing_list_screen.dart' show PackingScheduleListScreen;
 import 'staff_shopping_screen.dart' show StaffShoppingScreen;
 import 'schedule_itinerary_screen.dart' show ScheduleItineraryScreen;
 import 'wishlist_screen.dart';
@@ -139,6 +140,10 @@ class ProfilePage extends StatelessWidget {
                       const SizedBox(height: 24),
                       QuickActionsSection(app: app),
                       const SizedBox(height: 28),
+                      if (app.canViewPackingList) ...[
+                        const PackingMenu(),
+                        const SizedBox(height: 24),
+                      ],
                       AccountMenu(user: user),
                       const SizedBox(height: 24),
                       const TravelMenu(),
@@ -1070,6 +1075,27 @@ class _BookingsShortcutCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// งานจัดของ — โชว์เฉพาะบัญชีที่แอดมินเปิดสิทธิ์ "คนจัดของ" (บทบาทเสริม packer)
+class PackingMenu extends StatelessWidget {
+  const PackingMenu({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MenuSection(
+      title: 'งานจัดของ',
+      items: [
+        _MenuItem(
+          icon: Icons.inventory_2_outlined,
+          label: 'ใบเตรียมของ',
+          subtitle: 'แต่ละรอบต้องเตรียมอุปกรณ์อะไร กี่ชิ้น ของใครบ้าง',
+          onTap: () =>
+              _pushPremium(context, const PackingScheduleListScreen()),
+        ),
+      ],
     );
   }
 }

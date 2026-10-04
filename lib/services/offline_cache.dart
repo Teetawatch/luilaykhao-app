@@ -46,6 +46,9 @@ class OfflineCache {
     // ที่เดินทางกับเราสัปดาห์ละรอบไม่ควรแบกของปีที่แล้วไว้ทั้งปี
     'staff_manifest.': 6,
     'staff_pack.': 6,
+    // ใบเตรียมของของคนจัดของ — หนึ่งชุดต่อรอบ ใช้แค่ก่อนรถออก
+    'packing.': 6,
+    'packing_ticks.': 6,
   };
 
   final Map<String, dynamic> _public = {};

@@ -136,6 +136,14 @@ class AppProvider extends ChangeNotifier {
   /// ที่ BookingController ธงจากแอปเพียงอย่างเดียวยืนยันการจองให้ไม่ได้)
   bool get isAdmin => roleNames.contains('admin');
 
+  /// คนจัดของ — บทบาทเสริม `packer` ที่แอดมินเปิดให้ในหน้าผู้ใช้ (ซ้อนบน
+  /// บทบาทหลักใดก็ได้ รวมถึงลูกค้า) เปิดใบเตรียมของแต่ละรอบในแอปได้
+  /// แอดมิน/เจ้าหน้าที่เปิดได้ด้วยเพื่อดูว่าคนจัดของเห็นอะไร
+  bool get canViewPackingList =>
+      roleNames.contains('packer') ||
+      roleNames.contains('admin') ||
+      roleNames.contains('operator');
+
   int get unreadNotificationCount =>
       notifications.where((n) => (n as Map?)?['is_read'] != true).length;
 
@@ -2069,6 +2077,42 @@ class AppProvider extends ChangeNotifier {
     final data = api.data(response);
     if (data is! Map) return const {};
     return Map<String, dynamic>.from(data);
+  }
+
+  /// รอบที่ยังไม่ออกเดินทางและมีคนเช่าอุปกรณ์ — สำหรับคนจัดของ
+  Future<List<Map<String, dynamic>>> loadPackingSchedules() async {
+    final response = await api.get(ApiEndpoints.packingSchedules);
+    final data = api.data(response);
+    final list = data is Map ? data['schedules'] : null;
+    if (list is! List) return const [];
+    return list
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+  }
+
+  static String _packingCacheKey(int scheduleId) => 'packing.$scheduleId';
+
+  /// ใบเตรียมของที่โหลดสำเร็จล่าสุดของรอบนี้ — โกดังบางที่สัญญาณไม่ดี
+  Map<String, dynamic>? cachedPackingList(int scheduleId) {
+    final cached = OfflineCache.instance.readAccount<Map>(
+      _packingCacheKey(scheduleId),
+    );
+    return cached == null ? null : Map<String, dynamic>.from(cached);
+  }
+
+  /// ใบเตรียมของหนึ่งรอบ — คืน `{schedule, picking, items, bookings, totals}`
+  /// picking = ชิ้นที่ต้องหยิบจริง (แตกชุดแล้ว), items = ตามที่ลูกค้าเช่า
+  Future<Map<String, dynamic>> loadPackingList(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.packingSchedule(scheduleId));
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    final result = Map<String, dynamic>.from(data);
+    OfflineCache.instance.writeAccount(_packingCacheKey(scheduleId), {
+      ...result,
+      'cached_at': DateTime.now().toIso8601String(),
+    });
+    return result;
   }
 
   /// ติ๊กแจก/รับคืนอุปกรณ์หนึ่งชิ้น — คืนใบแจกชุดใหม่ทั้งก้อน (ไม่ต้องโหลดซ้ำ)

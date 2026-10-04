@@ -257,6 +257,10 @@ class ApiEndpoints {
       'staff/schedules/$scheduleId/outstanding/$ref/send-link';
   static String staffRentals(int scheduleId) =>
       'staff/schedules/$scheduleId/rentals';
+  // ใบเตรียมของสำหรับคนจัดของในโกดัง (บทบาทเสริม packer) — ไม่มีราคา/เบอร์โทร
+  static const packingSchedules = 'packing/schedules';
+  static String packingSchedule(int scheduleId) =>
+      'packing/schedules/$scheduleId';
   static String staffRentalMark(int scheduleId) =>
       'staff/schedules/$scheduleId/rentals/mark';
 
