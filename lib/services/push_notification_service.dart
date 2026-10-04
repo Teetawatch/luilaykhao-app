@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -124,6 +125,34 @@ class PushNotificationService {
     importance: Importance.high,
   );
 
+  /// ห้องแชททริป — ใบแรกของห้องที่เด้งมีเสียง ชื่อ channel ต้องตรงกับ
+  /// `SendChatPushJob::ANDROID_CHANNEL` ฝั่ง Laravel
+  static const _chatChannel = AndroidNotificationChannel(
+    'chat_messages',
+    'แชทกลุ่มทริป',
+    description: 'ข้อความใหม่ในห้องแชทกลุ่มทริป',
+    importance: Importance.high,
+  );
+
+  /// ใบที่ตามมาของห้องเดียวกันภายในไม่กี่นาที — ทับใบเดิมในถาดโดยไม่มีเสียง
+  /// (`SendChatPushJob::ANDROID_QUIET_CHANNEL`)
+  static const _chatQuietChannel = AndroidNotificationChannel(
+    'chat_quiet',
+    'แชทกลุ่มทริป (อัปเดตเงียบ)',
+    description: 'อัปเดตจำนวนข้อความใหม่ในแจ้งเตือนเดิมโดยไม่ส่งเสียง',
+    importance: Importance.low,
+    playSound: false,
+    enableVibration: false,
+  );
+
+  /// tag ของแจ้งเตือนห้องแชท — ต้องตรงกับ `SendChatPushJob::tagFor()`
+  static String chatTag(int scheduleId, {bool mention = false}) =>
+      mention ? 'chat-$scheduleId-mention' : 'chat-$scheduleId';
+
+  /// FCM วาดแจ้งเตือนที่มี tag ด้วย id 0 เสมอ — ใบที่แอปวาดเองตอนเปิดแอปอยู่
+  /// ใช้ id เดียวกันเพื่อให้ทับกันและล้างได้ด้วยคำสั่งเดียว
+  static const _taggedNotificationId = 0;
+
   static const _badgeChannel = MethodChannel('luilaykhao/badge');
 
   final _localNotifications = FlutterLocalNotificationsPlugin();
@@ -140,6 +169,10 @@ class PushNotificationService {
   ForegroundNotificationCallback? _onForegroundNotification;
   Map<String, dynamic>? _pendingTapData;
   String? _liveActivityStartToken;
+
+  /// ห้องแชทที่เปิดอยู่บนหน้าจอตอนนี้ — ข้อความของห้องนั้นไม่ต้องเด้งซ้ำ
+  /// เพราะผู้ใช้กำลังเห็นมันขึ้นมาอยู่แล้ว
+  final Map<Object, bool Function(int scheduleId)> _chatRoomWatchers = {};
 
   Future<void> initialize({
     VoidCallback? onRefreshRequested,
@@ -195,10 +228,13 @@ class PushNotificationService {
       await _requestPermission();
 
       // iOS: show alert/badge/sound banners while the app is in the foreground
+      // — unless a chat room is already open (cold start from a chat push),
+      // see [watchChatRoom].
+      final bannersOn = _chatRoomWatchers.isEmpty;
       await _messaging.setForegroundNotificationPresentationOptions(
-        alert: true,
+        alert: bannersOn,
         badge: true,
-        sound: true,
+        sound: bannersOn,
       );
       debugPrint('[FCM] foreground presentation options set');
 
@@ -233,6 +269,11 @@ class PushNotificationService {
           // หยุดไซเรนทันทีเมื่อมีคนรับเรื่องแล้ว โดยไม่ต้องรอให้ผู้ใช้เปิดหน้า SOS
           _handleNotificationTap(message.data);
           _showForegroundNotification(message);
+          _onRefreshRequested?.call();
+          return;
+        }
+        if (type == 'chat_message') {
+          _handleForegroundChat(message);
           _onRefreshRequested?.call();
           return;
         }
@@ -439,6 +480,8 @@ class PushNotificationService {
           AndroidFlutterLocalNotificationsPlugin
         >();
     await androidPlugin?.createNotificationChannel(_channel);
+    await androidPlugin?.createNotificationChannel(_chatChannel);
+    await androidPlugin?.createNotificationChannel(_chatQuietChannel);
     // Alarm-grade SOS channel with the looping siren sound. Must exist before
     // a killed app receives an FCM SOS, otherwise Android picks a silent channel.
     await androidPlugin?.createNotificationChannel(SosAlarmService.sosChannel);
@@ -476,7 +519,92 @@ class PushNotificationService {
 
   Future<void> clearBadge() => setBadgeCount(0);
 
-  Future<void> _showForegroundNotification(RemoteMessage message) async {
+  // ── ห้องแชท ──────────────────────────────────────────────────────────────
+
+  /// ห้องแชทลงทะเบียนว่า "ตอนนี้ผู้ใช้กำลังดูห้องไหนอยู่" คืนตัวยกเลิก
+  ///
+  /// ระหว่างที่มีห้องเปิดอยู่ iOS จะไม่วาดแบนเนอร์ระบบตอนแอปอยู่หน้าจอ (ข้อความ
+  /// ของห้องที่กำลังอ่านไม่ต้องเด้งทับ) — แจ้งเตือนประเภทอื่นยังขึ้นเป็นแบนเนอร์
+  /// ในแอปผ่าน [ForegroundNotificationCallback] ตามปกติ
+  VoidCallback watchChatRoom(bool Function(int scheduleId) isVisible) {
+    final key = Object();
+    final wasEmpty = _chatRoomWatchers.isEmpty;
+    _chatRoomWatchers[key] = isVisible;
+    if (wasEmpty) unawaited(_setIosForegroundBanners(false));
+
+    return () {
+      if (_chatRoomWatchers.remove(key) == null) return;
+      if (_chatRoomWatchers.isEmpty) unawaited(_setIosForegroundBanners(true));
+    };
+  }
+
+  bool _isChatRoomVisible(int scheduleId) {
+    for (final isVisible in _chatRoomWatchers.values) {
+      try {
+        if (isVisible(scheduleId)) return true;
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  Future<void> _setIosForegroundBanners(bool enabled) async {
+    if (defaultTargetPlatform != TargetPlatform.iOS || !_firebaseReady) return;
+    try {
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: enabled,
+        badge: true,
+        sound: enabled,
+      );
+    } catch (e) {
+      debugPrint('[FCM] setForegroundNotificationPresentationOptions failed: $e');
+    }
+  }
+
+  /// ข้อความแชทที่มาถึงตอนแอปเปิดอยู่
+  /// - ห้องที่กำลังดูอยู่: ไม่เด้งอะไรเลย ข้อความขึ้นในห้องเองอยู่แล้ว
+  /// - ห้องอื่น: ทับใบเดิมของห้องนั้นในถาด (Android) ใบเงียบไม่ขึ้นแบนเนอร์ในแอป
+  void _handleForegroundChat(RemoteMessage message) {
+    final scheduleId = int.tryParse('${message.data['schedule_id']}');
+    if (scheduleId != null && _isChatRoomVisible(scheduleId)) return;
+
+    final quiet = message.data['quiet']?.toString() == '1';
+    final tag = message.data['tag']?.toString();
+    _showForegroundNotification(
+      message,
+      channel: quiet ? _chatQuietChannel : _chatChannel,
+      tag: (tag == null || tag.isEmpty) ? null : tag,
+    );
+    if (!quiet) _fireForegroundCallback(message);
+  }
+
+  /// ล้างแจ้งเตือนของห้องนี้ออกจากถาด — เรียกตอนเปิดห้อง เพราะอ่านแล้ว
+  Future<void> clearChatNotifications(int scheduleId) async {
+    try {
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        await _localNotifications.cancel(
+          id: _taggedNotificationId,
+          tag: chatTag(scheduleId),
+        );
+        await _localNotifications.cancel(
+          id: _taggedNotificationId,
+          tag: chatTag(scheduleId, mention: true),
+        );
+      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+        // ใบของห้องนี้ทั้งข้อความทั่วไปและการแท็กอยู่ใน thread เดียวกัน
+        await _badgeChannel.invokeMethod('clearDeliveredThread', {
+          'thread': chatTag(scheduleId),
+        });
+      }
+    } catch (e) {
+      debugPrint('[FCM] clearChatNotifications failed: $e');
+    }
+  }
+
+  Future<void> _showForegroundNotification(
+    RemoteMessage message, {
+    AndroidNotificationChannel channel = _channel,
+    String? tag,
+  }) async {
     final notification = message.notification;
     if (notification == null) return;
 
@@ -488,17 +616,21 @@ class PushNotificationService {
     if (!_localReady) return;
 
     final android = notification.android;
+    final silent = channel.importance.value < Importance.defaultImportance.value;
     await _localNotifications.show(
-      id: notification.hashCode,
+      id: tag == null ? notification.hashCode : _taggedNotificationId,
       title: notification.title,
       body: notification.body,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          _channel.id,
-          _channel.name,
-          channelDescription: _channel.description,
-          importance: Importance.high,
-          priority: Priority.high,
+          channel.id,
+          channel.name,
+          channelDescription: channel.description,
+          importance: channel.importance,
+          priority: silent ? Priority.low : Priority.high,
+          playSound: !silent,
+          enableVibration: !silent,
+          tag: tag,
           icon: android?.smallIcon ?? '@mipmap/ic_launcher',
         ),
       ),

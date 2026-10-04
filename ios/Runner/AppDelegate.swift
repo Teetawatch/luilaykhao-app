@@ -60,6 +60,24 @@ import UserNotifications
             result(nil)
           }
         }
+      case "clearDeliveredThread":
+        // ล้างแจ้งเตือนของห้องแชทที่เพิ่งเปิดอ่าน — ใบของห้องเดียวกันใช้
+        // thread-id เดียวกัน (SendChatPushJob::tagFor ฝั่งเซิร์ฟเวอร์)
+        let args = call.arguments as? [String: Any]
+        guard let thread = args?["thread"] as? String, !thread.isEmpty else {
+          result(nil)
+          return
+        }
+        let center = UNUserNotificationCenter.current()
+        center.getDeliveredNotifications { delivered in
+          let ids = delivered
+            .filter { $0.request.content.threadIdentifier == thread }
+            .map { $0.request.identifier }
+          if !ids.isEmpty {
+            center.removeDeliveredNotifications(withIdentifiers: ids)
+          }
+          DispatchQueue.main.async { result(nil) }
+        }
       default:
         result(FlutterMethodNotImplemented)
       }

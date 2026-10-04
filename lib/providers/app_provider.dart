@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/api_config.dart';
 import '../config/api_endpoints.dart';
+import '../models/chat_notify_level.dart';
 import '../models/pickup_vehicle_class.dart';
 import '../models/sos_alert.dart';
 import '../models/medal_social.dart';
@@ -3038,6 +3039,32 @@ class AppProvider extends ChangeNotifier {
     final response = await api.get(ApiEndpoints.chatUnreadCount(scheduleId));
     final data = Map<String, dynamic>.from(api.data(response) ?? {});
     return int.tryParse('${data['count']}') ?? 0;
+  }
+
+  /// ตั้งระดับการแจ้งเตือนของห้องแชทนี้ แล้วอัปเดตรายการห้องที่แคชไว้ให้
+  /// ไอคอนกระดิ่งในแท็บ "แชท" ตรงกันทันที คืนค่าที่เซิร์ฟเวอร์บันทึกจริง
+  Future<ChatNotifyLevel> setChatNotifyLevel(
+    int scheduleId,
+    ChatNotifyLevel level,
+  ) async {
+    final response = await api.put(
+      ApiEndpoints.chatNotifications(scheduleId),
+      body: {'level': level.value},
+    );
+    final data = Map<String, dynamic>.from(api.data(response) ?? const {});
+    final saved = ChatNotifyLevel.fromValue(data['notify_level'] ?? level.value);
+
+    var changed = false;
+    for (final c in chatConversations) {
+      if (c is! Map) continue;
+      final id = int.tryParse('${c['schedule_id'] ?? c['id']}');
+      if (id != scheduleId) continue;
+      c['notify_level'] = saved.value;
+      changed = true;
+    }
+    if (changed) notifyListeners();
+
+    return saved;
   }
 
   /// Room metadata for a chat: members (with per-member read positions),

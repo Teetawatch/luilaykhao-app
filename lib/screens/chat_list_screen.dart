@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/api_config.dart';
+import '../models/chat_notify_level.dart';
 import '../providers/app_provider.dart';
 import '../widgets/skeleton.dart';
 import '../theme/app_theme.dart';
@@ -149,6 +150,11 @@ class _ConversationTile extends StatelessWidget {
     final title = _t(conversation['trip_title']);
     final vehicle = _t(conversation['vehicle_name']);
     final unread = int.tryParse('${conversation['unread_count']}') ?? 0;
+    final notifyLevel = ChatNotifyLevel.fromValue(conversation['notify_level']);
+    // ห้องที่ปิดแจ้งเตือนไว้ ป้ายนับยังอยู่แต่เป็นสีเทา แบบ LINE
+    final badgeColor = notifyLevel == ChatNotifyLevel.off
+        ? AppTheme.mutedText(context)
+        : AppTheme.primaryColor;
     final image = ApiConfig.mediaUrl(conversation['trip_image']);
     final time = _timeText();
 
@@ -191,6 +197,15 @@ class _ConversationTile extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (notifyLevel != ChatNotifyLevel.all) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            notifyLevel.icon,
+                            size: 14,
+                            semanticLabel: notifyLevel.label,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ],
                         if (time.isNotEmpty) ...[
                           const SizedBox(width: 8),
                           Text(
@@ -233,7 +248,7 @@ class _ConversationTile extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
+                              color: badgeColor,
                               borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                             ),
                             child: Text(

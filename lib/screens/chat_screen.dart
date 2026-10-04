@@ -14,7 +14,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
+import '../models/chat_notify_level.dart';
 import '../providers/app_provider.dart';
+import '../services/push_notification_service.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/moderation_sheet.dart';
 import '../theme/app_theme.dart';
@@ -70,6 +72,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   DateTime? _lastRoomFetch;
   bool _roomFetching = false;
   static const _roomRefreshGap = Duration(seconds: 8);
+
+  // การแจ้งเตือนของห้องนี้ (ของฉันคนเดียว) — _notifyEpoch กันไม่ให้ผลรีเฟรช
+  // ห้องที่ยิงออกไปก่อนผู้ใช้เปลี่ยนค่า กลับมาทับค่าใหม่ด้วยค่าเก่า
+  ChatNotifyLevel _notifyLevel = ChatNotifyLevel.all;
+  int _notifyEpoch = 0;
+  bool _savingNotify = false;
+  VoidCallback? _roomWatchDisposer;
   // How long before the same person can pop a "เข้าห้องแชท" notice again.
   static const _joinedCooldown = Duration(minutes: 3);
 
@@ -149,6 +158,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _scroll.addListener(_onScroll);
     _input.addListener(_watchComposing);
+    // ข้อความของห้องนี้ไม่ต้องเด้งแจ้งเตือนระหว่างที่ผู้ใช้กำลังดูห้องอยู่
+    _roomWatchDisposer = PushNotificationService.instance.watchChatRoom(
+      (scheduleId) =>
+          scheduleId == widget.scheduleId &&
+          mounted &&
+          _isForeground &&
+          (ModalRoute.of(context)?.isCurrent ?? false),
+    );
     _init();
   }
 
@@ -228,6 +245,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _roomWatchDisposer?.call();
     _stopPolling();
     _typingSweeper?.cancel();
     _joinedSweeper?.cancel();
@@ -316,11 +334,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       return;
     }
     _roomFetching = true;
+    final notifyEpoch = _notifyEpoch;
     try {
       final room = await context.read<AppProvider>().chatRoom(widget.scheduleId);
       if (!mounted) return;
       setState(() {
         _room = room;
+        if (notifyEpoch == _notifyEpoch && !_savingNotify) {
+          _notifyLevel = ChatNotifyLevel.fromValue(room['notify_level']);
+        }
         _pinned = room['pinned_message'] is Map
             ? Map<String, dynamic>.from(room['pinned_message'] as Map)
             : null;
@@ -457,6 +479,62 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void _markRead() {
     if (!_isForeground) return;
     context.read<AppProvider>().markChatRead(widget.scheduleId);
+    // อ่านแล้ว — แจ้งเตือนของห้องนี้ที่ค้างอยู่ในถาดไม่มีความหมายอีกต่อไป
+    unawaited(
+      PushNotificationService.instance.clearChatNotifications(
+        widget.scheduleId,
+      ),
+    );
+  }
+
+  Future<void> _openNotifySettings() async {
+    HapticFeedback.selectionClick();
+    final picked = await showModalBottomSheet<ChatNotifyLevel>(
+      context: context,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
+      ),
+      builder: (_) => _NotifyLevelSheet(current: _notifyLevel),
+    );
+    if (picked == null || picked == _notifyLevel || !mounted) return;
+    await _saveNotifyLevel(picked);
+  }
+
+  /// เปลี่ยนทันทีบนจอ แล้วถอยกลับถ้าบันทึกไม่สำเร็จ
+  Future<void> _saveNotifyLevel(ChatNotifyLevel level) async {
+    if (_savingNotify) return;
+    final previous = _notifyLevel;
+    final app = context.read<AppProvider>();
+    setState(() {
+      _notifyLevel = level;
+      _notifyEpoch++;
+      _savingNotify = true;
+    });
+    try {
+      final saved = await app.setChatNotifyLevel(widget.scheduleId, level);
+      if (!mounted) return;
+      setState(() => _notifyLevel = saved);
+      AppSnack.show(
+        context,
+        switch (saved) {
+          ChatNotifyLevel.all => 'เปิดแจ้งเตือนทุกข้อความแล้ว',
+          ChatNotifyLevel.important => 'แจ้งเตือนเฉพาะทีมงานและแท็กถึงคุณ',
+          ChatNotifyLevel.off => 'ปิดการแจ้งเตือนห้องนี้แล้ว',
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _notifyLevel = previous);
+      AppSnack.error(context, 'บันทึกการแจ้งเตือนไม่สำเร็จ ลองใหม่อีกครั้ง');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _savingNotify = false;
+          _notifyEpoch++;
+        });
+      }
+    }
   }
 
   int _latestId() {
@@ -1842,6 +1920,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'การแจ้งเตือน: ${_notifyLevel.label}',
+            onPressed: _room == null || _savingNotify ? null : _openNotifySettings,
+            icon: Icon(_notifyLevel.icon),
+          ),
           IconButton(
             tooltip: 'สมาชิกในห้อง',
             onPressed: _room == null ? null : _showRoomInfo,
@@ -5076,6 +5159,153 @@ class _RoomInfoSheet extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// เลือกระดับการแจ้งเตือนของห้อง — คืนค่าที่เลือก (ปิดชีตเฉย ๆ = null)
+class _NotifyLevelSheet extends StatelessWidget {
+  final ChatNotifyLevel current;
+
+  const _NotifyLevelSheet({required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.mutedText(context).withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
+              child: Text(
+                'การแจ้งเตือนห้องนี้',
+                style: appFont(
+                  fontSize: AppText.sizeSubtitle,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.onSurface(context),
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+              child: Text(
+                'ข้อความที่มาติด ๆ กันจะรวมเป็นแจ้งเตือนเดียว · ประกาศจากทีมงาน แจ้งเตือนรถ และ SOS ยังส่งถึงคุณตามปกติ',
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ),
+            for (final level in ChatNotifyLevel.values)
+              _NotifyLevelOption(
+                level: level,
+                selected: level == current,
+                onTap: () => Navigator.of(context).pop(level),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotifyLevelOption extends StatelessWidget {
+  final ChatNotifyLevel level;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _NotifyLevelOption({
+    required this.level,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = selected ? AppTheme.primaryColor : AppTheme.mutedText(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: selected
+            ? AppTheme.primaryColor.withValues(alpha: 0.06)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              border: Border.all(
+                color: selected
+                    ? AppTheme.primaryColor.withValues(alpha: 0.5)
+                    : AppTheme.mutedText(context).withValues(alpha: 0.15),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(level.icon, size: 22, color: accent),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        level.label,
+                        style: appFont(
+                          fontSize: AppText.sizeBody,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        level.description,
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          height: 1.4,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.mutedText(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked_rounded
+                      : Icons.radio_button_off_rounded,
+                  size: 20,
+                  color: accent,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
