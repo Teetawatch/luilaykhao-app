@@ -73,6 +73,18 @@ class ApiEndpoints {
       'schedules/$scheduleId/chat/polls/$pollId/vote';
   static String chatPollClose(int scheduleId, int pollId) =>
       'schedules/$scheduleId/chat/polls/$pollId/close';
+  static String chatFoodRounds(int scheduleId) =>
+      'schedules/$scheduleId/chat/food-rounds';
+  static String chatFoodMyOrder(int scheduleId, int roundId) =>
+      'schedules/$scheduleId/chat/food-rounds/$roundId/my-order';
+  static String chatFoodOrders(int scheduleId, int roundId) =>
+      'schedules/$scheduleId/chat/food-rounds/$roundId/orders';
+  static String chatFoodOrder(int scheduleId, int roundId, int orderId) =>
+      'schedules/$scheduleId/chat/food-rounds/$roundId/orders/$orderId';
+  static String chatFoodClose(int scheduleId, int roundId) =>
+      'schedules/$scheduleId/chat/food-rounds/$roundId/close';
+  static String chatFoodReopen(int scheduleId, int roundId) =>
+      'schedules/$scheduleId/chat/food-rounds/$roundId/reopen';
 
   // Support inbox (ศูนย์ช่วยเหลือ — ลูกค้าคุยกับทีมงาน)
   static const supportConversation = 'support/conversation';

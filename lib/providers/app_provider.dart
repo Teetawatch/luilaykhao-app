@@ -3370,14 +3370,19 @@ class AppProvider extends ChangeNotifier {
     required List<String> options,
     bool allowMultiple = false,
     int? durationHours,
+    // 'vote' = โหวตตัดสินเสียงข้างมาก — ปิดเองเมื่อครบ/หมดเวลา แล้วประกาศผลเข้าห้อง
+    String kind = 'poll',
+    int? durationMinutes,
   }) async {
     final response = await api.post(
       ApiEndpoints.chatPolls(scheduleId),
       body: {
+        'kind': kind,
         'question': question,
         'options': options,
         'allow_multiple': allowMultiple,
         'duration_hours': ?durationHours,
+        'duration_minutes': ?durationMinutes,
       },
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
@@ -3404,6 +3409,89 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  // ── รับออเดอร์อาหารในห้องแชท (แวะร้านตามสั่ง) ───────────────────────────
+  // ทุกตัวคืน {message_id, food_round} ยกเว้น openChatFoodRound ที่คืนข้อความใหม่
+
+  /// เปิดรอบรับออเดอร์ (สตาฟ/ทีมงานเท่านั้น) — คืนข้อความการ์ดที่เพิ่งลงห้อง
+  Future<Map<String, dynamic>> openChatFoodRound(
+    int scheduleId, {
+    required String title,
+    String? note,
+    int? durationMinutes,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.chatFoodRounds(scheduleId),
+      body: {
+        'title': title,
+        'note': ?note,
+        'duration_minutes': ?durationMinutes,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ส่ง/แก้ออเดอร์ของตัวเอง — items = [{name, qty}], skipped = รอบนี้ไม่สั่ง
+  Future<Map<String, dynamic>> saveMyFoodOrder(
+    int scheduleId,
+    int roundId, {
+    List<Map<String, dynamic>> items = const [],
+    bool skipped = false,
+  }) async {
+    final response = await api.put(
+      ApiEndpoints.chatFoodMyOrder(scheduleId, roundId),
+      body: {'items': items, 'skipped': skipped},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> withdrawMyFoodOrder(
+    int scheduleId,
+    int roundId,
+  ) async {
+    final response = await api.delete(
+      ApiEndpoints.chatFoodMyOrder(scheduleId, roundId),
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// สตาฟจดออเดอร์แทนคนที่ไม่ได้ใช้แอป
+  Future<Map<String, dynamic>> addFoodOrderOnBehalf(
+    int scheduleId,
+    int roundId, {
+    required String name,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.chatFoodOrders(scheduleId, roundId),
+      body: {'name': name, 'items': items},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> deleteFoodOrder(
+    int scheduleId,
+    int roundId,
+    int orderId,
+  ) async {
+    final response = await api.delete(
+      ApiEndpoints.chatFoodOrder(scheduleId, roundId, orderId),
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> setChatFoodRoundClosed(
+    int scheduleId,
+    int roundId, {
+    required bool closed,
+  }) async {
+    final response = await api.post(
+      closed
+          ? ApiEndpoints.chatFoodClose(scheduleId, roundId)
+          : ApiEndpoints.chatFoodReopen(scheduleId, roundId),
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   /// Subscribe to the auxiliary chat signals (read receipts, typing, reactions,
   /// pinned changes) on the same channel. Returns a single combined disposer.
   Future<VoidCallback> subscribeChatSignals(
@@ -3415,6 +3503,7 @@ class AppProvider extends ChangeNotifier {
     RealtimeEventHandler? onPinned,
     RealtimeEventHandler? onUpdated,
     RealtimeEventHandler? onPoll,
+    RealtimeEventHandler? onFood,
   }) async {
     final channel = 'private-chat.schedule.$scheduleId';
     final disposers = <VoidCallback>[];
@@ -3433,6 +3522,7 @@ class AppProvider extends ChangeNotifier {
     await bind('chat.pinned', onPinned);
     await bind('chat.message.updated', onUpdated);
     await bind('chat.poll', onPoll);
+    await bind('chat.food', onFood);
 
     return () {
       for (final d in disposers) {

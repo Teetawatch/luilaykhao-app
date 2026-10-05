@@ -18,6 +18,8 @@ import '../models/chat_notify_level.dart';
 import '../providers/app_provider.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/chat_food_round.dart';
+import '../widgets/chat_vote_sheet.dart';
 import '../widgets/moderation_sheet.dart';
 import '../theme/app_theme.dart';
 import '../services/quick_ask_matcher.dart';
@@ -126,6 +128,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   int _mentionAckId = 0;
 
   bool _canModerate = false;
+
+  // ชีตรายการรวมของรอบสั่งอาหารที่เปิดอยู่ (ถ้ามี) — realtime ป้อนค่าใหม่เข้ามา
+  // ให้ชีตอัปเดตเองระหว่างสตาฟเปิดค้างรอคนสั่ง
+  final _foodSheetRound = ValueNotifier<Map<String, dynamic>?>(null);
+  int? _foodSheetMessageId;
+  Timer? _foodSheetRefresh;
   List<String> _reactionEmojis = const ['👍', '❤️', '😂', '😮', '😢', '🙏'];
   int? _myUserId;
 
@@ -252,6 +260,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _highlightTimer?.cancel();
     _disposer?.call();
     _signalsDisposer?.call();
+    _foodSheetRefresh?.cancel();
+    _foodSheetRound.dispose();
     _input.removeListener(_watchComposing);
     _input.dispose();
     _inputFocus.dispose();
@@ -290,6 +300,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       onPinned: _onPinnedSignal,
       onUpdated: _onMessageUpdated,
       onPoll: _onPollSignal,
+      onFood: _onFoodSignal,
     );
     // Let the rest of the room know we've entered, so they see a brief notice.
     app.sendChatJoin(widget.scheduleId);
@@ -910,6 +921,49 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 _createPoll();
               },
             ),
+            ListTile(
+              leading: const Icon(
+                Icons.how_to_vote_rounded,
+                color: AppTheme.primaryColor,
+              ),
+              title: Text(
+                'โหวตตัดสิน',
+                style: appFont(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                'เสียงแตก? ให้ทุกคนโหวตภายในไม่กี่นาที ระบบประกาศผลให้',
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _createVote();
+              },
+            ),
+            if (_canModerate)
+              ListTile(
+                leading: const Icon(
+                  Icons.ramen_dining_rounded,
+                  color: AppTheme.primaryColor,
+                ),
+                title: Text(
+                  'รับออเดอร์อาหาร',
+                  style: appFont(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'ลูกทริปพิมพ์เมนูบนรถ คุณได้รายการรวมไปสั่งร้าน',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _openFoodRound();
+                },
+              ),
             // รูปในห้องนี้ถูกลบพร้อมห้องแชทหลังจบทริป (PurgeEndedTripChatsJob
             // ฝั่งเซิร์ฟเวอร์ — ต้องแก้คู่กันถ้าเปลี่ยนจำนวนวัน) บอกตั้งแต่ตอนจะส่ง
             // ดีกว่าให้ลูกค้ามารู้ตอนที่รูปหายไปแล้ว
@@ -1437,6 +1491,211 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
 
     setState(() => _messages[idx] = {..._messages[idx], 'poll': next});
+  }
+
+  /// เปิดชีตเริ่มโหวตตัดสิน แล้วส่งขึ้นห้อง
+  Future<void> _createVote() async {
+    if (_sending) return;
+    final draft = await showModalBottomSheet<VoteDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
+      ),
+      builder: (_) => const CreateVoteSheet(),
+    );
+    if (draft == null || !mounted) return;
+
+    try {
+      final message = await context.read<AppProvider>().createChatPoll(
+        widget.scheduleId,
+        kind: 'vote',
+        question: draft.question,
+        options: draft.options,
+        durationMinutes: draft.minutes,
+      );
+      if (!mounted) return;
+      setState(() => _messages.add(message));
+      _scrollToBottom();
+      _markRead();
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  /// ลูกทริปในห้อง (ไม่นับสตาฟ) — ตัวหารของ "โหวตแล้ว x/y" และรายชื่อคนที่ยังไม่โหวต/ไม่สั่ง
+  List<Map<String, dynamic>> get _travellers => _members
+      .where((m) => m['role'] != 'staff')
+      .map((m) => {
+            'id': int.tryParse('${m['id']}') ?? 0,
+            'name': (m['nickname']?.toString().isNotEmpty ?? false)
+                ? m['nickname'].toString()
+                : (m['name']?.toString() ?? ''),
+          })
+      .toList();
+
+  // ── รับออเดอร์อาหาร ──────────────────────────────────────────────────────
+
+  Future<T?> _showSheet<T>(Widget sheet) {
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
+      ),
+      builder: (_) => sheet,
+    );
+  }
+
+  /// สตาฟเปิดรอบรับออเดอร์ — การ์ดลงห้องและเด้งแจ้งทุกคน
+  Future<void> _openFoodRound() async {
+    final draft = await _showSheet<FoodRoundDraft>(const OpenFoodRoundSheet());
+    if (draft == null || !mounted) return;
+
+    try {
+      final message = await context.read<AppProvider>().openChatFoodRound(
+        widget.scheduleId,
+        title: draft.title,
+        note: draft.note,
+        durationMinutes: draft.minutes,
+      );
+      if (!mounted) return;
+      setState(() => _messages.add(message));
+      _scrollToBottom();
+      _markRead();
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  /// สั่ง/แก้ออเดอร์ของตัวเอง
+  Future<void> _orderFood(int messageId, Map<String, dynamic> round) async {
+    final roundId = int.tryParse('${round['id']}') ?? 0;
+    if (roundId == 0) return;
+    final draft = await _showSheet<FoodOrderDraft>(
+      FoodOrderSheet(round: round, existing: myFoodOrder(round, _myUserId)),
+    );
+    if (draft == null || !mounted) return;
+
+    final app = context.read<AppProvider>();
+    try {
+      final result = draft.withdraw
+          ? await app.withdrawMyFoodOrder(widget.scheduleId, roundId)
+          : await app.saveMyFoodOrder(
+              widget.scheduleId,
+              roundId,
+              items: draft.items,
+              skipped: draft.skipped,
+            );
+      if (!mounted) return;
+      _applyFood(messageId, result['food_round']);
+      HapticFeedback.mediumImpact();
+      _snack(draft.withdraw
+          ? 'ลบออเดอร์แล้ว'
+          : (draft.skipped ? 'บอกทีมงานแล้วว่ารอบนี้ไม่สั่ง' : 'ส่งออเดอร์แล้ว'));
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  /// รายการรวม — ทุกคนเปิดดูได้ สตาฟได้ปุ่มจดแทน/ลบ/ปิดรับเพิ่ม
+  Future<void> _openFoodSummary(int messageId, Map<String, dynamic> round) async {
+    final roundId = int.tryParse('${round['id']}') ?? 0;
+    if (roundId == 0) return;
+    final app = context.read<AppProvider>();
+
+    _foodSheetMessageId = messageId;
+    _foodSheetRound.value = round;
+    // socket หลุดเมื่อไรการ์ดจะไม่ขยับ — ระหว่างเปิดชีตค้างไว้ ดึงซ้ำเป็นระยะ
+    _foodSheetRefresh?.cancel();
+    _refreshMessage(messageId);
+    _foodSheetRefresh = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _refreshMessage(messageId),
+    );
+
+    Future<void> run(Future<Map<String, dynamic>> Function() call) async {
+      try {
+        final result = await call();
+        if (mounted) _applyFood(messageId, result['food_round']);
+      } catch (e) {
+        _snack(e.toString());
+      }
+    }
+
+    await _showSheet<void>(
+      FoodRoundSummarySheet(
+        round: _foodSheetRound,
+        travellers: _travellers,
+        canManage: _canModerate,
+        myUserId: _myUserId,
+        onDeleteOrder: (orderId) =>
+            run(() => app.deleteFoodOrder(widget.scheduleId, roundId, orderId)),
+        onSetClosed: (close) => run(
+          () => app.setChatFoodRoundClosed(widget.scheduleId, roundId, closed: close),
+        ),
+        onAddOnBehalf: () async {
+          final current = _foodSheetRound.value ?? round;
+          final draft = await _showSheet<FoodOrderDraft>(
+            FoodOrderSheet(round: current, onBehalf: true),
+          );
+          if (draft == null || draft.name == null) return;
+          await run(
+            () => app.addFoodOrderOnBehalf(
+              widget.scheduleId,
+              roundId,
+              name: draft.name!,
+              items: draft.items,
+            ),
+          );
+        },
+      ),
+    );
+
+    _foodSheetRefresh?.cancel();
+    _foodSheetRefresh = null;
+    _foodSheetMessageId = null;
+  }
+
+  /// ดึงข้อความการ์ดใบเดียวกลับมาใหม่ (after_id = id - 1 → ใบแรกคือใบนั้น)
+  Future<void> _refreshMessage(int messageId) async {
+    try {
+      final data = await context
+          .read<AppProvider>()
+          .chatMessages(widget.scheduleId, afterId: messageId - 1);
+      final fresh = (data['messages'] as List? ?? [])
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((m) => int.tryParse('${m['id']}') == messageId)
+          .firstOrNull;
+      if (fresh != null && fresh['food_round'] is Map) {
+        _applyFood(messageId, fresh['food_round']);
+      }
+    } catch (_) {
+      // เครือข่ายสะดุด — รอบถัดไปลองใหม่
+    }
+  }
+
+  void _onFoodSignal(Map<String, dynamic> data) {
+    final messageId = int.tryParse('${data['message_id']}');
+    if (messageId == null || data['food_round'] is! Map) return;
+    _applyFood(messageId, data['food_round']);
+  }
+
+  void _applyFood(int messageId, dynamic round) {
+    if (round is! Map || !mounted) return;
+    final next = Map<String, dynamic>.from(round);
+    if (_foodSheetMessageId == messageId) _foodSheetRound.value = next;
+
+    final idx = _messages.indexWhere(
+      (m) => int.tryParse('${m['id']}') == messageId,
+    );
+    if (idx < 0) return;
+    setState(() => _messages[idx] = {..._messages[idx], 'food_round': next});
   }
 
   void _startReply(Map<String, dynamic> message) {
@@ -2145,6 +2404,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// same sender within [_groupGap] collapse into one visual unit.
   List<Widget> _buildItems() {
     final items = <Widget>[];
+    final travellers = _travellers;
     DateTime? lastDay;
     var unreadDividerShown = false;
 
@@ -2219,6 +2479,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         canModerate: _canModerate,
         onVote: (pollId, optionIds) => _votePoll(mId, pollId, optionIds),
         onClosePoll: (pollId) => _closePoll(mId, pollId),
+        travellers: travellers,
+        onOrderFood: (round) => _orderFood(mId, round),
+        onOpenFoodSummary: (round) => _openFoodSummary(mId, round),
       );
 
       // Keyed so jumps can anchor exactly on this bubble (see _scrollToMessage).
@@ -3574,12 +3837,16 @@ class _TripInfoContactRow extends StatelessWidget {
 ///
 /// แตะที่ตัวเลือกเพื่อโหวต/ถอนโหวต (โพลเลือกข้อเดียวจะย้ายคะแนนให้เอง) ผลโหวต
 /// เปิดให้ทุกคนเห็นตลอด เพราะทริปกลุ่มต้องเห็นภาพรวมถึงจะนัดกันได้
+///
+/// kind = vote ("โหวตตัดสิน") เพิ่ม: นับ "โหวตแล้ว x/y คน" เทียบลูกทริปในห้อง
+/// รายชื่อคนที่ยังไม่โหวต และแถบผลเสียงข้างมากเมื่อปิด (ตรงกับข้อความประกาศผล)
 class _PollCard extends StatelessWidget {
   final Map<String, dynamic> poll;
   final int? myUserId;
   final bool canClose;
   final void Function(int pollId, List<int> optionIds) onVote;
   final ValueChanged<int> onClose;
+  final List<Map<String, dynamic>> travellers;
 
   const _PollCard({
     required this.poll,
@@ -3587,11 +3854,28 @@ class _PollCard extends StatelessWidget {
     required this.canClose,
     required this.onVote,
     required this.onClose,
+    this.travellers = const [],
   });
 
   int get _pollId => int.tryParse('${poll['id']}') ?? 0;
 
-  bool get _isClosed => poll['is_closed'] == true;
+  bool get _isVote => poll['kind'] == 'vote';
+
+  /// เลยเวลาปิดแล้วถือว่าปิด แม้ยังไม่ได้รับสัญญาณจากเซิร์ฟเวอร์ (socket หลุด)
+  bool get _isClosed {
+    if (poll['is_closed'] == true) return true;
+    final at = DateTime.tryParse('${poll['closes_at'] ?? ''}');
+    return at != null && at.isBefore(DateTime.now());
+  }
+
+  Set<int> get _voterIds => {
+        for (final o in _options)
+          for (final v in (o['voter_ids'] as List? ?? const []))
+            ?int.tryParse('$v'),
+      };
+
+  Map<String, dynamic>? get _result =>
+      poll['result'] is Map ? Map<String, dynamic>.from(poll['result'] as Map) : null;
 
   bool get _allowMultiple => poll['allow_multiple'] == true;
 
@@ -3643,11 +3927,31 @@ class _PollCard extends StatelessWidget {
     final voterCount = int.tryParse('${poll['voter_count']}') ?? 0;
     final closesIn = _closesInLabel();
 
+    // โหวตตัดสิน: นับเทียบลูกทริปในห้อง เพื่อให้เห็นว่ายังขาดใคร
+    final voterIds = _voterIds;
+    final pendingNames = _isVote
+        ? travellers
+            .where((t) => !voterIds.contains(t['id']))
+            .map((t) => t['name']?.toString() ?? '')
+            .where((n) => n.isNotEmpty)
+            .toList()
+        : const <String>[];
+    final votedTravellers = travellers.where((t) => voterIds.contains(t['id'])).length;
+
     final meta = <String>[
+      if (_isVote) 'โหวตตัดสิน',
       if (_allowMultiple) 'เลือกได้หลายข้อ',
-      voterCount > 0 ? 'โหวตแล้ว $voterCount คน' : 'ยังไม่มีใครโหวต',
+      if (_isVote && travellers.isNotEmpty)
+        'โหวตแล้ว $votedTravellers/${travellers.length} คน'
+      else
+        voterCount > 0 ? 'โหวตแล้ว $voterCount คน' : 'ยังไม่มีใครโหวต',
       if (_isClosed) 'ปิดโหวตแล้ว' else ?closesIn,
     ];
+
+    final result = _isVote && _isClosed ? _result : null;
+    final winnerLabel = result?['status'] == 'winner'
+        ? result!['winner_label']?.toString()
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3655,7 +3959,7 @@ class _PollCard extends StatelessWidget {
         Row(
           children: [
             Icon(
-              _isClosed ? Icons.how_to_vote_rounded : Icons.bar_chart_rounded,
+              (_isClosed || _isVote) ? Icons.how_to_vote_rounded : Icons.bar_chart_rounded,
               size: 17,
               color: AppTheme.primaryColor,
             ),
@@ -3689,7 +3993,23 @@ class _PollCard extends StatelessWidget {
             option: option,
             voterCount: voterCount,
             closed: _isClosed,
+            isWinner: winnerLabel != null && option['label']?.toString() == winnerLabel,
             onTap: () => _tap(option),
+          ),
+          const SizedBox(height: 6),
+        ],
+        if (result != null) ...[
+          _VoteResultBanner(result: result),
+          const SizedBox(height: 6),
+        ] else if (_isVote && !_isClosed && pendingNames.isNotEmpty) ...[
+          Text(
+            'ยังไม่โหวต: ${pendingNames.take(6).join(', ')}'
+            '${pendingNames.length > 6 ? ' และอีก ${pendingNames.length - 6} คน' : ''}',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              color: AppTheme.mutedText(context),
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 6),
         ],
@@ -3731,12 +4051,14 @@ class _PollOptionRow extends StatelessWidget {
   final Map<String, dynamic> option;
   final int voterCount;
   final bool closed;
+  final bool isWinner;
   final VoidCallback onTap;
 
   const _PollOptionRow({
     required this.option,
     required this.voterCount,
     required this.closed,
+    this.isWinner = false,
     required this.onTap,
   });
 
@@ -3784,7 +4106,14 @@ class _PollOptionRow extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    if (mine) ...[
+                    if (isWinner) ...[
+                      const Icon(
+                        Icons.emoji_events_rounded,
+                        size: 16,
+                        color: AppTheme.warningColor,
+                      ),
+                      const SizedBox(width: 6),
+                    ] else if (mine) ...[
                       const Icon(
                         Icons.check_circle_rounded,
                         size: 15,
@@ -3818,6 +4147,58 @@ class _PollOptionRow extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// แถบผลโหวตตัดสินใต้ตัวเลือก — ข้อความเดียวกับที่ระบบประกาศเข้าห้อง
+class _VoteResultBanner extends StatelessWidget {
+  final Map<String, dynamic> result;
+
+  const _VoteResultBanner({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = result['status']?.toString();
+    final winnerVotes = int.tryParse('${result['winner_votes']}') ?? 0;
+    final total = int.tryParse('${result['total_votes']}') ?? 0;
+    final tied = (result['tied_labels'] as List? ?? const []).join(' / ');
+
+    final (icon, text) = switch (status) {
+      'winner' => (
+          Icons.emoji_events_rounded,
+          'ผลโหวต: ${result['winner_label']} ($winnerVotes จาก $total เสียง)',
+        ),
+      'tie' => (Icons.balance_rounded, 'เสมอกัน ($tied) — ให้ทีมงานช่วยตัดสิน'),
+      _ => (Icons.info_outline_rounded, 'ปิดโหวตแล้ว ไม่มีใครโหวต'),
+    };
+
+    final accent = status == 'winner' ? AppTheme.primaryColor : AppTheme.warningColor;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: accent),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.onSurface(context),
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -4319,6 +4700,9 @@ class _MessageBubble extends StatelessWidget {
   final bool canModerate;
   final void Function(int pollId, List<int> optionIds) onVote;
   final ValueChanged<int> onClosePoll;
+  final List<Map<String, dynamic>> travellers;
+  final ValueChanged<Map<String, dynamic>> onOrderFood;
+  final ValueChanged<Map<String, dynamic>> onOpenFoodSummary;
 
   const _MessageBubble({
     required this.message,
@@ -4342,6 +4726,9 @@ class _MessageBubble extends StatelessWidget {
     required this.canModerate,
     required this.onVote,
     required this.onClosePoll,
+    required this.travellers,
+    required this.onOrderFood,
+    required this.onOpenFoodSummary,
   });
 
   static const _roleLabels = {
@@ -4379,13 +4766,18 @@ class _MessageBubble extends StatelessWidget {
     final poll = (!isDeleted && message['poll'] is Map)
         ? Map<String, dynamic>.from(message['poll'] as Map)
         : null;
+    // การ์ดรับออเดอร์อาหารใช้กติกาเดียวกับการ์ดโพล (กว้าง + พื้นกลาง)
+    final foodRound = (!isDeleted && message['food_round'] is Map)
+        ? Map<String, dynamic>.from(message['food_round'] as Map)
+        : null;
+    final isCard = poll != null || foodRound != null;
     final body = message['body']?.toString() ?? '';
     final imageUrl = isDeleted ? '' : ApiConfig.mediaUrl(message['image_url']);
     // A locally-picked image shown while an optimistic send is in flight (before
     // the server returns its hosted URL).
     final localImagePath =
         isDeleted ? '' : (message['_local_image_path']?.toString() ?? '');
-    final hasText = !isDeleted && poll == null && body.isNotEmpty;
+    final hasText = !isDeleted && !isCard && body.isNotEmpty;
     final hasImage = imageUrl.isNotEmpty;
     final hasLocalImage = imageUrl.isEmpty && localImagePath.isNotEmpty;
 
@@ -4401,8 +4793,8 @@ class _MessageBubble extends StatelessWidget {
     // บับเบิลฝั่งคนอื่นเป็นเทาอ่อนบนพื้นห้องสีขาว (โหมดมืดกลับกัน) — คู่สีนี้
     // อยู่ใน AppTheme เพราะพื้นห้องกับบับเบิลต้องขยับไปด้วยกันเสมอ
     final neutralBg = AppTheme.chatIncomingBubble(context);
-    final bg = (isMine && poll == null) ? AppTheme.primaryColor : neutralBg;
-    final fg = (isMine && poll == null)
+    final bg = (isMine && !isCard) ? AppTheme.primaryColor : neutralBg;
+    final fg = (isMine && !isCard)
         ? Colors.white
         : AppTheme.onSurface(context);
 
@@ -4446,7 +4838,7 @@ class _MessageBubble extends StatelessWidget {
           ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth:
-                  MediaQuery.sizeOf(context).width * (poll != null ? 0.86 : 0.74),
+                  MediaQuery.sizeOf(context).width * (isCard ? 0.86 : 0.74),
             ),
             child: Column(
               crossAxisAlignment:
@@ -4498,7 +4890,7 @@ class _MessageBubble extends StatelessWidget {
                               color: AppTheme.primaryColor.withValues(alpha: 0.9),
                               width: 1.5,
                             )
-                          : (isMine && poll == null)
+                          : (isMine && !isCard)
                           ? null
                           : Border.all(
                               color: isDark
@@ -4560,6 +4952,14 @@ class _MessageBubble extends StatelessWidget {
                                         int.tryParse('${poll['created_by_id']}')),
                             onVote: onVote,
                             onClose: onClosePoll,
+                            travellers: travellers,
+                          )
+                        else if (foodRound != null)
+                          ChatFoodRoundCard(
+                            round: foodRound,
+                            myUserId: myUserId,
+                            onOrder: () => onOrderFood(foodRound),
+                            onOpenSummary: () => onOpenFoodSummary(foodRound),
                           )
                         else if (hasText)
                           _MessageText(
