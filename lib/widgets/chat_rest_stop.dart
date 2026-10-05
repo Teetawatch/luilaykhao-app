@@ -26,6 +26,56 @@ DateTime? _time(dynamic raw) => DateTime.tryParse('${raw ?? ''}')?.toLocal();
 String _clock(DateTime t) =>
     '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
+/// คำที่ต่างกันระหว่าง "พักรถ" กับ "นัดรวมพลล่วงหน้า" — การ์ด/ชีตใช้ชุดเดียวกัน
+class _Words {
+  final bool meetup;
+
+  const _Words(this.meetup);
+
+  factory _Words.of(Map<String, dynamic>? stop) =>
+      _Words(stop?['kind'] == 'meetup');
+
+  IconData get icon =>
+      meetup ? Icons.place_rounded : Icons.local_parking_rounded;
+  String get fallbackTitle => meetup ? 'นัดรวมพล' : 'จุดพัก';
+  String get done => meetup ? 'เริ่มแล้ว' : 'ออกรถแล้ว';
+  String get deadline => meetup ? 'นัดรวมพล' : 'กลับขึ้นรถ';
+  String get arrived => meetup ? 'มาถึงแล้ว' : 'ขึ้นรถแล้ว';
+  String get meArrived => meetup ? 'ฉันมาถึงแล้ว' : 'ฉันขึ้นรถแล้ว';
+  String get waiting => meetup ? 'ยังไม่มา' : 'ยังไม่ขึ้น';
+  String get allIn => meetup ? 'มาครบ' : 'ขึ้นรถครบ';
+  String get go => meetup ? 'เริ่มเลย' : 'ออกรถ';
+  String get pickTitle => meetup ? 'ใครมาถึงแล้วบ้าง' : 'ใครขึ้นรถแล้วบ้าง';
+  String confirmGo(int missing) => meetup
+      ? 'ยังไม่มา $missing คน เริ่มเลยไหม?'
+      : 'ยังขาด $missing คน ออกรถเลยไหม?';
+  String get confirmHint => meetup
+      ? 'บางคนอาจมาถึงแล้วแต่ลืมกด ลองนับหัวอีกรอบก่อนนะครับ'
+      : 'บางคนอาจขึ้นรถแล้วแต่ลืมกด ลองนับหัวบนรถอีกรอบก่อนนะครับ';
+  IconData get goIcon =>
+      meetup ? Icons.flag_rounded : Icons.directions_bus_rounded;
+}
+
+/// กด "มาถึงแล้ว" ได้ตั้งแต่กี่ชั่วโมงก่อนนัด — ตรงกับ MEETUP_ARRIVE_WINDOW_HOURS
+/// ฝั่งเซิร์ฟเวอร์
+const _arriveWindow = Duration(hours: 3);
+
+const _thaiMonths = [
+  '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', //
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+];
+
+/// "04:30" ถ้าวันนี้, "พรุ่งนี้ 04:30", หรือ "9 ต.ค. 04:30"
+String _when(DateTime t) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(t.year, t.month, t.day);
+  final diff = day.difference(today).inDays;
+  if (diff == 0) return _clock(t);
+  if (diff == 1) return 'พรุ่งนี้ ${_clock(t)}';
+  return '${t.day} ${_thaiMonths[t.month]} ${_clock(t)}';
+}
+
 /// ผู้โดยสารที่บัญชีนี้กดขึ้นรถแทนได้
 List<Map<String, dynamic>> myRestStopPassengers(
   Map<String, dynamic> stop,
@@ -46,6 +96,7 @@ List<Map<String, dynamic>> myRestStopPassengers(
   }
   final m = left.inMinutes;
   final s = left.inSeconds % 60;
+  if (m >= 60 * 24) return (text: 'อีก ${m ~/ (60 * 24)} วัน', late: false);
   if (m >= 60) return (text: 'อีก ${m ~/ 60} ชม. ${m % 60} นาที', late: false);
   return (text: 'อีก $m:${s.toString().padLeft(2, '0')}', late: false);
 }
@@ -126,7 +177,8 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
           top: Radius.circular(AppTheme.radiusLg),
         ),
       ),
-      builder: (_) => _MyBoardingSheet(passengers: mine),
+      builder: (_) =>
+          _MyBoardingSheet(passengers: mine, words: _Words.of(widget.stop)),
     );
     if (result == null || result.isEmpty) return;
     final on = [
@@ -158,17 +210,25 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
         : (countdown?.late == true
               ? AppTheme.errorColor
               : AppTheme.primaryColor);
+    final w = _Words.of(stop);
+    // นัดรวมพลล่วงหน้า: กด "มาถึงแล้ว" ได้เมื่อใกล้เวลานัดเท่านั้น
+    final tooEarly =
+        w.meetup &&
+        returnAt != null &&
+        returnAt.difference(DateTime.now()) > _arriveWindow;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.local_parking_rounded, size: 17, color: accent),
+            Icon(w.icon, size: 17, color: accent),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                place.isEmpty ? 'จุดพัก' : place,
+                place.isEmpty
+                    ? w.fallbackTitle
+                    : (w.meetup ? 'นัดรวมพล · $place' : place),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
@@ -187,8 +247,8 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
           children: [
             Text(
               departed
-                  ? 'ออกรถแล้ว'
-                  : (returnAt == null ? '--:--' : _clock(returnAt)),
+                  ? w.done
+                  : (returnAt == null ? '--:--' : _when(returnAt)),
               style: appFont(
                 fontSize: AppText.sizeH1,
                 fontWeight: FontWeight.w800,
@@ -201,7 +261,7 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
               Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Text(
-                  'กลับขึ้นรถ · ${countdown.text}',
+                  '${w.deadline} · ${countdown.text}',
                   style: appFont(
                     fontSize: AppText.sizeLabel,
                     fontWeight: FontWeight.w700,
@@ -227,8 +287,8 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
           const SizedBox(height: 4),
           Text(
             boarded >= total
-                ? 'ขึ้นรถครบ $total คนแล้ว'
-                : 'ขึ้นรถแล้ว $boarded/$total คน',
+                ? '${w.allIn} $total คนแล้ว'
+                : '${w.arrived} $boarded/$total คน',
             style: appFont(
               fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w700,
@@ -239,7 +299,18 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
         const SizedBox(height: 10),
         Row(
           children: [
-            if (!departed && mine.isNotEmpty)
+            if (!departed && mine.isNotEmpty && tooEarly)
+              Expanded(
+                child: Text(
+                  'กด "${w.arrived}" ได้ตั้งแต่ ${_clock(returnAt.subtract(_arriveWindow))}',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w600,
+                    color: muted,
+                  ),
+                ),
+              ),
+            if (!departed && mine.isNotEmpty && !tooEarly)
               Expanded(
                 child: mineWaiting.isEmpty
                     ? OutlinedButton.icon(
@@ -253,8 +324,8 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
                         ),
                         label: Text(
                           mine.length == 1
-                              ? 'ขึ้นรถแล้ว'
-                              : 'ขึ้นครบ ${mine.length} คน',
+                              ? w.arrived
+                              : '${w.allIn} ${mine.length} คน',
                           style: appFont(
                             fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w800,
@@ -284,14 +355,11 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
                             _pickMine(mine);
                           }
                         },
-                        icon: const Icon(
-                          Icons.directions_bus_rounded,
-                          size: 17,
-                        ),
+                        icon: Icon(w.goIcon, size: 17),
                         label: Text(
                           mine.length == 1
-                              ? 'ฉันขึ้นรถแล้ว'
-                              : 'ขึ้นรถแล้ว (${mineWaiting.length} คน)',
+                              ? w.meArrived
+                              : '${w.arrived} (${mineWaiting.length} คน)',
                           style: appFont(
                             fontSize: AppText.sizeLabel,
                             fontWeight: FontWeight.w800,
@@ -341,8 +409,9 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
 /// เลือกว่าใครในกลุ่มขึ้นรถแล้ว — คืน {passengerId: boarded} เฉพาะที่เปลี่ยน
 class _MyBoardingSheet extends StatefulWidget {
   final List<Map<String, dynamic>> passengers;
+  final _Words words;
 
-  const _MyBoardingSheet({required this.passengers});
+  const _MyBoardingSheet({required this.passengers, required this.words});
 
   @override
   State<_MyBoardingSheet> createState() => _MyBoardingSheetState();
@@ -356,8 +425,8 @@ class _MyBoardingSheetState extends State<_MyBoardingSheet> {
   @override
   Widget build(BuildContext context) {
     return RestStopSheetFrame(
-      icon: Icons.directions_bus_rounded,
-      title: 'ใครขึ้นรถแล้วบ้าง',
+      icon: widget.words.goIcon,
+      title: widget.words.pickTitle,
       subtitle: 'ติ๊กให้คนในกลุ่มที่คุณจองให้ได้เลย',
       footer: PrimaryCTAButton(
         label: 'บันทึก',
@@ -481,6 +550,183 @@ class _OpenRestStopSheetState extends State<OpenRestStopSheet> {
   }
 }
 
+/// ผลจากชีตนัดรวมพล — เวลาเป็นเวลาเครื่อง (แปลงเป็น UTC ตอนส่ง)
+class MeetupDraft {
+  final DateTime meetAt;
+  final String? place;
+
+  const MeetupDraft({required this.meetAt, this.place});
+}
+
+/// ทีมงานนัดรวมพลล่วงหน้า — เลือกวัน (วันนี้/พรุ่งนี้/วันอื่น) + เวลา + จุดนัด
+class OpenMeetupSheet extends StatefulWidget {
+  const OpenMeetupSheet({super.key});
+
+  @override
+  State<OpenMeetupSheet> createState() => _OpenMeetupSheetState();
+}
+
+class _OpenMeetupSheetState extends State<OpenMeetupSheet> {
+  final _place = TextEditingController();
+  late DateTime _day;
+  TimeOfDay _time = const TimeOfDay(hour: 5, minute: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    // นัดส่วนใหญ่คือ "พรุ่งนี้เช้า" — ตั้งเป็นค่าเริ่มต้น
+    _day = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+  }
+
+  @override
+  void dispose() {
+    _place.dispose();
+    super.dispose();
+  }
+
+  DateTime get _today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  DateTime get _meetAt =>
+      DateTime(_day.year, _day.month, _day.day, _time.hour, _time.minute);
+
+  bool get _valid {
+    final at = _meetAt;
+    return at.isAfter(DateTime.now()) &&
+        at.isBefore(DateTime.now().add(const Duration(days: 7)));
+  }
+
+  Future<void> _pickDay() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _day,
+      firstDate: _today,
+      lastDate: _today.add(const Duration(days: 6)),
+    );
+    if (picked != null) setState(() => _day = picked);
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _time,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _time = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tomorrow = _today.add(const Duration(days: 1));
+    final isToday = _day == _today;
+    final isTomorrow = _day == tomorrow;
+
+    return RestStopSheetFrame(
+      icon: Icons.place_rounded,
+      title: 'นัดรวมพลล่วงหน้า',
+      subtitle:
+          'เช่น พรุ่งนี้ 04:30 ขึ้นดูพระอาทิตย์ — ระบบเตือนทุกคนคืนก่อน 20:00 '
+          'เตือนคนที่ยังไม่มาก่อน 15 นาที และบอกคุณว่าใครยังไม่มาเมื่อถึงเวลา',
+      footer: PrimaryCTAButton(
+        label: _valid
+            ? 'ประกาศนัด · ${_when(_meetAt)}'
+            : 'เลือกเวลาข้างหน้า (ไม่เกิน 7 วัน)',
+        icon: Icons.campaign_rounded,
+        onPressed: _valid
+            ? () {
+                HapticFeedback.mediumImpact();
+                Navigator.pop(
+                  context,
+                  MeetupDraft(
+                    meetAt: _meetAt,
+                    place: _place.text.trim().isEmpty
+                        ? null
+                        : _place.text.trim(),
+                  ),
+                );
+              }
+            : null,
+      ),
+      children: [
+        const RestStopSheetLabel('วันไหน'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              label: Text(
+                'วันนี้',
+                style: appFont(fontWeight: FontWeight.w700),
+              ),
+              selected: isToday,
+              onSelected: (_) => setState(() => _day = _today),
+            ),
+            ChoiceChip(
+              label: Text(
+                'พรุ่งนี้',
+                style: appFont(fontWeight: FontWeight.w700),
+              ),
+              selected: isTomorrow,
+              onSelected: (_) => setState(() => _day = tomorrow),
+            ),
+            ChoiceChip(
+              avatar: const Icon(Icons.calendar_month_rounded, size: 16),
+              label: Text(
+                isToday || isTomorrow
+                    ? 'วันอื่น'
+                    : '${_day.day} ${_thaiMonths[_day.month]}',
+                style: appFont(fontWeight: FontWeight.w700),
+              ),
+              selected: !isToday && !isTomorrow,
+              onSelected: (_) => _pickDay(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        const RestStopSheetLabel('กี่โมง'),
+        OutlinedButton.icon(
+          onPressed: _pickTime,
+          icon: const Icon(Icons.schedule_rounded),
+          label: Text(
+            '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')} น.',
+            style: appFont(
+              fontSize: AppText.sizeSubtitle,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        const RestStopSheetLabel('จุดนัด'),
+        TextField(
+          controller: _place,
+          maxLength: 120,
+          style: appFont(
+            fontSize: AppText.sizeBody,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.onSurface(context),
+          ),
+          decoration: restStopFieldDecoration(
+            context,
+            'เช่น หน้าลานกางเต็นท์ / ล็อบบี้ที่พัก',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ── รายชื่อเช็คชื่อ ───────────────────────────────────────────────────────
 
 /// รายชื่อขึ้นรถ — ยังไม่ขึ้นอยู่บนสุด ทีมงานแตะเพื่อติ๊กแทน กดโทรตามได้
@@ -528,19 +774,20 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
   }
 
   Future<void> _confirmDepart(int missing) async {
+    final w = _Words.of(widget.stop.value);
     if (missing > 0) {
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(
-            'ยังขาด $missing คน ออกรถเลยไหม?',
+            w.confirmGo(missing),
             style: appFont(
               fontSize: AppText.sizeSubtitle,
               fontWeight: FontWeight.w800,
             ),
           ),
           content: Text(
-            'บางคนอาจขึ้นรถแล้วแต่ลืมกด ลองนับหัวบนรถอีกรอบก่อนนะครับ',
+            w.confirmHint,
             style: appFont(fontSize: AppText.sizeBody),
           ),
           actions: [
@@ -554,7 +801,7 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                'ออกรถ',
+                w.go,
                 style: appFont(
                   fontWeight: FontWeight.w800,
                   color: AppTheme.errorColor,
@@ -592,6 +839,7 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
     final returnAt = _time(data['return_at']);
     final countdown = returnAt == null ? null : _countdown(returnAt);
     final manage = widget.canManage && !departed;
+    final w = _Words.of(data);
 
     Widget row(Map<String, dynamic> p) {
       final id = _int(p['id']);
@@ -634,16 +882,17 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
     return RestStopSheetFrame(
       icon: Icons.fact_check_rounded,
       title: departed
-          ? 'ออกรถแล้ว'
-          : 'กลับขึ้นรถ ${returnAt == null ? '' : _clock(returnAt)}',
+          ? w.done
+          : '${w.deadline} ${returnAt == null ? '' : _when(returnAt)}',
       subtitle: [
-        'ขึ้นแล้ว ${boarded.length}/${passengers.length} คน',
+        '${w.arrived} ${boarded.length}/${passengers.length} คน',
         if (!departed && countdown != null) countdown.text,
       ].join(' · '),
       footer: manage
           ? Row(
               children: [
-                for (final m in const [5, 10]) ...[
+                // พักรถขยายทีละนิด, นัดรวมพลเลื่อนทีละมากกว่า
+                for (final m in w.meetup ? const [10, 30] : const [5, 10]) ...[
                   OutlinedButton(
                     onPressed: () {
                       HapticFeedback.selectionClick();
@@ -668,9 +917,9 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: () => _confirmDepart(waiting.length),
-                    icon: const Icon(Icons.directions_bus_rounded, size: 18),
+                    icon: Icon(w.goIcon, size: 18),
                     label: Text(
-                      'ออกรถ',
+                      w.go,
                       style: appFont(
                         fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w800,
@@ -702,14 +951,14 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
         if (waiting.isNotEmpty) ...[
           RestStopSheetLabel(
             manage
-                ? 'ยังไม่ขึ้น ${waiting.length} คน — แตะเพื่อติ๊กแทน'
-                : 'ยังไม่ขึ้น ${waiting.length} คน',
+                ? '${w.waiting} ${waiting.length} คน — แตะเพื่อติ๊กแทน'
+                : '${w.waiting} ${waiting.length} คน',
           ),
           for (final p in waiting) row(p),
           const SizedBox(height: 8),
         ],
         if (boarded.isNotEmpty) ...[
-          RestStopSheetLabel('ขึ้นรถแล้ว ${boarded.length} คน'),
+          RestStopSheetLabel('${w.arrived} ${boarded.length} คน'),
           for (final p in boarded) row(p),
         ],
       ],

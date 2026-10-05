@@ -92,6 +92,13 @@ class ApiEndpoints {
   static String chatStopRequests(int scheduleId) =>
       'schedules/$scheduleId/chat/stop-requests';
   static String scheduleRooms(int scheduleId) => 'schedules/$scheduleId/rooms';
+  static String chatRoster(int scheduleId) => 'schedules/$scheduleId/chat/roster';
+  static const lostItems = 'lost-items';
+  static String scheduleLostItems(int scheduleId) =>
+      'schedules/$scheduleId/lost-items';
+  static String lostItem(int itemId) => 'lost-items/$itemId';
+  static String chatCollections(int scheduleId) =>
+      'schedules/$scheduleId/chat/collections';
 
   // Support inbox (ศูนย์ช่วยเหลือ — ลูกค้าคุยกับทีมงาน)
   static const supportConversation = 'support/conversation';

@@ -18,8 +18,10 @@ import '../models/chat_notify_level.dart';
 import '../providers/app_provider.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/chat_collection.dart';
 import '../widgets/chat_food_bill.dart';
 import '../widgets/chat_food_round.dart';
+import '../widgets/chat_lost_item.dart';
 import '../widgets/chat_rest_stop.dart';
 import '../widgets/chat_vote_sheet.dart';
 import '../widgets/moderation_sheet.dart';
@@ -28,6 +30,7 @@ import '../services/quick_ask_matcher.dart';
 import '../widgets/weather_card.dart';
 import '../widgets/tier_badge.dart';
 import 'schedule_itinerary_screen.dart';
+import 'lost_items_screen.dart';
 import 'trip_rooms_screen.dart';
 
 /// Group chat room for a trip schedule. Members are the customers booked on
@@ -135,8 +138,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   // ชีตรายการรวมของรอบสั่งอาหารที่เปิดอยู่ (ถ้ามี) — realtime ป้อนค่าใหม่เข้ามา
   // ให้ชีตอัปเดตเองระหว่างสตาฟเปิดค้างรอคนสั่ง
   final _foodSheetRound = ValueNotifier<Map<String, dynamic>?>(null);
+  // แพ้อาหาร/ฮาลาลของรอบที่เปิดอยู่ — ทีมงานเท่านั้น
+  final _foodSheetDietary = ValueNotifier<List<Map<String, dynamic>>>(const []);
   int? _foodSheetMessageId;
   Timer? _foodSheetRefresh;
+
+  // ชีตเช็คยอดเก็บเงินที่เปิดอยู่ (ถ้ามี)
+  final _collectionSheet = ValueNotifier<Map<String, dynamic>?>(null);
+  int? _collectionSheetMessageId;
 
   // ชีตเช็คชื่อขึ้นรถที่เปิดอยู่ (ถ้ามี) — realtime ป้อนค่าใหม่ให้เหมือนชีตรายการอาหาร
   final _restSheetStop = ValueNotifier<Map<String, dynamic>?>(null);
@@ -269,7 +278,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _signalsDisposer?.call();
     _foodSheetRefresh?.cancel();
     _foodSheetRound.dispose();
+    _foodSheetDietary.dispose();
     _restSheetStop.dispose();
+    _collectionSheet.dispose();
     _input.removeListener(_watchComposing);
     _input.dispose();
     _inputFocus.dispose();
@@ -311,6 +322,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       onFood: _onFoodSignal,
       onRestStop: _onRestStopSignal,
       onStopRequests: _onStopRequestsSignal,
+      onCollection: _onCollectionSignal,
+      onLostItem: _onLostItemSignal,
     );
     // Let the rest of the room know we've entered, so they see a brief notice.
     app.sendChatJoin(widget.scheduleId);
@@ -1004,6 +1017,73 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       _openRestStop();
                     },
                   ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.place_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'นัดรวมพลล่วงหน้า',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'เช่น พรุ่งนี้ 04:30 — เตือนคืนก่อนและก่อนเวลานัด',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openMeetup();
+                    },
+                  ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.savings_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'เก็บเงินหน้างาน',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ค่าเข้าอุทยาน ค่าลูกหาบ ทิปไกด์ — QR ต่อคน ติ๊กใครจ่ายแล้ว',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openCollection();
+                    },
+                  ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.inventory_2_rounded,
+                    color: AppTheme.primaryColor,
+                  ),
+                  title: Text(
+                    _canModerate ? 'แจ้งของที่เจอ (ของหาย)' : 'ของหาย / ลืมของ',
+                    style: appFont(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    _canModerate
+                        ? 'ถ่ายรูปของที่ลูกทริปลืมไว้ แจ้งทุกคนในทริป'
+                        : 'ดูของที่ทีมงานเจอ ถ้าเป็นของคุณกด "ของฉัน"',
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _openLostItems(startPosting: _canModerate);
+                  },
+                ),
                 if (_canModerate || _room?['has_rooms'] == true)
                   ListTile(
                     leading: const Icon(
@@ -1705,6 +1785,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     _foodSheetMessageId = messageId;
     _foodSheetRound.value = round;
+    _foodSheetDietary.value = const [];
+    if (_canModerate) {
+      app.loadFoodDietary(widget.scheduleId, roundId).then((alerts) {
+        if (mounted && _foodSheetMessageId == messageId) {
+          _foodSheetDietary.value = alerts;
+        }
+      }).catchError((_) {});
+    }
     // socket หลุดเมื่อไรการ์ดจะไม่ขยับ — ระหว่างเปิดชีตค้างไว้ ดึงซ้ำเป็นระยะ
     _foodSheetRefresh?.cancel();
     _refreshMessage(messageId);
@@ -1728,6 +1816,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         travellers: _travellers,
         canManage: _canModerate,
         myUserId: _myUserId,
+        dietary: _canModerate ? _foodSheetDietary : null,
         onDeleteOrder: (orderId) =>
             run(() => app.deleteFoodOrder(widget.scheduleId, roundId, orderId)),
         onSetPaid: (orderId, paid) => run(
@@ -1925,6 +2014,209 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       final message = await context.read<AppProvider>().openChatRestStop(
             widget.scheduleId,
             minutes: draft.minutes,
+            place: draft.place,
+          );
+      if (!mounted) return;
+      setState(() => _messages.add(message));
+      _scrollToBottom();
+      _markRead();
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  // ── ของหาย ───────────────────────────────────────────────────────────────
+
+  Future<void> _openLostItems({bool startPosting = false}) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LostItemsScreen(
+          scheduleId: widget.scheduleId,
+          startPosting: startPosting,
+        ),
+      ),
+    );
+    // กลับมาจากหน้าของหาย — สถานะการ์ด (มีเจ้าของ/คืนแล้ว) อาจเปลี่ยนไประหว่างนั้น
+    // ดึงรายการของรอบนี้แล้วทับการ์ดที่ตรงกัน (เผื่อ socket หลุด)
+    if (!mounted) return;
+    try {
+      final data = await context.read<AppProvider>().loadLostItems(
+            scheduleId: widget.scheduleId,
+          );
+      for (final raw in (data['items'] as List? ?? const [])) {
+        if (raw is! Map) continue;
+        final item = Map<String, dynamic>.from(raw);
+        final messageId = int.tryParse('${item['message_id']}');
+        if (messageId != null) {
+          _onLostItemSignal({'message_id': messageId, 'lost_item': item});
+        }
+      }
+    } catch (_) {
+      // ไม่เป็นไร — realtime หรือการเปิดห้องครั้งหน้าจะอัปเดตให้เอง
+    }
+  }
+
+  void _onLostItemSignal(Map<String, dynamic> data) {
+    final messageId = int.tryParse('${data['message_id']}');
+    if (messageId == null || data['lost_item'] is! Map || !mounted) return;
+    final idx = _messages.indexWhere(
+      (m) => int.tryParse('${m['id']}') == messageId,
+    );
+    if (idx < 0) return;
+    setState(
+      () => _messages[idx] = {
+        ..._messages[idx],
+        'lost_item': Map<String, dynamic>.from(data['lost_item'] as Map),
+      },
+    );
+  }
+
+  // ── เก็บเงินหน้างาน ──────────────────────────────────────────────────────
+
+  Future<void> _openCollection() async {
+    final app = context.read<AppProvider>();
+    List<Map<String, dynamic>> roster;
+    try {
+      roster = await app.loadChatRoster(widget.scheduleId);
+    } catch (e) {
+      _snack(e.toString());
+      return;
+    }
+    if (!mounted) return;
+    if (roster.isEmpty) {
+      _snack('ยังไม่มีผู้เดินทางที่ยืนยันแล้วในรอบนี้');
+      return;
+    }
+    final draft = await _showSheet<CollectionDraft>(
+      OpenCollectionSheet(roster: roster),
+    );
+    if (draft == null || !mounted) return;
+    try {
+      final message = await app.openChatCollection(
+        widget.scheduleId,
+        title: draft.title,
+        amount: draft.amount,
+        note: draft.note,
+        passengerIds: draft.passengerIds,
+        promptPayId: draft.promptPayId,
+        payeeName: draft.payeeName,
+      );
+      if (!mounted) return;
+      setState(() => _messages.add(message));
+      _scrollToBottom();
+      _markRead();
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  Future<void> _payCollection(int messageId, Map<String, dynamic> c) async {
+    final id = int.tryParse('${c['id']}') ?? 0;
+    if (id == 0) return;
+    final claimed = await showCollectionPaySheet(context, c, _myUserId);
+    if (claimed == null || !mounted) return;
+    try {
+      final result = await context.read<AppProvider>().claimChatCollection(
+            widget.scheduleId,
+            id,
+            claimed: claimed,
+          );
+      if (!mounted) return;
+      _applyCollection(messageId, result['collection']);
+      _snack(claimed ? 'แจ้งทีมงานแล้ว รอเช็กยอดเข้า' : 'ถอนการแจ้งแล้ว');
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  Future<void> _openCollectionList(int messageId, Map<String, dynamic> c) async {
+    final id = int.tryParse('${c['id']}') ?? 0;
+    if (id == 0) return;
+    final app = context.read<AppProvider>();
+    _collectionSheetMessageId = messageId;
+    _collectionSheet.value = c;
+
+    Future<void> run(Future<Map<String, dynamic>> Function() call) async {
+      try {
+        final result = await call();
+        if (mounted) _applyCollection(messageId, result['collection']);
+      } catch (e) {
+        _snack(e.toString());
+      }
+    }
+
+    await _showSheet<void>(
+      CollectionListSheet(
+        collection: _collectionSheet,
+        canManage: _canModerate,
+        onSetPaid: (ids, paid) => run(
+          () => app.setChatCollectionPaid(
+            widget.scheduleId,
+            id,
+            passengerIds: ids,
+            paid: paid,
+          ),
+        ),
+        onSetClosed: (close) => run(
+          () => app.setChatCollectionClosed(widget.scheduleId, id, closed: close),
+        ),
+        onEditPayers: () async {
+          List<Map<String, dynamic>> roster;
+          try {
+            roster = await app.loadChatRoster(widget.scheduleId);
+          } catch (e) {
+            _snack(e.toString());
+            return;
+          }
+          if (!mounted) return;
+          final current = _collectionSheet.value ?? c;
+          final picked = await _showSheet<List<int>>(
+            CollectionPayersSheet(
+              roster: roster,
+              selected: {
+                for (final d in (current['dues'] as List? ?? const []))
+                  if (d is Map) int.tryParse('${d['passenger_id']}') ?? 0,
+              },
+            ),
+          );
+          if (picked == null) return;
+          await run(
+            () => app.setChatCollectionPayers(widget.scheduleId, id, picked),
+          );
+        },
+      ),
+    );
+
+    _collectionSheetMessageId = null;
+  }
+
+  void _onCollectionSignal(Map<String, dynamic> data) {
+    final messageId = int.tryParse('${data['message_id']}');
+    if (messageId == null || data['collection'] is! Map) return;
+    _applyCollection(messageId, data['collection']);
+  }
+
+  void _applyCollection(int messageId, dynamic c) {
+    if (c is! Map || !mounted) return;
+    final next = Map<String, dynamic>.from(c);
+    if (_collectionSheetMessageId == messageId) _collectionSheet.value = next;
+
+    final idx = _messages.indexWhere(
+      (m) => int.tryParse('${m['id']}') == messageId,
+    );
+    if (idx < 0) return;
+    setState(() => _messages[idx] = {..._messages[idx], 'collection': next});
+  }
+
+  Future<void> _openMeetup() async {
+    final draft = await _showSheet<MeetupDraft>(const OpenMeetupSheet());
+    if (draft == null || !mounted) return;
+    try {
+      final message = await context.read<AppProvider>().openChatRestStop(
+            widget.scheduleId,
+            meetAt: draft.meetAt,
             place: draft.place,
           );
       if (!mounted) return;
@@ -2817,6 +3109,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         onBoardRestStop: (stop, ids, boarded) =>
             _boardRestStop(mId, stop, ids, boarded),
         onOpenRestRoll: (stop) => _openRestRoll(mId, stop),
+        onPayCollection: (c) => _payCollection(mId, c),
+        onOpenCollection: (c) => _openCollectionList(mId, c),
+        onOpenLostItems: () => _openLostItems(),
       );
 
       // Keyed so jumps can anchor exactly on this bubble (see _scrollToMessage).
@@ -5042,6 +5337,9 @@ class _MessageBubble extends StatelessWidget {
   final void Function(Map<String, dynamic> stop, List<int> ids, bool boarded)
       onBoardRestStop;
   final ValueChanged<Map<String, dynamic>> onOpenRestRoll;
+  final ValueChanged<Map<String, dynamic>> onPayCollection;
+  final ValueChanged<Map<String, dynamic>> onOpenCollection;
+  final VoidCallback onOpenLostItems;
 
   const _MessageBubble({
     required this.message,
@@ -5071,6 +5369,9 @@ class _MessageBubble extends StatelessWidget {
     required this.onPayFood,
     required this.onBoardRestStop,
     required this.onOpenRestRoll,
+    required this.onPayCollection,
+    required this.onOpenCollection,
+    required this.onOpenLostItems,
   });
 
   static const _roleLabels = {
@@ -5115,7 +5416,17 @@ class _MessageBubble extends StatelessWidget {
     final restStop = (!isDeleted && message['rest_stop'] is Map)
         ? Map<String, dynamic>.from(message['rest_stop'] as Map)
         : null;
-    final isCard = poll != null || foodRound != null || restStop != null;
+    final collection = (!isDeleted && message['collection'] is Map)
+        ? Map<String, dynamic>.from(message['collection'] as Map)
+        : null;
+    final lostItem = (!isDeleted && message['lost_item'] is Map)
+        ? Map<String, dynamic>.from(message['lost_item'] as Map)
+        : null;
+    final isCard = poll != null ||
+        foodRound != null ||
+        restStop != null ||
+        collection != null ||
+        lostItem != null;
     final body = message['body']?.toString() ?? '';
     final imageUrl = isDeleted ? '' : ApiConfig.mediaUrl(message['image_url']);
     // A locally-picked image shown while an optimistic send is in flight (before
@@ -5298,6 +5609,20 @@ class _MessageBubble extends StatelessWidget {
                             onVote: onVote,
                             onClose: onClosePoll,
                             travellers: travellers,
+                          )
+                        else if (lostItem != null)
+                          ChatLostItemCard(
+                            item: lostItem,
+                            myUserId: myUserId,
+                            onOpen: onOpenLostItems,
+                          )
+                        else if (collection != null)
+                          ChatCollectionCard(
+                            collection: collection,
+                            myUserId: myUserId,
+                            canManage: canModerate,
+                            onPay: () => onPayCollection(collection),
+                            onOpenList: () => onOpenCollection(collection),
                           )
                         else if (restStop != null)
                           ChatRestStopCard(

@@ -223,4 +223,53 @@ void main() {
     expect(result?.options, isEmpty);
     expect(result?.minutes, 10);
   });
+
+  group('dietary alerts', () {
+    final alerts = [
+      {'user_id': 10, 'name': 'มิ้นท์', 'allergies': 'แพ้กุ้ง', 'halal': false},
+      {'user_id': 12, 'name': 'พลอย', 'allergies': null, 'halal': true},
+      {'user_id': 99, 'name': 'โอ๊ต', 'allergies': 'แพ้ถั่ว', 'halal': true},
+    ];
+
+    test('order status follows the live orders', () {
+      expect(dietaryOrderStatus(_round(), alerts[0]), 'ordered');
+      expect(dietaryOrderStatus(_round(), alerts[1]), 'skipped');
+      expect(dietaryOrderStatus(_round(), alerts[2]), 'none');
+    });
+
+    test('shop text warns only about people who actually ordered', () {
+      expect(
+        foodRoundShopText(_round(), dietary: alerts),
+        endsWith('รวม 4 จาน\n⚠️ แจ้งร้าน: มิ้นท์: แพ้กุ้ง'),
+      );
+    });
+
+    testWidgets('staff sheet shows the alert panel and tags the order', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 4000);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: FoodRoundSummarySheet(
+              round: ValueNotifier<Map<String, dynamic>?>(_round()),
+              dietary: ValueNotifier(alerts),
+              travellers: const [],
+              canManage: true,
+              myUserId: 1,
+              onDeleteOrder: (_) async {},
+              onAddOnBehalf: () async {},
+              onSetClosed: (_) async {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('แจ้งร้านด้วย — แพ้อาหาร / ฮาลาล'), findsOneWidget);
+      expect(find.text('โอ๊ต: แพ้ถั่ว, ฮาลาล'), findsOneWidget);
+      expect(find.text('ยังไม่สั่ง'), findsOneWidget);
+      expect(find.textContaining('⚠️ มิ้นท์: แพ้กุ้ง'), findsOneWidget);
+    });
+  });
 }

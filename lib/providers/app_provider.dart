@@ -3513,6 +3513,21 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// แพ้อาหาร/ฮาลาลของคนในรอบ (เฉพาะทีมงาน)
+  Future<List<Map<String, dynamic>>> loadFoodDietary(
+    int scheduleId,
+    int roundId,
+  ) async {
+    final response = await api.get(
+      '${ApiEndpoints.chatFoodRounds(scheduleId)}/$roundId/dietary',
+    );
+    final data = Map<String, dynamic>.from(api.data(response) as Map);
+    return (data['alerts'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
   /// ลูกค้าแจ้งว่าโอนค่าอาหารแล้ว (claimed=false = ถอนการแจ้ง)
   Future<Map<String, dynamic>> claimFoodPaid(
     int scheduleId,
@@ -3538,6 +3553,146 @@ class AppProvider extends ChangeNotifier {
       body: {'paid': paid},
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  // ── เก็บเงินหน้างาน ────────────────────────────────────────────────────
+  // ทุกตัวคืน {message_id, collection} ยกเว้น openChatCollection ที่คืนข้อความใหม่
+
+  /// รายชื่อผู้เดินทางของรอบ (ทีมงาน) — ไว้เลือกว่าเก็บใคร
+  Future<List<Map<String, dynamic>>> loadChatRoster(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.chatRoster(scheduleId));
+    final data = Map<String, dynamic>.from(api.data(response) as Map);
+    return (data['passengers'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> openChatCollection(
+    int scheduleId, {
+    required String title,
+    required double amount,
+    String? note,
+    List<int>? passengerIds,
+    String? promptPayId,
+    String? payeeName,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.chatCollections(scheduleId),
+      body: {
+        'title': title,
+        'amount': amount,
+        'note': ?note,
+        'passenger_ids': ?passengerIds,
+        'promptpay_id': ?promptPayId,
+        'payee_name': ?payeeName,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> setChatCollectionPayers(
+    int scheduleId,
+    int collectionId,
+    List<int> passengerIds,
+  ) async {
+    final response = await api.put(
+      '${ApiEndpoints.chatCollections(scheduleId)}/$collectionId/payers',
+      body: {'passenger_ids': passengerIds},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ลูกทริปแจ้งว่าโอนแล้ว (claimed=false = ถอน)
+  Future<Map<String, dynamic>> claimChatCollection(
+    int scheduleId,
+    int collectionId, {
+    bool claimed = true,
+  }) async {
+    final response = await api.post(
+      '${ApiEndpoints.chatCollections(scheduleId)}/$collectionId/claim',
+      body: {'claimed': claimed},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> setChatCollectionPaid(
+    int scheduleId,
+    int collectionId, {
+    required List<int> passengerIds,
+    required bool paid,
+  }) async {
+    final response = await api.post(
+      '${ApiEndpoints.chatCollections(scheduleId)}/$collectionId/paid',
+      body: {'passenger_ids': passengerIds, 'paid': paid},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> setChatCollectionClosed(
+    int scheduleId,
+    int collectionId, {
+    required bool closed,
+  }) async {
+    final response = await api.post(
+      '${ApiEndpoints.chatCollections(scheduleId)}/$collectionId/${closed ? 'close' : 'reopen'}',
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  // ── ของหาย / ลืมของในทริป ──────────────────────────────────────────────
+
+  /// ของในทุกทริปที่ฉันไป ([scheduleId] null) หรือเฉพาะรอบ — คืน {items, can_manage?}
+  Future<Map<String, dynamic>> loadLostItems({int? scheduleId}) async {
+    final response = await api.get(
+      scheduleId == null
+          ? ApiEndpoints.lostItems
+          : ApiEndpoints.scheduleLostItems(scheduleId),
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ทีมงานโพสต์ของที่เจอ (รูปไม่บังคับ)
+  Future<Map<String, dynamic>> postLostItem(
+    int scheduleId, {
+    required String description,
+    String? photoPath,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.scheduleLostItems(scheduleId),
+      fields: {'description': description},
+      files: {'photo': ?photoPath},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> claimLostItem(int itemId, {String? note}) async {
+    final response = await api.post(
+      '${ApiEndpoints.lostItem(itemId)}/claim',
+      body: {'note': ?note},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> unclaimLostItem(int itemId) async {
+    final response = await api.delete('${ApiEndpoints.lostItem(itemId)}/claim');
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> setLostItemReturned(
+    int itemId, {
+    required bool returned,
+    String? note,
+  }) async {
+    final response = await api.post(
+      '${ApiEndpoints.lostItem(itemId)}/returned',
+      body: {'returned': returned, 'note': ?note},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<void> deleteLostItem(int itemId) async {
+    await api.delete(ApiEndpoints.lostItem(itemId));
   }
 
   // ── ห้องพักของรอบ ──────────────────────────────────────────────────────
@@ -3630,14 +3785,20 @@ class AppProvider extends ChangeNotifier {
   // ── จุดพัก (นัดเวลากลับรถ + เช็คชื่อขึ้นรถ) / ขอแวะห้องน้ำ ──────────────
 
   /// ทีมงานประกาศพัก — คืนข้อความการ์ดที่เพิ่งลงห้อง
+  /// ส่ง [minutes] = พักรถตอนนี้, หรือ [meetAt] = นัดรวมพลล่วงหน้า
   Future<Map<String, dynamic>> openChatRestStop(
     int scheduleId, {
-    required int minutes,
+    int? minutes,
+    DateTime? meetAt,
     String? place,
   }) async {
     final response = await api.post(
       ApiEndpoints.chatRestStops(scheduleId),
-      body: {'minutes': minutes, 'place': ?place},
+      body: {
+        'minutes': ?minutes,
+        'meet_at': ?meetAt?.toUtc().toIso8601String(),
+        'place': ?place,
+      },
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
@@ -3722,6 +3883,8 @@ class AppProvider extends ChangeNotifier {
     RealtimeEventHandler? onFood,
     RealtimeEventHandler? onRestStop,
     RealtimeEventHandler? onStopRequests,
+    RealtimeEventHandler? onCollection,
+    RealtimeEventHandler? onLostItem,
   }) async {
     final channel = 'private-chat.schedule.$scheduleId';
     final disposers = <VoidCallback>[];
@@ -3743,6 +3906,8 @@ class AppProvider extends ChangeNotifier {
     await bind('chat.food', onFood);
     await bind('chat.rest_stop', onRestStop);
     await bind('chat.stop_requests', onStopRequests);
+    await bind('chat.collection', onCollection);
+    await bind('chat.lost_item', onLostItem);
 
     return () {
       for (final d in disposers) {

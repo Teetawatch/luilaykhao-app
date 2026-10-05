@@ -6,6 +6,7 @@ import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../screens/chat_screen.dart';
 import '../screens/gift_screen.dart';
+import '../screens/lost_items_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/handover_claim_screen.dart';
 import '../screens/join_booking_screen.dart';
@@ -129,6 +130,10 @@ class NotificationNavigator {
         _openSosAlert(data);
       case 'sos_resolved':
         _handleSosResolved(data);
+      // ทีมงานเจอของที่ลืมไว้ / มีเจ้าของแล้ว / ส่งคืนแล้ว — ห้องแชทอาจถูกลบไปแล้ว
+      // จึงเปิดหน้าของหายของรอบนั้นโดยตรง
+      case 'lost_item':
+        _openLostItems(data);
       case 'chat_message':
       // เรื่องหน้างานที่เกิดในห้องแชททริป — จุดพัก/เตือนกลับรถ, ขอแวะห้องน้ำ,
       // ยอดค่าอาหาร, ห้องพัก — เปิดห้องแชทของรอบนั้นที่มีการ์ดอยู่
@@ -257,6 +262,17 @@ class NotificationNavigator {
       return;
     }
     _openTrip(slug);
+  }
+
+  static void _openLostItems(Map<String, dynamic> data) {
+    final id = int.tryParse('${data['schedule_id']}');
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => LostItemsScreen(scheduleId: id == 0 ? null : id),
+        ),
+      ),
+    );
   }
 
   static void _openChat(Map<String, dynamic> data) {

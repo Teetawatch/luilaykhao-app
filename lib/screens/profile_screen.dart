@@ -35,6 +35,7 @@ import 'incident_list_screen.dart' show IncidentListScreen;
 import 'staff_ledger_screen.dart' show StaffLedgerScreen;
 import 'staff_outstanding_screen.dart' show StaffOutstandingScreen;
 import 'staff_rentals_screen.dart' show StaffRentalsScreen;
+import 'lost_items_screen.dart';
 import 'packing_list_screen.dart' show PackingScheduleListScreen;
 import 'staff_shopping_screen.dart' show StaffShoppingScreen;
 import 'schedule_itinerary_screen.dart' show ScheduleItineraryScreen;
@@ -1200,6 +1201,12 @@ class TravelMenu extends StatelessWidget {
               filter: BookingFilter.past,
             ),
           ),
+        ),
+        _MenuItem(
+          icon: Icons.inventory_2_outlined,
+          label: 'ของที่ลืมไว้ในทริป',
+          subtitle: 'ทีมงานเจอของที่ลืมไว้ — ถ้าเป็นของคุณกดแจ้งได้เลย',
+          onTap: () => _pushPremium(context, const LostItemsScreen()),
         ),
         _MenuItem(
           icon: Icons.favorite_border_rounded,

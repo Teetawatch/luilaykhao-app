@@ -13,6 +13,11 @@ import 'travel_widgets.dart';
 // แล้วสแกน QR พร้อมเพย์ของสตาฟจ่ายคืน ยอด/สถานะ/QR คำนวณที่เซิร์ฟเวอร์ทั้งหมด
 // (ChatFoodOrderService::presentBill) — ฝั่งนี้แค่วาด
 
+/// พร้อมเพย์/ชื่อบัญชีของสตาฟที่จำไว้ในเครื่อง — หารบิลค่าอาหารกับเก็บเงินหน้างาน
+/// ใช้ชุดเดียวกัน สตาฟพิมพ์ครั้งเดียวพอ
+const staffPromptPayPrefKey = 'food_bill.promptpay_id';
+const staffPayeePrefKey = 'food_bill.payee_name';
+
 int _int(dynamic v) => int.tryParse('$v') ?? 0;
 
 double _num(dynamic v) => double.tryParse('$v') ?? 0;
@@ -120,11 +125,19 @@ class MyFoodBillRow extends StatelessWidget {
 }
 
 /// QR พร้อมเพย์ของยอดที่ค้าง + ปุ่ม "โอนแล้ว" — คืน true/false เมื่อกดแจ้ง/ถอน
+///
+/// ใช้ร่วมกับ "เก็บเงินหน้างาน" ด้วย — ส่ง [what] เป็นชื่อรายการแทนคำว่าค่าอาหาร
 class FoodPaySheet extends StatelessWidget {
   final Map<String, dynamic> order;
   final Map<String, dynamic> billing;
+  final String what;
 
-  const FoodPaySheet({super.key, required this.order, required this.billing});
+  const FoodPaySheet({
+    super.key,
+    required this.order,
+    required this.billing,
+    this.what = 'ค่าอาหาร',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +148,7 @@ class FoodPaySheet extends StatelessWidget {
 
     return BillSheetFrame(
       icon: Icons.qr_code_2_rounded,
-      title: 'จ่ายค่าอาหาร ${baht(order['balance'])}',
+      title: 'จ่าย$what ${baht(order['balance'])}',
       subtitle: 'สแกนด้วยแอปธนาคาร ยอดใส่ไว้ให้แล้ว',
       footer: claimed
           ? OutlinedButton(
@@ -258,8 +271,8 @@ class FoodBillSheet extends StatefulWidget {
 }
 
 class _FoodBillSheetState extends State<FoodBillSheet> {
-  static const _prefId = 'food_bill.promptpay_id';
-  static const _prefName = 'food_bill.payee_name';
+  static const _prefId = staffPromptPayPrefKey;
+  static const _prefName = staffPayeePrefKey;
 
   late final List<Map<String, dynamic>> _lines;
   late final List<TextEditingController> _prices;

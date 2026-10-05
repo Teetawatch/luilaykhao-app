@@ -57,14 +57,53 @@ String? _closesInLabel(Map<String, dynamic> round) {
 }
 
 /// ข้อความรายการรวมสำหรับวางในแชทร้าน / อ่านให้ร้านฟัง
-String foodRoundShopText(Map<String, dynamic> round) {
+///
+/// [dietary] (ของทีมงาน) — ต่อท้ายด้วยเรื่องที่ร้านต้องรู้ เฉพาะคนที่สั่งรอบนี้
+String foodRoundShopText(
+  Map<String, dynamic> round, {
+  List<Map<String, dynamic>> dietary = const [],
+}) {
   final lines = _maps(round['summary']);
   final buf = StringBuffer('🍜 ${round['title'] ?? 'ออเดอร์อาหาร'}\n');
   for (final l in lines) {
     buf.writeln('• ${l['name']} × ${l['qty']}');
   }
   buf.write('รวม ${_int(round['dish_count'])} จาน');
+
+  final notes = [
+    for (final a in dietary)
+      if (dietaryOrderStatus(round, a) == 'ordered') _dietaryText(a),
+  ];
+  if (notes.isNotEmpty) {
+    buf.write('\n⚠️ แจ้งร้าน: ${notes.join(' · ')}');
+  }
   return buf.toString();
+}
+
+/// "มิ้นท์: แพ้กุ้ง, ฮาลาล"
+String _dietaryText(Map<String, dynamic> alert) {
+  final bits = [
+    if ((alert['allergies']?.toString() ?? '').trim().isNotEmpty)
+      alert['allergies'].toString().trim(),
+    if (alert['halal'] == true) 'ฮาลาล',
+  ];
+  return '${alert['name']}: ${bits.join(', ')}';
+}
+
+/// สถานะการสั่งของคนที่แจ้งแพ้อาหาร — คิดสดจากออเดอร์ล่าสุดของบัญชีที่ดูแลเขา
+/// (ordered / skipped / none) เพราะออเดอร์ไหลเข้ามาหลังโหลดรายชื่อแพ้อาหาร
+String dietaryOrderStatus(
+  Map<String, dynamic> round,
+  Map<String, dynamic> alert,
+) {
+  final userId = int.tryParse('${alert['user_id']}');
+  if (userId == null) return 'none';
+  for (final o in _maps(round['orders'])) {
+    if (int.tryParse('${o['user_id']}') == userId) {
+      return o['skipped'] == true ? 'skipped' : 'ordered';
+    }
+  }
+  return 'none';
 }
 
 /// การ์ดในบับเบิลแชท — สรุปสั้น ๆ + ปุ่มสั่ง/แก้ และเปิดรายการรวม
@@ -778,6 +817,9 @@ class FoodRoundSummarySheet extends StatelessWidget {
   /// ทีมงานยืนยัน/ยกเลิกว่าได้รับเงินของออเดอร์นี้แล้ว
   final Future<void> Function(int orderId, bool paid)? onSetPaid;
 
+  /// แพ้อาหาร/ฮาลาลของคนในรอบ (เฉพาะทีมงาน — ลูกทริปได้ null)
+  final ValueListenable<List<Map<String, dynamic>>>? dietary;
+
   const FoodRoundSummarySheet({
     super.key,
     required this.round,
@@ -789,6 +831,7 @@ class FoodRoundSummarySheet extends StatelessWidget {
     required this.onSetClosed,
     this.onOpenBill,
     this.onSetPaid,
+    this.dietary,
   });
 
   @override
@@ -797,12 +840,21 @@ class FoodRoundSummarySheet extends StatelessWidget {
       valueListenable: round,
       builder: (context, data, _) {
         if (data == null) return const SizedBox.shrink();
-        return _buildFor(context, data);
+        final diet = dietary;
+        if (diet == null) return _buildFor(context, data, const []);
+        return ValueListenableBuilder<List<Map<String, dynamic>>>(
+          valueListenable: diet,
+          builder: (context, alerts, _) => _buildFor(context, data, alerts),
+        );
       },
     );
   }
 
-  Widget _buildFor(BuildContext context, Map<String, dynamic> data) {
+  Widget _buildFor(
+    BuildContext context,
+    Map<String, dynamic> data,
+    List<Map<String, dynamic>> alerts,
+  ) {
     final closed = _isClosed(data);
     final summary = _maps(data['summary']);
     final orders = _maps(data['orders']);
@@ -889,7 +941,9 @@ class FoodRoundSummarySheet extends StatelessWidget {
               TextButton.icon(
                 onPressed: () {
                   Clipboard.setData(
-                    ClipboardData(text: foodRoundShopText(data)),
+                    ClipboardData(
+                      text: foodRoundShopText(data, dietary: alerts),
+                    ),
                   );
                   HapticFeedback.selectionClick();
                   AppSnack.show(context, 'คัดลอกรายการแล้ว');
@@ -974,6 +1028,10 @@ class FoodRoundSummarySheet extends StatelessWidget {
               ],
             ),
           ),
+        if (alerts.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _DietaryPanel(round: data, alerts: alerts),
+        ],
         if (canManage || data['billing'] is Map) ...[
           const SizedBox(height: 16),
           _BillingPanel(
@@ -1029,6 +1087,21 @@ class FoodRoundSummarySheet extends StatelessWidget {
                               height: 1.4,
                             ),
                           ),
+                          // แพ้อาหาร/ฮาลาลของคนที่บัญชีนี้ดูแล — ติดไว้ข้างออเดอร์เลย
+                          for (final a in alerts)
+                            if (o['skipped'] != true &&
+                                o['user_id'] != null &&
+                                int.tryParse('${a['user_id']}') ==
+                                    int.tryParse('${o['user_id']}'))
+                              TextSpan(
+                                text: '\n⚠️ ${_dietaryText(a)}',
+                                style: appFont(
+                                  fontSize: AppText.sizeCaption,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.errorColor,
+                                  height: 1.5,
+                                ),
+                              ),
                         ],
                       ),
                     ),
@@ -1146,6 +1219,95 @@ class FoodRoundSummarySheet extends StatelessWidget {
       ),
     );
     if (ok == true) await onDeleteOrder(_int(order['id']));
+  }
+}
+
+/// กล่องเตือนแพ้อาหาร/ฮาลาล (เฉพาะทีมงาน) — สิ่งที่ต้องบอกร้านก่อนสั่ง
+class _DietaryPanel extends StatelessWidget {
+  final Map<String, dynamic> round;
+  final List<Map<String, dynamic>> alerts;
+
+  const _DietaryPanel({required this.round, required this.alerts});
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = {
+      'ordered': 'สั่งแล้ว',
+      'skipped': 'ไม่สั่งรอบนี้',
+      'none': 'ยังไม่สั่ง',
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.errorColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 18,
+                color: AppTheme.errorColor,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'แจ้งร้านด้วย — แพ้อาหาร / ฮาลาล',
+                  style: appFont(
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          for (final a in alerts)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _dietaryText(a),
+                      style: appFont(
+                        fontSize: AppText.sizeLabel,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.onSurface(context),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    labels[dietaryOrderStatus(round, a)] ?? '',
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      fontWeight: FontWeight.w700,
+                      color: dietaryOrderStatus(round, a) == 'ordered'
+                          ? AppTheme.errorColor
+                          : AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Text(
+            'ข้อมูลนี้เห็นเฉพาะทีมงาน ปุ่ม "คัดลอก" ใส่ท้ายรายการให้แล้ว',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

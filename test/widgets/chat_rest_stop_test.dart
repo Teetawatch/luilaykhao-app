@@ -134,4 +134,51 @@ void main() {
     expect(find.byIcon(Icons.call_rounded), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets('meetup far ahead says when arrival opens instead of a button', (
+    tester,
+  ) async {
+    final stop = {
+      ..._stop(left: const Duration(hours: 8)),
+      'kind': 'meetup',
+      'place': 'หน้าลานกางเต็นท์',
+    };
+    await tester.pumpWidget(
+      _host(
+        ChatRestStopCard(
+          stop: stop,
+          myUserId: 11,
+          canManage: false,
+          onBoard: (_, _) {},
+          onOpenRoll: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('นัดรวมพล · หน้าลานกางเต็นท์'), findsOneWidget);
+    expect(find.textContaining('กด "มาถึงแล้ว" ได้ตั้งแต่'), findsOneWidget);
+    expect(find.text('ฉันมาถึงแล้ว'), findsNothing);
+    expect(find.text('มาถึงแล้ว 0/3 คน'), findsOneWidget);
+  });
+
+  testWidgets('meetup close to the time lets you mark arrival', (tester) async {
+    final stop = {
+      ..._stop(left: const Duration(minutes: 40)),
+      'kind': 'meetup',
+    };
+    await tester.pumpWidget(
+      _host(
+        ChatRestStopCard(
+          stop: stop,
+          myUserId: 11,
+          canManage: false,
+          onBoard: (_, _) {},
+          onOpenRoll: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('ฉันมาถึงแล้ว'), findsOneWidget);
+    expect(find.textContaining('นัดรวมพล · อีก'), findsOneWidget);
+  });
 }
