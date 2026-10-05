@@ -18,7 +18,9 @@ import '../models/chat_notify_level.dart';
 import '../providers/app_provider.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/chat_food_bill.dart';
 import '../widgets/chat_food_round.dart';
+import '../widgets/chat_rest_stop.dart';
 import '../widgets/chat_vote_sheet.dart';
 import '../widgets/moderation_sheet.dart';
 import '../theme/app_theme.dart';
@@ -26,6 +28,7 @@ import '../services/quick_ask_matcher.dart';
 import '../widgets/weather_card.dart';
 import '../widgets/tier_badge.dart';
 import 'schedule_itinerary_screen.dart';
+import 'trip_rooms_screen.dart';
 
 /// Group chat room for a trip schedule. Members are the customers booked on
 /// the schedule, the assigned staff, and admins. Real-time via Reverb.
@@ -134,6 +137,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final _foodSheetRound = ValueNotifier<Map<String, dynamic>?>(null);
   int? _foodSheetMessageId;
   Timer? _foodSheetRefresh;
+
+  // ชีตเช็คชื่อขึ้นรถที่เปิดอยู่ (ถ้ามี) — realtime ป้อนค่าใหม่ให้เหมือนชีตรายการอาหาร
+  final _restSheetStop = ValueNotifier<Map<String, dynamic>?>(null);
+  int? _restSheetMessageId;
   List<String> _reactionEmojis = const ['👍', '❤️', '😂', '😮', '😢', '🙏'];
   int? _myUserId;
 
@@ -262,6 +269,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _signalsDisposer?.call();
     _foodSheetRefresh?.cancel();
     _foodSheetRound.dispose();
+    _restSheetStop.dispose();
     _input.removeListener(_watchComposing);
     _input.dispose();
     _inputFocus.dispose();
@@ -301,6 +309,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       onUpdated: _onMessageUpdated,
       onPoll: _onPollSignal,
       onFood: _onFoodSignal,
+      onRestStop: _onRestStopSignal,
+      onStopRequests: _onStopRequestsSignal,
     );
     // Let the rest of the room know we've entered, so they see a brief notice.
     app.sendChatJoin(widget.scheduleId);
@@ -848,151 +858,236 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (_sending) return;
     showModalBottomSheet<void>(
       context: context,
+      // เมนูยาวขึ้นตามเครื่องมือหน้างาน (โหวต/อาหาร/พักรถ/ห้องพัก) — เลื่อนได้
+      // จะได้ไม่ล้นจอบนมือถือจอเล็ก
+      isScrollControlled: true,
       backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_rounded),
-              title: Text(
-                'ถ่ายรูป',
-                style: appFont(fontWeight: FontWeight.w600),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _pickAndSendImage(ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded),
-              title: Text(
-                'เลือกจากคลังรูปภาพ',
-                style: appFont(fontWeight: FontWeight.w600),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _pickAndSendImage(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.location_on_rounded,
-                color: Color(0xFFE11D48),
-              ),
-              title: Text(
-                'แชร์ตำแหน่งของฉัน',
-                style: appFont(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                'ส่งจุดที่คุณอยู่ตอนนี้เป็นลิงก์แผนที่',
-                style: appFont(
-                  fontSize: AppText.sizeCaption,
-                  color: AppTheme.mutedText(context),
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _shareLocation();
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.bar_chart_rounded,
-                color: AppTheme.primaryColor,
-              ),
-              title: Text(
-                'สร้างโพล',
-                style: appFont(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                'ให้เพื่อนร่วมทริปโหวตเลือกด้วยกัน',
-                style: appFont(
-                  fontSize: AppText.sizeCaption,
-                  color: AppTheme.mutedText(context),
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _createPoll();
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.how_to_vote_rounded,
-                color: AppTheme.primaryColor,
-              ),
-              title: Text(
-                'โหวตตัดสิน',
-                style: appFont(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                'เสียงแตก? ให้ทุกคนโหวตภายในไม่กี่นาที ระบบประกาศผลให้',
-                style: appFont(
-                  fontSize: AppText.sizeCaption,
-                  color: AppTheme.mutedText(context),
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _createVote();
-              },
-            ),
-            if (_canModerate)
-              ListTile(
-                leading: const Icon(
-                  Icons.ramen_dining_rounded,
-                  color: AppTheme.primaryColor,
-                ),
-                title: Text(
-                  'รับออเดอร์อาหาร',
-                  style: appFont(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  'ลูกทริปพิมพ์เมนูบนรถ คุณได้รายการรวมไปสั่งร้าน',
-                  style: appFont(
-                    fontSize: AppText.sizeCaption,
-                    color: AppTheme.mutedText(context),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.85,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_rounded),
+                  title: Text(
+                    'ถ่ายรูป',
+                    style: appFont(fontWeight: FontWeight.w600),
                   ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _pickAndSendImage(ImageSource.camera);
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _openFoodRound();
-                },
-              ),
-            // รูปในห้องนี้ถูกลบพร้อมห้องแชทหลังจบทริป (PurgeEndedTripChatsJob
-            // ฝั่งเซิร์ฟเวอร์ — ต้องแก้คู่กันถ้าเปลี่ยนจำนวนวัน) บอกตั้งแต่ตอนจะส่ง
-            // ดีกว่าให้ลูกค้ามารู้ตอนที่รูปหายไปแล้ว
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 6, 20, 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.schedule_rounded,
-                    size: 14,
-                    color: AppTheme.mutedText(context),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_rounded),
+                  title: Text(
+                    'เลือกจากคลังรูปภาพ',
+                    style: appFont(fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'รูปที่ส่งในห้องนี้จะถูกลบพร้อมห้องแชท 3 วันหลังจบทริป '
-                      'อยากให้อยู่ถาวรลงในฟีดทริปได้ครับ',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _pickAndSendImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.location_on_rounded,
+                    color: Color(0xFFE11D48),
+                  ),
+                  title: Text(
+                    'แชร์ตำแหน่งของฉัน',
+                    style: appFont(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    'ส่งจุดที่คุณอยู่ตอนนี้เป็นลิงก์แผนที่',
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _shareLocation();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.bar_chart_rounded,
+                    color: AppTheme.primaryColor,
+                  ),
+                  title: Text(
+                    'สร้างโพล',
+                    style: appFont(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    'ให้เพื่อนร่วมทริปโหวตเลือกด้วยกัน',
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _createPoll();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.how_to_vote_rounded,
+                    color: AppTheme.primaryColor,
+                  ),
+                  title: Text(
+                    'โหวตตัดสิน',
+                    style: appFont(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    'เสียงแตก? ให้ทุกคนโหวตภายในไม่กี่นาที ระบบประกาศผลให้',
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _createVote();
+                  },
+                ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.ramen_dining_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'รับออเดอร์อาหาร',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ลูกทริปพิมพ์เมนูบนรถ คุณได้รายการรวมไปสั่งร้าน',
                       style: appFont(
                         fontSize: AppText.sizeCaption,
                         color: AppTheme.mutedText(context),
                       ),
                     ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openFoodRound();
+                    },
                   ),
-                ],
-              ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.local_parking_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'พักรถ / นัดเวลากลับรถ',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'นับถอยหลัง + เช็คชื่อขึ้นรถ ระบบเตือนคนที่ยังไม่กลับ',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openRestStop();
+                    },
+                  ),
+                if (_canModerate || _room?['has_rooms'] == true)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.bed_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      _canModerate ? 'จัดห้องพัก' : 'ห้องพัก',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      _canModerate
+                          ? 'จัดใครนอนห้องไหนกับใคร แล้วประกาศให้ทุกคน'
+                          : 'ดูว่าคุณพักห้องไหนกับใคร',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => TripRoomsScreen(
+                            scheduleId: widget.scheduleId,
+                            canManage: _canModerate,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                if (!_canModerate && _canRequestStop)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.wc_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      _myStopRequest ? 'ขอแวะห้องน้ำแล้ว' : 'ขอแวะห้องน้ำ',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ทีมงานไม่เห็นชื่อคุณ และไม่ขึ้นในแชทรวม',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _requestStop();
+                    },
+                  ),
+                // รูปในห้องนี้ถูกลบพร้อมห้องแชทหลังจบทริป (PurgeEndedTripChatsJob
+                // ฝั่งเซิร์ฟเวอร์ — ต้องแก้คู่กันถ้าเปลี่ยนจำนวนวัน) บอกตั้งแต่ตอนจะส่ง
+                // ดีกว่าให้ลูกค้ามารู้ตอนที่รูปหายไปแล้ว
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 14,
+                        color: AppTheme.mutedText(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'รูปที่ส่งในห้องนี้จะถูกลบพร้อมห้องแชท 3 วันหลังจบทริป '
+                          'อยากให้อยู่ถาวรลงในฟีดทริปได้ครับ',
+                          style: appFont(
+                            fontSize: AppText.sizeCaption,
+                            color: AppTheme.mutedText(context),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       ),
     );
@@ -1635,6 +1730,32 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         myUserId: _myUserId,
         onDeleteOrder: (orderId) =>
             run(() => app.deleteFoodOrder(widget.scheduleId, roundId, orderId)),
+        onSetPaid: (orderId, paid) => run(
+          () => app.setFoodOrderPaid(
+            widget.scheduleId,
+            roundId,
+            orderId,
+            paid: paid,
+          ),
+        ),
+        onOpenBill: () async {
+          final current = _foodSheetRound.value ?? round;
+          final draft = await _showSheet<FoodBillDraft>(
+            FoodBillSheet(round: current),
+          );
+          if (draft == null) return;
+          await run(
+            () => app.billChatFoodRound(
+              widget.scheduleId,
+              roundId,
+              prices: draft.prices,
+              promptPayId: draft.promptPayId,
+              payeeName: draft.payeeName,
+              notify: draft.notify,
+            ),
+          );
+          if (draft.notify) _snack('ส่งยอดให้ทุกคนแล้ว');
+        },
         onSetClosed: (close) => run(
           () => app.setChatFoodRoundClosed(widget.scheduleId, roundId, closed: close),
         ),
@@ -1659,6 +1780,33 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _foodSheetRefresh?.cancel();
     _foodSheetRefresh = null;
     _foodSheetMessageId = null;
+  }
+
+  /// QR จ่ายค่าอาหารของฉัน → กด "โอนแล้ว" แจ้งทีมงาน
+  Future<void> _payFood(int messageId, Map<String, dynamic> round) async {
+    final roundId = int.tryParse('${round['id']}') ?? 0;
+    final mine = myFoodOrder(round, _myUserId);
+    if (roundId == 0 || mine == null || round['billing'] is! Map) return;
+
+    final claimed = await _showSheet<bool>(
+      FoodPaySheet(
+        order: mine,
+        billing: Map<String, dynamic>.from(round['billing'] as Map),
+      ),
+    );
+    if (claimed == null || !mounted) return;
+    try {
+      final result = await context.read<AppProvider>().claimFoodPaid(
+            widget.scheduleId,
+            roundId,
+            claimed: claimed,
+          );
+      if (!mounted) return;
+      _applyFood(messageId, result['food_round']);
+      _snack(claimed ? 'แจ้งทีมงานแล้ว รอเช็กยอดเข้า' : 'ถอนการแจ้งแล้ว');
+    } catch (e) {
+      _snack(e.toString());
+    }
   }
 
   /// ดึงข้อความการ์ดใบเดียวกลับมาใหม่ (after_id = id - 1 → ใบแรกคือใบนั้น)
@@ -1696,6 +1844,182 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
     if (idx < 0) return;
     setState(() => _messages[idx] = {..._messages[idx], 'food_round': next});
+  }
+
+  // ── จุดพัก / ขอแวะห้องน้ำ ────────────────────────────────────────────────
+
+  Map<String, dynamic> get _stopRequests => _room?['stop_requests'] is Map
+      ? Map<String, dynamic>.from(_room!['stop_requests'] as Map)
+      : const {};
+
+  int get _pendingStopRequests =>
+      int.tryParse('${_stopRequests['pending']}') ?? 0;
+
+  bool get _myStopRequest => _room?['my_stop_request'] == true;
+
+  bool get _canRequestStop => _room?['can_request_stop'] == true;
+
+  void _setStopRequests(Map<String, dynamic> data) {
+    if (!mounted || _room == null) return;
+    setState(() {
+      _room = {
+        ..._room!,
+        'stop_requests': {
+          'pending': int.tryParse('${data['pending']}') ?? 0,
+          'urgent': int.tryParse('${data['urgent']}') ?? 0,
+        },
+        if (data.containsKey('mine')) 'my_stop_request': data['mine'] == true,
+        // ทีมงานรับทราบแล้ว (pending เป็น 0) = คำขอของฉันก็ถูกตอบไปด้วย
+        if ((int.tryParse('${data['pending']}') ?? 0) == 0)
+          'my_stop_request': false,
+      };
+    });
+  }
+
+  void _onStopRequestsSignal(Map<String, dynamic> data) {
+    final next = Map<String, dynamic>.from(data)..remove('mine');
+    _setStopRequests(next);
+  }
+
+  Future<void> _requestStop() async {
+    final action = await _showSheet<StopRequestAction>(
+      StopRequestSheet(hasPending: _myStopRequest),
+    );
+    if (action == null || !mounted) return;
+    final app = context.read<AppProvider>();
+    try {
+      final result = action == StopRequestAction.cancel
+          ? await app.cancelChatStopRequest(widget.scheduleId)
+          : await app.requestChatStop(
+              widget.scheduleId,
+              urgent: action == StopRequestAction.urgent,
+            );
+      _setStopRequests(result);
+      _snack(action == StopRequestAction.cancel
+          ? 'ถอนคำขอแล้ว'
+          : 'ส่งคำขอแล้ว ทีมงานไม่เห็นชื่อคุณ');
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  Future<void> _acknowledgeStops() async {
+    final minutes = await _showSheet<int>(const AcknowledgeStopSheet());
+    if (minutes == null || !mounted) return;
+    try {
+      final result = await context.read<AppProvider>().acknowledgeChatStopRequests(
+            widget.scheduleId,
+            minutes: minutes < 0 ? null : minutes,
+          );
+      _setStopRequests(result);
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  Future<void> _openRestStop() async {
+    final draft = await _showSheet<RestStopDraft>(const OpenRestStopSheet());
+    if (draft == null || !mounted) return;
+    try {
+      final message = await context.read<AppProvider>().openChatRestStop(
+            widget.scheduleId,
+            minutes: draft.minutes,
+            place: draft.place,
+          );
+      if (!mounted) return;
+      setState(() => _messages.add(message));
+      _scrollToBottom();
+      _markRead();
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  Future<void> _boardRestStop(
+    int messageId,
+    Map<String, dynamic> stop,
+    List<int> passengerIds,
+    bool boarded,
+  ) async {
+    final stopId = int.tryParse('${stop['id']}') ?? 0;
+    if (stopId == 0 || passengerIds.isEmpty) return;
+    try {
+      final result = await context.read<AppProvider>().boardChatRestStop(
+            widget.scheduleId,
+            stopId,
+            passengerIds: passengerIds,
+            boarded: boarded,
+          );
+      if (!mounted) return;
+      _applyRestStop(messageId, result['rest_stop']);
+      if (boarded) HapticFeedback.mediumImpact();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  /// รายชื่อเช็คชื่อ — ทีมงานติ๊กแทน/ขยายเวลา/ออกรถ ลูกทริปดูได้
+  Future<void> _openRestRoll(int messageId, Map<String, dynamic> stop) async {
+    final stopId = int.tryParse('${stop['id']}') ?? 0;
+    if (stopId == 0) return;
+    final app = context.read<AppProvider>();
+
+    _restSheetMessageId = messageId;
+    _restSheetStop.value = stop;
+    // ทีมงานต้องได้เบอร์โทร (ไม่มากับการ์ดที่กระจายทั้งห้อง) และค่าล่าสุดถ้า socket หลุด
+    app.getChatRestStop(widget.scheduleId, stopId).then((r) {
+      if (mounted) _applyRestStop(messageId, r['rest_stop']);
+    }).catchError((_) {});
+
+    Future<void> run(Future<Map<String, dynamic>> Function() call) async {
+      try {
+        final result = await call();
+        if (mounted) _applyRestStop(messageId, result['rest_stop']);
+      } catch (e) {
+        _snack(e.toString());
+      }
+    }
+
+    await _showSheet<void>(
+      RestStopRollSheet(
+        stop: _restSheetStop,
+        canManage: _canModerate,
+        onToggle: (id, boarded) => run(
+          () => app.boardChatRestStop(
+            widget.scheduleId,
+            stopId,
+            passengerIds: [id],
+            boarded: boarded,
+          ),
+        ),
+        onExtend: (m) =>
+            run(() => app.extendChatRestStop(widget.scheduleId, stopId, m)),
+        onDepart: () =>
+            run(() => app.departChatRestStop(widget.scheduleId, stopId)),
+      ),
+    );
+
+    _restSheetMessageId = null;
+  }
+
+  void _onRestStopSignal(Map<String, dynamic> data) {
+    final messageId = int.tryParse('${data['message_id']}');
+    if (messageId == null || data['rest_stop'] is! Map) return;
+    _applyRestStop(messageId, data['rest_stop']);
+  }
+
+  void _applyRestStop(int messageId, dynamic stop) {
+    if (stop is! Map || !mounted) return;
+    final next = Map<String, dynamic>.from(stop);
+    if (_restSheetMessageId == messageId) _restSheetStop.value = next;
+
+    final idx = _messages.indexWhere(
+      (m) => int.tryParse('${m['id']}') == messageId,
+    );
+    if (idx < 0) return;
+    setState(() => _messages[idx] = {..._messages[idx], 'rest_stop': next});
   }
 
   void _startReply(Map<String, dynamic> message) {
@@ -2201,6 +2525,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           // แถบติดต่อปักไว้ใต้ AppBar (แบบ Line Man) — สตาฟ/คนขับพร้อมปุ่มโทร
           // อยู่เหนือข้อความที่ปักหมุด เพราะ "โทรหาใครสักคน" เร่งด่วนกว่าเสมอ
           if (_contacts.isNotEmpty) _ContactBar(contacts: _contacts),
+          // คำขอแวะห้องน้ำ — เห็นเฉพาะทีมงาน และเห็นแค่จำนวน
+          if (_canModerate && _pendingStopRequests > 0)
+            StopRequestBanner(
+              pending: _pendingStopRequests,
+              urgent: int.tryParse('${_stopRequests['urgent']}') ?? 0,
+              onAcknowledge: _acknowledgeStops,
+            ),
           if (_pinned != null)
             _PinnedBanner(
               pinned: _pinned!,
@@ -2481,7 +2812,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         onClosePoll: (pollId) => _closePoll(mId, pollId),
         travellers: travellers,
         onOrderFood: (round) => _orderFood(mId, round),
+        onPayFood: (round) => _payFood(mId, round),
         onOpenFoodSummary: (round) => _openFoodSummary(mId, round),
+        onBoardRestStop: (stop, ids, boarded) =>
+            _boardRestStop(mId, stop, ids, boarded),
+        onOpenRestRoll: (stop) => _openRestRoll(mId, stop),
       );
 
       // Keyed so jumps can anchor exactly on this bubble (see _scrollToMessage).
@@ -4703,6 +5038,10 @@ class _MessageBubble extends StatelessWidget {
   final List<Map<String, dynamic>> travellers;
   final ValueChanged<Map<String, dynamic>> onOrderFood;
   final ValueChanged<Map<String, dynamic>> onOpenFoodSummary;
+  final ValueChanged<Map<String, dynamic>> onPayFood;
+  final void Function(Map<String, dynamic> stop, List<int> ids, bool boarded)
+      onBoardRestStop;
+  final ValueChanged<Map<String, dynamic>> onOpenRestRoll;
 
   const _MessageBubble({
     required this.message,
@@ -4729,6 +5068,9 @@ class _MessageBubble extends StatelessWidget {
     required this.travellers,
     required this.onOrderFood,
     required this.onOpenFoodSummary,
+    required this.onPayFood,
+    required this.onBoardRestStop,
+    required this.onOpenRestRoll,
   });
 
   static const _roleLabels = {
@@ -4770,7 +5112,10 @@ class _MessageBubble extends StatelessWidget {
     final foodRound = (!isDeleted && message['food_round'] is Map)
         ? Map<String, dynamic>.from(message['food_round'] as Map)
         : null;
-    final isCard = poll != null || foodRound != null;
+    final restStop = (!isDeleted && message['rest_stop'] is Map)
+        ? Map<String, dynamic>.from(message['rest_stop'] as Map)
+        : null;
+    final isCard = poll != null || foodRound != null || restStop != null;
     final body = message['body']?.toString() ?? '';
     final imageUrl = isDeleted ? '' : ApiConfig.mediaUrl(message['image_url']);
     // A locally-picked image shown while an optimistic send is in flight (before
@@ -4954,12 +5299,22 @@ class _MessageBubble extends StatelessWidget {
                             onClose: onClosePoll,
                             travellers: travellers,
                           )
+                        else if (restStop != null)
+                          ChatRestStopCard(
+                            stop: restStop,
+                            myUserId: myUserId,
+                            canManage: canModerate,
+                            onBoard: (ids, boarded) =>
+                                onBoardRestStop(restStop, ids, boarded),
+                            onOpenRoll: () => onOpenRestRoll(restStop),
+                          )
                         else if (foodRound != null)
                           ChatFoodRoundCard(
                             round: foodRound,
                             myUserId: myUserId,
                             onOrder: () => onOrderFood(foodRound),
                             onOpenSummary: () => onOpenFoodSummary(foodRound),
+                            onPay: () => onPayFood(foodRound),
                           )
                         else if (hasText)
                           _MessageText(

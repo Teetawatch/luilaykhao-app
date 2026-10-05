@@ -85,6 +85,13 @@ class ApiEndpoints {
       'schedules/$scheduleId/chat/food-rounds/$roundId/close';
   static String chatFoodReopen(int scheduleId, int roundId) =>
       'schedules/$scheduleId/chat/food-rounds/$roundId/reopen';
+  static String chatRestStops(int scheduleId) =>
+      'schedules/$scheduleId/chat/rest-stops';
+  static String chatRestStop(int scheduleId, int stopId) =>
+      'schedules/$scheduleId/chat/rest-stops/$stopId';
+  static String chatStopRequests(int scheduleId) =>
+      'schedules/$scheduleId/chat/stop-requests';
+  static String scheduleRooms(int scheduleId) => 'schedules/$scheduleId/rooms';
 
   // Support inbox (ศูนย์ช่วยเหลือ — ลูกค้าคุยกับทีมงาน)
   static const supportConversation = 'support/conversation';

@@ -130,6 +130,13 @@ class NotificationNavigator {
       case 'sos_resolved':
         _handleSosResolved(data);
       case 'chat_message':
+      // เรื่องหน้างานที่เกิดในห้องแชททริป — จุดพัก/เตือนกลับรถ, ขอแวะห้องน้ำ,
+      // ยอดค่าอาหาร, ห้องพัก — เปิดห้องแชทของรอบนั้นที่มีการ์ดอยู่
+      case 'rest_stop':
+      case 'stop_request':
+      case 'stop_request_ack':
+      case 'food_bill':
+      case 'room_assignment':
         _openChat(data);
       case 'support_message':
         _openSupport();

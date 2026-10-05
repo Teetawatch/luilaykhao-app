@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
 import 'app_snack.dart';
+import 'chat_food_bill.dart';
 import 'travel_widgets.dart';
 
 // รับออเดอร์อาหารในห้องแชททริป — แวะร้านตามสั่งขากลับ แต่ละคนพิมพ์เมนูของตัวเอง
@@ -73,12 +74,16 @@ class ChatFoodRoundCard extends StatelessWidget {
   final VoidCallback onOrder;
   final VoidCallback onOpenSummary;
 
+  /// เปิด QR จ่ายค่าอาหาร (มีเมื่อทีมงานส่งยอดแล้ว)
+  final VoidCallback? onPay;
+
   const ChatFoodRoundCard({
     super.key,
     required this.round,
     required this.myUserId,
     required this.onOrder,
     required this.onOpenSummary,
+    this.onPay,
   });
 
   @override
@@ -90,12 +95,20 @@ class ChatFoodRoundCard extends StatelessWidget {
     final dishCount = _int(round['dish_count']);
     final note = round['note']?.toString() ?? '';
     final closesIn = _closesInLabel(round);
+    final billing = round['billing'] is Map
+        ? Map<String, dynamic>.from(round['billing'] as Map)
+        : null;
 
     final meta = <String>[
       orderCount > 0
           ? 'สั่งแล้ว $orderCount คน · $dishCount จาน'
           : 'ยังไม่มีใครสั่ง',
-      if (closed) 'ปิดรับแล้ว' else ?closesIn,
+      if (billing != null)
+        'เก็บเงินแล้ว ${baht(billing['collected'])}/${baht(billing['total'])}'
+      else if (closed)
+        'ปิดรับแล้ว'
+      else
+        ?closesIn,
     ];
 
     final muted = AppTheme.mutedText(context);
@@ -190,6 +203,8 @@ class ChatFoodRoundCard extends StatelessWidget {
             ],
           ),
         ),
+        if (billing != null && mine != null && mine['skipped'] != true)
+          MyFoodBillRow(order: mine, onPay: onPay ?? () {}),
         if (summary.isNotEmpty) ...[
           const SizedBox(height: 8),
           for (final line in summary.take(3))
@@ -757,6 +772,12 @@ class FoodRoundSummarySheet extends StatelessWidget {
   final Future<void> Function() onAddOnBehalf;
   final Future<void> Function(bool close) onSetClosed;
 
+  /// ทีมงานเปิดชีตใส่ราคา/หารบิล
+  final Future<void> Function()? onOpenBill;
+
+  /// ทีมงานยืนยัน/ยกเลิกว่าได้รับเงินของออเดอร์นี้แล้ว
+  final Future<void> Function(int orderId, bool paid)? onSetPaid;
+
   const FoodRoundSummarySheet({
     super.key,
     required this.round,
@@ -766,6 +787,8 @@ class FoodRoundSummarySheet extends StatelessWidget {
     required this.onDeleteOrder,
     required this.onAddOnBehalf,
     required this.onSetClosed,
+    this.onOpenBill,
+    this.onSetPaid,
   });
 
   @override
@@ -951,6 +974,14 @@ class FoodRoundSummarySheet extends StatelessWidget {
               ],
             ),
           ),
+        if (canManage || data['billing'] is Map) ...[
+          const SizedBox(height: 16),
+          _BillingPanel(
+            data: data,
+            canManage: canManage,
+            onOpenBill: onOpenBill,
+          ),
+        ],
         if (pending.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Label('ยังไม่สั่ง ${pending.length} คน'),
@@ -1002,6 +1033,14 @@ class FoodRoundSummarySheet extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (data['billing'] is Map && o['skipped'] != true)
+                    _PayChip(
+                      order: o,
+                      // ทีมงานแตะเพื่อยืนยันว่าได้เงินแล้ว / แตะอีกครั้งเพื่อยกเลิก
+                      onTap: canManage && onSetPaid != null
+                          ? () => _confirmPaid(context, o)
+                          : null,
+                    ),
                   if (canManage && !closed)
                     InkWell(
                       borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -1021,6 +1060,57 @@ class FoodRoundSummarySheet extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  Future<void> _confirmPaid(
+    BuildContext context,
+    Map<String, dynamic> order,
+  ) async {
+    final paid =
+        order['pay_status'] == 'paid' || order['pay_status'] == 'short';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          paid
+              ? 'ยกเลิกสถานะจ่ายแล้วของ ${order['name']}?'
+              : '${order['name']} จ่าย ${baht(order['balance'] ?? order['amount'])} แล้ว?',
+          style: appFont(
+            fontSize: AppText.sizeSubtitle,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: paid
+            ? null
+            : Text(
+                'เช็กยอดเข้าในแอปธนาคาร (หรือรับเงินสด) แล้วค่อยยืนยันนะครับ',
+                style: appFont(fontSize: AppText.sizeBody),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('ยังก่อน', style: appFont(fontWeight: FontWeight.w700)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              paid ? 'ยกเลิก' : 'ได้รับแล้ว',
+              style: appFont(
+                fontWeight: FontWeight.w800,
+                color: paid ? AppTheme.errorColor : AppTheme.primaryColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    // ขาดเพราะราคาขึ้นทีหลัง = ยืนยันยอดใหม่ทับ ไม่ใช่ยกเลิก
+    if (ok == true) {
+      await onSetPaid!(
+        _int(order['id']),
+        order['pay_status'] == 'short' ? true : !paid,
+      );
+    }
   }
 
   Future<void> _confirmDelete(
@@ -1056,6 +1146,137 @@ class FoodRoundSummarySheet extends StatelessWidget {
       ),
     );
     if (ok == true) await onDeleteOrder(_int(order['id']));
+  }
+}
+
+/// สรุปการเก็บเงินในชีตรายการรวม + ปุ่มใส่ราคาของทีมงาน
+class _BillingPanel extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final bool canManage;
+  final Future<void> Function()? onOpenBill;
+
+  const _BillingPanel({
+    required this.data,
+    required this.canManage,
+    required this.onOpenBill,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final billing = data['billing'] is Map
+        ? Map<String, dynamic>.from(data['billing'] as Map)
+        : null;
+    final hasDishes = _maps(data['summary']).isNotEmpty;
+    final muted = AppTheme.mutedText(context);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: AppTheme.cardDecoration(context, radius: AppTheme.radiusSm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.payments_rounded,
+                size: 18,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  billing == null
+                      ? 'ค่าอาหาร'
+                      : 'เก็บแล้ว ${baht(billing['collected'])} จาก ${baht(billing['total'])}',
+                  style: appFont(
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+              ),
+              if (canManage && hasDishes && onOpenBill != null)
+                TextButton(
+                  onPressed: onOpenBill,
+                  child: Text(
+                    billing == null ? 'หารบิล' : 'แก้ราคา',
+                    style: appFont(
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          Text(
+            billing == null
+                ? 'จ่ายร้านรวมทีเดียว แล้วใส่ราคาต่อจาน ทุกคนจะเห็นยอดของตัวเองและสแกนจ่ายคืนได้'
+                : [
+                    'ค้าง ${baht(billing['outstanding'])}',
+                    'จ่ายครบ ${_int(billing['paid_count'])} คน',
+                    if (_int(billing['owing_count']) > 0)
+                      'ยังค้าง ${_int(billing['owing_count'])} คน',
+                    if ((billing['payee_name']?.toString() ?? '').isNotEmpty)
+                      'โอนให้ ${billing['payee_name']}',
+                  ].join(' · '),
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              color: muted,
+              height: 1.4,
+            ),
+          ),
+          if (billing != null &&
+              (billing['unpriced'] as List? ?? const []).isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'ยังไม่มีราคา: ${(billing['unpriced'] as List).join(', ')}',
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.warningColor,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ยอด + สถานะจ่ายของแต่ละคนในรายชื่อ
+class _PayChip extends StatelessWidget {
+  final Map<String, dynamic> order;
+  final VoidCallback? onTap;
+
+  const _PayChip({required this.order, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = foodPayStatus(context, order);
+    if (badge == null) return const SizedBox.shrink();
+    final priced = order['pay_status'] != 'unpriced';
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      onTap: priced ? onTap : null,
+      child: Container(
+        margin: const EdgeInsets.only(left: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: badge.color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        ),
+        child: Text(
+          priced ? '${baht(order['amount'])} · ${badge.label}' : badge.label,
+          style: appFont(
+            fontSize: AppText.sizeCaption,
+            fontWeight: FontWeight.w800,
+            color: badge.color,
+          ),
+        ),
+      ),
+    );
   }
 }
 
