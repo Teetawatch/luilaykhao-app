@@ -287,6 +287,7 @@ class ApiEndpoints {
   static const staffCheckInConfirm = 'staff/check-in/confirm';
   static const staffSchedulesMy = 'staff/schedules/my';
   static const staffReviewsMy = 'staff/reviews/my';
+  static const staffProfile = 'staff/profile';
 
   static String staffOutstanding(int scheduleId) =>
       'staff/schedules/$scheduleId/outstanding';

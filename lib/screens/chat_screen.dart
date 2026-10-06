@@ -24,6 +24,7 @@ import '../widgets/chat_food_round.dart';
 import '../widgets/chat_lost_item.dart';
 import '../widgets/chat_requests.dart';
 import '../widgets/chat_rest_stop.dart';
+import '../widgets/chat_staff_intro.dart';
 import '../widgets/chat_vote_sheet.dart';
 import '../widgets/moderation_sheet.dart';
 import '../theme/app_theme.dart';
@@ -2530,6 +2531,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     setState(() => _messages[idx] = {..._messages[idx], 'rest_stop': next});
   }
 
+  /// ปุ่ม "ทักทาย" บนการ์ดแนะนำทีมงาน — เติมคำทักลงช่องพิมพ์ให้แก้ต่อแล้วส่งเอง
+  /// (ไม่ส่งแทน) ถ้าพิมพ์อะไรค้างไว้อยู่แล้วจะไม่ทับของเดิม
+  void _greet(String greeting) {
+    if (_input.text.trim().isEmpty) {
+      _input.value = TextEditingValue(
+        text: greeting,
+        selection: TextSelection.collapsed(offset: greeting.length),
+      );
+    }
+    _inputFocus.requestFocus();
+  }
+
   void _startReply(Map<String, dynamic> message) {
     setState(() => _replyingTo = message);
     FocusScope.of(context).requestFocus(FocusNode());
@@ -3277,7 +3290,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       // System messages render as a centered pill, never as a chat bubble —
       // they're notices (e.g. "เจ้าหน้าที่เข้าร่วมแชท"), not conversation.
       if (role == 'system') {
-        items.add(_SystemMessage(message: m));
+        items.add(
+          _SystemMessage(
+            message: m,
+            myUserId: _myUserId,
+            onGreet: _greet,
+          ),
+        );
         continue;
       }
 
@@ -3715,13 +3734,29 @@ class _DateSeparator extends StatelessWidget {
 /// หลายบรรทัด จึงเรนเดอร์เป็นการ์ดชิดซ้ายให้อ่านเป็นย่อหน้าได้จริง
 class _SystemMessage extends StatelessWidget {
   final Map<String, dynamic> message;
+  final int? myUserId;
+  final ValueChanged<String>? onGreet;
 
-  const _SystemMessage({required this.message});
+  const _SystemMessage({required this.message, this.myUserId, this.onGreet});
 
   @override
   Widget build(BuildContext context) {
     final body = message['body']?.toString() ?? '';
     if (body.isEmpty) return const SizedBox.shrink();
+
+    // แนะนำทีมงานประจำรอบ — การ์ดรูป/ชื่อเล่น/ป่าที่เคยเดิน แทนข้อความล้วน
+    final intro = message['staff_intro'];
+    if (intro is Map) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 6),
+        child: StaffIntroCard(
+          intro: Map<String, dynamic>.from(intro),
+          myUserId: myUserId,
+          onGreet: onGreet,
+          trailing: _systemTime(message),
+        ),
+      );
+    }
 
     final isNotice = !body.contains('\n') && body.characters.length <= 90;
 

@@ -126,6 +126,10 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                         const SizedBox(height: 12),
                         _StaffToolbar(schedule: primarySchedule),
                       ],
+                      const SizedBox(height: 12),
+                      _StaffIntroEntry(
+                        filled: app.user?['has_staff_intro'] == true,
+                      ),
                       const SizedBox(height: 16),
                       _StaffSummaryRow(
                         summary: summary,
@@ -440,6 +444,79 @@ class _StaffTodayHero extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// ทางเข้า "โปรไฟล์ทีมงาน" — การ์ดแนะนำตัวที่ลูกทริปเห็นในห้องแชทของรอบ
+/// ยังไม่ได้เขียนแนะนำตัวจะเป็นสีเตือน ให้รู้ว่าการ์ดตอนนี้ยังโล่ง ๆ อยู่
+class _StaffIntroEntry extends StatelessWidget {
+  final bool filled;
+
+  const _StaffIntroEntry({required this.filled});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = filled ? AppTheme.primaryColor : AppTheme.warningColor;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          _pushPremium(context, const StaffProfileScreen());
+        },
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          decoration: _sectionDecoration(context: context, radius: 20),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                ),
+                child: Icon(Icons.badge_outlined, size: 20, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'แนะนำตัวกับลูกทริป',
+                      style: appFont(
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      filled
+                          ? 'ชื่อเล่น ป่าที่เคยเดิน ความถนัด — โชว์ในห้องแชทของทุกรอบ'
+                          : 'ยังไม่ได้เขียนแนะนำตัว เขียนสั้น ๆ ให้ลูกทริปรู้จักก่อนเจอกัน',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        color: filled ? AppTheme.mutedText(context) : color,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.mutedText(context),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

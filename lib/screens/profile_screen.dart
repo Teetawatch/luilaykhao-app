@@ -42,6 +42,7 @@ import 'staff_rentals_screen.dart' show StaffRentalsScreen;
 import 'lost_items_screen.dart';
 import 'packing_list_screen.dart' show PackingScheduleListScreen;
 import 'staff_shopping_screen.dart' show StaffShoppingScreen;
+import 'staff_profile_screen.dart' show StaffProfileScreen;
 import 'schedule_itinerary_screen.dart' show ScheduleItineraryScreen;
 import 'wishlist_screen.dart';
 import 'waitlist_screen.dart';

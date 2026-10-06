@@ -2268,6 +2268,43 @@ class AppProvider extends ChangeNotifier {
 
   /// ใบแจกอุปกรณ์เช่าของรอบ — คืน `{summary, items, bookings}`
   /// items = ยอดรวมต่อชิ้นของทั้งรอบ, bookings = รายการจองพร้อมสถานะแจก/รับคืน
+  /// โปรไฟล์แนะนำตัวของสตาฟ — สิ่งที่ลูกทริปเห็นในการ์ดแนะนำทีมงานในห้องแชท
+  Future<Map<String, dynamic>> loadStaffProfile() async {
+    final response = await api.get(ApiEndpoints.staffProfile);
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    return Map<String, dynamic>.from(data);
+  }
+
+  Future<Map<String, dynamic>> saveStaffProfile({
+    required String nickname,
+    required String bio,
+    required List<String> trails,
+    required List<String> skills,
+  }) async {
+    final response = await api.put(
+      ApiEndpoints.staffProfile,
+      body: {
+        'nickname': nickname,
+        'staff_bio': bio,
+        'staff_trails': trails,
+        'staff_skills': skills,
+      },
+    );
+    final data = api.data(response);
+    // ชื่อเล่นใช้ทั้งแอป (ห้องแชท โปรไฟล์) — อัปเดตตัวเก็บผู้ใช้ไปด้วย
+    if (user != null) {
+      user = {
+        ...user!,
+        'nickname': nickname.trim().isEmpty ? null : nickname.trim(),
+        'has_staff_intro': bio.trim().isNotEmpty,
+      };
+      notifyListeners();
+    }
+    if (data is! Map) return const {};
+    return Map<String, dynamic>.from(data);
+  }
+
   Future<Map<String, dynamic>> loadStaffRentals(int scheduleId) async {
     final response = await api.get(ApiEndpoints.staffRentals(scheduleId));
     final data = api.data(response);
