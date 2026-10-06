@@ -3842,31 +3842,82 @@ class AppProvider extends ChangeNotifier {
   }
 
   /// ขอแวะห้องน้ำแบบไม่บอกชื่อ — คืน {pending, urgent, mine}
-  Future<Map<String, dynamic>> requestChatStop(int scheduleId, {bool urgent = false}) async {
+  /// คำขอแบบไม่บอกชื่อ — [kind]: toilet / too_cold / too_hot / too_fast / music_down
+  /// คืน {pending, urgent, kinds, mine, mine_kinds}
+  Future<Map<String, dynamic>> requestChatStop(
+    int scheduleId, {
+    bool urgent = false,
+    String kind = 'toilet',
+  }) async {
     final response = await api.post(
       ApiEndpoints.chatStopRequests(scheduleId),
-      body: {'urgent': urgent},
+      body: {'urgent': urgent, 'kind': kind},
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
-  Future<Map<String, dynamic>> cancelChatStopRequest(int scheduleId) async {
+  Future<Map<String, dynamic>> cancelChatStopRequest(
+    int scheduleId, {
+    String kind = 'toilet',
+  }) async {
     final response = await api.delete(
       '${ApiEndpoints.chatStopRequests(scheduleId)}/mine',
+      body: {'kind': kind},
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
-  /// ทีมงานรับทราบ — minutes: 0 = แวะเลย, null = เร็ว ๆ นี้
+  /// ทีมงานรับทราบ — ห้องน้ำ: minutes 0 = แวะเลย, null = เร็ว ๆ นี้
   Future<Map<String, dynamic>> acknowledgeChatStopRequests(
     int scheduleId, {
     int? minutes,
+    String kind = 'toilet',
   }) async {
     final response = await api.post(
       '${ApiEndpoints.chatStopRequests(scheduleId)}/ack',
-      body: {'minutes': ?minutes},
+      body: {'minutes': ?minutes, 'kind': kind},
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  // ── ขอยา / ของจำเป็นจากสตาฟ ───────────────────────────────────────────
+
+  /// ทีมงาน: คิวทั้งรอบ · ลูกทริป: คำขอของฉัน + คนที่ขอแทนได้
+  /// คืน {can_manage, pending, requests, passengers}
+  Future<Map<String, dynamic>> loadChatSupplies(int scheduleId) async {
+    final response = await api.get('schedules/$scheduleId/chat/supplies');
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<void> requestChatSupply(
+    int scheduleId, {
+    required String item,
+    int? passengerId,
+    String? note,
+  }) async {
+    await api.post(
+      'schedules/$scheduleId/chat/supplies',
+      body: {'item': item, 'passenger_id': ?passengerId, 'note': ?note},
+    );
+  }
+
+  Future<void> cancelChatSupply(int scheduleId, int requestId) async {
+    await api.delete('schedules/$scheduleId/chat/supplies/$requestId');
+  }
+
+  Future<void> deliverChatSupply(int scheduleId, int requestId) async {
+    await api.post('schedules/$scheduleId/chat/supplies/$requestId/deliver');
+  }
+
+  Future<void> declineChatSupply(
+    int scheduleId,
+    int requestId, {
+    String? note,
+  }) async {
+    await api.post(
+      'schedules/$scheduleId/chat/supplies/$requestId/decline',
+      body: {'note': ?note},
+    );
   }
 
   /// Subscribe to the auxiliary chat signals (read receipts, typing, reactions,
@@ -3885,6 +3936,7 @@ class AppProvider extends ChangeNotifier {
     RealtimeEventHandler? onStopRequests,
     RealtimeEventHandler? onCollection,
     RealtimeEventHandler? onLostItem,
+    RealtimeEventHandler? onSupplies,
   }) async {
     final channel = 'private-chat.schedule.$scheduleId';
     final disposers = <VoidCallback>[];
@@ -3908,6 +3960,7 @@ class AppProvider extends ChangeNotifier {
     await bind('chat.stop_requests', onStopRequests);
     await bind('chat.collection', onCollection);
     await bind('chat.lost_item', onLostItem);
+    await bind('chat.supplies', onSupplies);
 
     return () {
       for (final d in disposers) {

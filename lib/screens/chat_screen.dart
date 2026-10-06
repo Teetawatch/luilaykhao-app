@@ -22,6 +22,7 @@ import '../widgets/chat_collection.dart';
 import '../widgets/chat_food_bill.dart';
 import '../widgets/chat_food_round.dart';
 import '../widgets/chat_lost_item.dart';
+import '../widgets/chat_requests.dart';
 import '../widgets/chat_rest_stop.dart';
 import '../widgets/chat_vote_sheet.dart';
 import '../widgets/moderation_sheet.dart';
@@ -281,6 +282,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _foodSheetDietary.dispose();
     _restSheetStop.dispose();
     _collectionSheet.dispose();
+    _supplyQueue.dispose();
     _input.removeListener(_watchComposing);
     _input.dispose();
     _inputFocus.dispose();
@@ -324,6 +326,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       onStopRequests: _onStopRequestsSignal,
       onCollection: _onCollectionSignal,
       onLostItem: _onLostItemSignal,
+      onSupplies: _onSuppliesSignal,
     );
     // Let the rest of the room know we've entered, so they see a brief notice.
     app.sendChatJoin(widget.scheduleId);
@@ -1115,18 +1118,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       );
                     },
                   ),
-                if (!_canModerate && _canRequestStop)
+                if (!_canModerate && _canRequestStop) ...[
                   ListTile(
                     leading: const Icon(
-                      Icons.wc_rounded,
+                      Icons.record_voice_over_rounded,
                       color: AppTheme.primaryColor,
                     ),
                     title: Text(
-                      _myStopRequest ? 'ขอแวะห้องน้ำแล้ว' : 'ขอแวะห้องน้ำ',
+                      _myStopKinds.isEmpty
+                          ? 'บอกทีมงานแบบไม่บอกชื่อ'
+                          : 'บอกทีมงานแล้ว ${_myStopKinds.length} เรื่อง',
                       style: appFont(fontWeight: FontWeight.w600),
                     ),
                     subtitle: Text(
-                      'ทีมงานไม่เห็นชื่อคุณ และไม่ขึ้นในแชทรวม',
+                      'ขอแวะห้องน้ำ · แอร์หนาว/ร้อน · ขับเร็วไป · ขอเบาเพลง',
                       style: appFont(
                         fontSize: AppText.sizeCaption,
                         color: AppTheme.mutedText(context),
@@ -1137,6 +1142,28 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       _requestStop();
                     },
                   ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.medical_services_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'ขอยา / ของจำเป็น',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ยาแก้เมารถ ถุงอาเจียน พลาสเตอร์ — ทีมงานนำไปให้ที่นั่ง',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openSupplyRequest();
+                    },
+                  ),
+                ],
                 // รูปในห้องนี้ถูกลบพร้อมห้องแชทหลังจบทริป (PurgeEndedTripChatsJob
                 // ฝั่งเซิร์ฟเวอร์ — ต้องแก้คู่กันถ้าเปลี่ยนจำนวนวัน) บอกตั้งแต่ตอนจะส่ง
                 // ดีกว่าให้ลูกค้ามารู้ตอนที่รูปหายไปแล้ว
@@ -1935,18 +1962,50 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     setState(() => _messages[idx] = {..._messages[idx], 'food_round': next});
   }
 
-  // ── จุดพัก / ขอแวะห้องน้ำ ────────────────────────────────────────────────
+  // ── คำขอถึงทีมงาน: ไม่บอกชื่อ (ห้องน้ำ/แอร์/ความเร็ว/เพลง) + ขอยา/ของ ──────
 
   Map<String, dynamic> get _stopRequests => _room?['stop_requests'] is Map
       ? Map<String, dynamic>.from(_room!['stop_requests'] as Map)
       : const {};
 
-  int get _pendingStopRequests =>
-      int.tryParse('${_stopRequests['pending']}') ?? 0;
+  /// จำนวนที่ยังนับอยู่ต่อเรื่อง — เซิร์ฟเวอร์รุ่นก่อนมีแค่ pending (ห้องน้ำ)
+  Map<String, int> get _stopCounts {
+    final kinds = _stopRequests['kinds'];
+    if (kinds is Map) {
+      return {
+        for (final e in kinds.entries) '${e.key}': int.tryParse('${e.value}') ?? 0,
+      };
+    }
+    return {'toilet': int.tryParse('${_stopRequests['pending']}') ?? 0};
+  }
 
-  bool get _myStopRequest => _room?['my_stop_request'] == true;
+  List<Map<String, dynamic>> get _stopKinds {
+    final raw = _room?['stop_request_kinds'];
+    if (raw is List && raw.isNotEmpty) {
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return fallbackStopKinds;
+  }
+
+  List<Map<String, dynamic>> get _supplyItems =>
+      (_room?['supply_items'] as List? ?? const [])
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+  Set<String> get _myStopKinds {
+    final raw = _room?['my_stop_requests'];
+    if (raw is List) return {for (final k in raw) '$k'};
+    return _room?['my_stop_request'] == true ? {'toilet'} : <String>{};
+  }
 
   bool get _canRequestStop => _room?['can_request_stop'] == true;
+
+  int get _supplyPending =>
+      int.tryParse('${_room?['supply_requests_pending']}') ?? 0;
 
   void _setStopRequests(Map<String, dynamic> data) {
     if (!mounted || _room == null) return;
@@ -1956,55 +2015,212 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         'stop_requests': {
           'pending': int.tryParse('${data['pending']}') ?? 0,
           'urgent': int.tryParse('${data['urgent']}') ?? 0,
+          if (data['kinds'] is Map) 'kinds': data['kinds'],
         },
-        if (data.containsKey('mine')) 'my_stop_request': data['mine'] == true,
-        // ทีมงานรับทราบแล้ว (pending เป็น 0) = คำขอของฉันก็ถูกตอบไปด้วย
-        if ((int.tryParse('${data['pending']}') ?? 0) == 0)
-          'my_stop_request': false,
+        if (data['mine_kinds'] is List) ...{
+          'my_stop_requests': data['mine_kinds'],
+          'my_stop_request':
+              (data['mine_kinds'] as List).map((e) => '$e').contains('toilet'),
+        },
       };
     });
   }
 
+  /// สัญญาณจากห้อง (ไม่ผูกผู้ใช้) — เรื่องที่ทีมงานรับทราบแล้วนับเป็น 0
+  /// ถ้าฉันขอเรื่องนั้นค้างไว้ แปลว่าของฉันก็ถูกตอบไปด้วย
   void _onStopRequestsSignal(Map<String, dynamic> data) {
-    final next = Map<String, dynamic>.from(data)..remove('mine');
-    _setStopRequests(next);
+    _setStopRequests(Map<String, dynamic>.from(data)..remove('mine'));
+    final kinds = data['kinds'] is Map
+        ? Map<String, dynamic>.from(data['kinds'] as Map)
+        : {'toilet': data['pending']};
+    final stillMine = _myStopKinds
+        .where((k) => (int.tryParse('${kinds[k]}') ?? 0) > 0)
+        .toList();
+    if (stillMine.length != _myStopKinds.length && mounted && _room != null) {
+      setState(() {
+        _room = {
+          ..._room!,
+          'my_stop_requests': stillMine,
+          'my_stop_request': stillMine.contains('toilet'),
+        };
+      });
+    }
   }
 
   Future<void> _requestStop() async {
-    final action = await _showSheet<StopRequestAction>(
-      StopRequestSheet(hasPending: _myStopRequest),
+    final action = await _showSheet<AnonRequestAction>(
+      AnonRequestSheet(kinds: _stopKinds, mine: _myStopKinds),
     );
     if (action == null || !mounted) return;
     final app = context.read<AppProvider>();
     try {
-      final result = action == StopRequestAction.cancel
-          ? await app.cancelChatStopRequest(widget.scheduleId)
+      final result = action.cancel
+          ? await app.cancelChatStopRequest(
+              widget.scheduleId,
+              kind: action.kind,
+            )
           : await app.requestChatStop(
               widget.scheduleId,
-              urgent: action == StopRequestAction.urgent,
+              urgent: action.urgent,
+              kind: action.kind,
             );
       _setStopRequests(result);
-      _snack(action == StopRequestAction.cancel
-          ? 'ถอนคำขอแล้ว'
-          : 'ส่งคำขอแล้ว ทีมงานไม่เห็นชื่อคุณ');
+      _snack(action.cancel ? 'ถอนแล้ว' : 'ส่งแล้ว ทีมงานไม่เห็นชื่อคุณ');
     } catch (e) {
       _snack(e.toString());
     }
   }
 
-  Future<void> _acknowledgeStops() async {
-    final minutes = await _showSheet<int>(const AcknowledgeStopSheet());
-    if (minutes == null || !mounted) return;
+  /// ทีมงานแตะเรื่องในแถบ — ห้องน้ำเลือกว่าจะแวะเมื่อไร เรื่องอื่นยืนยันแล้วรับทราบ
+  Future<void> _acknowledgeStops(String kind) async {
+    int? minutes;
+    if (kind == 'toilet') {
+      final picked = await _showSheet<int>(const AcknowledgeStopSheet());
+      if (picked == null || !mounted) return;
+      minutes = picked < 0 ? null : picked;
+    } else {
+      final meta = _stopKinds.firstWhere(
+        (k) => k['key'] == kind,
+        orElse: () => {'label': kind, 'emoji': ''},
+      );
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(
+            '${meta['emoji']} ${meta['label']} ${_stopCounts[kind] ?? 0} คน',
+            style: appFont(
+              fontSize: AppText.sizeSubtitle,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          content: Text(
+            'จัดการแล้วกดรับทราบ ระบบบอกห้องและแจ้งคนที่ขอให้เอง (ไม่เอ่ยชื่อ)',
+            style: appFont(fontSize: AppText.sizeBody),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('ยังก่อน', style: appFont(fontWeight: FontWeight.w700)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                'รับทราบ',
+                style: appFont(
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+    }
     try {
       final result = await context.read<AppProvider>().acknowledgeChatStopRequests(
             widget.scheduleId,
-            minutes: minutes < 0 ? null : minutes,
+            minutes: minutes,
+            kind: kind,
           );
       _setStopRequests(result);
       HapticFeedback.mediumImpact();
     } catch (e) {
       _snack(e.toString());
     }
+  }
+
+  // ── ขอยา / ของจำเป็น ────────────────────────────────────────────────────
+
+  final _supplyQueue = ValueNotifier<Map<String, dynamic>?>(null);
+  bool _supplyQueueOpen = false;
+
+  Future<void> _openSupplyRequest() async {
+    final app = context.read<AppProvider>();
+    final items = _supplyItems;
+    if (items.isEmpty) {
+      _snack('อัปเดตห้องแชทไม่สำเร็จ ลองเปิดห้องใหม่อีกครั้ง');
+      return;
+    }
+    await _showSheet<void>(
+      SupplyRequestSheet(
+        items: items,
+        load: () => app.loadChatSupplies(widget.scheduleId),
+        onSend: (item, passengerId, note) async {
+          try {
+            await app.requestChatSupply(
+              widget.scheduleId,
+              item: item,
+              passengerId: passengerId,
+              note: note,
+            );
+            _snack('ส่งคำขอแล้ว ทีมงานกำลังนำไปให้ครับ');
+          } catch (e) {
+            _snack(e.toString());
+            rethrow;
+          }
+        },
+        onCancel: (id) async {
+          try {
+            await app.cancelChatSupply(widget.scheduleId, id);
+          } catch (e) {
+            _snack(e.toString());
+            rethrow;
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _refreshSupplyQueue() async {
+    try {
+      final data = await context.read<AppProvider>().loadChatSupplies(
+            widget.scheduleId,
+          );
+      if (!mounted) return;
+      _supplyQueue.value = data;
+      _setSupplyPending(int.tryParse('${data['pending']}') ?? 0);
+    } catch (_) {
+      // ไม่เป็นไร — สัญญาณครั้งหน้าหรือการเปิดใหม่ดึงให้อีกรอบ
+    }
+  }
+
+  void _setSupplyPending(int pending) {
+    if (!mounted || _room == null) return;
+    setState(() => _room = {..._room!, 'supply_requests_pending': pending});
+  }
+
+  void _onSuppliesSignal(Map<String, dynamic> data) {
+    if (!_canModerate) return;
+    _setSupplyPending(int.tryParse('${data['pending']}') ?? 0);
+    if (_supplyQueueOpen) _refreshSupplyQueue();
+  }
+
+  Future<void> _openSupplyQueue() async {
+    final app = context.read<AppProvider>();
+    _supplyQueue.value = null;
+    _supplyQueueOpen = true;
+    _refreshSupplyQueue();
+
+    Future<void> run(Future<void> Function() call) async {
+      try {
+        await call();
+      } catch (e) {
+        _snack(e.toString());
+      }
+      await _refreshSupplyQueue();
+    }
+
+    await _showSheet<void>(
+      SupplyQueueSheet(
+        data: _supplyQueue,
+        onDeliver: (id) =>
+            run(() => app.deliverChatSupply(widget.scheduleId, id)),
+        onDecline: (id, note) =>
+            run(() => app.declineChatSupply(widget.scheduleId, id, note: note)),
+      ),
+    );
+    _supplyQueueOpen = false;
   }
 
   Future<void> _openRestStop() async {
@@ -2817,12 +3033,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           // แถบติดต่อปักไว้ใต้ AppBar (แบบ Line Man) — สตาฟ/คนขับพร้อมปุ่มโทร
           // อยู่เหนือข้อความที่ปักหมุด เพราะ "โทรหาใครสักคน" เร่งด่วนกว่าเสมอ
           if (_contacts.isNotEmpty) _ContactBar(contacts: _contacts),
-          // คำขอแวะห้องน้ำ — เห็นเฉพาะทีมงาน และเห็นแค่จำนวน
-          if (_canModerate && _pendingStopRequests > 0)
-            StopRequestBanner(
-              pending: _pendingStopRequests,
-              urgent: int.tryParse('${_stopRequests['urgent']}') ?? 0,
-              onAcknowledge: _acknowledgeStops,
+          // คำขอถึงทีมงาน — เห็นเฉพาะทีมงาน: เรื่องไม่บอกชื่อเป็นตัวเลข + คิวขอยา/ของ
+          if (_canModerate)
+            StaffRequestBanner(
+              kinds: _stopKinds,
+              counts: _stopCounts,
+              urgentToilet: int.tryParse('${_stopRequests['urgent']}') ?? 0,
+              supplyPending: _supplyPending,
+              onKind: _acknowledgeStops,
+              onSupplies: _openSupplyQueue,
             ),
           if (_pinned != null)
             _PinnedBanner(

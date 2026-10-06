@@ -135,11 +135,12 @@ class NotificationNavigator {
       case 'lost_item':
         _openLostItems(data);
       case 'chat_message':
-      // เรื่องหน้างานที่เกิดในห้องแชททริป — จุดพัก/เตือนกลับรถ, ขอแวะห้องน้ำ,
+      // เรื่องหน้างานที่เกิดในห้องแชททริป — จุดพัก/เตือนกลับรถ, คำขอไม่บอกชื่อ, ขอยา/ของ,
       // ยอดค่าอาหาร, ห้องพัก — เปิดห้องแชทของรอบนั้นที่มีการ์ดอยู่
       case 'rest_stop':
       case 'stop_request':
       case 'stop_request_ack':
+      case 'supply_request':
       case 'food_bill':
       case 'room_assignment':
         _openChat(data);
