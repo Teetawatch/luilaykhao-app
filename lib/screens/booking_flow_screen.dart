@@ -15,6 +15,8 @@ import '../utils/thai_date.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/booking_terms_sheet.dart';
 import '../widgets/document_attach_field.dart';
+import '../widgets/gift_voucher_card.dart';
+import '../widgets/gift_voucher_picker.dart';
 import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../services/booking_draft_store.dart';
@@ -139,6 +141,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   Map<String, dynamic>? _appliedPromo;
   bool _promoLoading = false;
   String? _promoError;
+  // บัตรของขวัญที่เลือกใช้ — หักหลังส่วนลด ยอดจริงคิดที่หลังบ้านตอนสร้างการจอง
+  SelectedGiftVoucher? _appliedVoucher;
 
   int? _scheduleId;
   int? _pickupPointId;
@@ -254,6 +258,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     selectedRentals: _selectedRentals,
     appliedPromo: _appliedPromo,
     vehicleAdjustment: _vehicleAdjustment,
+    voucherBalance: _appliedVoucher?.balance,
   );
 
   /// Validate the entered code and, on success, apply it inline so the discount
@@ -277,6 +282,18 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       );
       final promotion = asMap(asMap(res)['promotion']);
       if (!mounted) return;
+      // รหัสบัตรของขวัญที่พิมพ์ในช่องโค้ดส่วนลด — ย้ายไปเป็นบัตรแทน จะได้ใช้คู่กับ
+      // โค้ดส่วนลดจริงได้ และบรรทัดราคาบอกถูกว่าเป็นบัตร ไม่ใช่ส่วนลด
+      if (textOf(asMap(res)['kind']) == 'gift_voucher') {
+        setState(() {
+          _appliedVoucher = SelectedGiftVoucher(
+            code: textOf(promotion['code']),
+            balance: _asNum(promotion['value']),
+          );
+          _promo.clear();
+        });
+        return;
+      }
       setState(() {
         _promo.text = code;
         _appliedPromo = {
@@ -303,6 +320,14 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       if (mounted) setState(() => _promoLoading = false);
     }
   }
+
+  Future<void> _chooseVoucher() async {
+    FocusScope.of(context).unfocus();
+    final picked = await showGiftVoucherPicker(context);
+    if (picked != null && mounted) setState(() => _appliedVoucher = picked);
+  }
+
+  void _removeVoucher() => setState(() => _appliedVoucher = null);
 
   void _removePromo() {
     setState(() {
@@ -1484,6 +1509,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           promoError: _promoError,
           onApplyPromo: _applyPromo,
           onRemovePromo: _removePromo,
+          // บัญชีแอดมินข้ามการชำระเงินอยู่แล้ว ไม่มีอะไรให้บัตรจ่าย
+          appliedVoucher: _appliedVoucher,
+          onChooseVoucher: _isAdmin ? null : _chooseVoucher,
+          onRemoveVoucher: _removeVoucher,
           vehicleLabel: textOf(_selectedVehicleOption['label']),
           vehicleAdjustment: _vehicleAdjustment,
         ),
@@ -1817,6 +1846,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         'promotion_code': _appliedPromo != null
             ? textOf(_appliedPromo!['code'])
             : null,
+        if (_appliedVoucher != null && !_isAdmin)
+          'gift_voucher_code': _appliedVoucher!.code,
         'seat_ids': _hasSeatMap ? _selectedSeatList : <String>[],
         'is_join_trip': _isJoinTrip,
         'vehicle_option_id': _isJoinTrip ? null : _vehicleOptionId,
@@ -1863,6 +1894,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             content: Text('จองสำเร็จแล้ว — ข้ามการชำระเงินด้วยสิทธิ์แอดมิน'),
           ),
         );
+      } else if (textOf(booking['payment_method']) == 'gift_voucher') {
+        // บัตรจ่ายครบทั้งยอด — หลังบ้านยืนยันใบจองให้แล้ว หน้าถัดไปไม่มี QR ให้โอน
+        AppSnack.success(context, 'จองสำเร็จ ชำระครบด้วยบัตรของขวัญแล้ว');
       }
       Navigator.pushReplacement(
         context,

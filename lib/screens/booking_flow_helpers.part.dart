@@ -23,6 +23,8 @@ class _PricingQuote {
   final num rentalsTotal;
   final num serviceFee;
   final num discount;
+  /// ยอดที่บัตรของขวัญจ่าย (หักหลังส่วนลด) — 0 = ไม่ได้ใช้บัตร
+  final num voucher;
   final bool hasVariedPrices;
   final num? _passengersSubtotal;
 
@@ -33,14 +35,22 @@ class _PricingQuote {
     this.rentalsTotal = 0,
     required this.serviceFee,
     required this.discount,
+    this.voucher = 0,
     this.hasVariedPrices = false,
     num? passengersSubtotal,
   }) : _passengersSubtotal = passengersSubtotal;
 
   num get tripSubtotal => _passengersSubtotal ?? pricePerTraveler * travelerCount;
 
-  num get total {
+  /// ยอดหลังส่วนลด ก่อนหักบัตรของขวัญ
+  num get totalBeforeVoucher {
     final value = tripSubtotal + addonsTotal + rentalsTotal + serviceFee - discount;
+    return value < 0 ? 0 : value;
+  }
+
+  /// ยอดที่ยังต้องจ่ายเป็นเงิน
+  num get total {
+    final value = totalBeforeVoucher - voucher;
     return value < 0 ? 0 : value;
   }
 
@@ -56,6 +66,8 @@ class _PricingQuote {
     // ส่วนต่างต่อคนของประเภทรถที่เลือก — บวกท้ายราคาของแต่ละคน ตรงกับที่
     // เซิร์ฟเวอร์คิด (ราคาโซนจุดรับทับราคารอบก่อน แล้วค่อยบวกส่วนต่างนี้)
     num vehicleAdjustment = 0,
+    // ยอดคงเหลือของบัตรของขวัญที่เลือกไว้ (null = ไม่ได้ใช้บัตร)
+    num? voucherBalance,
   }) {
     final basePrice = _asNum(
       isJoinTrip
@@ -118,6 +130,12 @@ class _PricingQuote {
       if (discount < 0) discount = 0;
     }
 
+    final base = passengersTotal + addonsTotalValue + rentalsTotalValue;
+    final voucher = voucherCoverage(
+      (base - discount) < 0 ? 0 : base - discount,
+      voucherBalance,
+    );
+
     return _PricingQuote(
       pricePerTraveler: firstPrice ?? basePrice,
       travelerCount: count,
@@ -125,6 +143,7 @@ class _PricingQuote {
       rentalsTotal: rentalsTotalValue,
       serviceFee: 0,
       discount: discount,
+      voucher: voucher,
       hasVariedPrices: pricesVary,
       passengersSubtotal: passengersTotal,
     );

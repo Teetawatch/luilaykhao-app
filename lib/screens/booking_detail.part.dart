@@ -266,6 +266,9 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     ),
                     _Chip('เดินทาง ${departureText(schedule)}'),
                     _Chip(money(booking['total_amount'])),
+                    // จ่ายด้วยบัตรของขวัญ — total_amount คือยอดที่เหลือต้องจ่ายเป็นเงิน
+                    if ((num.tryParse('${booking['voucher_amount'] ?? ''}') ?? 0) > 0)
+                      _Chip('บัตรของขวัญ ${money(booking['voucher_amount'])}'),
                   ],
                 ),
                 const SizedBox(height: 16),

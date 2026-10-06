@@ -78,7 +78,70 @@ class AppProvider extends ChangeNotifier {
   /// ไกด์ประเภทรถรับ-ส่งจุดรับต่างภูมิภาค — โหลดครั้งเดียวแล้วใช้ซ้ำทั้งแอป
   List<PickupVehicleClass> pickupVehicleClasses = [];
   bool _pickupVehicleClassesLoaded = false;
+  /// การจองของบัญชีนี้ = ทริปที่ยังไม่จบ "ทั้งหมด" + ประวัติ "เท่าที่โหลดแล้ว"
+  ///
+  /// ทริปที่ยังไม่จบมีจำนวนจำกัดโดยธรรมชาติจึงโหลดครบทุกครั้ง ทุกจุดที่สนใจทริป
+  /// ข้างหน้า (หน้าแรก วันเดินทาง การ์ดล็อกสกรีน วิดเจ็ต) อ่านรายการนี้ได้เหมือนเดิม
+  /// ส่วนประวัติ (เดินทางแล้ว/ยกเลิก) โตขึ้นเรื่อย ๆ จึงโหลดทีละหน้าผ่าน
+  /// [loadMoreBookingHistory] — ตัวเลขรวมให้อ่านจาก [bookingsTotalCount] และ
+  /// [unloadedTravelledCount] / [unloadedCancelledCount] ไม่ใช่ `bookings.length`
   List<dynamic> bookings = [];
+  static const bookingHistoryPageSize = 20;
+  /// meta ของประวัติจากเซิร์ฟเวอร์ (ยอดนับทั้งชุด) — null = ไม่รู้ (เทสต์/แคชรุ่นเก่า)
+  /// ซึ่งถือว่าสิ่งที่อยู่ใน [bookings] คือทั้งหมดแล้ว
+  Map<String, dynamic>? bookingHistoryMeta;
+  int _bookingHistoryPage = 0;
+  final Set<String> _bookingHistoryIds = {};
+  /// เพิ่มขึ้นทุกครั้งที่รายการถูกโหลดใหม่/ล้าง — หน้าที่กำลังโหลดค้างจากรอบก่อน
+  /// จะถูกทิ้งแทนที่จะต่อท้ายรายการชุดใหม่
+  int _bookingHistoryGen = 0;
+  bool bookingHistoryLoading = false;
+  String? bookingHistoryError;
+
+  int _historyMetaInt(String key) =>
+      int.tryParse('${bookingHistoryMeta?[key] ?? ''}') ?? 0;
+
+  bool get bookingHistoryHasMore =>
+      bookingHistoryMeta != null &&
+      _bookingHistoryPage < _historyMetaInt('last_page');
+
+  Iterable<Map> get _loadedHistory => bookings
+      .whereType<Map>()
+      .where((b) => _bookingHistoryIds.contains('${b['id']}'));
+
+  static bool _isCancelledStatus(Map booking) =>
+      const ['cancelled', 'refunded'].contains('${booking['status']}');
+
+  /// จำนวนการจองทั้งหมดของบัญชี รวมประวัติหน้าที่ยังไม่ได้โหลด
+  int get bookingsTotalCount {
+    if (bookingHistoryMeta == null) return bookings.length;
+    final unloaded =
+        _historyMetaInt('history_count') - _bookingHistoryIds.length;
+    return bookings.length + (unloaded > 0 ? unloaded : 0);
+  }
+
+  /// ทริปที่เดินทางแล้ว (ไม่นับยกเลิก) ที่อยู่ในหน้าประวัติที่ยังไม่ได้โหลด —
+  /// หน้าจอนับใบที่โหลดแล้วเอง แล้วบวกตัวนี้
+  int get unloadedTravelledCount {
+    if (bookingHistoryMeta == null) return 0;
+    final loaded = _loadedHistory.where((b) => !_isCancelledStatus(b)).length;
+    final n = _historyMetaInt('travelled_count') - loaded;
+    return n > 0 ? n : 0;
+  }
+
+  /// ใบที่ยกเลิก/คืนเงินแล้วที่อยู่ในหน้าประวัติที่ยังไม่ได้โหลด
+  int get unloadedCancelledCount {
+    if (bookingHistoryMeta == null) return 0;
+    final loaded = _loadedHistory.where(_isCancelledStatus).length;
+    final n = _historyMetaInt('cancelled_count') - loaded;
+    return n > 0 ? n : 0;
+  }
+
+  /// จำนวนจุดหมายที่เคยไปจากประวัติทั้งชุด (null = ไม่รู้)
+  int? get travelledDestinationsCount => bookingHistoryMeta == null
+      ? null
+      : _historyMetaInt('destinations_count');
+
   // True once account data (incl. bookings) has been loaded at least once —
   // from the network or a cache restore. Lets screens show a skeleton on the
   // very first load instead of flashing an empty state.
@@ -336,6 +399,7 @@ class AppProvider extends ChangeNotifier {
       bookings = List<dynamic>.from(
         cache.readAccount<List>('bookings') ?? const [],
       );
+      _restoreBookingHistoryState(cache.readAccount<Map>('bookingHistory'));
       notifications = List<dynamic>.from(
         cache.readAccount<List>('notifications') ?? const [],
       );
@@ -1421,6 +1485,7 @@ class AppProvider extends ChangeNotifier {
     await AnalyticsService.instance.setUser(id: null);
     stopActiveSeatLockPolling();
     bookings = [];
+    _resetBookingHistory();
     notifications = [];
     activeSeatLocks = [];
     claimableBookingCount = 0;
@@ -1448,10 +1513,17 @@ class AppProvider extends ChangeNotifier {
     // การจองเป็นข้อมูลหลักของหน้านี้ ถ้าดึงไม่สำเร็จต้องบอกผู้ใช้ให้ลองใหม่
     // (เดิม exception หลุดออกไปก่อนตั้ง accountLoaded = ค้าง skeleton ถาวร)
     Object? bookingsError;
+    Future<dynamic> bookingsCall(Map<String, dynamic> query) =>
+        api.get(ApiEndpoints.bookings, query: query).catchError((Object e) {
+          bookingsError ??= e;
+          return null;
+        });
     final results = await Future.wait([
-      api.get(ApiEndpoints.bookings).catchError((Object e) {
-        bookingsError = e;
-        return null;
+      bookingsCall({'scope': 'current'}),
+      bookingsCall({
+        'scope': 'history',
+        'per_page': bookingHistoryPageSize,
+        'page': 1,
       }),
       safe(api.get(ApiEndpoints.notifications, query: {'per_page': 20})),
       safe(api.get(ApiEndpoints.loyaltyAccount)),
@@ -1470,43 +1542,47 @@ class AppProvider extends ChangeNotifier {
           : 'โหลดการจองไม่สำเร็จ กรุณาลองใหม่';
     } else {
       accountError = null;
-      bookings = List<dynamic>.from(api.data(results[0]) ?? []);
-    }
-    if (results[1] != null) {
-      notifications = List<dynamic>.from(api.data(results[1]) ?? []);
+      _applyBookingsFirstPage(
+        current: List<dynamic>.from(api.data(results[0]) ?? []),
+        history: List<dynamic>.from(api.data(results[1]) ?? []),
+        historyMeta: api.meta(results[1]),
+      );
     }
     if (results[2] != null) {
-      loyalty = Map<String, dynamic>.from(api.data(results[2]) ?? {});
+      notifications = List<dynamic>.from(api.data(results[2]) ?? []);
     }
     if (results[3] != null) {
-      rewards = List<dynamic>.from(api.data(results[3]) ?? []);
+      loyalty = Map<String, dynamic>.from(api.data(results[3]) ?? {});
     }
     if (results[4] != null) {
-      coupons = List<dynamic>.from(api.data(results[4]) ?? []);
+      rewards = List<dynamic>.from(api.data(results[4]) ?? []);
     }
     if (results[5] != null) {
-      myReviews = List<dynamic>.from(api.data(results[5]) ?? []);
+      coupons = List<dynamic>.from(api.data(results[5]) ?? []);
     }
     if (results[6] != null) {
-      chatConversations = List<dynamic>.from(api.data(results[6]) ?? []);
+      myReviews = List<dynamic>.from(api.data(results[6]) ?? []);
+    }
+    if (results[7] != null) {
+      chatConversations = List<dynamic>.from(api.data(results[7]) ?? []);
       chatUnreadTotal = chatConversations.fold<int>(0, (sum, c) {
         final n = int.tryParse('${(c as Map?)?['unread_count']}') ?? 0;
         return sum + n;
       });
     }
-    if (results[7] != null) {
-      final supportData = api.data(results[7]) as Map?;
+    if (results[8] != null) {
+      final supportData = api.data(results[8]) as Map?;
       supportUnread = int.tryParse('${supportData?['count']}') ?? 0;
     }
-    if (hasStaff && results.length > 8 && results[8] != null) {
-      final staffData = api.data(results[8]) as Map?;
+    if (hasStaff && results.length > 9 && results[9] != null) {
+      final staffData = api.data(results[9]) as Map?;
       staffSchedules = List<dynamic>.from(staffData?['schedules'] ?? []);
       staffSummary = Map<String, dynamic>.from(staffData?['summary'] ?? {});
     }
 
     final cache = OfflineCache.instance;
     if (user != null) cache.writeAccount('user', user);
-    cache.writeAccount('bookings', bookings);
+    _writeBookingsCache();
     cache.writeAccount('notifications', notifications);
     cache.writeAccount('loyalty', loyalty);
     cache.writeAccount('rewards', rewards);
@@ -1725,6 +1801,126 @@ class AppProvider extends ChangeNotifier {
       return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     }
     return const [];
+  }
+
+  // ── เหมาทริป / จัดทริปส่วนตัว ──────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> charterRequests() async {
+    final response = await api.get(ApiEndpoints.charterRequests);
+    final data = api.data(response);
+    return data is List
+        ? data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+        : const [];
+  }
+
+  Future<Map<String, dynamic>> charterRequest(int id) async {
+    final response = await api.get(ApiEndpoints.charterRequest(id));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ส่งคำขอ — คืน `(request, message)` ข้อความจากหลังบ้านบอกขั้นตอนถัดไป
+  Future<({Map<String, dynamic> request, String message})> createCharterRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await api.post(ApiEndpoints.charterRequests, body: payload);
+    return (
+      request: Map<String, dynamic>.from(api.data(response) as Map),
+      message: response is Map ? '${response['message'] ?? ''}' : '',
+    );
+  }
+
+  Future<Map<String, dynamic>> respondCharterRequest(
+    int id,
+    String action, {
+    String? reason,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.charterRequestAction(id, action),
+      body: {if ((reason ?? '').trim().isNotEmpty) 'reason': reason!.trim()},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  // ── บัตรของขวัญแบบระบุยอดเงิน ────────────────────────────────────
+
+  /// `{wallet: [...], purchased: [...], config: {min_amount, max_amount, presets, designs}}`
+  Future<Map<String, dynamic>> giftVouchers() async {
+    final response = await api.get(ApiEndpoints.giftVouchers);
+    final data = api.data(response);
+    return data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+  }
+
+  Future<Map<String, dynamic>> giftVoucher(int id) async {
+    final response = await api.get(ApiEndpoints.giftVoucher(id));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// สร้างบัตรที่รอจ่าย — คืน `{voucher, payment}` (payment = QR และบัญชีโอน)
+  Future<Map<String, dynamic>> createGiftVoucher({
+    required int amount,
+    required bool forSelf,
+    String? recipientName,
+    String? fromName,
+    String? message,
+    String? design,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.giftVouchers,
+      body: {
+        'amount': amount,
+        'for_self': forSelf,
+        if (!forSelf && (recipientName ?? '').trim().isNotEmpty)
+          'recipient_name': recipientName!.trim(),
+        if ((fromName ?? '').trim().isNotEmpty) 'from_name': fromName!.trim(),
+        if ((message ?? '').trim().isNotEmpty) 'message': message!.trim(),
+        'design': ?design,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> giftVoucherPayment(int id) async {
+    final response = await api.get(ApiEndpoints.giftVoucherPayment(id));
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ส่งสลิป — คืน `{voucher, message}` บัตรเปิดใช้ทันทีถ้าระบบอ่านสลิปผ่าน
+  /// ไม่งั้นสถานะเป็น under_review รอทีมงาน
+  Future<({Map<String, dynamic> voucher, String message})> submitGiftVoucherSlip(
+    int id,
+    String slipPath,
+  ) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.giftVoucherSlip(id),
+      fields: const {},
+      files: {'slip_image': slipPath},
+    );
+    final message = response is Map ? '${response['message'] ?? ''}' : '';
+    return (
+      voucher: Map<String, dynamic>.from(api.data(response) as Map),
+      message: message,
+    );
+  }
+
+  Future<void> cancelGiftVoucher(int id) async {
+    await api.delete(ApiEndpoints.giftVoucher(id));
+  }
+
+  /// ดูบัตรจากรหัส (ก่อนเพิ่มเข้าบัญชีหรือก่อนใช้ตอนจอง)
+  Future<Map<String, dynamic>> lookupGiftVoucher(String code) async {
+    final response = await api.post(
+      ApiEndpoints.giftVoucherLookup,
+      body: {'code': code.trim()},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  Future<Map<String, dynamic>> claimGiftVoucher(String code) async {
+    final response = await api.post(
+      ApiEndpoints.giftVoucherClaim,
+      body: {'code': code.trim()},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
   /// Triggers an SOS, retrying on network/server failures with backoff.
@@ -2459,6 +2655,129 @@ class AppProvider extends ChangeNotifier {
       amount: amount,
     );
     return booking;
+  }
+
+  void _resetBookingHistory() {
+    _bookingHistoryGen++;
+    bookingHistoryMeta = null;
+    _bookingHistoryPage = 0;
+    _bookingHistoryIds.clear();
+    bookingHistoryLoading = false;
+    bookingHistoryError = null;
+  }
+
+  void _applyBookingsFirstPage({
+    required List<dynamic> current,
+    required List<dynamic> history,
+    required Map<String, dynamic>? historyMeta,
+  }) {
+    _resetBookingHistory();
+    final known = {for (final b in current) if (b is Map) '${b['id']}'};
+    bookings = [
+      ...current,
+      for (final b in history)
+        if (b is! Map || !known.contains('${b['id']}')) b,
+    ];
+    for (final b in history) {
+      if (b is Map) _bookingHistoryIds.add('${b['id']}');
+    }
+    bookingHistoryMeta = historyMeta;
+    _bookingHistoryPage = 1;
+  }
+
+  /// ให้เทสต์ตั้งสภาพ "เพิ่งโหลดหน้าแรกมา" โดยไม่ต้องผ่าน [loadAccountData]
+  /// ที่พ่วงงานเบื้องหลังอื่นอีกมาก
+  @visibleForTesting
+  void debugApplyBookingsFirstPage({
+    required List<dynamic> current,
+    required List<dynamic> history,
+    required Map<String, dynamic>? historyMeta,
+  }) =>
+      _applyBookingsFirstPage(
+        current: current,
+        history: history,
+        historyMeta: historyMeta,
+      );
+
+  void _writeBookingsCache() {
+    final cache = OfflineCache.instance;
+    cache.writeAccount('bookings', bookings);
+    cache.writeAccount('bookingHistory', {
+      'meta': bookingHistoryMeta,
+      'page': _bookingHistoryPage,
+      'ids': _bookingHistoryIds.toList(),
+    });
+  }
+
+  void _restoreBookingHistoryState(Map? saved) {
+    _resetBookingHistory();
+    if (saved == null || saved['meta'] is! Map) return;
+    bookingHistoryMeta = Map<String, dynamic>.from(saved['meta'] as Map);
+    _bookingHistoryPage = int.tryParse('${saved['page']}') ?? 0;
+    final ids = saved['ids'];
+    if (ids is List) _bookingHistoryIds.addAll(ids.map((e) => '$e'));
+  }
+
+  /// โหลดประวัติการจองหน้าถัดไปต่อท้าย [bookings] — เรียกซ้ำระหว่างกำลังโหลด
+  /// หรือเมื่อครบแล้วจะไม่ทำอะไร ผิดพลาดเก็บไว้ที่ [bookingHistoryError]
+  Future<void> loadMoreBookingHistory() async {
+    if (!isLoggedIn || bookingHistoryLoading || !bookingHistoryHasMore) return;
+    final gen = _bookingHistoryGen;
+    final page = _bookingHistoryPage + 1;
+    bookingHistoryLoading = true;
+    bookingHistoryError = null;
+    notifyListeners();
+    try {
+      final response = await api.get(
+        ApiEndpoints.bookings,
+        query: {
+          'scope': 'history',
+          'per_page': bookingHistoryPageSize,
+          'page': page,
+        },
+      );
+      // รายการถูกโหลดใหม่ (ดึงลงรีเฟรช/ออกจากระบบ) ระหว่างรอ — หน้านี้เป็นของชุดเก่า
+      if (gen != _bookingHistoryGen) return;
+      final items = List<dynamic>.from(api.data(response) ?? []);
+      // ทริปที่เพิ่งจบระหว่างเลื่อนดูทำให้รายการขยับหนึ่งช่อง จึงอาจได้ใบซ้ำกับหน้าก่อน
+      final known = {for (final b in bookings) if (b is Map) '${b['id']}'};
+      bookings = [
+        ...bookings,
+        for (final b in items)
+          if (b is! Map || !known.contains('${b['id']}')) b,
+      ];
+      for (final b in items) {
+        if (b is Map) _bookingHistoryIds.add('${b['id']}');
+      }
+      _bookingHistoryPage = page;
+      final meta = api.meta(response);
+      if (meta != null) bookingHistoryMeta = meta;
+      _writeBookingsCache();
+    } catch (e) {
+      if (gen != _bookingHistoryGen) return;
+      bookingHistoryError = e is ApiException
+          ? e.message
+          : 'โหลดรายการก่อนหน้าไม่สำเร็จ';
+    } finally {
+      if (gen == _bookingHistoryGen) {
+        bookingHistoryLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// โหลดประวัติที่เหลือทั้งหมด — ใช้ตอนค้นหา เพราะการค้นหาทำในเครื่อง
+  /// ถ้ามีหน้าที่ยังไม่ได้โหลด ทริปเก่าที่ตรงคำค้นจะไม่ขึ้นเลย
+  Future<void> loadAllBookingHistory() async {
+    final gen = _bookingHistoryGen;
+    while (bookingHistoryHasMore &&
+        gen == _bookingHistoryGen &&
+        bookingHistoryError == null) {
+      if (bookingHistoryLoading) return; // อีกตัวกำลังไล่โหลดอยู่แล้ว
+      final before = _bookingHistoryPage;
+      await loadMoreBookingHistory();
+      if (_bookingHistoryPage == before) return; // ไม่คืบหน้า — กันวนไม่รู้จบ
+    }
   }
 
   Future<void> cancelBooking(String ref, String reason) async {

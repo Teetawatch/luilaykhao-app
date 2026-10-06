@@ -82,6 +82,20 @@
                     android:scheme="luilaykhao"
                     android:host="gift"/>
             </intent-filter>
+            <!-- บัตรของขวัญแบบระบุยอด — ผู้รับที่มีแอปเพิ่มบัตรเข้าบัญชีได้เลย
+                 (ไม่มีแอปก็เปิดหน้าเว็บ /voucher/* ที่บอกวิธีใช้) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="luilaykhao.com"
+                    android:pathPrefix="/voucher"/>
+                <data
+                    android:scheme="luilaykhao"
+                    android:host="voucher"/>
+            </intent-filter>
             <!-- ลิงก์ส่งต่อที่นั่ง — คนรับมีแอปก็รับที่นั่งในแอปเลย (ไม่มีก็เปิดหน้าเว็บ
                  /handover/* ใน SPA ซึ่งรับได้เหมือนกัน) -->
             <intent-filter android:autoVerify="true">

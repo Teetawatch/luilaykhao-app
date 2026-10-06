@@ -6,6 +6,8 @@ import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
 import '../screens/chat_screen.dart';
 import '../screens/gift_screen.dart';
+import '../screens/gift_voucher_screen.dart';
+import '../screens/charter_request_screen.dart';
 import '../screens/lost_items_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/handover_claim_screen.dart';
@@ -97,6 +99,17 @@ class NotificationNavigator {
       case 'review_invite':
         _switchTab(2);
         _reviewPrompter?.call(data);
+      // เหมาทริป: ใบเสนอราคามาแล้ว / ทีมงานรับไม่ได้ / เปิดการจองแล้ว
+      case 'charter_quoted':
+      case 'charter_rejected':
+      case 'charter_booked':
+        _openCharterRequest(int.tryParse('${data['charter_request_id'] ?? ''}'));
+      // บัตรของขวัญ: พร้อมใช้ / สลิปไม่ผ่าน / กำลังตรวจ / ยอดคืนเข้าบัตร
+      case 'gift_voucher_active':
+      case 'gift_voucher_rejected':
+      case 'gift_voucher_review':
+      case 'gift_voucher_restored':
+        _openGiftVoucher(focusId: int.tryParse('${data['voucher_id'] ?? ''}'));
       case 'medal_earned':
       // เหรียญพิชิตใหม่ / มีคนปรบมือให้ — เปิดตู้เหรียญแล้วชี้ไปที่เหรียญนั้น
       case 'medal_kudos':
@@ -461,6 +474,11 @@ class NotificationNavigator {
         _openGift(segments[1]);
         return true;
       }
+      // บัตรของขวัญแบบระบุยอด — ผู้รับที่มีแอปเพิ่มบัตรเข้าบัญชีได้เลย
+      if (segments.length >= 2 && segments.first == 'voucher') {
+        _openGiftVoucher(code: segments[1]);
+        return true;
+      }
       // ลิงก์ส่งต่อที่นั่ง — คนรับมีแอปก็รับในแอปเลย
       if (segments.length >= 2 && segments.first == 'handover') {
         _openHandover(segments[1]);
@@ -511,6 +529,11 @@ class NotificationNavigator {
         if (token == null) return false;
         _openHandover(token);
         return true;
+      case 'voucher':
+        final code = _firstSegment(uri.pathSegments);
+        if (code == null) return false;
+        _openGiftVoucher(code: code);
+        return true;
     }
     return false;
   }
@@ -540,6 +563,29 @@ class NotificationNavigator {
     _withNav(
       (nav) => nav.push(
         MaterialPageRoute(builder: (_) => GiftScreen(initialCode: code)),
+      ),
+    );
+  }
+
+  static void _openCharterRequest(int? id) {
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => id == null
+              ? const CharterRequestsScreen()
+              : CharterRequestDetailScreen(requestId: id),
+        ),
+      ),
+    );
+  }
+
+  static void _openGiftVoucher({String? code, int? focusId}) {
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) =>
+              GiftVoucherScreen(initialCode: code, focusVoucherId: focusId),
+        ),
       ),
     );
   }

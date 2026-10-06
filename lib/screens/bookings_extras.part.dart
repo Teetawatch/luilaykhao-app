@@ -293,6 +293,17 @@ class _BookingExtrasChips extends StatelessWidget {
       );
     }
 
+    final voucherPaid = num.tryParse('${booking['voucher_amount'] ?? ''}') ?? 0;
+    if (voucherPaid > 0) {
+      chips.add(
+        _ExtraChip(
+          icon: Icons.redeem_rounded,
+          label: 'จ่ายด้วยบัตรของขวัญ ${money(voucherPaid)}',
+          color: AppTheme.primaryColor,
+        ),
+      );
+    }
+
     if (_asBool(booking['is_gift'])) {
       final gift = asMap(booking['gift']);
       final claimed = _asBool(gift['claimed']);

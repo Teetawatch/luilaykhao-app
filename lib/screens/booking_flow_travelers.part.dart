@@ -164,6 +164,10 @@ class PricingSummaryCard extends StatelessWidget {
   // ประเภทรถที่เลือก — ยอดรวมอยู่ในค่าที่นั่งแล้ว บรรทัดนี้บอกว่ามาจากอะไร
   final String vehicleLabel;
   final num vehicleAdjustment;
+  // บัตรของขวัญ — onChooseVoucher เป็น null = ช่องนี้ใช้บัตรไม่ได้ (ซ่อนปุ่ม)
+  final SelectedGiftVoucher? appliedVoucher;
+  final VoidCallback? onChooseVoucher;
+  final VoidCallback? onRemoveVoucher;
 
   const PricingSummaryCard({
     super.key,
@@ -178,6 +182,9 @@ class PricingSummaryCard extends StatelessWidget {
     required this.onRemovePromo,
     this.vehicleLabel = '',
     this.vehicleAdjustment = 0,
+    this.appliedVoucher,
+    this.onChooseVoucher,
+    this.onRemoveVoucher,
   });
 
   @override
@@ -196,6 +203,15 @@ class PricingSummaryCard extends StatelessWidget {
             onApply: onApplyPromo,
             onRemove: onRemovePromo,
           ),
+          if (onChooseVoucher != null) ...[
+            const SizedBox(height: 10),
+            _GiftVoucherRow(
+              voucher: appliedVoucher,
+              covered: pricing.voucher,
+              onChoose: onChooseVoucher!,
+              onRemove: onRemoveVoucher,
+            ),
+          ],
           const SizedBox(height: 16),
           if (!pricing.hasVariedPrices) ...[
             _PriceRow(
@@ -265,6 +281,14 @@ class PricingSummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ],
+          if (pricing.voucher > 0) ...[
+            _PriceRow(
+              label: 'บัตรของขวัญ (${appliedVoucher?.displayCode ?? ''})',
+              value: '-${money(pricing.voucher)}',
+              valueColor: _softAccent,
+            ),
+            const SizedBox(height: 10),
+          ],
           InkWell(
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             onTap: onExpandedChanged,
@@ -294,9 +318,104 @@ class PricingSummaryCard extends StatelessWidget {
           ),
           Divider(height: 24, color: _cardBorder(context)),
           _PriceRow(
-            label: 'รวมทั้งหมด',
+            label: pricing.voucher > 0 ? 'ยอดที่ต้องชำระ' : 'รวมทั้งหมด',
             value: money(pricing.total),
             isTotal: true,
+          ),
+          if (pricing.voucher > 0 && pricing.total <= 0) ...[
+            const SizedBox(height: 8),
+            Text(
+              'บัตรของขวัญจ่ายครบแล้ว กดยืนยันการจองได้เลย ไม่ต้องโอนเงินเพิ่ม',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w700,
+                color: _softAccent,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// แถว "ใช้บัตรของขวัญ" — ยังไม่เลือก = ปุ่มเปิดตัวเลือก, เลือกแล้ว = รหัส + ยอดที่หัก
+class _GiftVoucherRow extends StatelessWidget {
+  final SelectedGiftVoucher? voucher;
+  final num covered;
+  final VoidCallback onChoose;
+  final VoidCallback? onRemove;
+
+  const _GiftVoucherRow({
+    required this.voucher,
+    required this.covered,
+    required this.onChoose,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final v = voucher;
+    if (v == null) {
+      return OutlinedButton.icon(
+        onPressed: () {
+          HapticFeedback.selectionClick();
+          onChoose();
+        },
+        icon: const Icon(Icons.card_giftcard_rounded, size: 18),
+        label: const Text('ใช้บัตรของขวัญ'),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(44),
+        ),
+      );
+    }
+
+    final left = v.balance - covered;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+      decoration: BoxDecoration(
+        color: AppTheme.selectedTint(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.card_giftcard_rounded,
+            color: AppTheme.primaryColor,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'บัตรของขวัญ ${v.displayCode}',
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+                Text(
+                  left > 0
+                      ? 'หัก ${money(covered)} · เหลือในบัตร ${money(left)}'
+                      : 'หัก ${money(covered)} (ใช้ครบยอดบัตร)',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'เอาบัตรออก',
+            onPressed: onRemove,
+            icon: const Icon(Icons.close_rounded, size: 20),
           ),
         ],
       ),

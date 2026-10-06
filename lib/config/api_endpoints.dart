@@ -41,6 +41,18 @@ class ApiEndpoints {
   // Promotions
   static const promotionsActive = 'promotions/active';
   static const promotionsValidate = 'promotions/validate';
+  // เหมาทริป / จัดทริปส่วนตัว
+  static const charterRequests = 'charter-requests';
+  static String charterRequest(int id) => 'charter-requests/$id';
+  static String charterRequestAction(int id, String action) =>
+      'charter-requests/$id/$action';
+  // บัตรของขวัญแบบระบุยอดเงิน
+  static const giftVouchers = 'gift-vouchers';
+  static const giftVoucherLookup = 'gift-vouchers/lookup';
+  static const giftVoucherClaim = 'gift-vouchers/claim';
+  static String giftVoucher(int id) => 'gift-vouchers/$id';
+  static String giftVoucherPayment(int id) => 'gift-vouchers/$id/payment';
+  static String giftVoucherSlip(int id) => 'gift-vouchers/$id/slip';
 
   // Chat (group chat per schedule)
   static String chatMessages(int scheduleId) =>

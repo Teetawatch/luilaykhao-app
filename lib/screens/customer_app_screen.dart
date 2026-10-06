@@ -28,6 +28,7 @@ import '../services/check_in_outbox.dart';
 import '../services/sos_outbox.dart';
 import '../services/trip_activity_service.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/booking_history_footer.dart';
 import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';

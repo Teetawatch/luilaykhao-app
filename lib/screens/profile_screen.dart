@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,6 +14,7 @@ import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../services/api_client.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/booking_history_footer.dart';
 import '../widgets/skeleton.dart';
 import '../theme/app_theme.dart';
 import '../widgets/support_shortcuts.dart';
@@ -22,6 +24,8 @@ import 'blocked_users_screen.dart' show BlockedUsersScreen;
 import 'booking_lookup_screen.dart';
 import 'customer_app_screen.dart' show BookingDetailSheet;
 import 'document_wallet_screen.dart';
+import 'gift_voucher_screen.dart';
+import 'charter_request_screen.dart';
 import 'group_rooms_screen.dart';
 import 'notification_preferences_screen.dart';
 import 'trip_feed_screen.dart' show TripFeedScreen;
@@ -515,10 +519,11 @@ class ProfileStatsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ประวัติโหลดทีละหน้า — ส่วนที่ยังไม่โหลดเอายอดจากเซิร์ฟเวอร์มาบวก
     final trips = app.bookings.map(asMap).where((b) {
       final s = _cleanText(b['status']).toLowerCase();
       return s != 'cancelled' && s != 'refunded';
-    }).length;
+    }).length + app.unloadedTravelledCount;
     final tier = _cleanText(loyalty['tier'] ?? loyalty['level']);
     final tierLabel = _cleanText(loyalty['tier_label']);
     final points = _numberValue(loyalty['points']);
@@ -798,7 +803,7 @@ class QuickActionsSection extends StatelessWidget {
         const SizedBox(height: 8),
         // Featured primary shortcut (Apple Wallet–style hero card).
         _BookingsShortcutCard(
-          total: app.bookings.length,
+          total: app.bookingsTotalCount,
           upcoming: upcomingCount,
           onTap: () => _pushPremium(
             context,
@@ -1218,6 +1223,18 @@ class TravelMenu extends StatelessWidget {
           label: 'คิวรอที่นั่ง',
           subtitle: 'ติดตามทริปที่เต็มแล้วลงคิวรอที่นั่งว่างไว้',
           onTap: () => _pushPremium(context, const WaitlistScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.groups_3_rounded,
+          label: 'เหมาทริป / ทริปส่วนตัว',
+          subtitle: 'ไปเป็นกลุ่มตั้งแต่ 4 คน ขอใบเสนอราคาและติดตามคำขอ',
+          onTap: () => _pushPremium(context, const CharterRequestsScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.card_giftcard_rounded,
+          label: 'บัตรของขวัญ',
+          subtitle: 'ซื้อบัตรมูลค่าเงินให้คนพิเศษ หรือดูบัตรที่ใช้จองได้',
+          onTap: () => _pushPremium(context, const GiftVoucherScreen()),
         ),
         _MenuItem(
           icon: Icons.redeem_rounded,

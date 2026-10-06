@@ -430,4 +430,80 @@ void main() {
     expect(find.text('โหลดการจองไม่สำเร็จ'), findsOneWidget);
     expect(find.text('ลองอีกครั้ง'), findsOneWidget);
   });
+
+  // ประวัติโหลดทีละหน้า — ตัวเลขบนแท็บต้องนับทั้งชุดจากเซิร์ฟเวอร์ ไม่ใช่แค่ที่โหลดมา
+  testWidgets('tab counts include history pages that are not loaded yet', (
+    tester,
+  ) async {
+    final provider = AppProvider();
+    provider.api.token = 'test-token';
+    provider.accountLoaded = true;
+    provider.debugApplyBookingsFirstPage(
+      current: [booking(status: 'confirmed', id: 1)],
+      history: [
+        booking(status: 'confirmed', departureDate: '2020-01-10', id: 2),
+        booking(status: 'cancelled', departureDate: '2020-02-10', id: 3),
+      ],
+      historyMeta: {
+        'current_page': 1,
+        'last_page': 4,
+        'history_count': 70,
+        'travelled_count': 60,
+        'cancelled_count': 10,
+        'destinations_count': 9,
+      },
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<AppProvider>.value(
+        value: provider,
+        child: const MaterialApp(home: MyBookingsScreen()),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('ทั้งหมด 71'), findsOneWidget);
+    expect(find.text('กำลังจะถึง 1'), findsOneWidget);
+    expect(find.text('เดินทางแล้ว 60'), findsOneWidget);
+    expect(find.text('ยกเลิก 10'), findsOneWidget);
+
+    // ไม่เลื่อนจอ — การเลื่อนจะสั่งโหลดหน้าถัดไปจริง
+    expect(
+      find.text('ดูรายการก่อนหน้า', skipOffstage: false),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('no load-more footer once every page is in', (tester) async {
+    final provider = AppProvider();
+    provider.api.token = 'test-token';
+    provider.accountLoaded = true;
+    provider.debugApplyBookingsFirstPage(
+      current: [booking(status: 'confirmed', id: 1)],
+      history: [booking(status: 'confirmed', departureDate: '2020-01-10', id: 2)],
+      historyMeta: {
+        'current_page': 1,
+        'last_page': 1,
+        'history_count': 1,
+        'travelled_count': 1,
+        'cancelled_count': 0,
+      },
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<AppProvider>.value(
+        value: provider,
+        child: const MaterialApp(home: MyBookingsScreen()),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('ทั้งหมด 2'), findsOneWidget);
+    expect(
+      find.text('ดูรายการก่อนหน้า', skipOffstage: false),
+      findsNothing,
+    );
+  });
 }

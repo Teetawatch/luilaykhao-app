@@ -20,6 +20,12 @@ class _ProfileBookingsScreenState extends State<ProfileBookingsScreen> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppProvider>();
+    // ประวัติโหลดทีละหน้า — มุมมอง "กำลังจะถึง" มีครบอยู่แล้ว ไม่ต้องโหลดต่อ
+    final pagesHistory = widget.filter != BookingFilter.upcoming;
+    final showFooter = pagesHistory &&
+        (app.bookingHistoryHasMore ||
+            app.bookingHistoryLoading ||
+            app.bookingHistoryError != null);
     final bookings = app.bookings.map(asMap).where((booking) {
       return switch (widget.filter) {
         BookingFilter.upcoming => _isUpcomingBooking(booking),
@@ -32,34 +38,53 @@ class _ProfileBookingsScreenState extends State<ProfileBookingsScreen> {
       backgroundColor: AppTheme.background(context),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            TravelSliverAppBar(title: widget.title),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                child: bookings.isEmpty
-                    ? const _EmptyProfileState(
-                        icon: Icons.confirmation_number_outlined,
-                        title: 'ยังไม่มีรายการ',
-                        body:
-                            'เมื่อคุณจองทริป รายการจะแสดงที่หน้านี้',
-                      )
-                    : Column(
-                        children: [
-                          for (final booking in bookings) ...[
-                            _BookingSummaryCard(
-                              booking: booking,
-                              onRefresh: _refresh,
-                            ),
-                            const SizedBox(height: 12),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (pagesHistory &&
+                n.depth == 0 &&
+                n.metrics.extentAfter < 900 &&
+                app.bookingHistoryHasMore &&
+                !app.bookingHistoryLoading &&
+                app.bookingHistoryError == null) {
+              unawaited(app.loadMoreBookingHistory());
+            }
+            return false;
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              TravelSliverAppBar(title: widget.title),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                  child: bookings.isEmpty && !showFooter
+                      ? const _EmptyProfileState(
+                          icon: Icons.confirmation_number_outlined,
+                          title: 'ยังไม่มีรายการ',
+                          body:
+                              'เมื่อคุณจองทริป รายการจะแสดงที่หน้านี้',
+                        )
+                      : Column(
+                          children: [
+                            for (final booking in bookings) ...[
+                              _BookingSummaryCard(
+                                booking: booking,
+                                onRefresh: _refresh,
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            if (showFooter)
+                              BookingHistoryFooter(
+                                loading: app.bookingHistoryLoading,
+                                error: app.bookingHistoryError,
+                                onLoadMore: app.loadMoreBookingHistory,
+                              ),
                           ],
-                        ],
-                      ),
+                        ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

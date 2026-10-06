@@ -31,6 +31,7 @@ import '../widgets/route_map_card.dart';
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
 import '../widgets/weather_card.dart';
 import 'booking_flow_screen.dart';
+import 'charter_request_screen.dart';
 import 'group_room_screen.dart';
 import 'login_screen.dart';
 import 'trip_feed_screen.dart';
@@ -737,6 +738,30 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     await context.read<TripAlertProvider>().load(app.api, force: true);
   }
 
+  Future<void> _openCharterForm(Map<String, dynamic> trip) async {
+    HapticFeedback.selectionClick();
+    final app = context.read<AppProvider>();
+    if (!app.isLoggedIn) {
+      _showTripDetailMessage(context, 'กรุณาเข้าสู่ระบบเพื่อขอเหมาทริป');
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      return;
+    }
+
+    final created = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => CharterRequestFormScreen(trip: trip)),
+    );
+    final id = _id(created?['id']);
+    if (!mounted || id == null) return;
+    // ส่งคำขอแล้วพาไปหน้าติดตามคำขอเลย — ใบเสนอราคาจะมาที่นั่น
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CharterRequestDetailScreen(requestId: id),
+      ),
+    );
+  }
+
   Future<void> _handleAlertTap() async {
     final slug = textOf(widget.trip['slug']).trim();
     if (slug.isEmpty) {
@@ -896,6 +921,9 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
             _selectedScheduleId!,
           ),
         ),
+      // กลุ่มใหญ่ / บริษัท — ขอรอบเฉพาะกลุ่ม ไม่ต้องรอรอบที่เปิดขาย
+      if (!widget.isLoading && _id(trip['id']) != null)
+        _CharterEntry(onPressed: () => _openCharterForm(trip)),
 
       // ── แท็บ 2: รายละเอียด ───────────────────────────────────────────
       _TabAnchor(key: _tabAnchors[1]),
@@ -1003,6 +1031,62 @@ class _TabAnchor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox(height: 12);
+}
+
+int? _id(dynamic raw) => int.tryParse('${raw ?? ''}');
+
+/// "เหมาทริปนี้" — กลุ่มตั้งแต่ 4 คนขอรอบเฉพาะกลุ่มตัวเอง ทีมงานส่งใบเสนอราคากลับมา
+class _CharterEntry extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _CharterEntry({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.surface(context),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            border: Border.all(color: AppTheme.border(context)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.groups_3_rounded, color: AppTheme.primaryColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ไปเป็นกลุ่ม? เหมาทริปนี้',
+                      style: appFont(
+                        fontSize: AppText.sizeSubtitle,
+                        fontWeight: FontWeight.w800,
+                        color: _premiumText,
+                      ),
+                    ),
+                    Text(
+                      'ตั้งแต่ 4 คน เลือกวันเอง ทีมงานส่งใบเสนอราคาให้ในแอป',
+                      style: appFont(
+                        fontSize: AppText.sizeLabel,
+                        color: _mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: _mutedText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Call-to-action that lets a customer start a group plan for the chosen
