@@ -1715,12 +1715,6 @@ class AppProvider extends ChangeNotifier {
         .toList();
   }
 
-  /// ลิงก์อัลบั้มสาธารณะของรอบ (null เมื่อทีมงานยังไม่ได้เปิดแชร์)
-  Future<Map<String, dynamic>> bookingAlbum(String ref) async {
-    final response = await api.get('bookings/$ref/album');
-    return Map<String, dynamic>.from(api.data(response) ?? const {});
-  }
-
   /// รูปจากรีวิวของลูกค้าทุกทริป — กำแพงรูป "คนที่ไปมาแล้วเจออะไร"
   ///
   /// [month] คือเดือนที่ "ไปจริง" (วันออกเดินทางของรอบ) ไม่ใช่เดือนที่เขียนรีวิว

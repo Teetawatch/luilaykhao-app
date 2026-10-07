@@ -105,7 +105,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
             ),
             const SizedBox(height: 4),
             Text(
-              'แตะเพื่อดูเต็มจอ · กดปุ่มดาวน์โหลดเพื่อบันทึก/แชร์',
+              'แตะรูปเพื่อดูเต็มจอ แล้วกดปุ่มแชร์เพื่อบันทึกทีละรูป',
               style: appFont(
                 fontSize: AppText.sizeCaption,
                 color: AppTheme.mutedText(context),
@@ -193,17 +193,6 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
                   ),
                 ),
               ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _shareAll(context, urls),
-                icon: const Icon(Icons.download_rounded),
-                label: Text('ดาวน์โหลด/แชร์ทั้งหมด (${urls.length} รูป)'),
-              ),
-            ),
-            // "หารูปของฉัน" — ซ่อนตัวเองถ้าทีมงานยังไม่ได้เปิดลิงก์อัลบั้มของรอบนี้
-            _FaceSearchEntry(bookingRef: widget.bookingRef),
           ],
         );
       },
@@ -245,7 +234,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
             Expanded(
               child: Text(
                 'รูปชุดนี้จะถูกลบอัตโนมัติ ${thaiDateTimeShort(deadline)} น. '
-                'กดดาวน์โหลดเก็บไว้ในเครื่องก่อนถึงเวลานี้นะครับ',
+                'บันทึกรูปของคุณเก็บไว้ในเครื่องก่อนถึงเวลานี้นะครับ',
                 style: appFont(
                   fontSize: AppText.sizeLabel,
                   height: 1.45,
@@ -308,7 +297,7 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
               const SizedBox(height: 4),
               Text(
                 'ทีมงานจะอัปโหลดภาพกิจกรรมให้หลังจบทริป กลับมาเช็กได้ที่นี่ภายหลัง '
-                'และรีบกดดาวน์โหลดเก็บไว้ เพราะรูปเปิดให้โหลดในเวลาจำกัดนะครับ',
+                'และรีบบันทึกรูปของคุณเก็บไว้ เพราะรูปเปิดให้โหลดในเวลาจำกัดนะครับ',
                 textAlign: TextAlign.center,
                 style: appFont(
                   fontSize: AppText.sizeLabel,
@@ -341,38 +330,6 @@ class _BookingPhotosSectionState extends State<BookingPhotosSection> {
         ),
       ],
     );
-  }
-
-  Future<void> _shareAll(BuildContext context, List<String> urls) async {
-    showSnack(context, 'กำลังเตรียมรูป…');
-    try {
-      final files = await _downloadAll(urls);
-      if (files.isEmpty) {
-        if (context.mounted) showSnack(context, 'ดาวน์โหลดรูปไม่สำเร็จ');
-        return;
-      }
-      await SharePlus.instance.share(
-        ShareParams(
-          files: files.map((p) => XFile(p)).toList(),
-          subject: 'ภาพจากทริป Luilaykhao',
-        ),
-      );
-    } catch (e) {
-      if (context.mounted) showSnack(context, 'ดาวน์โหลดไม่สำเร็จ: $e');
-    }
-  }
-
-  Future<List<String>> _downloadAll(List<String> urls) async {
-    final dir = await getTemporaryDirectory();
-    final paths = <String>[];
-    for (var i = 0; i < urls.length; i++) {
-      final saved = await _downloadOne(
-        urls[i],
-        '${dir.path}/llk_${widget.bookingRef}_$i.jpg',
-      );
-      if (saved != null) paths.add(saved);
-    }
-    return paths;
   }
 }
 
@@ -539,69 +496,5 @@ Future<String?> _downloadOne(String url, String destPath) async {
     return file.path;
   } catch (_) {
     return null;
-  }
-}
-
-/// ทางเข้า "ค้นหารูปของฉันด้วยใบหน้า"
-///
-/// การจับคู่ใบหน้าทำงานบนหน้าอัลบั้มเว็บ ซึ่งประมวลผลรูปทั้งหมดในเครื่องของ
-/// ผู้ใช้เอง — ไม่มีรูปหรือเวกเตอร์ใบหน้าถูกส่งขึ้นเซิร์ฟเวอร์ มีแต่บันทึกความ
-/// ยินยอม PDPA ที่หน้านั้นขอก่อนเริ่ม แอปจึงพาไปที่หน้านั้นแทนการทำซ้ำ ไม่ได้
-/// ย้ายการประมวลผลไปไว้ที่อื่น
-///
-/// ปุ่มขึ้นเฉพาะเมื่อทีมงานเปิดลิงก์อัลบั้มของรอบนั้นไว้แล้ว — แอปไม่สร้างลิงก์
-/// สาธารณะเอง (ดู BookingController::album)
-class _FaceSearchEntry extends StatefulWidget {
-  final String bookingRef;
-
-  const _FaceSearchEntry({required this.bookingRef});
-
-  @override
-  State<_FaceSearchEntry> createState() => _FaceSearchEntryState();
-}
-
-class _FaceSearchEntryState extends State<_FaceSearchEntry> {
-  String? _albumUrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final album = await context.read<AppProvider>().bookingAlbum(
-        widget.bookingRef,
-      );
-      final url = '${album['album_url'] ?? ''}'.trim();
-      if (!mounted || url.isEmpty) return;
-      setState(() => _albumUrl = url);
-    } catch (_) {
-      // ไม่มีลิงก์อัลบั้มไม่ใช่ข้อผิดพลาดที่ผู้ใช้ต้องรู้ — แค่ไม่มีปุ่ม
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final url = _albumUrl;
-    if (url == null) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: () {
-            final uri = Uri.tryParse(url);
-            if (uri != null) {
-              launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          },
-          icon: const Icon(Icons.face_retouching_natural_rounded),
-          label: const Text('หารูปของฉันด้วยใบหน้า'),
-        ),
-      ),
-    );
   }
 }
