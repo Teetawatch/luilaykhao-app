@@ -232,7 +232,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   // Secondary features (invite a group / refer a friend).
                   _GroupTripSection(app: app),
                   _ReferralBanner(app: app),
-                  const SizedBox(height: 100), // Bottom padding for Nav Bar
+                  // แถบเมนู + ส่วนนูนรอบปุ่ม QR เช็คอินที่สูงพ้นแถบขึ้นมา
+                  const SizedBox(
+                    height: 100 + CustomBottomNav.qrOverhang,
+                  ), // Bottom padding for Nav Bar
                 ],
               ),
             ),

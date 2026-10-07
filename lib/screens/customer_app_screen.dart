@@ -30,9 +30,11 @@ import '../services/trip_activity_service.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/booking_history_footer.dart';
 import '../widgets/min_tap_target.dart';
+import '../widgets/curved_nav_shape.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../utils/calendar_export.dart';
+import '../utils/check_in_pass.dart';
 import '../widgets/emergency_numbers_card.dart';
 import '../widgets/rally_card.dart';
 import '../widgets/review_dialog.dart';
@@ -91,6 +93,7 @@ part 'auth_booking.part.dart';
 part 'package_planner.part.dart';
 part 'trip_finder.part.dart';
 part 'customer_app_helpers.part.dart';
+part 'check_in_pass.part.dart';
 
 final _moneyFormat = NumberFormat.currency(locale: 'th_TH', symbol: '฿');
 
@@ -192,6 +195,31 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
     if (value == _chatTabIndex) {
       final app = context.read<AppProvider>();
       if (app.isLoggedIn) unawaited(app.loadChatConversations());
+    }
+  }
+
+  bool _checkInPassOpen = false;
+
+  /// ปุ่ม QR กลางแถบเมนู — กันกดรัว ๆ แล้วแผ่นซ้อนกันหลายชั้น
+  Future<void> _openCheckInPass() async {
+    if (_checkInPassOpen) return;
+    _checkInPassOpen = true;
+    try {
+      await CheckInPassSheet.show(
+        context,
+        onSelectTab: selectTab,
+        onOpenBooking: (ref) {
+          if (!mounted) return;
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => BookingDetailSheet(bookingRef: ref),
+          );
+        },
+      );
+    } finally {
+      _checkInPassOpen = false;
     }
   }
 
@@ -306,6 +334,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
         showStaffCheckIn: showStaffCheckIn,
         unreadChatCount: app.chatUnreadTotal,
         onChanged: selectTab,
+        onCheckInPass: _openCheckInPass,
       ),
     );
   }
@@ -317,105 +346,179 @@ class CustomBottomNav extends StatefulWidget {
   final int unreadChatCount;
   final ValueChanged<int> onChanged;
 
+  /// ปุ่ม QR เช็คอินกลางแถบ — เป็น "ปุ่ม" ไม่ใช่แท็บ (ไม่มีหน้าใน IndexedStack)
+  /// index ของแท็บอื่นจึงไม่เลื่อน ลิงก์/แจ้งเตือนที่สลับแท็บด้วยเลขเดิมยังพาไปถูกที่
+  final VoidCallback onCheckInPass;
+
   const CustomBottomNav({
     super.key,
     required this.index,
     required this.showStaffCheckIn,
     required this.onChanged,
+    required this.onCheckInPass,
     this.unreadChatCount = 0,
   });
+
+  /// ส่วนนูนกลางแถบสูงพ้นขอบบนของแถบเท่านี้ — หน้าที่เว้นระยะล่างเป็นตัวเลขตายตัว
+  /// (ไม่อ่านจาก MediaQuery) ต้องบวกค่านี้ ไม่งั้นเนื้อหาท้ายหน้าจมใต้ปุ่ม QR
+  static const double qrOverhang = _CustomBottomNavState._overhang;
 
   @override
   State<CustomBottomNav> createState() => _CustomBottomNavState();
 }
 
 class _CustomBottomNavState extends State<CustomBottomNav> {
+  static const double _barHeight = 68;
+  static const double _qrButtonSize = 56;
+  // จุดกึ่งกลางปุ่ม QR อยู่ต่ำกว่าขอบบนของแถบเท่านี้ — ปุ่มนั่งบนพื้นแถบ
+  // แล้วขอบบนนูนโค้งขึ้นห่อครึ่งบนของปุ่มไว้ โดยเหลือพื้นแถบรอบปุ่ม _bumpPadding
+  static const double _qrButtonCenterY = 8;
+  static const double _bumpPadding = 6;
+  static const double _bumpRadius = _qrButtonSize / 2 + _bumpPadding;
+  // ส่วนนูนสูงพ้นขอบบนของแถบ = พื้นที่ที่ต้องเผื่อไว้เหนือแถบ
+  static const double _overhang = _bumpRadius - _qrButtonCenterY;
+  // ช่องกลางที่ว่างไว้ให้ปุ่ม QR + ป้าย "เช็คอิน" — ปุ่มกว้าง 56 จึงเหลือที่ข้างละ
+  // 10 ไม่ให้ชิดไอคอนของแท็บข้าง ๆ
+  static const double _centerSlotWidth = 76;
+
+  static CurvedNavGeometry _geometryFor(Size size) => CurvedNavGeometry(
+    centerX: size.width / 2,
+    top: _overhang,
+    guestCenterY: _qrButtonCenterY,
+    bumpRadius: _bumpRadius,
+    cornerRadius: AppTheme.radiusXl,
+  );
+
   @override
   Widget build(BuildContext context) {
     final isDark = AppTheme.isDark(context);
     final items = _buildItems();
+    // ปุ่ม QR อยู่กลางจอพอดีเสมอ: ลูกค้า 5 แท็บ = ซ้าย 2 ขวา 3, สตาฟ 6 แท็บ = 3/3
+    // สองฝั่งกว้างเท่ากัน ฝั่งที่มีแท็บมากกว่าจึงวางไอคอนชิดกันกว่าเล็กน้อย
+    final split = items.length ~/ 2;
 
-    // Anchored to the bottom edge: full width, rounded only on the top corners
-    // using Apple-style continuous (superellipse) curves. Following iOS, the
-    // bar lifts off the page with the translucent blur and a hairline top
-    // border — not a heavy drop shadow. The shadow that remains is a single,
-    // very soft, low-opacity layer (no spread, no colour tint) living on an
-    // OUTER layer outside the clip so it isn't clipped away.
-    const topCorners = BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXl));
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        shape: const RoundedSuperellipseBorder(borderRadius: topCorners),
-        shadows: isDark
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.22),
-                  blurRadius: 16,
-                  offset: const Offset(0, -2),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 14,
-                  offset: const Offset(0, -1),
-                ),
-              ],
+    // Keep clearance from the home indicator, but trim a little of the
+    // bottom inset so the icons sit lower instead of floating high.
+    final bottomInset = (MediaQuery.viewPaddingOf(context).bottom - 4).clamp(
+      0.0,
+      double.infinity,
+    );
+
+    // Following iOS, the bar lifts off the page with the translucent blur and
+    // a hairline top border — not a heavy drop shadow. The shadow that remains
+    // is a single, very soft, low-opacity layer painted OUTSIDE the clip so it
+    // isn't clipped away. Both now trace the curve around the QR button.
+    final shadow = isDark
+        ? BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 16,
+            offset: const Offset(0, -2),
+          )
+        : BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, -1),
+          );
+    final borderColor = isDark
+        ? AppTheme.outlineDark.withValues(alpha: 0.7)
+        : AppTheme.border(context);
+
+    Widget navItem(int i) => Expanded(
+      child: _NavItem(
+        icon: items[i].icon,
+        activeIcon: items[i].activeIcon,
+        label: items[i].label,
+        isSelected: widget.index == i,
+        // Chat tab (index 3) → unread messages. Unread notifications live on
+        // the home header bell, not the "บัญชี" tab.
+        badge: i == 3 ? widget.unreadChatCount : 0,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          widget.onChanged(i);
+        },
       ),
-      child: ClipRSuperellipse(
-        borderRadius: topCorners,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppTheme.surfaceDark.withValues(alpha: 0.97)
-                  : Colors.white.withValues(alpha: 0.97),
-              border: Border(
-                top: BorderSide(
-                  color: isDark
-                      ? AppTheme.outlineDark.withValues(alpha: 0.7)
-                      : AppTheme.border(context),
-                  width: 1,
-                ),
-              ),
-            ),
-            // Keep clearance from the home indicator, but trim a little of the
-            // bottom inset so the icons sit lower instead of floating high.
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: (MediaQuery.viewPaddingOf(context).bottom - 4)
-                    .clamp(0.0, double.infinity),
-              ),
-              child: SizedBox(
-                height: 68,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    children: [
-                      for (int i = 0; i < items.length; i++)
-                        Expanded(
-                          child: _NavItem(
-                            icon: items[i].icon,
-                            activeIcon: items[i].activeIcon,
-                            label: items[i].label,
-                            isSelected: widget.index == i,
-                            // Chat tab (index 3) → unread messages. Unread
-                            // notifications live on the home header bell, not
-                            // the "บัญชี" tab.
-                            badge: i == 3 ? widget.unreadChatCount : 0,
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              widget.onChanged(i);
-                            },
-                          ),
-                        ),
-                    ],
+    );
+
+    // ความสูงรวมเผื่อส่วนนูนเหนือแถบไว้ด้วย ไม่งั้นส่วนนั้นทั้งวาดไม่ออกและกด
+    // ไม่ติด (Flutter ไม่ hit-test นอกกรอบของ parent) พื้นหลังถูก clip ตามรูปทรง
+    // แถบโปร่งใสข้างส่วนนูนจึงไม่รับการแตะ ทะลุลงไปถึงเนื้อหาด้านหลังตามปกติ
+    return SizedBox(
+      height: _overhang + _barHeight + bottomInset,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final geometry = _geometryFor(constraints.biggest);
+                return CustomPaint(
+                  painter: CurvedNavShadowPainter(
+                    geometry: geometry,
+                    shadow: shadow,
                   ),
-                ),
+                  foregroundPainter: CurvedNavBorderPainter(
+                    geometry: geometry,
+                    color: borderColor,
+                  ),
+                  child: ClipPath(
+                    clipper: const CurvedNavClipper(_geometryFor),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                      child: ColoredBox(
+                        color: isDark
+                            ? AppTheme.surfaceDark.withValues(alpha: 0.97)
+                            : Colors.white.withValues(alpha: 0.97),
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: _overhang,
+            height: _barHeight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [for (int i = 0; i < split; i++) navItem(i)],
+                    ),
+                  ),
+                  SizedBox(
+                    width: _centerSlotWidth,
+                    child: _CheckInNavLabel(onTap: widget.onCheckInPass),
+                  ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        for (int i = split; i < items.length; i++) navItem(i),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ),
+          // ยอดส่วนนูนอยู่ที่ y = 0 พอดี (_overhang = _bumpRadius - _qrButtonCenterY)
+          Positioned(
+            top: _overhang + _qrButtonCenterY - _bumpRadius,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: _CheckInNavButton(
+                size: _qrButtonSize,
+                rim: _bumpPadding,
+                onTap: widget.onCheckInPass,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -453,6 +556,124 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
         label: 'งานสตาฟ',
       ),
   ];
+}
+
+/// ปุ่มกลม QR เช็คอินกลางแถบเมนู — สีหลักทึบ แบน ไม่มีเงา (ตามสไตล์ทั้งแอป)
+/// นั่งบนพื้นแถบ ครึ่งบนอยู่ในส่วนนูนโค้งที่ขอบแถบยกขึ้นมาห่อไว้
+class _CheckInNavButton extends StatefulWidget {
+  final double size;
+
+  /// พื้นแถบรอบปุ่มในส่วนนูน — นับเป็นพื้นที่กดด้วย แตะขอบส่วนนูนก็เปิด QR
+  final double rim;
+  final VoidCallback onTap;
+
+  const _CheckInNavButton({
+    required this.size,
+    required this.rim,
+    required this.onTap,
+  });
+
+  @override
+  State<_CheckInNavButton> createState() => _CheckInNavButtonState();
+}
+
+class _CheckInNavButtonState extends State<_CheckInNavButton> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed != value) setState(() => _pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'แสดง QR เช็คอิน',
+      excludeSemantics: true,
+      // ClipOval จำกัดการแตะให้อยู่ในวงกลมของส่วนนูน — มุมสี่เหลี่ยมนอกวง
+      // ไม่บังการแตะเนื้อหาด้านหลัง
+      child: ClipOval(
+        child: GestureDetector(
+          key: const ValueKey('nav-check-in-qr'),
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) => _setPressed(true),
+          onTapUp: (_) => _setPressed(false),
+          onTapCancel: () => _setPressed(false),
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            widget.onTap();
+          },
+          child: Padding(
+            padding: EdgeInsets.all(widget.rim),
+            child: AnimatedScale(
+              scale: _pressed ? 0.92 : 1,
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              child: Container(
+                width: widget.size,
+                height: widget.size,
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.qr_code_2_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ป้าย "เช็คอิน" ใต้ปุ่ม QR — วางระดับเดียวกับป้ายของแท็บอื่น (เว้นที่ไอคอน 32
+/// + ช่องไฟ 3 เท่า [_NavItem]) และกดได้ทั้งช่องเพื่อให้เป้ากว้าง
+class _CheckInNavLabel extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _CheckInNavLabel({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = AppTheme.isDark(context)
+        ? AppTheme.accentColor
+        : AppTheme.primaryColor;
+    return ExcludeSemantics(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          onTap();
+        },
+        child: SizedBox(
+          height: 68,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 32),
+              const SizedBox(height: 3),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'เช็คอิน',
+                  maxLines: 1,
+                  style: appFont(
+                    fontSize: AppText.sizeMicro,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _NavItemData {
@@ -626,7 +847,12 @@ class _NavItemState extends State<_NavItem>
                 color: widget.isSelected ? activeColor : inactiveColor,
                 letterSpacing: widget.isSelected ? 0.1 : 0,
               ),
-              child: Text(widget.label, maxLines: 1),
+              // ฝั่งขวามีสามแท็บในพื้นที่เท่าฝั่งซ้าย — ตัวอักษรขยาย (textScaler) จะ
+              // ล้นช่องแคบ ๆ ได้ ย่อลงแทนการล้น
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(widget.label, maxLines: 1),
+              ),
             ),
           ],
         ),
