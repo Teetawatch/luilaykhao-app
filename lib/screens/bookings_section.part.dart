@@ -1661,6 +1661,23 @@ class _PaymentStatusRow extends StatelessWidget {
       );
     }
 
+    // ยอดเพิ่มเติม (แอดมินข้ามการชำระให้จ่ายทีหลัง / เพิ่มของให้ทีหลัง) — เดิม
+    // แถบนี้ขึ้น "ชำระครบ" ทั้งที่หน้าแรกทวงเงินอยู่ ยอดคงเหลือของมัดจำมาก่อน
+    // เพราะมีวันครบกำหนดของมันเอง
+    final extraDue =
+        num.tryParse('${asMap(booking['extra_due'])['amount'] ?? ''}') ?? 0;
+    final balanceOpen = paymentType == 'deposit' &&
+        textOf(booking['balance_paid_at']).isEmpty &&
+        (num.tryParse(booking['balance_amount']?.toString() ?? '') ?? 0) > 0;
+    if (status == 'confirmed' && extraDue > 0 && !balanceOpen) {
+      return _PendingPaymentBar(
+        total: extraDue,
+        expiresAt: null,
+        onPay: onPayPressed,
+        label: 'ต้องชำระเพิ่ม',
+      );
+    }
+
     if (paymentType == 'deposit') {
       final balance =
           num.tryParse(booking['balance_amount']?.toString() ?? '') ?? 0;
@@ -1744,10 +1761,14 @@ class _PendingPaymentBar extends StatefulWidget {
   final DateTime? expiresAt;
   final VoidCallback onPay;
 
+  /// หัวแถบ — ใบที่ยืนยันแล้วแต่มียอดเพิ่มเติมใช้ "ต้องชำระเพิ่ม" แทน
+  final String label;
+
   const _PendingPaymentBar({
     required this.total,
     required this.expiresAt,
     required this.onPay,
+    this.label = 'รอชำระเงิน',
   });
 
   @override
@@ -1823,7 +1844,7 @@ class _PendingPaymentBarState extends State<_PendingPaymentBar> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'รอชำระเงิน',
+                  widget.label,
                   style: appFont(
                     color: const Color(0xFF92400E),
                     fontSize: AppText.sizeCaption,

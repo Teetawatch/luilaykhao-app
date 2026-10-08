@@ -220,13 +220,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
     bool payingBalance = false,
     int? installmentNo,
     bool payingShare = false,
+    bool payingExtra = false,
   }) async {
     final payingInstallment = installmentNo != null;
-    if (!payingBalance && !payingInstallment && !payingShare &&
+    if (!payingBalance && !payingInstallment && !payingShare && !payingExtra &&
         textOf(booking['status']) != 'pending') {
       return;
     }
     if (payingBalance && !_balanceUnpaid(booking)) return;
+    if (payingExtra && _extraDue(booking) <= 0) return;
     if (payingShare && textOf(_splitShare?['status']) != 'pending') return;
     if (_transferDate == null || _transferTime == null) {
       _showSnack('กรุณาระบุวันที่และเวลาที่โอนเงินตามสลิป');
@@ -252,6 +254,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
         result = await context.read<AppProvider>().paySplitShare(
           bookingRef: widget.bookingRef,
           shareId: widget.splitShareId!,
+          paymentMethod: _paymentMethod,
+          transferDate: transferDateStr,
+          transferTime: transferTimeStr,
+          slipImagePath: _slipImage!.path,
+        );
+      } else if (payingExtra) {
+        amount = _extraDue(booking);
+        kind = PaymentSubmissionKind.extra;
+        result = await context.read<AppProvider>().chargeExtra(
+          bookingRef: widget.bookingRef,
           paymentMethod: _paymentMethod,
           transferDate: transferDateStr,
           transferTime: transferTimeStr,
@@ -366,9 +378,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
     required bool collectingBalance,
     required bool payingInstallment,
     required bool payingShare,
+    bool collectingExtra = false,
   }) {
     if (payingShare) return 'split_share';
     if (collectingBalance) return 'balance';
+    if (collectingExtra) return 'extra';
     if (payingInstallment) return 'installment_due';
     return _normalizePaymentType(booking, _paymentType);
   }
@@ -523,8 +537,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
               payingInstallment && textOf(installmentRecord['status']) == 'paid';
           final collectingInstallment =
               payingInstallment && !installmentPaid && installmentRecord.isNotEmpty;
+          // ยอดเพิ่มเติม — ใบยืนยันแล้วแต่ยังมีเงินที่ไม่มีทางจ่ายอื่น (แอดมินข้าม
+          // การชำระให้จ่ายทีหลัง หรือเพิ่มของให้ทีหลัง) เดิมหน้านี้เห็นว่า
+          // "ยืนยันแล้ว" เลยกลายเป็นหน้าเช็คอิน ทั้งที่ลูกค้ากดมาเพื่อจ่ายเงิน
+          final collectingExtra = status == 'confirmed' &&
+              !collectingBalance &&
+              !payingInstallment &&
+              !payingShare &&
+              _extraDue(booking) > 0;
           final checkInReady = status == 'confirmed' &&
               !balanceUnpaid &&
+              !collectingExtra &&
               !payingInstallment &&
               !payingShare;
           final paymentType = collectingBalance
@@ -534,6 +557,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ? _asNum(shareRecord['amount'])
               : collectingBalance
                   ? _balanceAmount(booking)
+                  : collectingExtra
+                  ? _extraDue(booking)
                   : payingInstallment
                       ? _asNum(installmentRecord['amount'])
                       : _amountDue(
@@ -549,6 +574,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           final qrPayload = _buildPromptPayPayload(_promptPayId, amountDue);
           final pendingFormVisible = status == 'pending' ||
               collectingBalance ||
+              collectingExtra ||
               collectingInstallment ||
               collectingShare;
 
@@ -570,6 +596,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ],
               if (collectingBalance) ...[
                 _BalanceDueBanner(booking: booking),
+                const SizedBox(height: 16),
+              ],
+              if (collectingExtra) ...[
+                _ExtraDueBanner(booking: booking),
                 const SizedBox(height: 16),
               ],
               if (payingInstallment) ...[
@@ -602,6 +632,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const _SeatLockSection(),
               if (pendingFormVisible) ...[
                 if (!collectingBalance &&
+                    !collectingExtra &&
                     !payingInstallment &&
                     !payingShare &&
                     (_installmentAvailable(booking) ||
@@ -624,7 +655,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     // key ผูกกับ "สิ่งที่กำลังจ่าย" — เปลี่ยนรูปแบบ/ยอดเมื่อไร
                     // ต้องสร้าง section ใหม่เพื่อออก QR ใบใหม่ ไม่ใช่โชว์ใบเดิม
                     key: ValueKey(
-                      '${_beamPurpose(booking, collectingBalance: collectingBalance, payingInstallment: payingInstallment, payingShare: payingShare)}'
+                      '${_beamPurpose(booking, collectingBalance: collectingBalance, payingInstallment: payingInstallment, payingShare: payingShare, collectingExtra: collectingExtra)}'
                       '-$amountDue',
                     ),
                     bookingRef: widget.bookingRef,
@@ -633,6 +664,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       collectingBalance: collectingBalance,
                       payingInstallment: payingInstallment,
                       payingShare: payingShare,
+                      collectingExtra: collectingExtra,
                     ),
                     amount: amountDue,
                     methods: _beamMethods(booking),
@@ -642,6 +674,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         : null,
                     installmentCount:
                         !collectingBalance &&
+                            !collectingExtra &&
                             !payingInstallment &&
                             !payingShare &&
                             paymentType == 'installment'
@@ -656,6 +689,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ? PaymentSubmissionKind.share
                           : collectingBalance
                           ? PaymentSubmissionKind.balance
+                          : collectingExtra
+                          ? PaymentSubmissionKind.extra
                           : collectingInstallment
                           ? PaymentSubmissionKind.installment
                           : paymentType == 'deposit'
@@ -702,6 +737,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         ? 'ชำระส่วนของฉัน'
                         : collectingBalance
                             ? 'ชำระยอดส่วนที่เหลือ'
+                            : collectingExtra
+                            ? 'ชำระยอดเพิ่มเติม'
                             : collectingInstallment
                                 ? 'ชำระงวดที่ ${widget.installmentNo}'
                                 : null,
@@ -711,6 +748,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       installmentNo:
                           collectingInstallment ? widget.installmentNo : null,
                       payingShare: collectingShare,
+                      payingExtra: collectingExtra,
                     ),
                   ),
                 ],

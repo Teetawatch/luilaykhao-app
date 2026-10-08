@@ -6,7 +6,7 @@ part of 'payment_screen.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// ชนิดของการแจ้งชำระ — ใช้เลือกคำอธิบายและขั้นตอนถัดไปให้ตรงกับสิ่งที่เพิ่งจ่าย
-enum PaymentSubmissionKind { initial, deposit, balance, installment, share }
+enum PaymentSubmissionKind { initial, deposit, balance, installment, share, extra }
 
 class PaymentSubmittedScreen extends StatefulWidget {
   final String bookingRef;
@@ -75,6 +75,7 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
     PaymentSubmissionKind.balance => 'ชำระยอดคงเหลือ',
     PaymentSubmissionKind.installment => 'ชำระงวดที่ ${widget.installmentNo}',
     PaymentSubmissionKind.share => 'ชำระส่วนของคุณ (แบ่งจ่ายกลุ่ม)',
+    PaymentSubmissionKind.extra => 'ชำระยอดเพิ่มเติม',
   };
 
   /// ขั้นสุดท้ายต่างกันตามชนิด — จองใหม่ต้องรอ "ยืนยันการจอง" ส่วนยอดที่จ่าย
@@ -85,6 +86,7 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
     PaymentSubmissionKind.balance => 'ปิดยอดคงเหลือ',
     PaymentSubmissionKind.installment => 'บันทึกงวดที่ ${widget.installmentNo}',
     PaymentSubmissionKind.share => 'บันทึกส่วนของคุณ',
+    PaymentSubmissionKind.extra => 'บันทึกยอดเพิ่มเติม',
   };
 
   /// สลิปผ่านแล้ว = ขั้นสุดท้ายเกิดขึ้นแล้วจริง ๆ (BE ยืนยันการจอง/บันทึกยอดให้
@@ -97,6 +99,7 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
           PaymentSubmissionKind.balance => 'ใบจองขึ้นว่าชำระครบแล้ว',
           PaymentSubmissionKind.installment => 'ยอดคงเหลือลดลงตามงวดที่จ่ายแล้ว',
           PaymentSubmissionKind.share => 'เพื่อนในกลุ่มเห็นแล้วว่าคุณจ่ายแล้ว',
+          PaymentSubmissionKind.extra => 'ใบจองขึ้นว่าชำระครบแล้ว',
         }
       : switch (widget.kind) {
           PaymentSubmissionKind.initial ||
@@ -105,6 +108,7 @@ class _PaymentSubmittedScreenState extends State<PaymentSubmittedScreen>
           PaymentSubmissionKind.balance => 'ใบจองจะขึ้นว่าชำระครบแล้ว',
           PaymentSubmissionKind.installment => 'ยอดคงเหลือจะลดลงตามงวดที่จ่าย',
           PaymentSubmissionKind.share => 'เพื่อนในกลุ่มจะเห็นว่าคุณจ่ายแล้ว',
+          PaymentSubmissionKind.extra => 'ใบจองจะขึ้นว่าชำระครบแล้ว',
         };
 
   String get _methodLabel =>

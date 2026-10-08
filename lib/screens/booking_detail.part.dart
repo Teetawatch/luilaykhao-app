@@ -105,6 +105,50 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
               (num.tryParse(booking['balance_amount']?.toString() ?? '0') ??
                       0) >
                   0;
+          final status = textOf(booking['status']);
+          final isCancelled = status == 'cancelled' || status == 'refunded';
+          final scheduleId = int.tryParse(textOf(schedule['id'])) ?? 0;
+          // ยอดคงเหลือของมัดจำมาก่อน (มีวันครบกำหนดของมันเอง) — หน้าชำระเงินก็
+          // เก็บยอดคงเหลือก่อนเหมือนกัน
+          final extraDue = balanceUnpaid
+              ? 0
+              : num.tryParse(
+                      '${asMap(booking['extra_due'])['amount'] ?? ''}',
+                    ) ??
+                    0;
+          final upcoming = liveConfirmed && !_isTripFinished(schedule);
+          final mySeatIds = asList(booking['seats'])
+              .map((s) => textOf(asMap(s)['seat_id']))
+              .where((s) => s.isNotEmpty)
+              .toSet();
+          final nextInstallment = nextInstallmentNo == null
+              ? const <String, dynamic>{}
+              : installments.map(asMap).firstWhere(
+                  (i) =>
+                      int.tryParse(textOf(i['installment_no'])) ==
+                      nextInstallmentNo,
+                  orElse: () => <String, dynamic>{},
+                );
+          // ภาพจากทริปมีความหมายตั้งแต่วันเดินทาง — ก่อนหน้านั้นเป็นแค่กล่องว่าง
+          final showMemories =
+              !isCancelled &&
+              !awaitingNewRound &&
+              (_isWithinTripWindow(schedule) ||
+                  _tripCompleted(schedule) ||
+                  _asBool(booking['can_review']));
+          final canShareToFeed =
+              _isPastBooking(booking) &&
+              !awaitingNewRound &&
+              textOf(trip['slug']).isNotEmpty &&
+              ['confirmed', 'completed'].contains(status);
+          final showManage =
+              !isCancelled ||
+              _acceptedTermsLines(booking).isNotEmpty;
+
+          void reload() => setState(() {
+            _future = context.read<AppProvider>().booking(widget.bookingRef);
+          });
+
           return Container(
             decoration: BoxDecoration(
               color: AppTheme.background(context),
@@ -127,742 +171,679 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
-                // รอบเดิมออกไม่ได้ (น้ำป่า/พายุ/อุทยานปิด หรือคนไม่ครบ) — เรื่องแรกที่ต้องเห็น
+                // ── หัวตั๋ว ────────────────────────────────────────────────
+                _BookingDetailHeader(
+                  booking: booking,
+                  awaitingNewRound: awaitingNewRound,
+                ),
+
+                // ของขวัญ 🎁 — ผู้ให้เห็นโค้ดไว้ส่งต่อ ผู้รับเห็นการ์ดคำอวยพร
+                if (_asBool(booking['is_gift'])) ...[
+                  _detailGap,
+                  _GiftCard(booking: booking, trip: trip, schedule: schedule),
+                ],
+
+                // ── ต้องทำ ─────────────────────────────────────────────────
+                // สิ่งที่ค้างอยู่กับลูกค้า อยู่ใต้หัวตั๋วทันที ไม่ต้องเลื่อนหา
+
+                // รอบเดิมออกไม่ได้ (น้ำป่า/พายุ/อุทยานปิด หรือคนไม่ครบ)
                 if (asMap(booking['force_majeure']).isNotEmpty) ...[
+                  _detailGap,
                   _ForceMajeureCard(
                     booking: booking,
                     onChoose: () => _openReschedule(context, booking),
                     onRefund: () => _openPostponementRefund(context, booking),
                   ),
-                  const SizedBox(height: 20),
                 ],
 
-                // เอกสารเดินทางที่ยังขาด — บนสุดเหนือทุกอย่าง เพราะไม่มีพาสปอร์ต
-                // คือออกตั๋วไม่ได้ ต่างจากเรื่องอื่นในหน้านี้ที่รอได้
-                if (textOf(booking['status']) != 'cancelled') ...[
+                // ยังไม่จ่าย — ส่งสลิปแล้วรอตรวจต้องไม่ชวนให้โอนซ้ำ
+                if (status == 'pending') ...[
+                  _detailGap,
+                  if (textOf(booking['slip_ocr_status']).isNotEmpty)
+                    const _SlipUnderReviewBar()
+                  else ...[
+                    if (installmentAvailable ||
+                        depositAvailable ||
+                        splitAvailable) ...[
+                      _PaymentTypePicker(
+                        value: paymentType,
+                        deposit: depositAvailable,
+                        installment: installmentAvailable,
+                        split: splitAvailable,
+                        onChanged: (value) =>
+                            setState(() => _paymentType = value),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    _PendingPaymentBar(
+                      total:
+                          num.tryParse('${booking['total_amount'] ?? ''}') ?? 0,
+                      expiresAt: DateTime.tryParse(
+                        textOf(booking['expires_at']),
+                      ),
+                      onPay: () => _openPayment(
+                        context,
+                        initialPaymentType: paymentType,
+                      ),
+                    ),
+                  ],
+                ],
+
+                // มัดจำแล้ว ค้างยอดส่วนที่เหลือ — รายละเอียดอยู่ในหมวดการชำระเงิน
+                if (balanceUnpaid) ...[
+                  _detailGap,
+                  _BookingActionCard(
+                    icon: Icons.payments_rounded,
+                    color: AppTheme.warningColor,
+                    title: 'ชำระยอดส่วนที่เหลือ',
+                    subtitle: [
+                      money(booking['balance_amount']),
+                      if (DateTime.tryParse(
+                            textOf(booking['balance_due_at']),
+                          ) !=
+                          null)
+                        'ครบกำหนด ${thaiDateShort(DateTime.parse(textOf(booking['balance_due_at'])).toLocal())}',
+                    ].join(' · '),
+                    onTap: () => _openPayment(context),
+                  ),
+                ],
+
+                // ยอดเพิ่มเติม — แอดมินข้ามการชำระให้จ่ายทีหลัง หรือเพิ่มของให้ทีหลัง
+                if (extraDue > 0) ...[
+                  _detailGap,
+                  _BookingActionCard(
+                    icon: Icons.add_card_rounded,
+                    color: AppTheme.warningColor,
+                    title: 'ชำระยอดเพิ่มเติม',
+                    subtitle: '${money(extraDue)} · ชำระก่อนวันเดินทาง',
+                    onTap: () => _openPayment(context),
+                  ),
+                ],
+
+                // งวดถัดไปของใบที่ผ่อน
+                if (nextInstallmentNo != null && !isCancelled) ...[
+                  _detailGap,
+                  _BookingActionCard(
+                    icon: Icons.payments_rounded,
+                    color: AppTheme.warningColor,
+                    title: 'ชำระงวดที่ $nextInstallmentNo',
+                    subtitle: [
+                      if (nextInstallment.isNotEmpty)
+                        money(nextInstallment['amount']),
+                      if (textOf(nextInstallment['due_date']).isNotEmpty)
+                        'ครบกำหนด ${dateText(nextInstallment['due_date'])}',
+                    ].join(' · '),
+                    onTap: () => _openPayment(
+                      context,
+                      installmentNo: nextInstallmentNo,
+                    ),
+                  ),
+                ],
+
+                // เอกสารที่ยังขาด — ไม่มีพาสปอร์ตคือออกตั๋วไม่ได้
+                // (ทั้งสองใบซ่อนตัวเองเมื่อไม่มีอะไรค้าง)
+                if (!isCancelled) ...[
                   _TravelDocumentsCard(
                     bookingRef: textOf(booking['booking_ref']),
                     passport: asMap(booking['passport']),
-                    onSaved: () => setState(() {
-                      _future = context.read<AppProvider>().booking(
-                        widget.bookingRef,
-                      );
-                    }),
+                    onSaved: reload,
                   ),
-                  // เอกสารแนบที่ทริปขอ — ซ่อนตัวเองเมื่อทริปไม่ได้ขออะไร
                   _BookingDocumentsCard(
                     bookingRef: textOf(booking['booking_ref']),
                     documents: asMap(booking['documents']),
-                    onChanged: () => setState(() {
-                      _future = context.read<AppProvider>().booking(
-                        widget.bookingRef,
-                      );
-                    }),
+                    onChanged: reload,
                   ),
                 ],
 
-                // สรุปการเดินทาง — ตอบ 4 คำถามที่ลูกค้าถามซ้ำที่สุด (ขึ้นรถกี่โมง /
-                // รอที่ไหน / รถทะเบียนอะไร / เบอร์ใคร) ไว้บนสุดตั้งแต่วันจอง
-                // ไม่ใช่รอให้ใกล้เดินทางแล้วค่อยโผล่
-                if (liveConfirmed &&
-                    !_isTripFinished(schedule)) ...[
-                  _TripSummaryCard(booking: booking, schedule: schedule),
-                  const SizedBox(height: 20),
-                ],
+                // Flexi-Price — "ไปต่อกันไหม?" เมื่อรอบคนไม่ครบ (ซ่อนเมื่อไม่มีข้อเสนอ)
+                if (upcoming) _FlexiOfferCard(bookingRef: widget.bookingRef),
 
-                // Trip Day hub — a single gateway to ETA, today's itinerary,
-                // chat, checklist, weather, staff & SOS once the trip is near
-                // (from 3 days before through the return date).
+                // ── วันเดินทาง ─────────────────────────────────────────────
+                // ตั้งแต่ 3 วันก่อนออกจนถึงวันกลับ: ETA · กำหนดการ · แชท · SOS
                 if (liveConfirmed &&
                     (_isPreTripWindow(schedule) ||
                         _isWithinTripWindow(schedule))) ...[
+                  _detailGap,
                   _TripDayEntryCard(booking: booking),
-                  const SizedBox(height: 20),
                 ],
-
-                // Flexi-Price (Go Together) — ข้อเสนอ "ไปต่อกันไหม?" เมื่อรอบคนไม่ครบ
-                // การ์ดจัดการ visibility/spacing ของตัวเอง (ซ่อนเมื่อไม่มีข้อเสนอ)
-                if (liveConfirmed &&
-                    !_isTripFinished(schedule))
-                  _FlexiOfferCard(bookingRef: widget.bookingRef),
-
-                // ช่วยกันเปิดรอบ — ชวนเพื่อนมาเติมที่นั่งที่ยังขาด ต้องอยู่บนใบจอง
-                // ไม่ใช่แค่หน้าวันเดินทาง เพราะกว่าจะถึงวันนั้นก็สายเกินจะหาคนเพิ่ม
-                // การ์ดซ่อนตัวเอง (พร้อมระยะห่าง) เมื่อรอบครบแล้ว/ยังไกล/เต็มแล้ว
-                if (liveConfirmed &&
-                    !_isTripFinished(schedule) &&
-                    (int.tryParse(textOf(schedule['id'])) ?? 0) > 0)
-                  RallyCard(
-                    scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
-                    bottomSpacing: 20,
-                  ),
-
-                // Check-in card (confirmed only)
-                if (liveConfirmed) ...[
-                  _BookingCheckInCard(booking: booking),
-                  const SizedBox(height: 20),
-                ],
-
-                // Pre-trip checklist — available the whole time the trip is
-                // still ahead, so travellers can prepare well in advance.
-                if (liveConfirmed &&
-                    !_isTripFinished(schedule)) ...[
-                  _ChecklistEntryRow(booking: booking),
-                  const SizedBox(height: 20),
-                ],
-
-                // Pre-trip Briefing Card — confirmed, 0-3 days before departure
-                if (liveConfirmed &&
-                    _isPreTripWindow(schedule)) ...[
-                  _PreTripBriefingCard(booking: booking, schedule: schedule),
-                  const SizedBox(height: 20),
-                ],
-
-                // SOS button — confirmed bookings, only during the trip window
-                if (liveConfirmed &&
-                    _isWithinTripWindow(schedule)) ...[
+                if (liveConfirmed && _isWithinTripWindow(schedule)) ...[
+                  _detailGap,
                   SosButton(
-                    scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
+                    scheduleId: scheduleId,
                     tripTitle: textOf(trip['title']),
                   ),
-                  const SizedBox(height: 20),
-                  // เบอร์ตำรวจ/รถพยาบาลของประเทศปลายทาง — คู่กับปุ่ม SOS
-                  // (ซ่อนตัวเองในทริปในประเทศ)
-                  EmergencyNumbersCard(trip: trip, bottomSpacing: 20),
-                ],
-
-                // Trip title + booking ref
-                Text(
-                  textOf(trip['title'], 'รายละเอียดการจอง'),
-                  style: appFont(
-                    color: AppTheme.primaryColor,
-                    fontSize: AppText.sizeH1,
-                    fontWeight: FontWeight.w900,
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  textOf(booking['booking_ref']),
-                  style: appFont(
-                    color: AppTheme.mutedText(context),
-                    fontSize: AppText.sizeLabel,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Status chips
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _StatusChip(
-                      status: awaitingNewRound
-                          ? 'awaiting_new_round'
-                          : textOf(booking['status']),
-                    ),
-                    _Chip('เดินทาง ${departureText(schedule)}'),
-                    _Chip(money(booking['total_amount'])),
-                    // จ่ายด้วยบัตรของขวัญ — total_amount คือยอดที่เหลือต้องจ่ายเป็นเงิน
-                    if ((num.tryParse('${booking['voucher_amount'] ?? ''}') ?? 0) > 0)
-                      _Chip('บัตรของขวัญ ${money(booking['voucher_amount'])}'),
+                  // เบอร์ตำรวจ/รถพยาบาลของประเทศปลายทาง — เฉพาะทริปต่างประเทศ
+                  if (trip['is_international'] == true &&
+                      asMap(trip['emergency_numbers']).isNotEmpty) ...[
+                    _detailGap,
+                    EmergencyNumbersCard(trip: trip),
                   ],
+                ],
+
+                // ── ตั๋วเดินทาง ────────────────────────────────────────────
+                if (liveConfirmed) ...[
+                  const _DetailChapter(
+                    icon: Icons.qr_code_2_rounded,
+                    title: 'ตั๋วเดินทาง',
+                  ),
+                  _detailGap,
+                  _BookingCheckInCard(booking: booking),
+                ],
+
+                // ── การเดินทาง ─────────────────────────────────────────────
+                if (!isCancelled) ...[
+                  const _DetailChapter(
+                    icon: Icons.route_rounded,
+                    title: 'การเดินทาง',
+                  ),
+
+                  // ขึ้นรถกี่โมง / รอที่ไหน / รถทะเบียนอะไร / เบอร์ใคร
+                  if (upcoming) ...[
+                    _detailGap,
+                    _TripSummaryCard(booking: booking, schedule: schedule),
+                  ],
+
+                  // ประกาศจากผู้จัด — ของใหม่ที่ต้องเห็นก่อนรายละเอียดอื่น
+                  if (scheduleId > 0)
+                    _AnnouncementsEntry(
+                      scheduleId: scheduleId,
+                      tripTitle: textOf(trip['title']),
+                    ),
+
+                  // ข้อควรทราบ + สถานะจุดที่ปักหมุดเอง — 0–3 วันก่อนออก
+                  // (ซ่อนตัวเองเมื่อไม่มีอะไรเพิ่มจากการ์ดสรุป)
+                  if (liveConfirmed && _isPreTripWindow(schedule))
+                    _PreTripBriefingCard(booking: booking, schedule: schedule),
+
+                  if (asMap(schedule['weather']).isNotEmpty) ...[
+                    _detailGap,
+                    WeatherCard(
+                      weather: asMap(schedule['weather']),
+                      compact: true,
+                    ),
+                  ],
+
+                  if (upcoming) ...[
+                    _detailGap,
+                    _ChecklistEntryRow(booking: booking),
+                  ],
+
+                  // จุดขึ้นรถ / เที่ยวบิน / รถที่เลือก — ซ่อนตัวเองเมื่อไม่มีข้อมูล
+                  _BookingPickupSection(booking: booking, schedule: schedule),
+                  _BookingFlightSection(schedule: schedule),
+                  _BookingVehicleOptionRow(booking: booking),
+
+                  // เส้นทางเดินรถทั้งรอบ ไฮไลต์จุดที่จองไว้
+                  if (scheduleId > 0) ...[
+                    _detailGap,
+                    RouteMapCard(
+                      scheduleId: scheduleId,
+                      highlightPickupPointId: int.tryParse(
+                        textOf(asMap(booking['pickup_point'])['id']),
+                      ),
+                    ),
+                  ],
+
+                  if (_hasVehicleInfo(asMap(schedule['vehicle']))) ...[
+                    _detailGap,
+                    const _SheetSectionTitle(
+                      icon: Icons.directions_car_rounded,
+                      title: 'รถและคนขับ',
+                    ),
+                    const SizedBox(height: 10),
+                    _VehicleDriverCard(vehicle: asMap(schedule['vehicle'])),
+                  ],
+
+                  if (asList(booking['assigned_staff']).isNotEmpty) ...[
+                    _detailGap,
+                    const _SheetSectionTitle(
+                      icon: Icons.badge_rounded,
+                      title: 'สตาฟ / ไกด์ประจำรอบ',
+                    ),
+                    const SizedBox(height: 10),
+                    _AssignedStaffList(
+                      staffList: asList(booking['assigned_staff']),
+                    ),
+                  ],
+
+                  if (asList(booking['selected_rentals']).isNotEmpty) ...[
+                    _detailGap,
+                    const _SheetSectionTitle(
+                      icon: Icons.backpack_rounded,
+                      title: 'อุปกรณ์ที่เช่า',
+                    ),
+                    const SizedBox(height: 10),
+                    _RentedEquipmentList(
+                      rentals: asList(booking['selected_rentals']),
+                    ),
+                  ],
+                ],
+
+                // ── ผู้เดินทาง ─────────────────────────────────────────────
+                _DetailChapter(
+                  icon: Icons.people_alt_rounded,
+                  title: 'ผู้เดินทาง',
+                  trailing: passengers.isEmpty
+                      ? null
+                      : '${passengers.length} คน',
                 ),
-                const SizedBox(height: 16),
 
-                // ของขวัญ 🎁 — ผู้ให้เห็นโค้ดไว้ส่งต่อ ผู้รับเห็นการ์ดคำอวยพร
-                if (_asBool(booking['is_gift'])) ...[
-                  _GiftCard(booking: booking, trip: trip, schedule: schedule),
-                  const SizedBox(height: 16),
-                ],
+                // ผู้จอง (ซ่อนเมื่อไม่มีข้อมูลบัญชี)
+                _BookingCustomerRow(booking: booking),
 
-                // สรุปทริป (Recap) — โผล่หลังจบทริปแล้ว ให้แชร์อวดเพื่อน
-                if (textOf(booking['status']) != 'cancelled' &&
-                    !awaitingNewRound &&
-                    _tripCompleted(schedule)) ...[
-                  _TripRecapButton(bookingRef: textOf(booking['booking_ref'])),
-                  const SizedBox(height: 16),
-                  // เหรียญพิชิตของใบนี้ — ซ่อนตัวเองเมื่อยังไม่มี (ยังไม่ถึง 20:00
-                  // วันสุดท้าย หรือรอบที่เช็คอินแล้วแต่ใบนี้ไม่ได้เช็คอิน)
-                  _BookingMedalButton(
-                    bookingRef: textOf(booking['booking_ref']),
+                ...passengers.asMap().entries.map(
+                  (entry) => Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: _passengerTile(
+                      context,
+                      booking: booking,
+                      passenger: asMap(entry.value),
+                      seat: seatForPassenger(asMap(entry.value), entry.key),
+                      isFlight: isFlight,
+                    ),
+                  ),
+                ),
+
+                // ผังที่นั่ง — ตำแหน่งที่นั่งของเราในรถ (รอบบินโชว์แค่เลขที่นั่ง)
+                if (!isCancelled && scheduleId > 0 && mySeatIds.isNotEmpty) ...[
+                  _detailGap,
+                  _SheetSectionTitle(
+                    icon: isFlight
+                        ? Icons.airline_seat_recline_normal_rounded
+                        : Icons.event_seat_rounded,
+                    title: isFlight ? 'ที่นั่งบนเครื่องบิน' : 'ที่นั่งของคุณในรถ',
+                  ),
+                  const SizedBox(height: 10),
+                  _MySeatMapSection(
+                    scheduleId: scheduleId,
+                    mySeatIds: mySeatIds,
+                    skipMap: isFlight,
                   ),
                 ],
 
-                // เก็บผู้ร่วมเดินทางเข้าสมุด — ตรงนี้ข้อมูลถูกกรอกครบไปแล้ว
-                // การจองครั้งหน้าจึงเหลือแค่กดเลือกชื่อ
-                if (textOf(booking['status']) != 'cancelled' &&
-                    asList(booking['passengers']).isNotEmpty) ...[
-                  _SaveTravellersButton(
-                    bookingRef: textOf(booking['booking_ref']),
-                    passengerCount: asList(booking['passengers']).length,
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // เพิ่มลงปฏิทิน — กันลืมรอบ โดยเฉพาะรอบที่รถออกคืนก่อนวันทริป
-                if (textOf(booking['status']) != 'cancelled' &&
-                    !awaitingNewRound &&
-                    _realDepartureDate(schedule) != null) ...[
-                  _AddToCalendarButton(booking: booking, schedule: schedule),
-                  const SizedBox(height: 16),
-                ],
-
-                // Departure-day weather (only present when the backend resolved
-                // a forecast for the trip's coordinates).
-                if (asMap(schedule['weather']).isNotEmpty) ...[
-                  WeatherCard(
-                    weather: asMap(schedule['weather']),
-                    compact: true,
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Companion invites — เชิญเพื่อนเข้าการจองเดียวกัน
-                if (textOf(booking['status']) == 'pending' ||
-                    textOf(booking['status']) == 'confirmed') ...[
+                // เชิญเพื่อนเข้าการจองเดียวกัน
+                if (status == 'pending' || status == 'confirmed') ...[
+                  _detailGap,
                   _BookingMembersSection(booking: booking),
-                  const SizedBox(height: 16),
                 ],
+
+                // ช่วยกันเปิดรอบ — ชวนคนมาเติมที่นั่งที่ยังขาด (ซ่อนตัวเองเมื่อรอบครบ)
+                if (upcoming && scheduleId > 0)
+                  RallyCard(
+                    scheduleId: scheduleId,
+                    topSpacing: 16,
+                    bottomSpacing: 0,
+                  ),
 
                 // ส่งต่อที่นั่ง — คนที่ไปไม่ได้ส่งที่นั่งให้คนอื่นไปแทน
                 if (asMap(booking['seat_handover'])['available'] == true) ...[
+                  _detailGap,
                   _SeatHandoverEntryCard(booking: booking),
-                  const SizedBox(height: 16),
                 ],
 
-                // ผู้จอง — รูปโปรไฟล์ลูกค้า + ชื่อ (self-spaces; hides if no user)
-                _BookingCustomerRow(booking: booking),
-
-                // Passengers section
-                const _SheetSectionTitle(
-                  icon: Icons.people_alt_rounded,
-                  title: 'ผู้เดินทาง',
+                // ── การชำระเงิน ────────────────────────────────────────────
+                const _DetailChapter(
+                  icon: Icons.account_balance_wallet_rounded,
+                  title: 'การชำระเงิน',
                 ),
-                const SizedBox(height: 10),
-                ...passengers.asMap().entries.map((entry) {
-                  final p = asMap(entry.value);
-                  final name = '${textOf(p['title'])} ${textOf(p['name'])}'
-                      .trim();
-                  final phone = textOf(p['phone'], 'ไม่มีเบอร์โทร');
-                  final seat = seatForPassenger(p, entry.key);
-                  final halal = p['halal_food'] == true;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppTheme.subtleSurface(context),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        border: Border.all(
-                          color: AppTheme.border(
-                            context,
-                          ).withValues(alpha: 0.6),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: AppTheme.primaryColor.withValues(
-                              alpha: 0.10,
-                            ),
-                            child: const Icon(
-                              Icons.person_rounded,
-                              color: AppTheme.primaryColor,
-                              size: 18,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  name.isEmpty ? '-' : name,
-                                  style: appFont(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: AppText.sizeBody,
-                                    color: AppTheme.onSurface(context),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  phone,
-                                  style: appFont(
-                                    fontSize: AppText.sizeCaption,
-                                    color: AppTheme.mutedText(context),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                if (seat.isNotEmpty || halal) ...[
-                                  const SizedBox(height: 4),
-                                  Wrap(
-                                    spacing: 6,
-                                    children: [
-                                      if (seat.isNotEmpty)
-                                        _InlineBadge(
-                                          isFlight
-                                              ? 'ที่นั่งบนเครื่อง $seat'
-                                              : 'ที่นั่ง $seat',
-                                        ),
-                                      if (halal)
-                                        const _InlineBadge('อาหารฮาลาล'),
-                                    ],
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          // ให้เพื่อนกรอกข้อมูลของตัวเอง — คนจองจะได้ไม่ต้อง
-                          // ไล่ถามเลขบัตร/โรคประจำตัวทางแชท
-                          if (textOf(booking['status']) != 'cancelled')
-                            _PassengerInviteButton(
-                              bookingRef: textOf(booking['booking_ref']),
-                              passenger: p,
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
+                _detailGap,
+                if (balanceUnpaid) ...[
+                  _BookingDepositSummary(booking: booking),
+                  // แบ่งจ่ายกลุ่ม — เจ้าของแบ่งยอดคงเหลือให้เพื่อนช่วยจ่าย
+                  _detailGap,
+                  _BookingSplitSection(booking: booking, onChanged: reload),
+                ] else
+                  _BookingPaymentSummary(booking: booking),
 
-                // ผังที่นั่ง — แสดงตำแหน่งที่นั่งของเราในรถแบบกราฟิก
-                // (เฉพาะการจองที่มีที่นั่งจริง และรอบยังไม่ถูกยกเลิก)
-                ...(() {
-                  if (textOf(booking['status']) == 'cancelled') {
-                    return const <Widget>[];
-                  }
-                  final scheduleId = int.tryParse(textOf(schedule['id'])) ?? 0;
-                  // ที่นั่งของการจองอยู่ที่ booking['seats'] (ไม่ใช่ราย passenger)
-                  final mySeatIds = asList(booking['seats'])
-                      .map((s) => textOf(asMap(s)['seat_id']))
-                      .where((s) => s.isNotEmpty)
-                      .toSet();
-                  if (scheduleId <= 0 || mySeatIds.isEmpty) {
-                    return const <Widget>[];
-                  }
-                  return <Widget>[
-                    const SizedBox(height: 16),
-                    _SheetSectionTitle(
-                      icon: isFlight
-                          ? Icons.airline_seat_recline_normal_rounded
-                          : Icons.event_seat_rounded,
-                      title: isFlight
-                          ? 'ที่นั่งบนเครื่องบิน'
-                          : 'ที่นั่งของคุณในรถ',
-                    ),
-                    const SizedBox(height: 10),
-                    _MySeatMapSection(
-                      scheduleId: scheduleId,
-                      mySeatIds: mySeatIds,
-                      // รอบที่บินไปไม่มีผังให้วาด — ข้ามการเรียก API ไปเลย
-                      skipMap: isFlight,
-                    ),
-                  ];
-                })(),
-
-                // ประเภทรถที่เลือกไว้ (รอบที่วิ่งทั้งบัสและตู้) — อ่านจากสำเนา
-                // บนใบจอง ไม่ใช่ตัวเลือกปัจจุบันของรอบ
-                _BookingVehicleOptionRow(booking: booking),
-
-                // จุดขึ้นรถที่จองไว้ (พร้อมรูปจริง) — แสดงเสมอเมื่อมีจุดรับ
-                _BookingPickupSection(booking: booking, schedule: schedule),
-
-                // จุดนัดพบที่สนามบิน + เที่ยวบิน — สิ่งที่มาแทนจุดขึ้นรถของรอบที่บินไป
-                // (การ์ดซ่อนตัวเองเมื่อทีมงานยังไม่ได้กรอกแผนการบิน)
-                _BookingFlightSection(schedule: schedule),
-
-                // เส้นทางเดินรถของรอบ (จุดรับทุกจุด → ปลายทาง) — self-loading,
-                // ไฮไลต์จุดที่ลูกค้าจองไว้; ซ่อนตัวเองเมื่อไม่มีจุดจอด
-                if (textOf(booking['status']) != 'cancelled' &&
-                    (int.tryParse(textOf(schedule['id'])) ?? 0) > 0) ...[
-                  const SizedBox(height: 16),
-                  RouteMapCard(
-                    scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
-                    highlightPickupPointId: int.tryParse(
-                      textOf(asMap(booking['pickup_point'])['id']),
-                    ),
-                  ),
-                ],
-
-                // อุปกรณ์ที่เช่ามาพร้อมทริป (ถ้ามี)
-                if (asList(booking['selected_rentals']).isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const _SheetSectionTitle(
-                    icon: Icons.backpack_rounded,
-                    title: 'อุปกรณ์ที่เช่า',
-                  ),
-                  const SizedBox(height: 10),
-                  _RentedEquipmentList(
-                    rentals: asList(booking['selected_rentals']),
-                  ),
-                ],
-
-                // Operator announcements (ประกาศจากผู้จัด) — self-loading,
-                // renders nothing when the round has no announcements yet.
-                if (textOf(booking['status']) != 'cancelled' &&
-                    (int.tryParse(textOf(schedule['id'])) ?? 0) > 0) ...[
-                  const SizedBox(height: 16),
-                  _AnnouncementsEntry(
-                    scheduleId: int.tryParse(textOf(schedule['id'])) ?? 0,
-                    tripTitle: textOf(asMap(schedule['trip'])['title']),
-                  ),
-                ],
-
-                // Vehicle & driver section
-                if (textOf(booking['status']) != 'cancelled' &&
-                    _hasVehicleInfo(asMap(schedule['vehicle']))) ...[
-                  const SizedBox(height: 16),
-                  const _SheetSectionTitle(
-                    icon: Icons.directions_car_rounded,
-                    title: 'รถและคนขับ',
-                  ),
-                  const SizedBox(height: 10),
-                  _VehicleDriverCard(vehicle: asMap(schedule['vehicle'])),
-                ],
-
-                // Assigned staff section
-                if (asList(booking['assigned_staff']).isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const _SheetSectionTitle(
-                    icon: Icons.badge_rounded,
-                    title: 'สตาฟ / ไกด์ประจำรอบ',
-                  ),
-                  const SizedBox(height: 10),
-                  _AssignedStaffList(
-                    staffList: asList(booking['assigned_staff']),
-                  ),
-                ],
-
-                // Trip photos taken by staff (R2). Self-loading; returns
-                // an empty widget when there are no photos yet.
-                if (textOf(booking['status']) != 'cancelled')
-                  BookingPhotosSection(bookingRef: widget.bookingRef),
-
-                // ใบเสร็จที่ออกไปแล้ว — ซ่อนตัวเองถ้ายังไม่มีใบไหนออก
-                BookingReceiptsSection(bookingRef: widget.bookingRef),
-
-                // Installments section
                 if (installments.isNotEmpty) ...[
-                  const SizedBox(height: 16),
+                  _detailGap,
                   const _SheetSectionTitle(
                     icon: Icons.receipt_long_rounded,
                     title: 'งวดชำระ',
                   ),
                   const SizedBox(height: 10),
-                  ...installments.map((item) {
-                    final inst = asMap(item);
-                    final instStatus = textOf(inst['status']);
-                    final isPaid = instStatus == 'paid';
-                    return Padding(
+                  for (final item in installments)
+                    Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: isPaid
-                              ? AppTheme.primaryColor.withValues(alpha: 0.06)
-                              : AppTheme.subtleSurface(context),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                          border: Border.all(
-                            color: isPaid
-                                ? AppTheme.primaryColor.withValues(alpha: 0.16)
-                                : AppTheme.border(
-                                    context,
-                                  ).withValues(alpha: 0.6),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isPaid
-                                  ? Icons.check_circle_rounded
-                                  : Icons.schedule_rounded,
-                              color: isPaid
-                                  ? AppTheme.primaryColor
-                                  : AppTheme.warningColor,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'งวดที่ ${textOf(inst['installment_no'])}  ·  ${money(inst['amount'])}',
-                                    style: appFont(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: AppText.sizeLabel,
-                                      color: AppTheme.onSurface(context),
-                                    ),
-                                  ),
-                                  Text(
-                                    'ครบกำหนด ${dateText(inst['due_date'])}',
-                                    style: appFont(
-                                      fontSize: AppText.sizeCaption,
-                                      color: AppTheme.mutedText(context),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            _StatusChip(status: instStatus),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
-                  if (nextInstallmentNo != null) ...[
-                    const SizedBox(height: 4),
+                      child: _installmentTile(context, asMap(item)),
+                    ),
+                ],
+
+                // ใบเสร็จที่ออกไปแล้ว — ซ่อนตัวเองถ้ายังไม่มีใบไหนออก
+                BookingReceiptsSection(bookingRef: widget.bookingRef),
+
+                // ── ความทรงจำจากทริป ───────────────────────────────────────
+                if (showMemories) ...[
+                  const _DetailChapter(
+                    icon: Icons.photo_library_rounded,
+                    title: 'ความทรงจำจากทริป',
+                  ),
+                  if (_tripCompleted(schedule)) ...[
+                    _detailGap,
+                    _TripRecapButton(
+                      bookingRef: textOf(booking['booking_ref']),
+                    ),
+                    // เหรียญพิชิต — ซ่อนตัวเองเมื่อยังไม่มี
+                    _BookingMedalButton(
+                      bookingRef: textOf(booking['booking_ref']),
+                    ),
+                  ],
+                  // รีวิว — backend เปิดให้หลังจบทริป (can_review)
+                  if (_asBool(booking['can_review'])) ...[
+                    _detailGap,
+                    PrimaryCTAButton(
+                      label: 'รีวิวทริป',
+                      icon: Icons.star_rounded,
+                      onPressed: () => _review(context, booking),
+                    ),
+                  ],
+                  if (canShareToFeed) ...[
+                    const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
-                      child: FilledButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: () {
-                          Navigator.pop(context);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => PaymentScreen(
-                                bookingRef: widget.bookingRef,
-                                installmentNo: nextInstallmentNo,
+                              builder: (_) => TripPostComposerScreen(
+                                slug: textOf(trip['slug']),
+                                tripTitle: textOf(trip['title'], 'ทริปนี้'),
                               ),
                             ),
                           );
                         },
-                        icon: const Icon(Icons.payments_outlined),
-                        label: Text('ชำระงวดที่ $nextInstallmentNo'),
+                        icon: const Icon(Icons.add_a_photo_rounded),
+                        label: const Text('แชร์รูปทริปนี้ขึ้นฟีด'),
                       ),
                     ),
                   ],
+                  // รูปที่สตาฟถ่าย — โหลดเอง มีกล่องว่างเมื่อยังไม่มีรูป
+                  BookingPhotosSection(bookingRef: widget.bookingRef),
                 ],
 
-                const SizedBox(height: 20),
-
-                // Deposit balance summary (confirmed booking with unpaid balance)
-                if (balanceUnpaid) ...[
-                  _BookingDepositSummary(booking: booking),
-                  const SizedBox(height: 16),
-                  // แบ่งจ่ายกลุ่ม — เจ้าของแบ่งยอดคงเหลือให้เพื่อนช่วยจ่าย
-                  _BookingSplitSection(
-                    booking: booking,
-                    onChanged: () => setState(() {
-                      _future = context.read<AppProvider>().booking(
-                        widget.bookingRef,
-                      );
-                    }),
+                // ── จัดการการจอง ───────────────────────────────────────────
+                if (showManage) ...[
+                  const _DetailChapter(
+                    icon: Icons.tune_rounded,
+                    title: 'จัดการการจอง',
                   ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                PaymentScreen(bookingRef: widget.bookingRef),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.payments_outlined),
-                      label: const Text('ชำระยอดส่วนที่เหลือ'),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                // Payment actions (pending status)
-                if (booking['status'] == 'pending') ...[
-                  if (installmentAvailable ||
-                      depositAvailable ||
-                      splitAvailable) ...[
-                    DropdownButtonFormField<String>(
-                      initialValue: paymentType,
-                      decoration: const InputDecoration(
-                        labelText: 'รูปแบบชำระเงิน',
-                      ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: 'full',
-                          child: Text('จ่ายเต็ม'),
-                        ),
-                        if (depositAvailable)
-                          const DropdownMenuItem(
-                            value: 'deposit',
-                            child: Text('จ่ายมัดจำ'),
-                          ),
-                        if (installmentAvailable)
-                          const DropdownMenuItem(
-                            value: 'installment',
-                            child: Text('ผ่อนชำระ'),
-                          ),
-                        if (splitAvailable)
-                          const DropdownMenuItem(
-                            value: 'split',
-                            child: Text('แบ่งจ่ายกับเพื่อน'),
-                          ),
-                      ],
-                      onChanged: (value) =>
-                          setState(() => _paymentType = value ?? 'full'),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PaymentScreen(
-                              bookingRef: widget.bookingRef,
-                              initialPaymentType: paymentType,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.payments_outlined),
-                      label: const Text('ไปหน้าชำระเงิน'),
-                    ),
-                  ),
-                ],
-
-                // Review CTA — available once the trip is over (backend gates
-                // via can_review: confirmed + after the last day, not yet reviewed).
-                if (_asBool(booking['can_review'])) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _review(context, booking),
-                      icon: const Icon(Icons.star_rounded),
-                      label: const Text('รีวิวทริป'),
-                    ),
-                  ),
-                ],
-
-                // แชร์รูปเข้าฟีดสาธารณะของทริป — หลังทริปจบ (backend ตรวจสิทธิ์อีกชั้น)
-                if (_isPastBooking(booking) &&
-                    !awaitingNewRound &&
-                    textOf(trip['slug']).isNotEmpty &&
-                    ['confirmed', 'completed']
-                        .contains(textOf(booking['status']))) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TripPostComposerScreen(
-                              slug: textOf(trip['slug']),
-                              tripTitle: textOf(trip['title'], 'ทริปนี้'),
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add_a_photo_rounded),
-                      label: const Text('แชร์รูปทริปนี้ขึ้นฟีด'),
-                    ),
-                  ),
-                ],
-
-                // Booking modification — เปลี่ยนวันเดินทาง / จุดรับ (ในช่วงที่อนุญาต)
-                if (_asBool(booking['can_reschedule']) ||
-                    _asBool(booking['can_modify']) ||
-                    awaitingNewRound ||
-                    textOf(booking['rescheduled_at']).isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  const Divider(height: 28),
-                  const _SheetSectionTitle(
-                    icon: Icons.edit_calendar_rounded,
-                    title: 'แก้ไขการจอง',
-                  ),
-                  const SizedBox(height: 10),
-                  if (_asBool(booking['can_reschedule']) &&
-                      textOf(booking['reschedule_mode']) == 'force_majeure')
-                    _BookingActionCard(
-                      icon: Icons.event_repeat_rounded,
-                      color: AppTheme.warningColor,
-                      title: 'เลือกรอบเดินทางใหม่',
-                      subtitle: _isUnderfilledBooking(booking)
-                          ? 'รอบเดิมยกเลิก · ฟรี ราคาเดิม · ตัดสินใจได้ถึง ${textOf(asMap(booking['force_majeure'])['decide_by_label'])}'
-                          : 'รอบเดิมยกเลิก · ฟรี ราคาเดิม · ถึง ${textOf(asMap(booking['force_majeure'])['until_label'])}',
-                      onTap: () => _openReschedule(context, booking),
-                    )
-                  else if (_asBool(booking['can_reschedule']))
-                    _BookingActionCard(
-                      icon: Icons.event_repeat_rounded,
-                      color: AppTheme.primaryColor,
-                      title: 'เปลี่ยนวันเดินทาง',
-                      subtitle:
-                          'ได้ครั้งเดียว · ก่อนเดินทางอย่างน้อย 20 วัน · คงราคาเดิม',
-                      onTap: () => _openReschedule(context, booking),
-                    )
-                  // เหตุผลที่ปุ่มเปลี่ยนวันไม่ขึ้น — ใช้สิทธิ์ไปแล้ว หรือเลยกำหนด
-                  // ไม่ให้หายไปเฉย ๆ จนลูกค้าสงสัยว่าทำไมทำไม่ได้
-                  else
-                    _BookingActionNote(
-                      text: awaitingNewRound && _isUnderfilledBooking(booking)
-                          ? 'เลยกำหนดเลือกรอบใหม่แล้ว · เราจะคืนเงินเต็มจำนวนให้'
-                          : awaitingNewRound
-                          ? 'เลยกำหนดเลือกรอบใหม่แล้ว · ทักทีมงานเพื่อช่วยดูแลต่อ'
-                          : textOf(booking['rescheduled_at']).isNotEmpty
-                          ? 'เปลี่ยนวันเดินทางได้ครั้งเดียว · ใช้สิทธิ์ไปแล้ว'
-                          : 'เลยกำหนดเปลี่ยนวันเดินทางแล้ว · ต้องแจ้งก่อนเดินทางอย่างน้อย 20 วัน',
-                    ),
-                  // รอบคนไม่ครบ — รับเงินคืนเต็มจำนวนแทนรอบใหม่ (ไม่ใช่นโยบายยกเลิกปกติ)
-                  if (asMap(booking['force_majeure'])['can_request_refund'] ==
-                          true &&
-                      booking['viewer_is_owner'] != false) ...[
-                    const SizedBox(height: 10),
-                    _BookingActionCard(
-                      icon: Icons.currency_exchange_rounded,
-                      color: AppTheme.warningColor,
-                      title: _refundActionTitle(booking),
-                      subtitle: _refundAmountOf(booking) > 0
-                          ? 'คืนเต็มจำนวน ${money(_refundAmountOf(booking))} รวมมัดจำ · การจองจะถูกยกเลิก'
-                          : 'ยังไม่มียอดที่ชำระ · ยกเลิกได้ทันที',
-                      onTap: () => _openPostponementRefund(context, booking),
-                    ),
-                  ],
-                  if (_asBool(booking['can_modify']) &&
-                      asList(schedule['pickup_points']).isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    _BookingActionCard(
-                      icon: Icons.location_on_rounded,
-                      color: AppTheme.accentColor,
-                      title: 'เปลี่ยนจุดรับ',
-                      subtitle: 'ย้ายจุดขึ้นรถได้ถึงก่อนเดินทาง 1 วัน · คงราคาเดิม',
-                      onTap: () => _openChangePickup(context, booking),
-                    ),
-                  ],
-                ],
-                // เงื่อนไขที่ลูกค้ากดยอมรับตอนจอง — ย้อนอ่านได้ว่าตกลงอะไรไว้
-                // (เช่น รอบถูกเลื่อนเพราะน้ำป่า ได้สิทธิ์อะไร) ใบที่ไม่ได้กด
-                // ยอมรับ (แอดมินจองแทน) ไม่มีแถวนี้ เพราะไม่มีอะไรให้อ้าง
-                if (_acceptedTermsLines(booking).isNotEmpty) ...[
-                  const Divider(height: 28),
-                  _BookingActionCard(
-                    icon: Icons.gavel_rounded,
-                    color: AppTheme.slate600,
-                    title: 'เงื่อนไขที่คุณยอมรับไว้',
-                    subtitle: _acceptedTermsSubtitle(booking),
-                    onTap: () => _openAcceptedTerms(context, booking),
-                  ),
+                  ..._manageItems(context, booking, schedule, awaitingNewRound),
                 ],
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// แถวผู้เดินทางหนึ่งคน — ชื่อ เบอร์ ที่นั่ง ฮาลาล และปุ่มให้เพื่อนกรอกเอง
+  Widget _passengerTile(
+    BuildContext context, {
+    required Map<String, dynamic> booking,
+    required Map<String, dynamic> passenger,
+    required String seat,
+    required bool isFlight,
+  }) {
+    final name = '${textOf(passenger['title'])} ${textOf(passenger['name'])}'
+        .trim();
+    final phone = textOf(passenger['phone'], 'ไม่มีเบอร์โทร');
+    final halal = passenger['halal_food'] == true;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: AppTheme.border(context).withValues(alpha: 0.6),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.10),
+            child: const Icon(
+              Icons.person_rounded,
+              color: AppTheme.primaryColor,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name.isEmpty ? '-' : name,
+                  style: appFont(
+                    fontWeight: FontWeight.w800,
+                    fontSize: AppText.sizeBody,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  phone,
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    color: AppTheme.mutedText(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (seat.isNotEmpty || halal) ...[
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      if (seat.isNotEmpty)
+                        _InlineBadge(
+                          isFlight ? 'ที่นั่งบนเครื่อง $seat' : 'ที่นั่ง $seat',
+                        ),
+                      if (halal) const _InlineBadge('อาหารฮาลาล'),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          // ให้เพื่อนกรอกข้อมูลของตัวเอง — คนจองจะได้ไม่ต้องไล่ถามเลขบัตร/
+          // โรคประจำตัวทางแชท
+          if (textOf(booking['status']) != 'cancelled')
+            _PassengerInviteButton(
+              bookingRef: textOf(booking['booking_ref']),
+              passenger: passenger,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _installmentTile(BuildContext context, Map<String, dynamic> inst) {
+    final instStatus = textOf(inst['status']);
+    final isPaid = instStatus == 'paid';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isPaid
+            ? AppTheme.primaryColor.withValues(alpha: 0.06)
+            : AppTheme.subtleSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: isPaid
+              ? AppTheme.primaryColor.withValues(alpha: 0.16)
+              : AppTheme.border(context).withValues(alpha: 0.6),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isPaid ? Icons.check_circle_rounded : Icons.schedule_rounded,
+            color: isPaid ? AppTheme.primaryColor : AppTheme.warningColor,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'งวดที่ ${textOf(inst['installment_no'])}  ·  ${money(inst['amount'])}',
+                  style: appFont(
+                    fontWeight: FontWeight.w800,
+                    fontSize: AppText.sizeLabel,
+                    color: AppTheme.onSurface(context),
+                  ),
+                ),
+                Text(
+                  'ครบกำหนด ${dateText(inst['due_date'])}',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    color: AppTheme.mutedText(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _StatusChip(status: instStatus),
+        ],
+      ),
+    );
+  }
+
+  /// หมวด "จัดการการจอง" — เครื่องมือของใบจอง (ปฏิทิน · สมุดผู้เดินทาง) ตามด้วย
+  /// สิทธิ์แก้ไข (เปลี่ยนวัน/จุดรับ/ขอคืนเงิน) และเงื่อนไขที่ยอมรับไว้
+  List<Widget> _manageItems(
+    BuildContext context,
+    Map<String, dynamic> booking,
+    Map<String, dynamic> schedule,
+    bool awaitingNewRound,
+  ) {
+    final status = textOf(booking['status']);
+    final isCancelled = status == 'cancelled' || status == 'refunded';
+    final canReschedule = _asBool(booking['can_reschedule']);
+    final forceMajeure = asMap(booking['force_majeure']);
+
+    return [
+      // เพิ่มลงปฏิทิน — กันลืมรอบ โดยเฉพาะรอบที่รถออกคืนก่อนวันทริป
+      if (!isCancelled &&
+          !awaitingNewRound &&
+          _realDepartureDate(schedule) != null) ...[
+        _detailGap,
+        _AddToCalendarButton(booking: booking, schedule: schedule),
+      ],
+
+      // เก็บผู้ร่วมเดินทางเข้าสมุด — การจองครั้งหน้าเหลือแค่กดเลือกชื่อ
+      if (!isCancelled && asList(booking['passengers']).isNotEmpty) ...[
+        const SizedBox(height: 10),
+        _SaveTravellersButton(
+          bookingRef: textOf(booking['booking_ref']),
+          passengerCount: asList(booking['passengers']).length,
+        ),
+      ],
+
+      // เปลี่ยนวันเดินทาง / เลือกรอบใหม่
+      if (canReschedule && textOf(booking['reschedule_mode']) == 'force_majeure') ...[
+        _detailGap,
+        _BookingActionCard(
+          icon: Icons.event_repeat_rounded,
+          color: AppTheme.warningColor,
+          title: 'เลือกรอบเดินทางใหม่',
+          subtitle: _isUnderfilledBooking(booking)
+              ? 'รอบเดิมยกเลิก · ฟรี ราคาเดิม · ตัดสินใจได้ถึง ${textOf(forceMajeure['decide_by_label'])}'
+              : 'รอบเดิมยกเลิก · ฟรี ราคาเดิม · ถึง ${textOf(forceMajeure['until_label'])}',
+          onTap: () => _openReschedule(context, booking),
+        ),
+      ] else if (canReschedule) ...[
+        _detailGap,
+        _BookingActionCard(
+          icon: Icons.event_repeat_rounded,
+          color: AppTheme.primaryColor,
+          title: 'เปลี่ยนวันเดินทาง',
+          subtitle: 'ได้ครั้งเดียว · ก่อนเดินทางอย่างน้อย 20 วัน · คงราคาเดิม',
+          onTap: () => _openReschedule(context, booking),
+        ),
+      ],
+
+      // รอบคนไม่ครบ — รับเงินคืนเต็มจำนวนแทนรอบใหม่ (ไม่ใช่นโยบายยกเลิกปกติ)
+      if (forceMajeure['can_request_refund'] == true &&
+          booking['viewer_is_owner'] != false) ...[
+        const SizedBox(height: 10),
+        _BookingActionCard(
+          icon: Icons.currency_exchange_rounded,
+          color: AppTheme.warningColor,
+          title: _refundActionTitle(booking),
+          subtitle: _refundAmountOf(booking) > 0
+              ? 'คืนเต็มจำนวน ${money(_refundAmountOf(booking))} รวมมัดจำ · การจองจะถูกยกเลิก'
+              : 'ยังไม่มียอดที่ชำระ · ยกเลิกได้ทันที',
+          onTap: () => _openPostponementRefund(context, booking),
+        ),
+      ],
+
+      if (_asBool(booking['can_modify']) &&
+          asList(schedule['pickup_points']).isNotEmpty) ...[
+        const SizedBox(height: 10),
+        _BookingActionCard(
+          icon: Icons.location_on_rounded,
+          color: AppTheme.accentColor,
+          title: 'เปลี่ยนจุดรับ',
+          subtitle: 'ย้ายจุดขึ้นรถได้ถึงก่อนเดินทาง 1 วัน · คงราคาเดิม',
+          onTap: () => _openChangePickup(context, booking),
+        ),
+      ],
+
+      // เหตุผลที่ปุ่มเปลี่ยนวันไม่ขึ้น — ใช้สิทธิ์ไปแล้ว หรือเลยกำหนด
+      // ไม่ให้หายไปเฉย ๆ จนลูกค้าสงสัยว่าทำไมทำไม่ได้
+      if (!canReschedule &&
+          (_asBool(booking['can_modify']) ||
+              awaitingNewRound ||
+              textOf(booking['rescheduled_at']).isNotEmpty)) ...[
+        const SizedBox(height: 12),
+        _BookingActionNote(
+          text: awaitingNewRound && _isUnderfilledBooking(booking)
+              ? 'เลยกำหนดเลือกรอบใหม่แล้ว · เราจะคืนเงินเต็มจำนวนให้'
+              : awaitingNewRound
+              ? 'เลยกำหนดเลือกรอบใหม่แล้ว · ทักทีมงานเพื่อช่วยดูแลต่อ'
+              : textOf(booking['rescheduled_at']).isNotEmpty
+              ? 'เปลี่ยนวันเดินทางได้ครั้งเดียว · ใช้สิทธิ์ไปแล้ว'
+              : 'เลยกำหนดเปลี่ยนวันเดินทางแล้ว · ต้องแจ้งก่อนเดินทางอย่างน้อย 20 วัน',
+        ),
+      ],
+
+      // เงื่อนไขที่ลูกค้ากดยอมรับตอนจอง — ย้อนอ่านได้ว่าตกลงอะไรไว้ ใบที่ไม่ได้
+      // กดยอมรับ (แอดมินจองแทน) ไม่มีแถวนี้ เพราะไม่มีอะไรให้อ้าง
+      if (_acceptedTermsLines(booking).isNotEmpty) ...[
+        _detailGap,
+        _BookingActionCard(
+          icon: Icons.gavel_rounded,
+          color: AppTheme.slate600,
+          title: 'เงื่อนไขที่คุณยอมรับไว้',
+          subtitle: _acceptedTermsSubtitle(booking),
+          onTap: () => _openAcceptedTerms(context, booking),
+        ),
+      ],
+    ];
+  }
+
+  void _openPayment(
+    BuildContext context, {
+    String initialPaymentType = 'full',
+    int? installmentNo,
+  }) {
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaymentScreen(
+          bookingRef: widget.bookingRef,
+          initialPaymentType: initialPaymentType,
+          installmentNo: installmentNo,
+        ),
       ),
     );
   }
@@ -1794,7 +1775,7 @@ class _BookingCustomerRow extends StatelessWidget {
     final phone = textOf(user['phone']).trim();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(top: 16),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -2747,7 +2728,7 @@ class _BookingMedalButtonState extends State<_BookingMedalButton> {
     if (medal == null) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(top: 16),
       child: GestureDetector(
         onTap: () {
           HapticFeedback.selectionClick();
@@ -3129,37 +3110,6 @@ class _PreTripBriefingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final trip = asMap(schedule['trip']);
     final customPickup = asMap(booking['custom_pickup']);
-    final staffList = asList(booking['assigned_staff']);
-
-    // จุดรับที่จะแสดงในหน้านี้ (พร้อมรูป) — เลือกจากแหล่งที่ครบที่สุด:
-    // 1) จุดที่ booking เลือกไว้ (booking.pickup_point)
-    // 2) จุดเดียวกันใน schedule.pickup_points (เผื่อ relation ฝั่ง booking ไม่มี image_url)
-    // 3) ถ้า booking ไม่ได้ระบุจุด (เลือกแบบภูมิภาค) ใช้จุดของภูมิภาคนั้นใน schedule
-    final schedulePickups =
-        asList(schedule['pickup_points']).map(asMap).toList();
-    final bookingPickup = asMap(booking['pickup_point']);
-    final matchedById = schedulePickups.firstWhere(
-      (p) =>
-          bookingPickup.isNotEmpty &&
-          p['id'].toString() == bookingPickup['id'].toString(),
-      orElse: () => <String, dynamic>{},
-    );
-    var pickupPoint = bookingPickup;
-    if (pickupPoint.isEmpty) {
-      final region = textOf(booking['pickup_region']);
-      if (region.isNotEmpty) {
-        pickupPoint = schedulePickups.firstWhere(
-          (p) => textOf(p['region']) == region,
-          orElse: () => <String, dynamic>{},
-        );
-      }
-    }
-    final pickupImageUrl = ApiConfig.mediaUrl(
-      textOf(pickupPoint['image_url']).isNotEmpty
-          ? pickupPoint['image_url']
-          : matchedById['image_url'],
-    );
-    final preparations = asList(trip['preparations']);
     final mustKnow = asList(trip['must_know']);
 
     final depDate = _realDepartureDate(schedule);
@@ -3173,7 +3123,14 @@ class _PreTripBriefingCard extends StatelessWidget {
       _ => 'อีก $daysLeft วัน',
     };
 
+    // จุดรับ (พร้อมรูป) และสตาฟมีหมวดของตัวเองในหน้าเดียวกันแล้ว การ์ดนี้จึง
+    // เหลือเฉพาะสิ่งที่ไม่มีที่อื่น — สถานะจุดที่ปักหมุดเอง และข้อควรทราบ
+    if (customPickup.isEmpty && mustKnow.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
+      margin: const EdgeInsets.only(top: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -3264,207 +3221,11 @@ class _PreTripBriefingCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Pickup location
-                if (pickupPoint.isNotEmpty) ...[
-                  _BriefingSection(
-                    icon: Icons.location_on_rounded,
-                    title: 'จุดรับ',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          textOf(
-                            pickupPoint['pickup_location'],
-                            textOf(pickupPoint['region']),
-                          ),
-                          style: appFont(
-                            fontSize: AppText.sizeBody,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.onSurface(context),
-                            height: 1.4,
-                          ),
-                        ),
-                        if (pickupImageUrl.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                            child: CachedNetworkImage(
-                              imageUrl: pickupImageUrl,
-                              height: 150,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              placeholder: (_, _) => Container(
-                                height: 150,
-                                color: AppTheme.subtleSurface(context),
-                                child: const Center(
-                                  child: SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // อย่าซ่อนเงียบ — โชว์ placeholder ให้เห็นว่ามีรูปแต่โหลดไม่ได้
-                              errorWidget: (_, _, _) => Container(
-                                height: 150,
-                                color: AppTheme.subtleSurface(context),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.image_not_supported_outlined,
-                                        color: AppTheme.mutedText(context),
-                                        size: 26,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'โหลดรูปไม่สำเร็จ',
-                                        style: appFont(
-                                          fontSize: AppText.sizeCaption,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.mutedText(context),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (textOf(pickupPoint['notes']).isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            textOf(pickupPoint['notes']),
-                            style: appFont(
-                              fontSize: AppText.sizeLabel,
-                              color: AppTheme.mutedText(context),
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                        if (textOf(pickupPoint['map_url']).isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          GestureDetector(
-                            onTap: () async {
-                              final uri = Uri.parse(
-                                textOf(pickupPoint['map_url']),
-                              );
-                              if (await canLaunchUrl(uri)) {
-                                launchUrl(
-                                  uri,
-                                  mode: LaunchMode.externalApplication,
-                                );
-                              }
-                            },
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.map_outlined,
-                                  size: 14,
-                                  color: AppTheme.primaryColor,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'เปิดแผนที่',
-                                  style: appFont(
-                                    fontSize: AppText.sizeLabel,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTheme.primaryColor,
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: AppTheme.primaryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-
                 // จุดรับที่ลูกค้าปักหมุดเอง (custom) พร้อมสถานะยืนยัน
                 if (customPickup.isNotEmpty) ...[
                   _CustomPickupBriefing(customPickup: customPickup),
                   const SizedBox(height: 14),
                 ],
-
-                // Staff/guide contacts
-                if (staffList.isNotEmpty) ...[
-                  _BriefingSection(
-                    icon: Icons.badge_rounded,
-                    title: 'ไกด์ / สตาฟ',
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: staffList.map((item) {
-                        final s = asMap(item);
-                        final name = textOf(s['nickname']).isNotEmpty
-                            ? textOf(s['nickname'])
-                            : textOf(s['name']);
-                        final phone = textOf(s['phone']);
-                        return GestureDetector(
-                          onTap: phone.isEmpty
-                              ? null
-                              : () async {
-                                  final uri = Uri(scheme: 'tel', path: phone);
-                                  if (await canLaunchUrl(uri)) {
-                                    launchUrl(uri);
-                                  }
-                                },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.surface(
-                                context,
-                              ).withValues(alpha: 0.80),
-                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                              border: Border.all(
-                                color: AppTheme.primaryColor.withValues(
-                                  alpha: 0.20,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (phone.isNotEmpty) ...[
-                                  const Icon(
-                                    Icons.call_rounded,
-                                    size: 13,
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                  const SizedBox(width: 5),
-                                ],
-                                Text(
-                                  phone.isNotEmpty ? '$name  $phone' : name,
-                                  style: appFont(
-                                    fontSize: AppText.sizeLabel,
-                                    fontWeight: FontWeight.w800,
-                                    color: phone.isNotEmpty
-                                        ? AppTheme.primaryColor
-                                        : AppTheme.onSurface(context),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-
 
                 // Must know
                 if (mustKnow.isNotEmpty) ...[
@@ -3509,20 +3270,6 @@ class _PreTripBriefingCard extends StatelessWidget {
                     ),
                   ),
                 ],
-
-                // Fallback when no content is available yet
-                if (pickupPoint.isEmpty &&
-                    staffList.isEmpty &&
-                    preparations.isEmpty &&
-                    mustKnow.isEmpty)
-                  Text(
-                    'ข้อมูลจะถูกอัปเดตโดยทีมงานก่อนวันเดินทาง',
-                    style: appFont(
-                      fontSize: AppText.sizeLabel,
-                      color: AppTheme.mutedText(context),
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
               ],
             ),
           ),
@@ -3837,7 +3584,7 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
     final reason = textOf(offer['reason']);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(top: 16),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -4267,7 +4014,7 @@ class _TravelDocumentsCard extends StatelessWidget {
               'ยังมีเวลาต่อเล่มใหม่ครับ ได้เล่มแล้วมาแก้เลขที่นี่ได้เลย';
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(top: 16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -4368,7 +4115,7 @@ class _BookingDocumentsCard extends StatelessWidget {
     final accent = hasMissing ? AppTheme.warningColor : AppTheme.primaryColor;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(top: 16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -5036,6 +4783,7 @@ class _AnnouncementsEntryState extends State<_AnnouncementsEntry> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 16),
         const _SheetSectionTitle(
           icon: Icons.campaign_rounded,
           title: 'ประกาศจากผู้จัด',

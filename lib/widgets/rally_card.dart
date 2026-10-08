@@ -18,10 +18,14 @@ class RallyCard extends StatefulWidget {
   /// ถ้าให้หน้าเรียกใส่ SizedBox เองจะเหลือช่องว่างลอยเมื่อการ์ดไม่ขึ้น
   final double bottomSpacing;
 
+  /// ระยะห่างด้านบน — สำหรับหน้าที่ให้การ์ดแต่ละใบเว้นระยะด้านบนของตัวเอง
+  final double topSpacing;
+
   const RallyCard({
     super.key,
     required this.scheduleId,
     this.bottomSpacing = 16,
+    this.topSpacing = 0,
   });
 
   @override
@@ -86,7 +90,10 @@ class _RallyCardState extends State<RallyCard> {
     final daysLeft = int.tryParse(textOf(data['days_left'])) ?? 0;
 
     return Container(
-      margin: EdgeInsets.only(bottom: widget.bottomSpacing),
+      margin: EdgeInsets.only(
+        top: widget.topSpacing,
+        bottom: widget.bottomSpacing,
+      ),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),

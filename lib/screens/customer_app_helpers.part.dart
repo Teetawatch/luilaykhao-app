@@ -1,31 +1,5 @@
 part of 'customer_app_screen.dart';
 
-class _Chip extends StatelessWidget {
-  final String text;
-
-  const _Chip(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: AppText.sizeCaption,
-          color: AppTheme.primaryColor,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.2,
-        ),
-      ),
-    );
-  }
-}
-
 class _StatusChip extends StatelessWidget {
   final String status;
 

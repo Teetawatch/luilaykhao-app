@@ -224,6 +224,7 @@ class ApiEndpoints {
   // Payments
   static const paymentsCharge = 'payments/charge';
   static const paymentsChargeBalance = 'payments/charge-balance';
+  static const paymentsChargeExtra = 'payments/charge-extra';
   static const paymentsChargeInstallment = 'payments/charge-installment';
   static String paymentStatus(String ref) => 'payments/$ref';
 

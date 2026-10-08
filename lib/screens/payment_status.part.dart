@@ -232,6 +232,111 @@ class _PaymentNotice extends StatelessWidget {
 // Balance-due banner (shown after deposit is paid, while balance is unpaid)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// ยอดเพิ่มเติมบนใบที่ยืนยันแล้ว — แอดมินข้ามการชำระให้จ่ายทีหลัง หรือเพิ่ม
+/// ของ/ปรับยอดให้หลังยืนยัน แจกแจงให้เห็นว่ายอดนี้มาจากไหน ไม่ใช่แค่ตัวเลขลอย ๆ
+class _ExtraDueBanner extends StatelessWidget {
+  final Map<String, dynamic> booking;
+
+  const _ExtraDueBanner({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final due = _extraDue(booking);
+    final total = _asNum(booking['total_amount']);
+    final paid = _asNum(booking['paid_amount']);
+    final waived = _asNum(booking['waived_amount']);
+    const color = AppTheme.warningColor;
+
+    Widget row(String label, String value, {bool strong = false}) => Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: appFont(
+                color: AppTheme.mutedText(context),
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: appFont(
+              color: strong ? color : AppTheme.onSurface(context),
+              fontSize: strong ? AppText.sizeSubtitle : AppText.sizeLabel,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: AppTheme.isDark(context) ? 0.18 : 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                ),
+                child: const Icon(
+                  Icons.add_card_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'มียอดที่ต้องชำระเพิ่ม',
+                      style: appFont(
+                        color: color,
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'ที่นั่งของคุณยืนยันแล้ว ชำระส่วนนี้ก่อนวันเดินทาง',
+                      style: appFont(
+                        color: AppTheme.onSurface(context),
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          row('ยอดรวมของการจอง', money(total)),
+          row('ชำระแล้ว', money(paid)),
+          if (waived > 0) row('ยกเว้นให้', '−${money(waived)}'),
+          row('ต้องชำระเพิ่ม', money(due), strong: true),
+        ],
+      ),
+    );
+  }
+}
+
 class _BalanceDueBanner extends StatelessWidget {
   final Map<String, dynamic> booking;
 

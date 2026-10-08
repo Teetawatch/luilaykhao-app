@@ -1418,7 +1418,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         if (_isAdmin) ...[
           const _CompactNotice(
             icon: Icons.admin_panel_settings_rounded,
-            text: 'บัญชีแอดมิน — กดยืนยันแล้วการจองจะสำเร็จทันที ไม่ต้องชำระเงิน',
+            text:
+                'บัญชีแอดมิน — กดยืนยันแล้วการจองจะสำเร็จทันที แล้วเลือกได้ว่าให้ลูกค้าชำระทีหลังในแอป หรือไม่ต้องเก็บเงิน',
           ),
           const SizedBox(height: 24),
         ],
@@ -1679,6 +1680,129 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   /// โหลดเงื่อนไขฉบับล่าสุดแล้วให้ลูกค้ากดยอมรับ — คืนเวอร์ชันที่ยอมรับ
   /// หรือ null เมื่อโหลดไม่ได้หรือลูกค้าปิดแผ่น
+  /// แอดมินจองแทนลูกค้า — ให้ลูกค้าจ่ายทีหลังในแอป หรือถือว่ารับเงินแล้ว/ไม่ต้องเก็บ
+  ///
+  /// เดิมใบที่ข้ามการชำระเงินแยกสองแบบนี้ไม่ออก ลูกค้าเลยเห็น "ยังต้องชำระ" ทุกใบ
+  /// แล้วกดไปเจอหน้าเช็คอินที่จ่ายไม่ได้ คืนค่า null เมื่อปิดแผ่นโดยไม่เลือก
+  Future<String?> _chooseSkipPaymentMode() {
+    return showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusXl),
+        ),
+      ),
+      builder: (sheetContext) {
+        Widget option({
+          required String value,
+          required IconData icon,
+          required String title,
+          required String subtitle,
+        }) {
+          return Material(
+            color: AppTheme.subtleSurface(sheetContext),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                Navigator.pop(sheetContext, value);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                  border: Border.all(color: AppTheme.border(sheetContext)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, color: AppTheme.primaryColor, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: appFont(
+                              fontSize: AppText.sizeBody,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.onSurface(sheetContext),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: appFont(
+                              fontSize: AppText.sizeCaption,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.mutedText(sheetContext),
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppTheme.mutedText(sheetContext),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'การชำระเงินของใบจองนี้',
+                  style: appFont(
+                    fontSize: AppText.sizeTitle,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.onSurface(sheetContext),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'ใบจองจะยืนยันทันทีทั้งสองแบบ',
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    color: AppTheme.mutedText(sheetContext),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                option(
+                  value: 'collect_later',
+                  icon: Icons.schedule_send_rounded,
+                  title: 'ให้ลูกค้าชำระทีหลังในแอป',
+                  subtitle:
+                      'ลูกค้าเห็นยอดค้างและจ่ายเองได้ในแอป (สแกน QR หรือแนบสลิป)',
+                ),
+                const SizedBox(height: 10),
+                option(
+                  value: 'waive',
+                  icon: Icons.verified_rounded,
+                  title: 'รับเงินแล้ว / ไม่ต้องเก็บเงิน',
+                  subtitle:
+                      'ไม่ทวงลูกค้า และไม่นับเป็นรายรับในระบบ ถ้าเพิ่มของทีหลังจะทวงเฉพาะส่วนที่เพิ่ม',
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<String?> _confirmTerms() async {
     setState(() => _submitting = true);
     Map<String, dynamic> policy;
@@ -1803,9 +1927,13 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     // ข้ามไป เพราะคนที่กดไม่ใช่เจ้าของใบจอง การประทับว่า "ยอมรับแล้ว" ให้
     // ทั้งที่ลูกค้าไม่เคยเห็นคือหลักฐานปลอม ใบจองแบบนั้นจึงไม่มีบันทึก
     String? termsVersion;
+    String? skipPaymentMode;
     if (!_isAdmin) {
       termsVersion = await _confirmTerms();
       if (termsVersion == null || !mounted) return;
+    } else {
+      skipPaymentMode = await _chooseSkipPaymentMode();
+      if (skipPaymentMode == null || !mounted) return;
     }
 
     setState(() => _submitting = true);
@@ -1834,6 +1962,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         // แอดมินเท่านั้น — หลังบ้านยืนยันใบจองให้ทันทีโดยไม่ต้องชำระเงิน
         // บัญชีอื่นที่ส่งธงนี้จะได้ใบจองรอชำระเงินตามปกติ
         if (_isAdmin) 'skip_payment': true,
+        if (_isAdmin) 'skip_payment_mode': skipPaymentMode,
         'is_group': _passengers.length > 1,
         'group_name': _passengers.length > 1
             ? 'กลุ่ม ${_passengers.length} คน'
@@ -1890,8 +2019,12 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       // "พร้อมสำหรับเช็คอิน" ไม่ใช่ QR โอนเงิน — บอกไว้ก่อนจะได้ไม่งงกับชื่อหน้า
       if (_isAdmin) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('จองสำเร็จแล้ว — ข้ามการชำระเงินด้วยสิทธิ์แอดมิน'),
+          SnackBar(
+            content: Text(
+              skipPaymentMode == 'waive'
+                  ? 'จองสำเร็จแล้ว — ไม่ต้องเก็บเงินจากลูกค้า'
+                  : 'จองสำเร็จแล้ว — ลูกค้าชำระเงินทีหลังในแอปได้',
+            ),
           ),
         );
       } else if (textOf(booking['payment_method']) == 'gift_voucher') {

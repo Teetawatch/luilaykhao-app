@@ -3949,27 +3949,66 @@ class _OutstandingPaymentBanner extends StatelessWidget {
 
   const _OutstandingPaymentBanner({required this.bookings});
 
-  /// ยอดที่ยังต้องจ่ายของการจองหนึ่ง — 0 เมื่อจ่ายครบหรือรอตรวจสลิปอยู่
-  static double _outstanding(Map<String, dynamic> booking) {
+  /// ยอดที่ต้องจ่ายตอนนี้ของการจองหนึ่ง พร้อมงวดที่ต้องเปิด — null เมื่อไม่มี
+  /// อะไรให้จ่าย หรือส่งสลิปแล้วกำลังรอตรวจ
+  ///
+  /// ห้ามคิดจาก total − paid ตรง ๆ: ใบผ่อนที่ยังเหลือหลายงวดจะโชว์ยอดรวมทุกงวด
+  /// แล้วพาไปหน้าที่ไม่รู้ว่าจะจ่ายงวดไหน และใบที่ยืนยันแล้วจะถูกพาไปหน้าเช็คอิน
+  /// ยอดแต่ละแบบจึงมาจากแหล่งของมันเอง — ยอดเพิ่มเติมมาจาก `extra_due` ของหลังบ้าน
+  static ({double amount, int? installmentNo})? _due(
+    Map<String, dynamic> booking,
+  ) {
     final status = textOf(booking['status']);
-    if (status == 'cancelled') return 0;
     // รอเลือกรอบใหม่ (เหตุสุดวิสัย) — ระบบพักการทวงไว้ กำหนดใหม่ตามรอบที่เลือก
-    if (_awaitsNewRound(booking)) return 0;
+    if (_awaitsNewRound(booking)) return null;
+
+    if (status == 'pending') {
+      if (textOf(booking['slip_ocr_status']).isNotEmpty) return null;
+      final total = double.tryParse('${booking['total_amount'] ?? 0}') ?? 0;
+      return total > 0 ? (amount: total, installmentNo: null) : null;
+    }
+    if (status != 'confirmed') return null;
 
     final balance = double.tryParse('${booking['balance_amount'] ?? 0}') ?? 0;
-    if (balance > 0 && booking['balance_paid_at'] == null) return balance;
+    if (textOf(booking['payment_type']) == 'deposit' &&
+        textOf(booking['balance_paid_at']).isEmpty &&
+        balance > 0) {
+      return (amount: balance, installmentNo: null);
+    }
 
-    final total = double.tryParse('${booking['total_amount'] ?? 0}') ?? 0;
-    final paid = double.tryParse('${booking['paid_amount'] ?? 0}') ?? 0;
-    final remaining = total - paid;
+    final extra =
+        double.tryParse('${asMap(booking['extra_due'])['amount'] ?? 0}') ?? 0;
+    if (extra > 0) return (amount: extra, installmentNo: null);
 
-    return remaining > 0 ? remaining : 0;
+    if (textOf(booking['payment_type']) == 'installment') {
+      final unpaid = asList(booking['installment_payments'])
+          .map(asMap)
+          .where((i) => textOf(i['status']) != 'paid')
+          .toList()
+        ..sort(
+          (a, b) => (int.tryParse(textOf(a['installment_no'])) ?? 0)
+              .compareTo(int.tryParse(textOf(b['installment_no'])) ?? 0),
+        );
+      // งวดแรกจ่ายตอนจองเสมอ — งวดที่ยังค้างที่จ่ายเองได้เริ่มที่ 2
+      final next = unpaid.firstWhere(
+        (i) => (int.tryParse(textOf(i['installment_no'])) ?? 0) >= 2,
+        orElse: () => const <String, dynamic>{},
+      );
+      final amount = double.tryParse('${next['amount'] ?? 0}') ?? 0;
+      if (amount > 0) {
+        return (
+          amount: amount,
+          installmentNo: int.tryParse(textOf(next['installment_no'])),
+        );
+      }
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     final due = bookings
-        .where((b) => _outstanding(b) > 0)
+        .where((b) => _due(b) != null)
         .toList()
       ..sort((a, b) {
         final ad = DateTime.tryParse(textOf(a['balance_due_at'])) ??
@@ -3984,7 +4023,8 @@ class _OutstandingPaymentBanner extends StatelessWidget {
     if (due.isEmpty) return const SizedBox.shrink();
 
     final booking = due.first;
-    final amount = _outstanding(booking);
+    final target = _due(booking)!;
+    final amount = target.amount;
     final ref = textOf(booking['booking_ref']);
     final dueAt = DateTime.tryParse(textOf(booking['balance_due_at']));
     final daysLeft = dueAt?.difference(DateTime.now()).inDays;
@@ -4004,7 +4044,10 @@ class _OutstandingPaymentBanner extends StatelessWidget {
                   HapticFeedback.selectionClick();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => PaymentScreen(bookingRef: ref),
+                      builder: (_) => PaymentScreen(
+                        bookingRef: ref,
+                        installmentNo: target.installmentNo,
+                      ),
                     ),
                   );
                 },

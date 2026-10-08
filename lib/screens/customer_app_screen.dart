@@ -86,6 +86,7 @@ part 'trip_cards.part.dart';
 part 'bookings_section.part.dart';
 part 'bookings_extras.part.dart';
 part 'booking_detail.part.dart';
+part 'booking_detail_layout.part.dart';
 part 'booking_split.part.dart';
 part 'booking_photos.part.dart';
 part 'booking_receipts.part.dart';

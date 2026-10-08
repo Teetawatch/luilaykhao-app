@@ -4454,6 +4454,29 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// จ่าย "ยอดเพิ่มเติม" ของใบที่ยืนยันแล้ว — ยอดมาจาก `booking.extra_due` ที่
+  /// หลังบ้านคำนวณ (แอดมินข้ามการชำระให้จ่ายทีหลัง หรือเพิ่มของให้ทีหลัง)
+  Future<Map<String, dynamic>> chargeExtra({
+    required String bookingRef,
+    String paymentMethod = 'promptpay',
+    String? transferDate,
+    String? transferTime,
+    required String slipImagePath,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.paymentsChargeExtra,
+      fields: {
+        'booking_ref': bookingRef,
+        'payment_method': paymentMethod,
+        'transfer_date': ?transferDate,
+        'transfer_time': ?transferTime,
+      },
+      files: {'slip_image': slipImagePath},
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   /// Pay a specific installment for an installment booking.
   Future<Map<String, dynamic>> chargeInstallment({
     required String bookingRef,

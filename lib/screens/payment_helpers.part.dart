@@ -247,6 +247,12 @@ int _depositPercentApprox(Map<String, dynamic> booking) {
 }
 
 /// True when the booking is on a deposit plan and the balance has not been paid yet.
+/// ยอดเพิ่มเติมที่ยังต้องจ่ายบนใบที่ยืนยันแล้ว — มาจากหลังบ้านตัวเดียว
+/// (`booking.extra_due.amount`) ห้ามคิด total − paid เอง เพราะยอดคงเหลือของ
+/// มัดจำและงวดที่นัดไว้มีทางจ่ายของมันอยู่แล้ว ดู Booking::extraDueAmount()
+num _extraDue(Map<String, dynamic> booking) =>
+    _asNum(asMap(booking['extra_due'])['amount']);
+
 bool _balanceUnpaid(Map<String, dynamic> booking) {
   if (textOf(booking['payment_type']) != 'deposit') return false;
   if (textOf(booking['balance_paid_at']).isNotEmpty) return false;
