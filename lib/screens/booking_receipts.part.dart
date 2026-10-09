@@ -7,6 +7,10 @@ part of 'customer_app_screen.dart';
 /// ส่วนนี้จึงเป็นทางที่สอง ไม่ใช่เอกสารคนละใบ: ปุ่มพาไปที่ PDF/หน้าตรวจสอบ
 /// ตัวเดียวกับในอีเมล
 ///
+/// จองหลายคน: ใต้ใบรวมมี "ใบเสร็จแยกรายคน" ของทุกคน (ยอดหารเท่ากัน) ให้ผู้จอง
+/// ส่งลิงก์ต่อให้เพื่อนที่ต้องใช้ใบในชื่อตัวเอง เพื่อนที่ผูกบัญชีไว้เปิดใบจอง
+/// เดียวกันจะเห็นเฉพาะใบในชื่อตัวเอง (backend เป็นคนกรอง)
+///
 /// โหลดเองและเงียบสนิทเมื่อยังไม่มีใบเสร็จ (จองแล้วแต่ยังไม่จ่าย, สลิปยังรอ
 /// ตรวจ) — ไม่ขึ้นหัวข้อว่างเปล่าให้ลูกค้าสงสัยว่าใบเสร็จหายไปไหน
 class BookingReceiptsSection extends StatefulWidget {
@@ -28,8 +32,8 @@ class _BookingReceiptsSectionState extends State<BookingReceiptsSection> {
   }
 
   Future<List<Map<String, dynamic>>> _load() {
-    // ไม่ใช่ทุกคนในคณะที่มีสิทธิ์ดูใบเสร็จ (เฉพาะผู้จอง) — เพื่อนที่เปิดใบจอง
-    // เดียวกันจะได้ 403 ซึ่งแปลว่า "ไม่มีอะไรให้แสดง" ไม่ใช่ข้อผิดพลาด
+    // คนที่ไม่ได้ผูกกับผู้เดินทางคนไหนในการจองจะได้ 403 ซึ่งแปลว่า "ไม่มีอะไร
+    // ให้แสดง" ไม่ใช่ข้อผิดพลาด
     return context
         .read<AppProvider>()
         .bookingReceipts(widget.bookingRef)
@@ -40,6 +44,21 @@ class _BookingReceiptsSectionState extends State<BookingReceiptsSection> {
     final uri = Uri.tryParse(url);
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _share(Map<String, dynamic> receipt) async {
+    final url = textOf(receipt['pdf_url']).isNotEmpty
+        ? textOf(receipt['pdf_url'])
+        : textOf(receipt['verify_url']);
+    if (url.isEmpty) return;
+    final name = textOf(receipt['holder_name']);
+    await SharePlus.instance.share(
+      ShareParams(
+        text: name.isEmpty
+            ? 'ใบเสร็จค่าทริป ${textOf(receipt['receipt_no'])}\n$url'
+            : 'ใบเสร็จค่าทริปในชื่อ $name (${textOf(receipt['receipt_no'])})\n$url',
+      ),
+    );
   }
 
   @override
@@ -62,7 +81,11 @@ class _BookingReceiptsSectionState extends State<BookingReceiptsSection> {
             ...receipts.map(
               (receipt) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: _ReceiptCard(receipt: receipt, onOpen: _open),
+                child: _ReceiptCard(
+                  receipt: receipt,
+                  onOpen: _open,
+                  onShare: _share,
+                ),
               ),
             ),
           ],
@@ -75,8 +98,13 @@ class _BookingReceiptsSectionState extends State<BookingReceiptsSection> {
 class _ReceiptCard extends StatelessWidget {
   final Map<String, dynamic> receipt;
   final Future<void> Function(String url) onOpen;
+  final Future<void> Function(Map<String, dynamic> receipt) onShare;
 
-  const _ReceiptCard({required this.receipt, required this.onOpen});
+  const _ReceiptCard({
+    required this.receipt,
+    required this.onOpen,
+    required this.onShare,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +113,9 @@ class _ReceiptCard extends StatelessWidget {
     final pdfUrl = textOf(receipt['pdf_url']);
     final verifyUrl = textOf(receipt['verify_url']);
     final issuedAt = DateTime.tryParse(textOf(receipt['issued_at']))?.toLocal();
+    final isPersonal = receipt['is_personal'] == true;
+    final holderName = textOf(receipt['holder_name']);
+    final personal = asList(receipt['personal']).map(asMap).toList();
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -113,11 +144,23 @@ class _ReceiptCard extends StatelessWidget {
                         color: AppTheme.onSurface(context),
                       ),
                     ),
+                    if (isPersonal && holderName.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'ในชื่อ $holderName',
+                        style: appFont(
+                          fontSize: AppText.sizeLabel,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.onSurface(context),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 2),
                     Text(
                       [
                         number,
-                        if (issuedAt != null) 'ออกเมื่อ ${thaiDateShort(issuedAt)}',
+                        if (issuedAt != null)
+                          'ออกเมื่อ ${thaiDateShort(issuedAt)}',
                       ].where((t) => t.isNotEmpty).join(' · '),
                       style: appFont(
                         fontSize: AppText.sizeLabel,
@@ -173,7 +216,102 @@ class _ReceiptCard extends StatelessWidget {
                 ),
             ],
           ),
+          if (personal.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              'ใบเสร็จแยกรายคน',
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'ส่งให้เพื่อนที่ต้องใช้ใบเสร็จในชื่อตัวเองได้เลย',
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.mutedText(context),
+              ),
+            ),
+            const SizedBox(height: 4),
+            for (final item in personal)
+              _PersonalReceiptRow(
+                receipt: item,
+                onOpen: onOpen,
+                onShare: onShare,
+              ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// ใบแยกของผู้เดินทางหนึ่งคน — แตะเปิด PDF, ปุ่มแชร์ส่งลิงก์ให้เจ้าตัว
+class _PersonalReceiptRow extends StatelessWidget {
+  final Map<String, dynamic> receipt;
+  final Future<void> Function(String url) onOpen;
+  final Future<void> Function(Map<String, dynamic> receipt) onShare;
+
+  const _PersonalReceiptRow({
+    required this.receipt,
+    required this.onOpen,
+    required this.onShare,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final name = textOf(receipt['holder_name']);
+    final pdfUrl = textOf(receipt['pdf_url']);
+    final url = pdfUrl.isNotEmpty ? pdfUrl : textOf(receipt['verify_url']);
+
+    return InkWell(
+      onTap: url.isEmpty ? null : () => onOpen(url),
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Icon(
+              Icons.person_outline_rounded,
+              size: 18,
+              color: AppTheme.mutedText(context),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                name.isNotEmpty ? name : textOf(receipt['receipt_no']),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  fontSize: AppText.sizeBody,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+            ),
+            Text(
+              money(receipt['amount']),
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+            IconButton(
+              tooltip: 'ส่งใบเสร็จให้ $name',
+              visualDensity: VisualDensity.compact,
+              onPressed: url.isEmpty ? null : () => onShare(receipt),
+              icon: const Icon(
+                Icons.ios_share_rounded,
+                size: 18,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
