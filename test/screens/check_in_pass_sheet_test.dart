@@ -290,6 +290,157 @@ void main() {
       expect(r.opened, ['LLK-REF-0001']);
     });
 
+    // ─────────── บัตรขึ้นรถรายคน (check_in_passes จากเซิร์ฟเวอร์) ───────────
+
+    Map<String, dynamic> withPasses(
+      Map<String, dynamic> base, {
+      required String role,
+      int? mine,
+      bool groupVisible = true,
+      List<int> aboard = const [],
+      List<Map<String, dynamic>> pickable = const [],
+    }) {
+      final people = [
+        {'id': 11, 'name': 'เอ', 'code': 'QR-PASS-A'},
+        {'id': 12, 'name': 'บี', 'code': 'QR-PASS-B'},
+      ];
+      return {
+        ...base,
+        'checked_in': aboard.isNotEmpty,
+        'passengers': [
+          for (final p in people)
+            {
+              'id': p['id'],
+              'name': p['name'],
+              'checked_in_at': aboard.contains(p['id'])
+                  ? '2026-10-10T00:10:00Z'
+                  : null,
+            },
+        ],
+        'check_in_passes': {
+          'viewer_role': role,
+          'mine_passenger_id': mine,
+          'group': groupVisible
+              ? {'code': base['qr_code'], 'passenger_count': 2}
+              : null,
+          'passes': [
+            for (final p in people)
+              if (role == 'owner' || p['id'] == mine)
+                {
+                  'passenger_id': p['id'],
+                  'name': p['name'],
+                  'full_name': p['name'],
+                  'code': p['code'],
+                  'checked_in': aboard.contains(p['id']),
+                  'checked_in_at': aboard.contains(p['id'])
+                      ? '2026-10-10T00:10:00Z'
+                      : null,
+                  'not_going': false,
+                  'is_mine': p['id'] == mine,
+                  'pass_url': null,
+                },
+          ],
+          'pickable_passengers': pickable,
+        },
+      };
+    }
+
+    // QrImageView ไม่เปิดข้อมูลที่วาดให้อ่าน — ดูจากป้าย Semantics ที่ห่อ QR แต่ละแบบแทน
+    Finder qrLabelled(String label) => find.byWidgetPredicate(
+      (w) => w is Semantics && w.properties.label == label,
+    );
+    final groupQr = qrLabelled('QR เช็คอินทั้งกลุ่ม ใบจอง LLK-REF-0001');
+
+    testWidgets('คนจอง — เริ่มที่ QR ทั้งกลุ่ม แล้วสลับดูบัตรของแต่ละคนได้', (
+      tester,
+    ) async {
+      await pumpSheet(
+        tester,
+        bookings: [withPasses(booking(id: 1), role: 'owner')],
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('ทั้งกลุ่ม · 2 คน'), findsOneWidget);
+      expect(groupQr, findsOneWidget);
+      expect(find.textContaining('ทีมงานจะติ๊กเฉพาะคนที่มาถึง'), findsOneWidget);
+
+      await tester.tap(find.text('บี'));
+      await tester.pumpAndSettle();
+      expect(qrLabelled('QR บัตรขึ้นรถของ บี'), findsOneWidget);
+      expect(groupQr, findsNothing);
+      expect(find.text('บัตรขึ้นรถของ บี'), findsOneWidget);
+      expect(find.text('ส่งบัตรให้บี'), findsOneWidget);
+    });
+
+    testWidgets('เพื่อนที่ผูกชื่อแล้ว — เห็นบัตรของตัวเองใบเดียว ไม่มี QR กลุ่ม', (
+      tester,
+    ) async {
+      await pumpSheet(
+        tester,
+        bookings: [
+          withPasses(
+            booking(id: 1),
+            role: 'member',
+            mine: 12,
+            groupVisible: false,
+          ),
+        ],
+      );
+      expect(find.byType(QrImageView), findsOneWidget);
+      expect(qrLabelled('QR บัตรขึ้นรถของ บี'), findsOneWidget);
+      expect(find.text('บัตรขึ้นรถของ บี'), findsOneWidget);
+      expect(find.text('ทั้งกลุ่ม · 2 คน'), findsNothing);
+      expect(find.textContaining('ส่งบัตรให้'), findsNothing);
+    });
+
+    testWidgets('เพื่อนที่ยังไม่เลือกชื่อ — QR กลุ่ม + ปุ่มเลือกชื่อของตัวเอง', (
+      tester,
+    ) async {
+      await pumpSheet(
+        tester,
+        bookings: [
+          withPasses(
+            booking(id: 1),
+            role: 'member',
+            pickable: [
+              {'passenger_id': 12, 'name': 'บี', 'full_name': 'บี'},
+            ],
+          ),
+        ],
+      );
+      expect(groupQr, findsOneWidget);
+      expect(
+        find.text('เลือกชื่อของฉัน เพื่อรับบัตรขึ้นรถของตัวเอง'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('ขึ้นรถไปบางคน — QR กลุ่มยังอยู่สำหรับคนที่เหลือ', (
+      tester,
+    ) async {
+      await pumpSheet(
+        tester,
+        bookings: [withPasses(booking(id: 1), role: 'owner', aboard: [11])],
+      );
+      expect(groupQr, findsOneWidget);
+      expect(find.textContaining('ขึ้นรถแล้ว 1/2 คน'), findsOneWidget);
+
+      await tester.tap(find.text('เอ'));
+      await tester.pumpAndSettle();
+      expect(find.text('เอ ขึ้นรถแล้ว'), findsOneWidget);
+      expect(find.byType(QrImageView), findsNothing);
+    });
+
+    testWidgets('ขึ้นรถครบทุกคน — การ์ดเช็คอินแล้ว ไม่มี QR', (tester) async {
+      await pumpSheet(
+        tester,
+        bookings: [
+          withPasses(booking(id: 1), role: 'owner', aboard: [11, 12]),
+        ],
+      );
+      expect(find.text('เช็คอินแล้ว'), findsOneWidget);
+      expect(find.byType(QrImageView), findsNothing);
+    });
+
     testWidgets('เช็คอินแล้ว — ไม่โชว์ QR ที่สแกนได้อีก', (tester) async {
       await pumpSheet(tester, bookings: [booking(id: 1, checkedIn: true)]);
       expect(find.text('เช็คอินแล้ว'), findsOneWidget);

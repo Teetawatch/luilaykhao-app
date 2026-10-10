@@ -181,6 +181,18 @@ class ApiEndpoints {
   static String bookingInvite(String token) => 'booking-invites/$token';
   static String bookingInviteAccept(String token) =>
       'booking-invites/$token/accept';
+  // เพื่อนที่เข้าร่วมแล้วเลือกว่าตัวเองคือใครในรายชื่อ → ได้บัตรขึ้นรถของตัวเอง
+  static String bookingClaimPassenger(String ref) =>
+      'bookings/$ref/members/me/passenger';
+
+  // ลิงก์ของเพื่อน (/f/{token}) — บัตรขึ้นรถ + กรอกข้อมูล + เข้าแอป ในลิงก์เดียว
+  static String passengerPassLink(String ref, int passengerId) =>
+      'bookings/$ref/passengers/$passengerId/pass-link';
+
+  // ไปครบไหม — คนจองตอบทั้งใบ เพื่อนตอบเฉพาะตัวเอง
+  static String bookingAttendance(String ref) => 'bookings/$ref/attendance';
+  static String bookingAttendancePassenger(String ref, int passengerId) =>
+      'bookings/$ref/attendance/$passengerId';
 
   // ส่งต่อที่นั่ง — คนที่ไปไม่ได้ออกลิงก์ให้คนอื่นมารับที่นั่งแทน
   static String bookingHandovers(String ref) => 'bookings/$ref/handovers';
@@ -286,6 +298,7 @@ class ApiEndpoints {
   // Staff
   static const staffCheckInLookup = 'staff/check-in/lookup';
   static const staffCheckInConfirm = 'staff/check-in/confirm';
+  static const staffCheckInUndo = 'staff/check-in/undo';
   static const staffSchedulesMy = 'staff/schedules/my';
   static const staffReviewsMy = 'staff/reviews/my';
   static const staffProfile = 'staff/profile';

@@ -180,6 +180,7 @@ class _CheckInPassSheetState extends State<CheckInPassSheet> {
             child: _CheckInPassCard(
               key: ValueKey(currentRef),
               booking: current,
+              onChanged: _refresh,
               onOpenBooking: () {
                 _close();
                 widget.onOpenBooking(currentRef);
@@ -351,10 +352,15 @@ class _CheckInPassCard extends StatelessWidget {
   final Map<String, dynamic> booking;
   final VoidCallback onOpenBooking;
 
+  /// เพื่อนเพิ่งเลือกชื่อตัวเอง — ดึงใบจองสดใหม่ ไม่งั้นสำเนาที่ดึงไว้ตอนเปิดแผ่น
+  /// จะทับบัตรใบใหม่ด้วยข้อมูลก่อนเลือก
+  final VoidCallback? onChanged;
+
   const _CheckInPassCard({
     super.key,
     required this.booking,
     required this.onOpenBooking,
+    this.onChanged,
   });
 
   @override
@@ -469,7 +475,10 @@ class _CheckInPassCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          if (checkedIn)
+          // บัตรรายคนจากเซิร์ฟเวอร์ — ข้อมูลที่แคชจากแอปรุ่นก่อนยังไม่มี ใช้ QR ใบจองเดิม
+          if (_BoardingPasses.available(booking))
+            _BoardingPasses(booking: booking, onChanged: onChanged)
+          else if (checkedIn)
             _CheckedInCard(
               bookingRef: bookingRef,
               checkedInAt: booking['checked_in_at'],

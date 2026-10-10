@@ -308,6 +308,14 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   _detailGap,
                   _TripDayEntryCard(booking: booking),
                 ],
+                // ไปครบไหม — ใบจองหลายคน ช่วงก่อนรถออก (แจ้งไว้ สตาฟจะไม่ยืนรอ)
+                if (liveConfirmed &&
+                    _isPreTripWindow(schedule) &&
+                    asList(booking['passengers']).length >= 2 &&
+                    booking['checked_in'] != true) ...[
+                  _detailGap,
+                  _AttendanceEntryCard(booking: booking, onReturn: reload),
+                ],
                 if (liveConfirmed && _isWithinTripWindow(schedule)) ...[
                   _detailGap,
                   SosButton(
@@ -329,7 +337,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     title: 'ตั๋วเดินทาง',
                   ),
                   _detailGap,
-                  _BookingCheckInCard(booking: booking),
+                  _BookingCheckInCard(booking: booking, onChanged: reload),
                 ],
 
                 // ── การเดินทาง ─────────────────────────────────────────────
@@ -592,6 +600,14 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
         .trim();
     final phone = textOf(passenger['phone'], 'ไม่มีเบอร์โทร');
     final halal = passenger['halal_food'] == true;
+    final boarded = textOf(passenger['checked_in_at']).isNotEmpty;
+    final notGoing = !boarded && textOf(passenger['not_going_at']).isNotEmpty;
+    // ลิงก์ของเพื่อน: คนจองส่งได้ทุกคน เพื่อนขอได้เฉพาะของตัวเอง
+    final passes = asMap(booking['check_in_passes']);
+    final canShareLink =
+        booking['viewer_is_owner'] == true ||
+        (passes['mine_passenger_id'] != null &&
+            textOf(passes['mine_passenger_id']) == textOf(passenger['id']));
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -635,11 +651,14 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (seat.isNotEmpty || halal) ...[
+                if (seat.isNotEmpty || halal || boarded || notGoing) ...[
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 6,
+                    runSpacing: 4,
                     children: [
+                      if (boarded) const _InlineBadge('ขึ้นรถแล้ว'),
+                      if (notGoing) const _InlineBadge('แจ้งไม่ไป'),
                       if (seat.isNotEmpty)
                         _InlineBadge(
                           isFlight ? 'ที่นั่งบนเครื่อง $seat' : 'ที่นั่ง $seat',
@@ -651,9 +670,10 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
               ],
             ),
           ),
-          // ให้เพื่อนกรอกข้อมูลของตัวเอง — คนจองจะได้ไม่ต้องไล่ถามเลขบัตร/
-          // โรคประจำตัวทางแชท
-          if (textOf(booking['status']) != 'cancelled')
+          // ลิงก์ของเพื่อน — บัตรขึ้นรถของตัวเอง + กรอกข้อมูลเอง + เข้าห้องแชท
+          // ในลิงก์เดียว คนจองจะได้ไม่ต้องไล่ถามเลขบัตร/โรคประจำตัวทางแชท
+          if (canShareLink &&
+              const ['confirmed', 'pending'].contains(textOf(booking['status'])))
             _PassengerInviteButton(
               bookingRef: textOf(booking['booking_ref']),
               passenger: passenger,
@@ -2789,10 +2809,12 @@ class _BookingMedalButtonState extends State<_BookingMedalButton> {
   }
 }
 
-/// ปุ่มสร้างลิงก์ให้ผู้โดยสารคนนั้นกรอกข้อมูลของตัวเอง แล้วแชร์ต่อทันที
+/// ส่ง "ลิงก์ของเพื่อน" ให้ผู้เดินทางคนนั้น แล้วแชร์ต่อทันที
 ///
-/// ลิงก์เป็นหน้าเว็บธรรมดา เพื่อนไม่ต้องมีแอปและไม่ต้องสมัครสมาชิก เปิดใน
-/// เบราว์เซอร์ของ LINE ได้ตรง ๆ
+/// ลิงก์เดียวที่เพื่อนต้องมี: บัตรขึ้นรถของตัวเอง (ขึ้นรถได้แม้คนจองไม่มา)
+/// กรอกข้อมูลของตัวเอง เข้าห้องแชทของทริปในแอป และแจ้งว่าไปไม่ได้ — เป็นหน้าเว็บ
+/// ธรรมดา เพื่อนไม่ต้องมีแอปและไม่ต้องสมัครสมาชิก เปิดในเบราว์เซอร์ของ LINE ได้
+/// ลิงก์ไม่เปลี่ยนเมื่อกดซ้ำ ส่งซ้ำในกลุ่มได้โดยลิงก์เก่าไม่ตาย
 class _PassengerInviteButton extends StatefulWidget {
   final String bookingRef;
   final Map<String, dynamic> passenger;
@@ -2819,7 +2841,7 @@ class _PassengerInviteButtonState extends State<_PassengerInviteButton> {
         int.tryParse(textOf(widget.passenger['id'])) ?? 0;
 
     try {
-      final result = await context.read<AppProvider>().createPassengerInvite(
+      final result = await context.read<AppProvider>().passengerPassLink(
         widget.bookingRef,
         passengerId,
       );
@@ -2829,17 +2851,13 @@ class _PassengerInviteButtonState extends State<_PassengerInviteButton> {
       final url = textOf(result['url']);
       if (url.isEmpty) throw Exception('no url');
 
-      final tripName = textOf(
-        asMap(asMap(widget.passenger['booking'])['trip'])['title'],
-      );
-
       await SharePlus.instance.share(
-        ShareParams(
-          text: tripName.isEmpty
-              ? 'ช่วยกรอกข้อมูลผู้เดินทางให้หน่อยนะ (ใช้เวลาไม่ถึง 2 นาที)\n$url'
-              : 'ช่วยกรอกข้อมูลผู้เดินทางสำหรับทริป $tripName ให้หน่อยนะ\n$url',
-        ),
+        ShareParams(text: textOf(result['share_text'], url)),
       );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -2852,7 +2870,7 @@ class _PassengerInviteButtonState extends State<_PassengerInviteButton> {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      tooltip: 'ส่งลิงก์ให้กรอกข้อมูลเอง',
+      tooltip: 'ส่งลิงก์ให้เพื่อน: บัตรขึ้นรถ · กรอกข้อมูล · เข้าห้องแชท',
       onPressed: _busy ? null : _invite,
       icon: _busy
           ? const SizedBox(
@@ -2861,7 +2879,7 @@ class _PassengerInviteButtonState extends State<_PassengerInviteButton> {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : Icon(
-              Icons.person_add_alt_rounded,
+              Icons.ios_share_rounded,
               size: 19,
               color: AppTheme.mutedText(context),
             ),
@@ -2910,7 +2928,7 @@ class _SaveTravellersButtonState extends State<_SaveTravellersButton> {
         SnackBar(
           content: Text(
             created > 0
-                ? 'เก็บผู้ร่วมเดินทาง \$created คนเข้าสมุดแล้ว'
+                ? 'เก็บผู้ร่วมเดินทาง $created คนเข้าสมุดแล้ว'
                 : 'ทุกคนอยู่ในสมุดอยู่แล้ว',
           ),
         ),
@@ -4628,6 +4646,112 @@ class _SummaryRow extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// "ไปครบไหม" ในใบจอง — สรุปว่าไปกี่คน แตะแล้วไปหน้าตอบ
+class _AttendanceEntryCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final VoidCallback onReturn;
+
+  const _AttendanceEntryCard({required this.booking, required this.onReturn});
+
+  @override
+  Widget build(BuildContext context) {
+    final people = asList(booking['passengers']).map(asMap).toList();
+    final notGoing = people
+        .where(
+          (p) =>
+              textOf(p['not_going_at']).isNotEmpty &&
+              textOf(p['checked_in_at']).isEmpty,
+        )
+        .length;
+    final going = people.length - notGoing;
+    final confirmed = textOf(booking['attendance_confirmed_at']).isNotEmpty;
+
+    final title = confirmed || notGoing > 0
+        ? (notGoing == 0
+              ? 'ไปครบ ${people.length} คน'
+              : 'ไป $going จาก ${people.length} คน')
+        : 'ไปครบ ${people.length} คนไหม?';
+    final subtitle = confirmed || notGoing > 0
+        ? 'แตะเพื่อแก้ไข ได้จนถึงเวลารถออก'
+        : 'ใครไปไม่ได้ บอกทีมงานไว้ก่อน จะได้ไม่ต้องรอที่จุดขึ้นรถ';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        onTap: () async {
+          HapticFeedback.selectionClick();
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TripAttendanceScreen(
+                bookingRef: textOf(booking['booking_ref']),
+              ),
+            ),
+          );
+          onReturn();
+        },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: AppTheme.cardDecoration(context, radius: AppTheme.radiusLg),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: (notGoing > 0
+                          ? AppTheme.warningColor
+                          : AppTheme.primaryColor)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                ),
+                child: Icon(
+                  notGoing > 0
+                      ? Icons.event_busy_rounded
+                      : Icons.groups_rounded,
+                  color: notGoing > 0
+                      ? AppTheme.warningColor
+                      : AppTheme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: appFont(
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.mutedText(context),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

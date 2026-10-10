@@ -506,7 +506,10 @@ class _JoinBookingAction extends StatelessWidget {
 class _BookingCheckInCard extends StatelessWidget {
   final Map<String, dynamic> booking;
 
-  const _BookingCheckInCard({required this.booking});
+  /// ข้อมูลใบจองเปลี่ยน (เพื่อนเลือกชื่อตัวเอง) — ให้หน้าที่ถือใบจองดึงใหม่
+  final VoidCallback? onChanged;
+
+  const _BookingCheckInCard({required this.booking, this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -515,6 +518,36 @@ class _BookingCheckInCard extends StatelessWidget {
     }
 
     final bookingRef = textOf(booking['booking_ref'], '-');
+
+    // บัตรขึ้นรถรายคน (เจ้าของเห็นทุกคน เพื่อนเห็นของตัวเอง) — ใบจองเดียวกัน
+    // ขึ้นรถไม่พร้อมกันได้ "เช็คอินแล้ว" ระดับใบจองจึงไม่ได้แปลว่าครบทุกคน
+    if (_BoardingPasses.available(booking)) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppTheme.isDark(context)
+              ? AppTheme.primaryColor.withValues(alpha: 0.14)
+              : AppTheme.primaryColor.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(
+            color: AppTheme.primaryColor.withValues(alpha: 0.16),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _CheckInTextBlock(bookingRef: null),
+            const SizedBox(height: 16),
+            _BoardingPasses(
+              booking: booking,
+              maxQrSize: 200,
+              onChanged: onChanged,
+            ),
+          ],
+        ),
+      );
+    }
 
     // เมื่อ QR ถูกสแกนเช็คอินแล้ว รหัสจะใช้ไม่ได้อีก — สลับเป็นการ์ดสถานะ
     // "เช็คอินแล้ว" แทนการโชว์ QR ที่สแกนได้ เพื่อบอกผู้ใช้ชัดเจนว่าถูกสแกนไปแล้ว

@@ -35,6 +35,12 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
   String? _success;
   bool _loading = false;
   bool _confirming = false;
+
+  /// ผู้เดินทางที่สตาฟติ๊กว่ามาถึงแล้ว — เช็คอินรายคน ใบจองเดียวกันมาไม่ครบได้
+  Set<int> _selected = {};
+
+  /// id ที่กำลังถอนเช็คอินอยู่ — กันกดซ้ำ
+  final Set<int> _undoing = {};
   late final AnimationController _successAnimController;
   late final Animation<double> _successScale;
 
@@ -110,6 +116,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
       setState(() {
         _booking = result.booking;
         _meta = result.meta;
+        _selected = _defaultSelection(result.meta);
       });
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -119,6 +126,94 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// รายคนจาก meta ของเซิร์ฟเวอร์ (ว่าง = ใบจองเก่าที่ไม่มีรายชื่อแยก)
+  List<Map<String, dynamic>> get _roster =>
+      asList(_meta?['passengers']).map(asMap).toList();
+
+  /// ติ๊กไว้ให้ก่อน: สแกน QR รายคน = คนนั้นคนเดียว, QR ทั้งกลุ่ม = ทุกคนที่ยังรอ
+  /// (คนที่แจ้งไม่ไปไม่ถูกติ๊กให้ — ถ้าเขามาจริง สตาฟติ๊กเองได้)
+  Set<int> _defaultSelection(Map<String, dynamic> meta) {
+    final roster = asList(meta['passengers']).map(asMap);
+    final scanned = (meta['scanned_passenger_id'] as num?)?.toInt();
+
+    if (scanned != null) {
+      final person = roster.firstWhere(
+        (p) => (p['id'] as num?)?.toInt() == scanned,
+        orElse: () => const {},
+      );
+      return person.isNotEmpty && person['checked_in'] != true
+          ? {scanned}
+          : <int>{};
+    }
+
+    return roster
+        .where((p) => p['checked_in'] != true && p['not_going'] != true)
+        .map((p) => (p['id'] as num).toInt())
+        .toSet();
+  }
+
+  Future<void> _undo(Map<String, dynamic> person) async {
+    final code = _currentCode;
+    final id = (person['id'] as num?)?.toInt();
+    if (code == null || id == null || _undoing.contains(id)) return;
+
+    final name = textOf(person['display_name'], textOf(person['name'], '-'));
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'ยกเลิกเช็คอินของ $name?',
+          style: appFont(
+            fontSize: AppText.sizeSubtitle,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: Text(
+          'ใช้เมื่อติ๊กผิดคน — $name จะกลับไปอยู่ในรายชื่อที่ยังไม่ขึ้นรถ',
+          style: appFont(fontSize: AppText.sizeBody, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ไม่ใช่'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('ยกเลิกเช็คอิน'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() {
+      _undoing.add(id);
+      _error = null;
+      _success = null;
+    });
+    try {
+      final result = await context.read<AppProvider>().undoStaffCheckIn(
+        code,
+        passengerId: id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _booking = result.booking;
+        _meta = result.meta;
+        _selected = <int>{};
+        _success = result.message;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _undoing.remove(id));
     }
   }
 
@@ -135,12 +230,15 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
     try {
       final result = await context.read<AppProvider>().confirmStaffCheckIn(
         code,
+        // ใบจองเก่าที่ไม่มีรายชื่อแยก — ไม่ส่ง ให้เซิร์ฟเวอร์เช็คอินทั้งใบตามเดิม
+        passengerIds: _roster.isEmpty ? null : _selected.toList(),
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
       setState(() {
         _booking = result.booking;
         _meta = result.meta;
+        _selected = <int>{};
         _success = result.message;
       });
       _successAnimController.forward(from: 0);
@@ -164,6 +262,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
       _currentCode = null;
       _error = null;
       _success = null;
+      _selected = <int>{};
     });
     _manualController.clear();
     _successAnimController.reset();
@@ -225,12 +324,18 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
     }
 
     final booking = _booking;
-    final checkedIn = booking?['checked_in'] == true;
+    final roster = _roster;
+    // ขึ้นรถครบทุกคนแล้ว — ใบจองเก่าที่ไม่มีรายชื่อแยกดูระดับใบจอง
+    final checkedIn = roster.isEmpty
+        ? (booking?['checked_in'] == true)
+        : roster.every((p) => p['checked_in'] == true);
     final canConfirm =
         booking != null &&
         textOf(booking['status']).toLowerCase() == 'confirmed' &&
         !checkedIn &&
+        (roster.isEmpty || _selected.isNotEmpty) &&
         !_confirming;
+    final blockReason = textOf(_meta?['block_reason']);
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
@@ -305,8 +410,31 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
             else if (booking == null)
               const _EmptyState()
             else ...[
-              _BookingDetail(booking: booking, meta: _meta),
-              const SizedBox(height: 16),
+              // ── ใครมาถึงแล้วบ้าง (เช็คอินรายคน) ─────────────────────
+              if (roster.isNotEmpty &&
+                  textOf(booking['status']).toLowerCase() == 'confirmed') ...[
+                _ArrivalChecklist(
+                  roster: roster,
+                  selected: _selected,
+                  scannedId: (_meta?['scanned_passenger_id'] as num?)?.toInt(),
+                  undoing: _undoing,
+                  enabled: !_confirming,
+                  onToggle: (id, value) => setState(() {
+                    value ? _selected.add(id) : _selected.remove(id);
+                  }),
+                  onSelectAll: (ids) => setState(() => _selected = ids),
+                  onUndo: _undo,
+                ),
+                if (!checkedIn && _selected.isEmpty && blockReason.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _MessageBanner(
+                    icon: Icons.info_outline_rounded,
+                    text: blockReason,
+                    color: AppTheme.warningColor,
+                  ),
+                ],
+                const SizedBox(height: 12),
+              ],
 
               // ── Check-in button ──────────────────────────────────
               _CheckInButton(
@@ -314,8 +442,11 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
                 canConfirm: canConfirm,
                 confirming: _confirming,
                 booking: booking,
+                selectedCount: roster.isEmpty ? null : _selected.length,
                 onConfirm: _confirm,
               ),
+              const SizedBox(height: 16),
+              _BookingDetail(booking: booking, meta: _meta),
             ],
           ],
         ),
@@ -499,12 +630,16 @@ class _CheckInButton extends StatelessWidget {
   final Map<String, dynamic> booking;
   final VoidCallback onConfirm;
 
+  /// จำนวนคนที่ติ๊กไว้ — null = ใบจองเก่าที่ไม่มีรายชื่อแยก
+  final int? selectedCount;
+
   const _CheckInButton({
     required this.checkedIn,
     required this.canConfirm,
     required this.confirming,
     required this.booking,
     required this.onConfirm,
+    this.selectedCount,
   });
 
   @override
@@ -529,7 +664,7 @@ class _CheckInButton extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Text(
-              'เช็คอินเรียบร้อยแล้ว',
+              selectedCount == null ? 'เช็คอินเรียบร้อยแล้ว' : 'ขึ้นรถครบทุกคนแล้ว',
               style: appFont(
                 fontSize: AppText.sizeSubtitle,
                 fontWeight: FontWeight.w900,
@@ -618,7 +753,11 @@ class _CheckInButton extends StatelessWidget {
                       const Icon(Icons.how_to_reg_rounded, size: 22),
                       const SizedBox(width: 10),
                       Text(
-                        'ยืนยันเช็คอิน',
+                        switch (selectedCount) {
+                          null => 'ยืนยันเช็คอิน',
+                          0 => 'เลือกคนที่มาถึงก่อน',
+                          final n => 'เช็คอิน $n คน',
+                        },
                         style: appFont(
                           fontWeight: FontWeight.w900,
                           fontSize: AppText.sizeSubtitle,
@@ -629,6 +768,199 @@ class _CheckInButton extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Arrival checklist — เช็คอินรายคน
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// ใครในใบจองนี้มาถึงแล้วบ้าง
+///
+/// ใบจองเดียวมาไม่ครบเป็นเรื่องปกติ (เพื่อนไม่มา, ขึ้นคนละจุด) — สตาฟติ๊กเฉพาะคนที่
+/// ยืนอยู่ตรงหน้า คนที่ไม่ได้ติ๊กยังอยู่ในรายชื่อรอขึ้นรถ และจุดรับนั้นจะยังไม่ปิด
+class _ArrivalChecklist extends StatelessWidget {
+  final List<Map<String, dynamic>> roster;
+  final Set<int> selected;
+  final int? scannedId;
+  final Set<int> undoing;
+  final bool enabled;
+  final void Function(int id, bool value) onToggle;
+  final ValueChanged<Set<int>> onSelectAll;
+  final ValueChanged<Map<String, dynamic>> onUndo;
+
+  const _ArrivalChecklist({
+    required this.roster,
+    required this.selected,
+    required this.scannedId,
+    required this.undoing,
+    required this.enabled,
+    required this.onToggle,
+    required this.onSelectAll,
+    required this.onUndo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final waiting = roster
+        .where((p) => p['checked_in'] != true)
+        .map((p) => (p['id'] as num).toInt())
+        .toSet();
+    final aboard = roster.where((p) => p['checked_in'] == true).length;
+    final allPicked = waiting.isNotEmpty && waiting.every(selected.contains);
+
+    return _SectionCard(
+      icon: Icons.fact_check_rounded,
+      title: 'ใครมาถึงแล้วบ้าง',
+      trailingBadge: 'ขึ้นรถ $aboard/${roster.length}',
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  scannedId != null
+                      ? 'สแกนบัตรรายคน — ติ๊กเพิ่มได้ถ้าคนอื่นในใบนี้มาด้วย'
+                      : 'ติ๊กเฉพาะคนที่อยู่ตรงหน้า คนที่ยังไม่มาเช็คอินทีหลังได้',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    color: AppTheme.mutedText(context),
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              if (waiting.length > 1)
+                TextButton(
+                  onPressed: enabled
+                      ? () => onSelectAll(allPicked ? <int>{} : waiting)
+                      : null,
+                  child: Text(allPicked ? 'ล้าง' : 'เลือกทั้งหมด'),
+                ),
+            ],
+          ),
+        ),
+        for (final person in roster)
+          _ArrivalRow(
+            person: person,
+            selected: selected.contains((person['id'] as num).toInt()),
+            scanned: (person['id'] as num).toInt() == scannedId,
+            undoing: undoing.contains((person['id'] as num).toInt()),
+            enabled: enabled,
+            onToggle: (value) => onToggle((person['id'] as num).toInt(), value),
+            onUndo: () => onUndo(person),
+          ),
+      ],
+    );
+  }
+}
+
+class _ArrivalRow extends StatelessWidget {
+  final Map<String, dynamic> person;
+  final bool selected;
+  final bool scanned;
+  final bool undoing;
+  final bool enabled;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onUndo;
+
+  const _ArrivalRow({
+    required this.person,
+    required this.selected,
+    required this.scanned,
+    required this.undoing,
+    required this.enabled,
+    required this.onToggle,
+    required this.onUndo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final checkedIn = person['checked_in'] == true;
+    final notGoing = person['not_going'] == true;
+    final name = textOf(person['display_name'], textOf(person['name'], '-'));
+    final fullName = [
+      textOf(person['title']),
+      textOf(person['name']),
+    ].where((v) => v.isNotEmpty).join(' ');
+    final at = DateTime.tryParse(textOf(person['checked_in_at']))?.toLocal();
+
+    final String? note = checkedIn
+        ? 'ขึ้นรถแล้ว${at != null ? ' ${DateFormat('HH:mm').format(at)} น.' : ''}'
+        : notGoing
+        ? 'แจ้งไว้ว่าไม่ไป — ติ๊กได้ถ้ามาจริง'
+        : (scanned ? 'เจ้าของบัตรที่สแกน' : null);
+    final noteColor = checkedIn
+        ? AppTheme.primaryColor
+        : notGoing
+        ? AppTheme.warningColor
+        : AppTheme.mutedText(context);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      onTap: checkedIn || !enabled ? null : () => onToggle(!selected),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Checkbox(
+              value: checkedIn || selected,
+              onChanged: checkedIn || !enabled
+                  ? null
+                  : (value) => onToggle(value ?? false),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: appFont(
+                      fontSize: AppText.sizeBody,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.onSurface(context),
+                    ),
+                  ),
+                  if (fullName.isNotEmpty && fullName != name)
+                    Text(
+                      fullName,
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                  if (note != null)
+                    Text(
+                      note,
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w700,
+                        color: noteColor,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (checkedIn)
+              undoing
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : TextButton(
+                      onPressed: enabled ? onUndo : null,
+                      child: const Text('ยกเลิก'),
+                    ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -657,7 +989,11 @@ class _BookingDetail extends StatelessWidget {
     final passengers = asList(booking['passengers']).map(asMap).toList();
     final seats = asList(booking['seats']).map(asMap).toList();
     final staff = asList(booking['assigned_staff']).map(asMap).toList();
-    final checkedIn = booking['checked_in'] == true;
+    // "เช็คอินแล้ว" บนหัวการ์ด = ขึ้นรถครบทุกคน ใบที่ขึ้นมาบางคนยังไม่ใช่
+    final roster = asList(meta?['passengers']).map(asMap).toList();
+    final checkedIn = roster.isEmpty
+        ? booking['checked_in'] == true
+        : roster.every((p) => p['checked_in'] == true);
     final status = textOf(booking['status']).toLowerCase();
 
     return Column(

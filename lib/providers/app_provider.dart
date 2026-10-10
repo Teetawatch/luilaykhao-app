@@ -2112,6 +2112,7 @@ class AppProvider extends ChangeNotifier {
     String qrCode, {
     int? scheduleId,
     DateTime? checkedInAt,
+    List<int>? passengerIds,
   }) async {
     final response = await api.post(
       'staff/check-in/confirm',
@@ -2125,6 +2126,9 @@ class AppProvider extends ChangeNotifier {
         'qr_code': qrCode,
         'schedule_id': ?scheduleId,
         'checked_in_at': ?checkedInAt?.toUtc().toIso8601String(),
+        // เช็คอินรายคน — คนที่สตาฟติ๊กว่ามาจริง (ไม่ส่ง = ทุกคนที่ยังรอ หรือ
+        // เฉพาะเจ้าของบัตรเมื่อสแกน QR รายคน)
+        'passenger_ids': ?passengerIds,
       },
     );
     final envelope = Map<String, dynamic>.from(response as Map);
@@ -2134,6 +2138,31 @@ class AppProvider extends ChangeNotifier {
           ? Map<String, dynamic>.from(envelope['meta'] as Map)
           : <String, dynamic>{},
       message: envelope['message']?.toString() ?? 'เช็คอินสำเร็จแล้ว',
+    );
+  }
+
+  /// ถอนเช็คอินของผู้เดินทางคนหนึ่ง (สตาฟติ๊กผิดคน)
+  Future<({Map<String, dynamic> booking, Map<String, dynamic> meta, String message})>
+  undoStaffCheckIn(
+    String qrCode, {
+    required int passengerId,
+    int? scheduleId,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.staffCheckInUndo,
+      body: {
+        'qr_code': qrCode,
+        'passenger_id': passengerId,
+        'schedule_id': ?scheduleId,
+      },
+    );
+    final envelope = Map<String, dynamic>.from(response as Map);
+    return (
+      booking: Map<String, dynamic>.from(envelope['data'] as Map),
+      meta: envelope['meta'] is Map
+          ? Map<String, dynamic>.from(envelope['meta'] as Map)
+          : <String, dynamic>{},
+      message: envelope['message']?.toString() ?? 'ยกเลิกเช็คอินแล้ว',
     );
   }
 
@@ -2968,6 +2997,77 @@ class AppProvider extends ChangeNotifier {
     final data = Map<String, dynamic>.from(api.data(response) as Map);
     await loadAccountData();
     return data;
+  }
+
+  /// เพื่อนที่เข้าร่วมแล้วเลือกว่าตัวเองคือใครในรายชื่อ — คืน check_in_passes ชุดใหม่
+  /// แล้วรีโหลดใบจองในแอป ให้แผ่น QR เปลี่ยนเป็นบัตรของตัวเองทันที
+  Future<Map<String, dynamic>> claimBookingPassenger(
+    String ref,
+    int passengerId,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.bookingClaimPassenger(ref),
+      body: {'passenger_id': passengerId},
+    );
+    final data = Map<String, dynamic>.from(api.data(response) ?? const {});
+    await loadAccountData();
+    return data;
+  }
+
+  /// ลิงก์ของเพื่อนคนหนึ่ง (ใช้ตัวเดิมตลอด) — {url, share_text, name}
+  Future<Map<String, dynamic>> passengerPassLink(
+    String ref,
+    int passengerId,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.passengerPassLink(ref, passengerId),
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// เปลี่ยนลิงก์ของเพื่อน — ลิงก์เดิมใช้ไม่ได้อีก
+  Future<void> revokePassengerPassLink(String ref, int passengerId) async {
+    await api.delete(ApiEndpoints.passengerPassLink(ref, passengerId));
+  }
+
+  // ─── ไปครบไหม ──────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> bookingAttendance(String ref) async {
+    final response = await api.get(ApiEndpoints.bookingAttendance(ref));
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// คนจองยืนยันทั้งใบ — [notGoingIds] คือคนที่ไม่ไป
+  Future<({Map<String, dynamic> data, String message})> confirmBookingAttendance(
+    String ref,
+    List<int> notGoingIds,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.bookingAttendance(ref),
+      body: {'not_going_ids': notGoingIds},
+    );
+    final envelope = Map<String, dynamic>.from(response as Map);
+    return (
+      data: Map<String, dynamic>.from(envelope['data'] as Map? ?? const {}),
+      message: envelope['message']?.toString() ?? 'บันทึกแล้ว',
+    );
+  }
+
+  /// เปลี่ยนสถานะไป/ไม่ไปของคนเดียว (เพื่อนทำได้เฉพาะตัวเอง)
+  Future<({Map<String, dynamic> data, String message})> setPassengerNotGoing(
+    String ref,
+    int passengerId, {
+    required bool notGoing,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.bookingAttendancePassenger(ref, passengerId),
+      body: {'not_going': notGoing},
+    );
+    final envelope = Map<String, dynamic>.from(response as Map);
+    return (
+      data: Map<String, dynamic>.from(envelope['data'] as Map? ?? const {}),
+      message: envelope['message']?.toString() ?? 'บันทึกแล้ว',
+    );
   }
 
   // ─── ส่งต่อที่นั่ง ─────────────────────────────────────────────────────────

@@ -327,6 +327,37 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
     if (mounted) AppSnack.show(context, 'คัดลอกลิงก์คำเชิญแล้ว');
   }
 
+  /// ผู้เดินทางในใบจอง (จากใบจองที่ส่งเข้ามา)
+  List<Map<String, dynamic>> get _travellers =>
+      asList(widget.booking['passengers']).map(asMap).toList();
+
+  /// ผู้เดินทางที่กำลังสร้างลิงก์ของเพื่อนอยู่
+  String? _sharingPassengerId;
+
+  Future<void> _shareFriendLink(Map<String, dynamic> person) async {
+    final id = int.tryParse(textOf(person['id']));
+    if (id == null || _sharingPassengerId != null) return;
+    setState(() => _sharingPassengerId = '$id');
+    HapticFeedback.selectionClick();
+    try {
+      final result = await context.read<AppProvider>().passengerPassLink(
+        _ref,
+        id,
+      );
+      final url = textOf(result['url']);
+      if (url.isEmpty) throw Exception('สร้างลิงก์ไม่สำเร็จ');
+      await SharePlus.instance.share(
+        ShareParams(text: textOf(result['share_text'], url)),
+      );
+      // เปิดลิงก์แล้วเพื่อนจะได้คำเชิญที่ผูกกับชื่อตัวเอง — โหลดรายชื่อใหม่ไว้
+      if (mounted) await _load();
+    } catch (e) {
+      if (mounted) AppSnack.error(context, _cleanError(e));
+    } finally {
+      if (mounted) setState(() => _sharingPassengerId = null);
+    }
+  }
+
   Future<void> _shareInvite({required String url, required String token}) async {
     final schedule = asMap(widget.booking['schedule']);
     final trip = asMap(schedule['trip']);
@@ -389,6 +420,32 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
                 // ยังไม่รู้จำนวนที่เหลือจนกว่าจะโหลด roster สำเร็จ — อย่าเดาเป็น 0
                 remaining: _loading || _error != null ? null : remaining,
               ),
+              // ลิงก์ของเพื่อนแต่ละคน — ทางที่แนะนำ: เพื่อนได้บัตรขึ้นรถของตัวเอง
+              // (ขึ้นรถได้แม้คนจองไม่มา) กรอกข้อมูลเอง และเข้าแอปด้วยชื่อตัวเอง
+              if (_isOwner && _travellers.length > 1) ...[
+                const SizedBox(height: 24),
+                const _SectionHeading('ส่งลิงก์ให้เพื่อนแต่ละคน (แนะนำ)'),
+                const SizedBox(height: 6),
+                Text(
+                  'ลิงก์เดียวต่อคน: บัตรขึ้นรถของตัวเอง กรอกข้อมูลเอง เข้าห้องแชท '
+                  'และแจ้งได้ถ้าไปไม่ได้ — เพื่อนไม่ต้องมีแอปก็ใช้ได้',
+                  style: appFont(
+                    fontSize: AppText.sizeLabel,
+                    color: AppTheme.mutedText(context),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                for (final person in _travellers)
+                  _FriendLinkRow(
+                    name: textOf(
+                      person['nickname'],
+                      textOf(person['name'], '-'),
+                    ),
+                    busy: _sharingPassengerId == textOf(person['id']),
+                    onShare: () => _shareFriendLink(person),
+                  ),
+              ],
               const SizedBox(height: 24),
               const _SectionHeading('เพื่อนที่เข้าร่วมจะได้อะไร'),
               const SizedBox(height: 12),
@@ -594,6 +651,62 @@ class _MetaPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FriendLinkRow extends StatelessWidget {
+  final String name;
+  final bool busy;
+  final VoidCallback onShare;
+
+  const _FriendLinkRow({
+    required this.name,
+    required this.busy,
+    required this.onShare,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+        decoration: AppTheme.cardDecoration(context, radius: AppTheme.radiusMd),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.confirmation_number_outlined,
+              size: 20,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: appFont(
+                  fontSize: AppText.sizeBody,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.onSurface(context),
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: busy ? null : onShare,
+              icon: busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.ios_share_rounded, size: 18),
+              label: const Text('ส่งลิงก์'),
+            ),
+          ],
+        ),
       ),
     );
   }

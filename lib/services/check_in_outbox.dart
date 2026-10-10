@@ -64,21 +64,32 @@ class CheckInOutbox {
     _app = null;
   }
 
-  /// เก็บเช็คอินที่ส่งไม่ผ่านลงคิว — กดซ้ำใบเดิมไม่กลายเป็นสองรายการ
+  /// คีย์ของรายการในคิว — เช็คอินรายคนใช้ ref + id ผู้เดินทาง ใบเดียวกันจึงค้าง
+  /// ได้หลายคนพร้อมกัน ส่วนเช็คอินยกใบ (ไม่มีรายชื่อแยก) ใช้ ref อย่างเดียวแบบเดิม
+  static String keyFor(String bookingRef, [List<int>? passengerIds]) =>
+      passengerIds == null || passengerIds.isEmpty
+      ? bookingRef
+      : '$bookingRef#${(List<int>.from(passengerIds)..sort()).join(',')}';
+
+  /// เก็บเช็คอินที่ส่งไม่ผ่านลงคิว — กดซ้ำคนเดิมไม่กลายเป็นสองรายการ
   Future<void> enqueue({
     required int scheduleId,
     required String bookingRef,
     required String qrCode,
     String? name,
     DateTime? occurredAt,
+    List<int>? passengerIds,
   }) async {
-    final items = _read()..removeWhere((item) => item['booking_ref'] == bookingRef);
+    final key = keyFor(bookingRef, passengerIds);
+    final items = _read()..removeWhere((item) => _keyOf(item) == key);
 
     items.add({
+      'key': key,
       'booking_ref': bookingRef,
       'qr_code': qrCode,
       'schedule_id': scheduleId,
       'name': name,
+      'passenger_ids': ?passengerIds,
       'occurred_at': (occurredAt ?? DateTime.now()).toUtc().toIso8601String(),
     });
 
@@ -100,10 +111,16 @@ class CheckInOutbox {
     return fresh;
   }
 
-  /// เลขที่จองของรอบนี้ที่ยังค้างส่งอยู่ — หน้ารายชื่อใช้ทำป้าย "รอส่ง"
+  /// เลขที่จองของรอบนี้ที่ยังค้างส่งอยู่
   Set<String> pendingRefs(int scheduleId) => pending()
       .where((item) => item['schedule_id'] == scheduleId)
       .map((item) => '${item['booking_ref']}')
+      .toSet();
+
+  /// คีย์ของรายการที่ค้างส่งในรอบนี้ ([keyFor]) — หน้ารายชื่อใช้ทำป้าย "รอส่ง" รายคน
+  Set<String> pendingKeys(int scheduleId) => pending()
+      .where((item) => item['schedule_id'] == scheduleId)
+      .map(_keyOf)
       .toSet();
 
   /// พยายามส่งทุกรายการที่ค้าง — คืนจำนวนที่ส่งสำเร็จในรอบนี้
@@ -128,7 +145,7 @@ class CheckInOutbox {
 
     try {
       for (final item in List<Map<String, dynamic>>.from(items)) {
-        final ref = '${item['booking_ref']}';
+        final ref = _keyOf(item);
         final qr = '${item['qr_code']}';
         final scheduleId = item['schedule_id'] as int? ?? 0;
         if (qr.isEmpty || scheduleId <= 0) {
@@ -136,11 +153,19 @@ class CheckInOutbox {
           continue;
         }
 
+        final ids = item['passenger_ids'] is List
+            ? (item['passenger_ids'] as List)
+                  .map((e) => int.tryParse('$e'))
+                  .whereType<int>()
+                  .toList()
+            : null;
+
         try {
           await app.confirmStaffCheckIn(
             qr,
             scheduleId: scheduleId,
             checkedInAt: DateTime.tryParse('${item['occurred_at']}'),
+            passengerIds: ids == null || ids.isEmpty ? null : ids,
           );
           _remove(ref);
           sent++;
@@ -177,11 +202,14 @@ class CheckInOutbox {
     _refreshCount();
   }
 
-  void _remove(String bookingRef) {
-    final items = _read()
-      ..removeWhere((item) => item['booking_ref'] == bookingRef);
+  void _remove(String key) {
+    final items = _read()..removeWhere((item) => _keyOf(item) == key);
     OfflineCache.instance.writeAccount(_key, items);
   }
+
+  /// รายการที่เข้าคิวก่อนมีเช็คอินรายคนไม่มี 'key' — ใช้เลขที่จองแทน
+  static String _keyOf(Map<String, dynamic> item) =>
+      '${item['key'] ?? item['booking_ref']}';
 
   List<Map<String, dynamic>> _read() {
     final raw = OfflineCache.instance.readAccount<List>(_key);

@@ -24,6 +24,7 @@ import '../services/home_widget_service.dart';
 import '../services/notification_navigator.dart';
 import '../services/push_notification_service.dart';
 import '../services/search_history_service.dart';
+import '../services/api_client.dart' show ApiException;
 import '../services/check_in_outbox.dart';
 import '../services/sos_outbox.dart';
 import '../services/trip_activity_service.dart';
@@ -57,6 +58,7 @@ import 'claim_booking_screen.dart';
 import 'join_booking_screen.dart';
 import 'invite_friends_screen.dart';
 import 'seat_handover_screen.dart';
+import 'trip_attendance_screen.dart';
 import 'pre_trip_checklist_screen.dart';
 import 'schedule_announcements_screen.dart';
 import 'article_list_screen.dart';
@@ -95,6 +97,7 @@ part 'package_planner.part.dart';
 part 'trip_finder.part.dart';
 part 'customer_app_helpers.part.dart';
 part 'check_in_pass.part.dart';
+part 'boarding_passes.part.dart';
 
 final _moneyFormat = NumberFormat.currency(locale: 'th_TH', symbol: '฿');
 

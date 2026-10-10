@@ -17,6 +17,7 @@ import '../screens/medals_screen.dart';
 import '../screens/year_review_screen.dart';
 import '../screens/payment_screen.dart';
 import '../screens/reset_password_screen.dart';
+import '../screens/trip_attendance_screen.dart';
 import '../screens/trip_feed_screen.dart';
 import '../screens/profile_screen.dart' show NotificationsScreen;
 import '../screens/schedule_announcements_screen.dart';
@@ -173,11 +174,16 @@ class NotificationNavigator {
       // ที่ราคาลดแล้วทุกใบ ไม่ใช่หน้าทริปเดียว
       case 'sale_campaign':
         _switchTab(1);
+      // "พรุ่งนี้ไปครบไหม" — เปิดหน้าตอบทันที ไม่ใช่ศูนย์แจ้งเตือน
+      case 'attendance_check':
+        _openAttendance(data);
       // ลูกค้าแจ้งว่าอาจมาสาย — คนที่ได้แจ้งเตือนนี้คือสตาฟของรอบนั้น สิ่งที่
       // เขาต้องทำต่อคือดูรายชื่อว่าเหลือใครอีกบ้าง ไม่ใช่มาอ่านซ้ำในศูนย์แจ้งเตือน
       case 'pickup_late':
       // เปลี่ยนตัวผู้เดินทาง — สตาฟต้องดูรายชื่อบนรถชุดใหม่
       case 'seat_handover_staff':
+      // ผู้เดินทางแจ้งไม่ไป/กลับมาไป — ดูรายชื่อว่าต้องรอใครที่จุดไหน
+      case 'passenger_not_going':
       // เตือนสตาฟว่ายังไม่ได้เปิดแชร์ตำแหน่งรถ — สวิตช์อยู่บนหน้ารายชื่อ
       case 'staff_share_location':
         _openStaffManifest(data);
@@ -484,6 +490,11 @@ class NotificationNavigator {
         _openHandover(segments[1]);
         return true;
       }
+      // คำเชิญเข้าการจอง (รวมปุ่ม "เข้าร่วมทริปในแอป" บนลิงก์ของเพื่อน /f/)
+      if (segments.length >= 2 && segments.first == 'join') {
+        _openJoinBooking(segments[1]);
+        return true;
+      }
       // ลิงก์ตั้งรหัสผ่านใหม่จากอีเมล — เป็นหน้าเว็บใน SPA ด้วย แต่ถ้าเปิดบน
       // เครื่องที่มีแอปอยู่ ให้จบในแอปเลย ผู้ใช้จะได้ล็อกอินต่อได้ทันที
       if (segments.isNotEmpty && segments.first == 'reset-password') {
@@ -594,6 +605,19 @@ class NotificationNavigator {
     _withNav(
       (nav) => nav.push(
         MaterialPageRoute(builder: (_) => HandoverClaimScreen(token: token)),
+      ),
+    );
+  }
+
+  static void _openAttendance(Map<String, dynamic> data) {
+    final ref = '${data['booking_ref'] ?? ''}'.trim();
+    if (ref.isEmpty) {
+      _openNotifications();
+      return;
+    }
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => TripAttendanceScreen(bookingRef: ref)),
       ),
     );
   }

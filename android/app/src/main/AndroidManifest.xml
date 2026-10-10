@@ -110,6 +110,20 @@
                     android:scheme="luilaykhao"
                     android:host="handover"/>
             </intent-filter>
+            <!-- คำเชิญเข้าการจอง — ปุ่ม "เข้าร่วมทริปในแอป" บนลิงก์ของเพื่อน (/f/) ชี้มา
+                 /join/* มีแอปก็รับคำเชิญในแอปเลย ไม่มีก็เปิดหน้าเว็บ /join ใน SPA -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="luilaykhao.com"
+                    android:pathPrefix="/join"/>
+                <data
+                    android:scheme="luilaykhao"
+                    android:host="join"/>
+            </intent-filter>
             <!-- ลิงก์ตั้งรหัสผ่านใหม่จากอีเมล — เปิดหน้าตั้งรหัสผ่านในแอปแทนเบราว์เซอร์
                  (ถ้า assetlinks.json ยังไม่ผ่านการตรวจ Android จะเปิดเว็บให้ตามเดิม
                  หน้า /reset-password ใน SPA ทำงานได้เหมือนกัน จึงไม่มีทางตัน) -->

@@ -112,6 +112,74 @@ void main() {
       expect(CheckInOutbox.instance.pendingRefs(11), isEmpty);
     });
 
+    /// เช็คอินรายคน: เพื่อนสองคนในใบเดียวกันแตะเช็คอินตอนไม่มีสัญญาณ ต้องค้างอยู่
+    /// ทั้งคู่ ไม่ใช่คนหลังทับคนแรกเพราะเลขที่จองเดียวกัน
+    test('คนละคนในใบจองเดียวกันเป็นคนละรายการ และจำ id ผู้เดินทางไว้', () async {
+      await CheckInOutbox.instance.enqueue(
+        scheduleId: 7,
+        bookingRef: 'LLK-A',
+        qrCode: 'LLK-A',
+        passengerIds: [11],
+      );
+      await CheckInOutbox.instance.enqueue(
+        scheduleId: 7,
+        bookingRef: 'LLK-A',
+        qrCode: 'LLK-A',
+        passengerIds: [12],
+      );
+      // แตะคนเดิมซ้ำ — แทนที่ ไม่เพิ่ม
+      await CheckInOutbox.instance.enqueue(
+        scheduleId: 7,
+        bookingRef: 'LLK-A',
+        qrCode: 'LLK-A',
+        passengerIds: [12],
+      );
+
+      final pending = CheckInOutbox.instance.pending();
+      expect(pending, hasLength(2));
+      expect(pending.map((e) => e['passenger_ids']), [
+        [11],
+        [12],
+      ]);
+      expect(CheckInOutbox.instance.pendingKeys(7), {
+        CheckInOutbox.keyFor('LLK-A', [11]),
+        CheckInOutbox.keyFor('LLK-A', [12]),
+      });
+      expect(CheckInOutbox.instance.pendingRefs(7), {'LLK-A'});
+    });
+
+    test('keyFor ไม่ขึ้นกับลำดับ id และเช็คอินยกใบใช้เลขที่จองตรง ๆ', () {
+      expect(
+        CheckInOutbox.keyFor('LLK-A', [3, 1]),
+        CheckInOutbox.keyFor('LLK-A', [1, 3]),
+      );
+      expect(CheckInOutbox.keyFor('LLK-A'), 'LLK-A');
+      expect(CheckInOutbox.keyFor('LLK-A', const []), 'LLK-A');
+    });
+
+    /// รายการที่เข้าคิวไว้ด้วยแอปรุ่นก่อนเช็คอินรายคน (ไม่มี 'key') ต้องยังส่งได้
+    /// และยังขึ้นป้าย "รอส่ง" — ไม่หายไปเงียบ ๆ หลังอัปเดตแอป
+    test('รายการรุ่นเก่าที่ไม่มี key ใช้เลขที่จองแทน', () async {
+      OfflineCache.instance.writeAccount('checkin_outbox', [
+        {
+          'booking_ref': 'LLK-OLD',
+          'qr_code': 'LLK-OLD',
+          'schedule_id': 7,
+          'occurred_at': DateTime.now().toUtc().toIso8601String(),
+        },
+      ]);
+
+      expect(CheckInOutbox.instance.pendingKeys(7), {'LLK-OLD'});
+
+      // เข้าคิวยกใบซ้ำด้วยแอปรุ่นใหม่ — ทับรายการเดิม ไม่ซ้อนเป็นสอง
+      await CheckInOutbox.instance.enqueue(
+        scheduleId: 7,
+        bookingRef: 'LLK-OLD',
+        qrCode: 'LLK-OLD',
+      );
+      expect(CheckInOutbox.instance.pending(), hasLength(1));
+    });
+
     test('clear ล้างคิวและตัวนับ (ใช้ตอนออกจากระบบ)', () async {
       await CheckInOutbox.instance.enqueue(
         scheduleId: 7,

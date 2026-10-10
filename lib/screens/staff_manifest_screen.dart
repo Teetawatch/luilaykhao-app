@@ -51,16 +51,16 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
   bool _fromCache = false;
   DateTime? _savedAt;
 
-  /// booking_ref ที่กำลังเช็คอินอยู่ — กันกดซ้ำระหว่างรอ API
+  /// คีย์ของคนที่กำลังเช็คอินอยู่ ([CheckInOutbox.keyFor]) — กันกดซ้ำระหว่างรอ API
   final Set<String> _checkingIn = {};
 
-  /// booking_ref ที่เช็คอินไปแล้วแต่ยังส่งไม่ออก — อ่านจากคิวบนเครื่อง
+  /// คีย์ของคนที่เช็คอินไปแล้วแต่ยังส่งไม่ออก — อ่านจากคิวบนเครื่อง
   Set<String> _queued = {};
 
   @override
   void initState() {
     super.initState();
-    _queued = CheckInOutbox.instance.pendingRefs(widget.scheduleId);
+    _queued = CheckInOutbox.instance.pendingKeys(widget.scheduleId);
     CheckInOutbox.instance.pendingCount.addListener(_syncQueued);
     // เปิดหน้านี้ตอนมีสัญญาณ = จังหวะที่ดีที่สุดที่จะปล่อยคิวที่ค้างจากเมื่อเช้า
     unawaited(CheckInOutbox.instance.flush(force: true));
@@ -75,7 +75,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
 
   void _syncQueued() {
     if (!mounted) return;
-    final refs = CheckInOutbox.instance.pendingRefs(widget.scheduleId);
+    final refs = CheckInOutbox.instance.pendingKeys(widget.scheduleId);
     final sent = _queued.difference(refs);
     setState(() => _queued = refs);
     // คิวเพิ่งส่งของออกไปได้ — ดึงรายชื่อใหม่เพื่อให้สถานะบนหน้าจอเป็นของจริง
@@ -109,20 +109,51 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
     }
   }
 
+  /// คีย์ของแถวผู้โดยสารในรายชื่อ — ตรงกับคีย์ในคิวออฟไลน์
+  static String _rowKey(Map<String, dynamic> passenger) {
+    final ref = textOf(passenger['booking_ref']);
+    final id = (passenger['passenger_id'] as num?)?.toInt();
+    return CheckInOutbox.keyFor(ref, id == null ? null : [id]);
+  }
+
+  /// ค้างส่งอยู่ไหม — ทั้งรายคน หรือทั้งใบ (รายการที่เข้าคิวก่อนอัปเดตแอป)
+  bool _isQueued(Map<String, dynamic> passenger) =>
+      _queued.contains(_rowKey(passenger)) ||
+      _queued.contains(textOf(passenger['booking_ref']));
+
   /// เช็คอินจากรายชื่อโดยไม่ต้องสแกน QR — ลูกค้าแบตหมด/เปิดแอปไม่ได้ก็ผ่านได้
   ///
-  /// เช็คอินเป็นราย "ใบจอง" ไม่ใช่รายคน จึงถามยืนยันพร้อมบอกจำนวนคนในใบจองนั้น
-  /// ก่อนเสมอ เพื่อไม่ให้เผลอเช็คอินยกกลุ่มโดยไม่ตั้งใจ
+  /// เช็คอินรายคน: แตะชื่อไหนก็เช็คอินคนนั้นคนเดียว คนอื่นในใบจองเดียวกันยังรอ
+  /// อยู่ในรายชื่อ (เพื่อนที่ไม่มาจะไม่ถูกนับว่าขึ้นรถ) — เซิร์ฟเวอร์รุ่นเก่าที่ไม่ส่ง
+  /// passenger_id มายังเช็คอินทั้งใบตามเดิม ข้อความยืนยันจึงพูดตามนั้น
   Future<void> _checkInFromManifest(Map<String, dynamic> passenger) async {
     final ref = textOf(passenger['booking_ref']);
-    if (ref.isEmpty || _checkingIn.contains(ref)) return;
+    final key = _rowKey(passenger);
+    if (ref.isEmpty || _checkingIn.contains(key)) return;
 
+    final passengerId = (passenger['passenger_id'] as num?)?.toInt();
+    final ids = passengerId == null ? null : [passengerId];
     final name = textOf(passenger['full_name'], textOf(passenger['name'], '-'));
     final groupSize = asList(_data?['pickup_groups'])
         .map(asMap)
         .expand((g) => asList(g['passengers']).map(asMap))
         .where((p) => textOf(p['booking_ref']) == ref)
         .length;
+    final notGoing = passenger['not_going'] == true;
+
+    final String message;
+    if (ids == null) {
+      message = groupSize > 1
+          ? 'ใบจอง $ref มีผู้เดินทาง $groupSize คน การเช็คอินจะนับครบทั้งใบจอง'
+          : 'ยืนยันเช็คอินใบจอง $ref';
+    } else {
+      message = [
+        if (notGoing) '$name แจ้งไว้ว่าไม่ไป — เช็คอินถ้ามาถึงจริง',
+        groupSize > 1
+            ? 'เช็คอินเฉพาะ $name คนอื่นในใบจอง $ref เช็คอินแยกได้'
+            : 'ยืนยันเช็คอิน $name (ใบจอง $ref)',
+      ].join('\n\n');
+    }
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -132,9 +163,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
           style: appFont(fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w800),
         ),
         content: Text(
-          groupSize > 1
-              ? 'ใบจอง $ref มีผู้เดินทาง $groupSize คน การเช็คอินจะนับครบทั้งใบจอง'
-              : 'ยืนยันเช็คอินใบจอง $ref',
+          message,
           style: appFont(fontSize: AppText.sizeBody, height: 1.45),
         ),
         actions: [
@@ -158,11 +187,12 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    setState(() => _checkingIn.add(ref));
+    setState(() => _checkingIn.add(key));
     try {
       final result = await context.read<AppProvider>().confirmStaffCheckIn(
         ref,
         scheduleId: widget.scheduleId,
+        passengerIds: ids,
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
@@ -180,10 +210,11 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
           bookingRef: ref,
           qrCode: ref,
           name: name,
+          passengerIds: ids,
         );
         if (!mounted) return;
         HapticFeedback.heavyImpact();
-        setState(() => _queued = CheckInOutbox.instance.pendingRefs(widget.scheduleId));
+        setState(() => _queued = CheckInOutbox.instance.pendingKeys(widget.scheduleId));
         AppSnack.success(
           context,
           'บันทึกเช็คอิน $name ไว้แล้ว จะส่งให้เองเมื่อมีสัญญาณ',
@@ -201,7 +232,7 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
-      if (mounted) setState(() => _checkingIn.remove(ref));
+      if (mounted) setState(() => _checkingIn.remove(key));
     }
   }
 
@@ -632,8 +663,8 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
           for (final group in groups) ...[
             _PickupGroupCard(
               group: group,
-              checkingIn: _checkingIn,
-              queued: _queued,
+              isBusy: (p) => _checkingIn.contains(_rowKey(p)),
+              isQueued: _isQueued,
               onCheckIn: _checkInFromManifest,
               busy: _completingPoints.contains(group['id']),
               arrivalBusy: _arrivingPoints.contains(group['id']),
@@ -923,6 +954,8 @@ class _ManifestSummary extends StatelessWidget {
         ? _intOf(summary['checked_in_passengers'])
         : _intOf(summary['checked_in']);
     final careAlerts = _intOf(summary['care_alerts']);
+    // แจ้งล่วงหน้าว่าไม่ไป — ไม่ต้องรอ
+    final notGoing = _intOf(summary['not_going_passengers']);
     // แยกหัวคนสองแบบ: รอขึ้นรถตามจุดรับ กับ จอยทริปที่ไปเจอกันเองหน้างาน
     final joinTrip = _intOf(summary['join_trip_passengers']);
     final regular = summary['regular_passengers'] != null
@@ -957,11 +990,22 @@ class _ManifestSummary extends StatelessWidget {
               Expanded(
                 child: _SummaryStat(
                   icon: Icons.how_to_reg_outlined,
-                  value: '$checkedIn/$passengers',
+                  value: '$checkedIn/${passengers - notGoing}',
                   label: 'เช็คอินแล้ว',
                   color: AppTheme.primaryColor,
                 ),
               ),
+              if (notGoing > 0) ...[
+                _divider(context),
+                Expanded(
+                  child: _SummaryStat(
+                    icon: Icons.event_busy_outlined,
+                    value: notGoing.toString(),
+                    label: 'แจ้งไม่ไป',
+                    color: AppTheme.warningColor,
+                  ),
+                ),
+              ],
               if (careAlerts > 0) ...[
                 _divider(context),
                 Expanded(
@@ -1158,18 +1202,18 @@ class _PickupGroupCard extends StatelessWidget {
   /// id (e.g. the "ไม่ระบุจุดรับ" group), in which case no action is shown.
   final void Function(bool completed)? onToggleComplete;
 
-  /// booking_ref ที่กำลังเช็คอินอยู่ + ตัวจัดการกดเช็คอินจากรายชื่อ
-  final Set<String> checkingIn;
+  /// ผู้โดยสารคนนี้กำลังเช็คอินอยู่ไหม + ตัวจัดการกดเช็คอินจากรายชื่อ (รายคน)
+  final bool Function(Map<String, dynamic> passenger) isBusy;
   final void Function(Map<String, dynamic> passenger) onCheckIn;
 
-  /// booking_ref ที่เช็คอินไว้แล้วแต่ยังส่งไม่ออก (ไม่มีสัญญาณ)
-  final Set<String> queued;
+  /// เช็คอินไว้แล้วแต่ยังส่งไม่ออก (ไม่มีสัญญาณ)
+  final bool Function(Map<String, dynamic> passenger) isQueued;
 
   const _PickupGroupCard({
     required this.group,
-    required this.checkingIn,
+    required this.isBusy,
     required this.onCheckIn,
-    this.queued = const {},
+    required this.isQueued,
     this.busy = false,
     this.arrivalBusy = false,
     this.onToggleComplete,
@@ -1427,8 +1471,8 @@ class _PickupGroupCard extends StatelessWidget {
                   _ManifestPassengerRow(
                     passenger: passengers[i],
                     index: i + 1,
-                    busy: checkingIn.contains(textOf(passengers[i]['booking_ref'])),
-                    queued: queued.contains(textOf(passengers[i]['booking_ref'])),
+                    busy: isBusy(passengers[i]),
+                    queued: isQueued(passengers[i]),
                     onCheckIn: () => onCheckIn(passengers[i]),
                   ),
                   if (i < passengers.length - 1)
@@ -1790,7 +1834,10 @@ class _ManifestPassengerRow extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _BookingTypeChip(isJoinTrip: isJoinTrip),
-                    if (!checkedIn && !queued)
+                    // แจ้งล่วงหน้าว่าไม่ไป — ไม่ต้องรอที่จุดนี้ (มาจริงก็ยังเช็คอินได้)
+                    if (!checkedIn && passenger['not_going'] == true)
+                      const _NotGoingChip(),
+                    if (!checkedIn && !queued && passenger['not_going'] != true)
                       _PickupStatusChip(
                         status: textOf(passenger['pickup_status']),
                         etaMinutes: int.tryParse(
@@ -2080,6 +2127,40 @@ class _BookingTypeChip extends StatelessWidget {
 
 /// สถานะเช็คอินของผู้โดยสาร — ถ้ายังไม่เช็คอินและสตาฟมีสิทธิ์ ป้ายนี้กดเช็คอินได้เลย
 /// (ไม่ต้องเปิดกล้องสแกน QR ซึ่งใช้ไม่ได้ตอนลูกค้าแบตหมดหรือเปิดแอปไม่ได้)
+class _NotGoingChip extends StatelessWidget {
+  const _NotGoingChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.event_busy_rounded,
+            size: 12,
+            color: AppTheme.warningColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'แจ้งไม่ไป',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.warningColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CheckInPill extends StatelessWidget {
   final bool checkedIn;
   final bool queued;
