@@ -89,7 +89,10 @@ class _RightNowCardState extends State<RightNowCard> {
     VehicleTracking? vehicle;
     final vehicleId = booking?.vehicleId ?? 0;
     if (vehicleId > 0) {
-      vehicle = await _tracking.fetchVehicleLocation(vehicleId);
+      vehicle = await _tracking.fetchVehicleLocation(
+        vehicleId,
+        scheduleId: booking?.scheduleId,
+      );
     }
     final activity = await activityFuture;
     if (!mounted) return;

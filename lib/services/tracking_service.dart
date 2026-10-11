@@ -17,12 +17,25 @@ class TrackingService {
 
   String? authToken;
 
-  static const Duration _farInterval = Duration(minutes: 30);
+  /// รถยังอยู่ไกล (ETA เกิน 30 นาที) — เดิม 30 นาที ซึ่งนานจนหมุดบนจอที่เปิด
+  /// ค้างไว้กลายเป็นตำแหน่งเก่าไปหลายกิโล รถวิ่งกิโลกว่าต่อนาที
+  static const Duration _farInterval = Duration(minutes: 2);
   static const Duration _nearSoonInterval = Duration(seconds: 30);
   static const Duration _imminentInterval = Duration(seconds: 4);
 
+  /// ยังไม่มีพิกัดของรอบนี้เลย (สตาฟยังไม่เริ่มแชร์) — ถามถี่พอให้รถโผล่บนจอ
+  /// ภายในนาทีเดียวหลังสตาฟเปิดแอป ไม่ใช่รอรอบ "ไกล" ถัดไป
+  static const Duration _noSignalInterval = Duration(minutes: 1);
+
+  /// รถถึงจุดรับแล้ว — ลูกค้ากำลังขึ้นรถ ไม่ต้องถามถี่
+  static const Duration _arrivedInterval = Duration(minutes: 5);
+
   Timer? _pollTimer;
   TrackingPhase _currentPhase = TrackingPhase.far;
+  bool _hasSignal = false;
+
+  /// เปลี่ยนทุกครั้งที่เริ่ม/หยุด — คำตอบของรอบที่ถูกหยุดไปแล้วจะไม่ไปตั้งเวลาต่อ
+  int _generation = 0;
 
   final StreamController<VehicleTracking?> _trackingController =
       StreamController<VehicleTracking?>.broadcast();
@@ -57,10 +70,20 @@ class TrackingService {
     return null;
   }
 
-  Future<VehicleTracking?> fetchVehicleLocation(int vehicleId) async {
+  /// พิกัดล่าสุดของรถ *ของรอบนี้* — null เมื่อรอบนี้ยังไม่มีใครส่งพิกัด
+  ///
+  /// [scheduleId] ทำให้เซิร์ฟเวอร์ไม่หยิบจุดสุดท้ายของทริปก่อนหน้า (รถคันเดียวกัน)
+  /// มาตอบเป็นตำแหน่งสด
+  Future<VehicleTracking?> fetchVehicleLocation(
+    int vehicleId, {
+    int? scheduleId,
+  }) async {
     try {
+      final query = (scheduleId != null && scheduleId > 0)
+          ? '?schedule_id=$scheduleId'
+          : '';
       final response = await http.get(
-        Uri.parse('$baseUrl/tracking/current/$vehicleId'),
+        Uri.parse('$baseUrl/tracking/current/$vehicleId$query'),
         headers: _headers,
       );
       if (response.statusCode == 200) {
@@ -126,51 +149,65 @@ class TrackingService {
 
   void startAdaptivePolling({
     required int vehicleId,
+    int? scheduleId,
     required TrackingPhase initialPhase,
+    required bool hasSignal,
     required void Function(VehicleTracking?) onData,
-    void Function(TrackingPhase)? onPhaseChange,
   }) {
+    _generation++;
     _currentPhase = initialPhase;
-    _scheduleNextPoll(
-      vehicleId: vehicleId,
-      onData: onData,
-      onPhaseChange: onPhaseChange,
-    );
+    _hasSignal = hasSignal;
+    _vehicleId = vehicleId;
+    _scheduleId = scheduleId;
+    _onData = onData;
+    _scheduleNextPoll();
   }
 
+  int? _vehicleId;
+  int? _scheduleId;
+  void Function(VehicleTracking?)? _onData;
+
+  /// ETA เปลี่ยนช่วง — ตั้งเวลาครั้งถัดไปใหม่ตามช่วงใหม่ทันที
   void updatePhase({
     required TrackingPhase newPhase,
-    required int vehicleId,
-    required void Function(VehicleTracking?) onData,
     void Function(TrackingPhase)? onPhaseChange,
   }) {
     if (newPhase == _currentPhase) return;
     debugPrint('[TrackingService] Phase changed: $_currentPhase -> $newPhase');
     _currentPhase = newPhase;
-    _pollTimer?.cancel();
     onPhaseChange?.call(newPhase);
-    _scheduleNextPoll(
-      vehicleId: vehicleId,
-      onData: onData,
-      onPhaseChange: onPhaseChange,
-    );
+    _scheduleNextPoll();
   }
 
-  void _scheduleNextPoll({
-    required int vehicleId,
-    required void Function(VehicleTracking?) onData,
-    void Function(TrackingPhase)? onPhaseChange,
-  }) {
+  /// ตั้งเวลาทีละครั้ง (ไม่ใช่ periodic) เพื่อให้ช่วงถัดไปขึ้นกับคำตอบล่าสุดเสมอ —
+  /// ไม่มีสัญญาณ → ถามทุกนาที, มีแล้ว → ตามระยะห่างของรถ
+  void _scheduleNextPoll() {
+    final vehicleId = _vehicleId;
+    if (vehicleId == null) return;
+
     _pollTimer?.cancel();
-    final interval = _intervalForPhase(_currentPhase);
+    final generation = _generation;
+    final interval = _hasSignal
+        ? _intervalForPhase(_currentPhase)
+        : _noSignalInterval;
     debugPrint(
-      '[TrackingService] Polling every ${interval.inSeconds}s (phase: $_currentPhase)',
+      '[TrackingService] Next poll in ${interval.inSeconds}s '
+      '(phase: $_currentPhase, signal: $_hasSignal)',
     );
 
-    _pollTimer = Timer.periodic(interval, (_) async {
-      final tracking = await fetchVehicleLocation(vehicleId);
+    _pollTimer = Timer(interval, () async {
+      final tracking = await fetchVehicleLocation(
+        vehicleId,
+        scheduleId: _scheduleId,
+      );
+      if (generation != _generation) return;
+
+      _hasSignal = tracking != null;
       _trackingController.add(tracking);
-      onData(tracking);
+      _onData?.call(tracking);
+      // onData อาจเรียก updatePhase ซึ่งตั้งเวลาให้แล้ว — ตั้งซ้ำได้เพราะ
+      // _scheduleNextPoll ยกเลิกตัวเก่าก่อนเสมอ
+      if (generation == _generation) _scheduleNextPoll();
     });
   }
 
@@ -179,13 +216,17 @@ class TrackingService {
       TrackingPhase.far => _farInterval,
       TrackingPhase.nearSoon => _nearSoonInterval,
       TrackingPhase.imminent => _imminentInterval,
-      TrackingPhase.arrived => _farInterval,
+      TrackingPhase.arrived => _arrivedInterval,
     };
   }
 
   void stop() {
+    _generation++;
     _pollTimer?.cancel();
     _pollTimer = null;
+    _vehicleId = null;
+    _scheduleId = null;
+    _onData = null;
   }
 
   void dispose() {

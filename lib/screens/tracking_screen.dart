@@ -139,6 +139,9 @@ class _TrackingScreenState extends State<TrackingScreen>
                 TrackingTopBar(
                   eta: eta,
                   tracking: tracking,
+                  waitingForSignal: provider.waitingForSignal,
+                  staleAge: provider.signalStale ? provider.signalAge : null,
+                  vanIsHere: booking?.vanIsHere ?? false,
                   onBack: () {
                     provider.stopTracking();
                     Navigator.pop(context);
@@ -163,6 +166,7 @@ class _TrackingScreenState extends State<TrackingScreen>
                   eta: eta,
                   scheduleRoute: provider.scheduleRoute,
                   phase: provider.phase,
+                  waitingForSignal: provider.waitingForSignal,
                   onCall: () => _callDriver(phone),
                   onChat: () => _chatDriver(phone),
                 ),
@@ -582,12 +586,24 @@ class TrackingTopBar extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onShare;
 
+  /// รอบนี้ยังไม่มีพิกัดรถเลย — ห้ามพูดว่ารถกำลังมา
+  final bool waitingForSignal;
+
+  /// อายุของพิกัดล่าสุด เมื่อมันเก่าเกินกว่าจะเรียกว่าสด (null = ยังสดอยู่)
+  final Duration? staleAge;
+
+  /// สตาฟกดว่ารถถึงจุดรับแล้ว — ชนะทุกอย่าง แม้ GPS จะเงียบ
+  final bool vanIsHere;
+
   const TrackingTopBar({
     super.key,
     required this.eta,
     required this.tracking,
     required this.onBack,
     required this.onShare,
+    this.waitingForSignal = false,
+    this.staleAge,
+    this.vanIsHere = false,
   });
 
   @override
@@ -644,7 +660,7 @@ class TrackingTopBar extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${eta?.formattedETA ?? '--'} • ${eta?.formattedDistance ?? '--'}',
+                          _subtitle(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: appFont(
@@ -672,9 +688,33 @@ class TrackingTopBar extends StatelessWidget {
   }
 
   String _headline(ETAResult? eta) {
-    if (eta?.phase == TrackingPhase.arrived) return 'รถถึงจุดรับแล้ว';
+    if (vanIsHere || eta?.phase == TrackingPhase.arrived) {
+      return 'รถถึงจุดรับแล้ว';
+    }
+    if (waitingForSignal) return 'รถยังไม่เริ่มแชร์ตำแหน่ง';
+    if (staleAge != null) return 'ตำแหน่งรถไม่อัปเดต';
     return 'รถกำลังมาถึง';
   }
+
+  String _subtitle() {
+    if (waitingForSignal) {
+      return vanIsHere
+          ? 'ดูรถที่จอดรอได้จากการ์ดด้านล่าง'
+          : 'ทีมงานจะเปิดเมื่อใกล้เวลารถออก';
+    }
+    final age = staleAge;
+    if (age != null) return 'อัปเดตล่าสุด ${_ageLabel(age)}';
+    return '${eta?.formattedETA ?? '--'} • ${eta?.formattedDistance ?? '--'}';
+  }
+}
+
+/// "12 นาทีที่แล้ว" / "1 ชม. 5 นาทีที่แล้ว" — อายุของพิกัดรถที่ไม่สดแล้ว
+String _ageLabel(Duration age) {
+  final minutes = age.inMinutes;
+  if (minutes < 60) return '$minutes นาทีที่แล้ว';
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  return m == 0 ? '$h ชม.ที่แล้ว' : '$h ชม. $m นาทีที่แล้ว';
 }
 
 class TrackingBottomSheet extends StatelessWidget {
@@ -686,6 +726,9 @@ class TrackingBottomSheet extends StatelessWidget {
   final VoidCallback onCall;
   final VoidCallback onChat;
 
+  /// ยังไม่มีพิกัดรถของรอบนี้ — ช่องสถานะต้องไม่พูดว่ารถออกเดินทางแล้ว
+  final bool waitingForSignal;
+
   const TrackingBottomSheet({
     super.key,
     required this.booking,
@@ -695,6 +738,7 @@ class TrackingBottomSheet extends StatelessWidget {
     required this.phase,
     required this.onCall,
     required this.onChat,
+    this.waitingForSignal = false,
   });
 
   /// จุดรับของลูกค้าใน timeline — เทียบจากพิกัดจุดรับที่จองไว้ (BookingInfo
@@ -765,7 +809,7 @@ class TrackingBottomSheet extends StatelessWidget {
                     Expanded(
                       child: _MetricCard(
                         label: 'สถานะ',
-                        value: _phaseLabel(phase),
+                        value: waitingForSignal ? 'รอสัญญาณ' : _phaseLabel(phase),
                       ),
                     ),
                   ],

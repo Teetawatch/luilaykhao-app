@@ -295,8 +295,10 @@ class _StaffTodayHero extends StatelessWidget {
       _cleanText(schedule['departure_date']),
       _cleanText(schedule['return_date']),
     );
-    final total = _numberValue(schedule['total_confirmed']);
     final checkedIn = _numberValue(schedule['checked_in_count']);
+    final notGoing = _numberValue(schedule['not_going_count']);
+    // คนที่แจ้งไปไม่ได้ไม่ใช่คนที่ต้องรอ — นับเหมือนหน้ารายชื่อ
+    final total = _expectedAboard(schedule);
     final progress = total > 0 ? (checkedIn / total).clamp(0.0, 1.0) : 0.0;
     final allIn = total > 0 && checkedIn >= total;
 
@@ -411,6 +413,17 @@ class _StaffTodayHero extends StatelessWidget {
               ),
             ],
           ),
+          if (notGoing > 0) ...[
+            const SizedBox(height: 2),
+            Text(
+              'แจ้งไม่ไป $notGoing คน · ไม่ต้องรอ',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.75),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -965,8 +978,10 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
     final departureDate = _cleanText(s['departure_date']);
     final returnDate = _cleanText(s['return_date']);
     final status = _cleanText(s['status']);
-    final totalConfirmed = _numberValue(s['total_confirmed']);
     final checkedIn = _numberValue(s['checked_in_count']);
+    final notGoing = _numberValue(s['not_going_count']);
+    // คนที่แจ้งไปไม่ได้ไม่ใช่คนที่ต้องรอ — ถ้าไม่หักออก หลอดจะไม่มีวันเต็ม
+    final totalConfirmed = _expectedAboard(s);
     final totalSeats = _numberValue(s['total_seats']);
     final pickupBreakdown = (s['pickup_breakdown'] as List? ?? []).map(_toMap).toList();
     final noPickupCount = _numberValue(s['no_pickup_count']);
@@ -1140,7 +1155,7 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                         ),
                         const Spacer(),
                         Text(
-                          totalConfirmed == 0
+                          totalConfirmed == 0 && notGoing == 0
                               ? 'ยังไม่มีผู้โดยสาร'
                               : '$checkedIn / $totalConfirmed คน',
                           style: appFont(
@@ -1167,9 +1182,12 @@ class _StaffScheduleCardState extends State<_StaffScheduleCard> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        checkedIn == totalConfirmed
-                            ? 'เช็คอินครบแล้ว'
-                            : 'เหลือ ${totalConfirmed - checkedIn} คน ยังไม่เช็คอิน',
+                        [
+                          checkedIn >= totalConfirmed
+                              ? 'เช็คอินครบแล้ว'
+                              : 'เหลือ ${totalConfirmed - checkedIn} คน ยังไม่เช็คอิน',
+                          if (notGoing > 0) 'แจ้งไม่ไป $notGoing คน',
+                        ].join(' · '),
                         style: appFont(
                           fontSize: AppText.sizeCaption,
                           fontWeight: FontWeight.w500,
@@ -1437,6 +1455,8 @@ class _PickupPassengerRow extends StatelessWidget {
     final name = _cleanText(passenger['name'], fallback: 'ผู้โดยสาร');
     final phone = _cleanText(passenger['phone']);
     final checkedIn = passenger['checked_in'] == true;
+    // แจ้งล่วงหน้าว่าไม่ไป — ไม่ต้องรอ/โทรตาม (มาจริงก็ยังเช็คอินได้)
+    final notGoing = !checkedIn && passenger['not_going'] == true;
     final isJoinTrip = passenger['is_join_trip'] == true;
 
     return Padding(
@@ -1446,10 +1466,14 @@ class _PickupPassengerRow extends StatelessWidget {
           Icon(
             checkedIn
                 ? Icons.check_circle_rounded
+                : notGoing
+                ? Icons.event_busy_rounded
                 : Icons.radio_button_unchecked_rounded,
             size: 15,
             color: checkedIn
                 ? const Color(0xFF059669)
+                : notGoing
+                ? AppTheme.warningColor
                 : AppTheme.mutedText(context),
           ),
           const SizedBox(width: 8),
@@ -1459,10 +1483,29 @@ class _PickupPassengerRow extends StatelessWidget {
               style: appFont(
                 fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.textMain,
+                color: notGoing
+                    ? AppTheme.mutedText(context)
+                    : AppTheme.textMain,
               ),
             ),
           ),
+          if (notGoing)
+            Container(
+              margin: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppTheme.warningColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              ),
+              child: Text(
+                'แจ้งไม่ไป',
+                style: appFont(
+                  fontSize: AppText.sizeMicro,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.warningColor,
+                ),
+              ),
+            ),
           if (isJoinTrip && showJoinTag) ...[
             Container(
               margin: const EdgeInsets.only(right: 6),
@@ -1777,4 +1820,12 @@ Map<String, dynamic> _toMap(dynamic value) {
   if (value is Map<String, dynamic>) return value;
   if (value is Map) return Map<String, dynamic>.from(value);
   return <String, dynamic>{};
+}
+
+/// คนที่ต้องขึ้นรถจริงของรอบ — ผู้โดยสารทั้งหมดหักคนที่แจ้งไปไม่ได้ (และยังไม่ได้
+/// เช็คอิน) แบบเดียวกับหน้ารายชื่อ เซิร์ฟเวอร์รุ่นก่อนไม่ส่ง not_going_count มา = 0
+int _expectedAboard(Map<String, dynamic> schedule) {
+  final total = _numberValue(schedule['total_confirmed']);
+  final notGoing = _numberValue(schedule['not_going_count']);
+  return (total - notGoing).clamp(0, total);
 }

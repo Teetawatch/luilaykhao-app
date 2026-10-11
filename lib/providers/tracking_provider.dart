@@ -46,6 +46,23 @@ class TrackingProvider extends ChangeNotifier {
   bool get locationPermissionDenied => _locationPermissionDenied;
   String? get locationError => _locationError;
   List<LatLng> get routePoints => _routePoints;
+
+  /// พิกัดรถเงียบนานกว่านี้ถือว่าไม่สด — จอต้องบอกอายุแทนการพูดว่ารถกำลังมา
+  static const Duration staleAfter = Duration(minutes: 5);
+
+  /// เปิดติดตามแล้วแต่รอบนี้ยังไม่มีพิกัดรถเลย — สตาฟยังไม่เริ่มแชร์ตำแหน่ง
+  bool get waitingForSignal =>
+      _isTracking && !_isLoading && _vehicleTracking == null;
+
+  /// พิกัดล่าสุดเก่าแค่ไหน — null เมื่อยังไม่เคยได้พิกัด
+  Duration? get signalAge {
+    final tracking = _vehicleTracking;
+    if (tracking == null) return null;
+    final age = DateTime.now().difference(tracking.updatedAt);
+    return age.isNegative ? Duration.zero : age;
+  }
+
+  bool get signalStale => (signalAge ?? Duration.zero) > staleAfter;
   ScheduleRouteData? get scheduleRoute => _scheduleRoute;
 
   /// เริ่มติดตามสำหรับ guest ที่ผ่านการ verify แล้ว — ข้าม fetchBookingInfo เพราะมีข้อมูลครบแล้ว
@@ -76,7 +93,10 @@ class TrackingProvider extends ChangeNotifier {
     _cachedDriverPhone = bookingInfo.driverPhone;
     _loadScheduleRoute(bookingInfo.scheduleId);
 
-    final initial = await _service.fetchVehicleLocation(bookingInfo.vehicleId);
+    final initial = await _service.fetchVehicleLocation(
+      bookingInfo.vehicleId,
+      scheduleId: bookingInfo.scheduleId,
+    );
     _handleNewTracking(initial);
 
     _isLoading = false;
@@ -84,33 +104,7 @@ class TrackingProvider extends ChangeNotifier {
     notifyListeners();
 
     _beginCustomerLocation();
-
-    _service.startAdaptivePolling(
-      vehicleId: bookingInfo.vehicleId,
-      initialPhase: _phase,
-      onData: (tracking) {
-        _handleNewTracking(tracking);
-        if (_booking != null && tracking != null && _eta != null) {
-          _service.updatePhase(
-            newPhase: _eta!.phase,
-            vehicleId: bookingInfo.vehicleId,
-            onData: (t) {
-              _handleNewTracking(t);
-              notifyListeners();
-            },
-            onPhaseChange: (p) {
-              _phase = p;
-              notifyListeners();
-            },
-          );
-        }
-        notifyListeners();
-      },
-      onPhaseChange: (p) {
-        _phase = p;
-        notifyListeners();
-      },
-    );
+    _startPolling(bookingInfo);
   }
 
   Future<void> startTracking(String bookingRef, {String? authToken}) async {
@@ -148,7 +142,10 @@ class TrackingProvider extends ChangeNotifier {
     _cachedDriverPhone = booking.driverPhone;
     _loadScheduleRoute(booking.scheduleId);
 
-    final initial = await _service.fetchVehicleLocation(booking.vehicleId);
+    final initial = await _service.fetchVehicleLocation(
+      booking.vehicleId,
+      scheduleId: booking.scheduleId,
+    );
     _handleNewTracking(initial);
 
     _isLoading = false;
@@ -156,30 +153,23 @@ class TrackingProvider extends ChangeNotifier {
     notifyListeners();
 
     _beginCustomerLocation();
+    _startPolling(booking);
+  }
 
+  void _startPolling(BookingInfo booking) {
     _service.startAdaptivePolling(
       vehicleId: booking.vehicleId,
+      scheduleId: booking.scheduleId,
       initialPhase: _phase,
+      hasSignal: _vehicleTracking != null,
       onData: (tracking) {
         _handleNewTracking(tracking);
-        if (_booking != null && tracking != null && _eta != null) {
+        if (tracking != null && _eta != null) {
           _service.updatePhase(
             newPhase: _eta!.phase,
-            vehicleId: booking.vehicleId,
-            onData: (t) {
-              _handleNewTracking(t);
-              notifyListeners();
-            },
-            onPhaseChange: (p) {
-              _phase = p;
-              notifyListeners();
-            },
+            onPhaseChange: (p) => _phase = p,
           );
         }
-        notifyListeners();
-      },
-      onPhaseChange: (p) {
-        _phase = p;
         notifyListeners();
       },
     );
@@ -214,6 +204,11 @@ class TrackingProvider extends ChangeNotifier {
   }
 
   void _handleNewTracking(VehicleTracking? tracking) {
+    // เคยเห็นรถแล้วแต่รอบนี้ถามไม่ได้ (เน็ตสะดุด) — คงหมุดเดิมไว้ให้จอบอกอายุของมัน
+    // ([signalStale]) ดีกว่าหมุดหายแล้วจอกลับไปพูดว่ารถยังไม่เริ่มส่งตำแหน่ง
+    // เซิร์ฟเวอร์ตอบเฉพาะพิกัดของรอบนี้ หมุดที่คงไว้จึงไม่ใช่ของทริปอื่นแน่นอน
+    if (tracking == null && _vehicleTracking != null) return;
+
     if (tracking != null && _booking != null) {
       _vehicleTracking = VehicleTracking(
         vehicleId: tracking.vehicleId,
