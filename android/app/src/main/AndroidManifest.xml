@@ -110,6 +110,29 @@
                     android:scheme="luilaykhao"
                     android:host="handover"/>
             </intent-filter>
+            <!-- SMS "ทีมงานเปิดการจองให้คุณแล้ว" — มีแอปก็รับการจองเข้าบัญชีที่ล็อกอินอยู่
+                 (LINE/Google/อีเมล) ได้เลย ไม่มีแอปก็เปิดหน้าเว็บ /claim/* ตั้งรหัสผ่านตามเดิม
+                 prefix มี "/" ปิดท้าย ไม่งั้นจะกินหน้า /claim-done ที่ต้องเปิดในเว็บไปด้วย -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="luilaykhao.com"
+                    android:pathPrefix="/claim/"/>
+            </intent-filter>
+            <!-- luilaykhao://claim/TOKEN (ปุ่ม "เปิดในแอป" บนหน้าเว็บ /claim) แยกไว้อีกตัว —
+                 ถ้าอยู่รวมกับข้างบน pathPrefix จะถูกใช้กับ scheme นี้ด้วย แล้ว path "/TOKEN"
+                 ไม่ตรง "/claim/" ลิงก์จะไม่เปิดแอป -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="luilaykhao"
+                    android:host="claim"/>
+            </intent-filter>
             <!-- คำเชิญเข้าการจอง — ปุ่ม "เข้าร่วมทริปในแอป" บนลิงก์ของเพื่อน (/f/) ชี้มา
                  /join/* มีแอปก็รับคำเชิญในแอปเลย ไม่มีก็เปิดหน้าเว็บ /join ใน SPA -->
             <intent-filter android:autoVerify="true">

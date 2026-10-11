@@ -206,6 +206,10 @@ class ApiEndpoints {
   static const String claimableBookings = 'me/claimable-bookings';
   static const String claimBooking = 'bookings/claim';
 
+  // ลิงก์ SMS "ทีมงานเปิดการจองให้คุณแล้ว" (/claim/TOKEN) ที่เปิดเข้าแอป
+  static String accountClaimPreview(String token) => 'account/claim/$token';
+  static String accountClaimAccept(String token) => 'me/claim/$token';
+
   // Trip posts / ฟีดรูปหลังทริป
   static const tripPosts = 'trip-posts';
   static String tripPostsOf(String slug) => 'trips/$slug/posts';

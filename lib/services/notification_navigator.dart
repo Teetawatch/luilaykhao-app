@@ -7,6 +7,7 @@ import '../providers/app_provider.dart';
 import '../screens/chat_screen.dart';
 import '../screens/gift_screen.dart';
 import '../screens/gift_voucher_screen.dart';
+import '../screens/account_claim_screen.dart';
 import '../screens/charter_request_screen.dart';
 import '../screens/lost_items_screen.dart';
 import '../screens/group_room_screen.dart';
@@ -490,6 +491,13 @@ class NotificationNavigator {
         _openHandover(segments[1]);
         return true;
       }
+      // SMS "ทีมงานเปิดการจองให้คุณแล้ว" — รับเข้าบัญชีที่ล็อกอินอยู่ (LINE/Google/อีเมล)
+      if (segments.length >= 2 &&
+          segments.first == 'claim' &&
+          segments[1].trim().isNotEmpty) {
+        _openAccountClaim(segments[1]);
+        return true;
+      }
       // คำเชิญเข้าการจอง (รวมปุ่ม "เข้าร่วมทริปในแอป" บนลิงก์ของเพื่อน /f/)
       if (segments.length >= 2 && segments.first == 'join') {
         _openJoinBooking(segments[1]);
@@ -545,6 +553,11 @@ class NotificationNavigator {
         if (code == null) return false;
         _openGiftVoucher(code: code);
         return true;
+      case 'claim':
+        final token = _firstSegment(uri.pathSegments);
+        if (token == null) return false;
+        _openAccountClaim(token);
+        return true;
     }
     return false;
   }
@@ -597,6 +610,14 @@ class NotificationNavigator {
           builder: (_) =>
               GiftVoucherScreen(initialCode: code, focusVoucherId: focusId),
         ),
+      ),
+    );
+  }
+
+  static void _openAccountClaim(String token) {
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => AccountClaimScreen(token: token)),
       ),
     );
   }

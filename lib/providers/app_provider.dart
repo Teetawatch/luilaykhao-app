@@ -468,7 +468,22 @@ class AppProvider extends ChangeNotifier {
     });
   }
 
+  Uri? _lastDeepLink;
+  DateTime? _lastDeepLinkAt;
+
   Future<void> _dispatchDeepLink(Uri uri) async {
+    // app_links 6+ ส่งลิงก์ที่ปลุกแอปจากปิดสนิทมาทั้งทาง getInitialLink() และ
+    // uriLinkStream — ลิงก์เดียวกันที่มาซ้ำในไม่กี่วินาทีจึงเป็นลิงก์เดิม ไม่ใช่การ
+    // กดใหม่ ถ้าไม่กันไว้หน้าปลายทาง (รับการจอง/รับที่นั่ง/ของขวัญ) จะเปิดซ้อนสองชั้น
+    final now = DateTime.now();
+    if (uri == _lastDeepLink &&
+        _lastDeepLinkAt != null &&
+        now.difference(_lastDeepLinkAt!) < const Duration(seconds: 2)) {
+      return;
+    }
+    _lastDeepLink = uri;
+    _lastDeepLinkAt = now;
+
     // Trip/booking links take precedence; fall through to social auth flow.
     if (NotificationNavigator.handleDeepLink(uri)) return;
     await _handleSocialDeepLink(uri);
@@ -3151,6 +3166,29 @@ class AppProvider extends ChangeNotifier {
     final data = Map<String, dynamic>.from(api.data(response) as Map);
     claimableBookingCount = 0;
     await loadAccountData();
+    return data;
+  }
+
+  /// พรีวิวลิงก์เปิดใช้บัญชีจาก SMS — ชื่อทริป วันเดินทาง เบอร์ 4 ตัวท้าย
+  /// (ไม่ต้องล็อกอิน คนที่เพิ่งโหลดแอปจะได้เห็นก่อนว่าลิงก์นี้คือการจองของตัวเอง)
+  Future<Map<String, dynamic>> previewAccountClaim(String token) async {
+    final response = await api.get(ApiEndpoints.accountClaimPreview(token));
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// รับการจองจากลิงก์ SMS เข้าบัญชีที่ล็อกอินอยู่ (LINE/Google/อีเมลก็ได้)
+  /// แล้วรีโหลดโปรไฟล์ (เบอร์อาจถูกเติมให้) กับรายการจองให้เห็นทันที
+  Future<Map<String, dynamic>> acceptAccountClaim(String token) async {
+    final response = await api.post(ApiEndpoints.accountClaimAccept(token));
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    claimableBookingCount = 0;
+    try {
+      await refreshMe();
+      await loadAccountData();
+    } catch (_) {
+      // รับการจองสำเร็จแล้วที่เซิร์ฟเวอร์ — โหลดซ้ำไม่ทันไม่ควรทำให้ดูเหมือนล้มเหลว
+      // (หน้าการจองของฉันดึงใหม่เองเมื่อเปิด/ดึงลงรีเฟรช)
+    }
     return data;
   }
 
