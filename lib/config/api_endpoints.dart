@@ -97,6 +97,15 @@ class ApiEndpoints {
       'schedules/$scheduleId/chat/food-rounds/$roundId/close';
   static String chatFoodReopen(int scheduleId, int roundId) =>
       'schedules/$scheduleId/chat/food-rounds/$roundId/reopen';
+  // ถามทีมงานแบบส่วนตัว — เธรดแยกต่อลูกทริป
+  static String chatPrivateThreads(int scheduleId) =>
+      'schedules/$scheduleId/chat/private/threads';
+  static String chatPrivateMessages(int scheduleId) =>
+      'schedules/$scheduleId/chat/private/messages';
+  static String chatPrivateMessage(int scheduleId, int messageId) =>
+      'schedules/$scheduleId/chat/private/messages/$messageId';
+  static String chatPrivateRead(int scheduleId) =>
+      'schedules/$scheduleId/chat/private/read';
   static String chatRestStops(int scheduleId) =>
       'schedules/$scheduleId/chat/rest-stops';
   static String chatRestStop(int scheduleId, int stopId) =>

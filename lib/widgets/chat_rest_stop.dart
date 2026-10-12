@@ -26,34 +26,51 @@ DateTime? _time(dynamic raw) => DateTime.tryParse('${raw ?? ''}')?.toLocal();
 String _clock(DateTime t) =>
     '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-/// คำที่ต่างกันระหว่าง "พักรถ" กับ "นัดรวมพลล่วงหน้า" — การ์ด/ชีตใช้ชุดเดียวกัน
+/// คำที่ต่างกันระหว่าง "พักรถ", "นัดรวมพลล่วงหน้า" และ "เช็คถึงบ้าน" — การ์ด/ชีต
+/// ใช้ชุดเดียวกัน (kind มาจาก ChatRestStop::KIND_* ฝั่งเซิร์ฟเวอร์)
 class _Words {
-  final bool meetup;
+  final String kind;
 
-  const _Words(this.meetup);
+  const _Words(this.kind);
 
   factory _Words.of(Map<String, dynamic>? stop) =>
-      _Words(stop?['kind'] == 'meetup');
+      _Words(stop?['kind']?.toString() ?? 'rest');
 
-  IconData get icon =>
-      meetup ? Icons.place_rounded : Icons.local_parking_rounded;
-  String get fallbackTitle => meetup ? 'นัดรวมพล' : 'จุดพัก';
-  String get done => meetup ? 'เริ่มแล้ว' : 'ออกรถแล้ว';
-  String get deadline => meetup ? 'นัดรวมพล' : 'กลับขึ้นรถ';
-  String get arrived => meetup ? 'มาถึงแล้ว' : 'ขึ้นรถแล้ว';
-  String get meArrived => meetup ? 'ฉันมาถึงแล้ว' : 'ฉันขึ้นรถแล้ว';
-  String get waiting => meetup ? 'ยังไม่มา' : 'ยังไม่ขึ้น';
-  String get allIn => meetup ? 'มาครบ' : 'ขึ้นรถครบ';
-  String get go => meetup ? 'เริ่มเลย' : 'ออกรถ';
-  String get pickTitle => meetup ? 'ใครมาถึงแล้วบ้าง' : 'ใครขึ้นรถแล้วบ้าง';
-  String confirmGo(int missing) => meetup
-      ? 'ยังไม่มา $missing คน เริ่มเลยไหม?'
-      : 'ยังขาด $missing คน ออกรถเลยไหม?';
-  String get confirmHint => meetup
-      ? 'บางคนอาจมาถึงแล้วแต่ลืมกด ลองนับหัวอีกรอบก่อนนะครับ'
-      : 'บางคนอาจขึ้นรถแล้วแต่ลืมกด ลองนับหัวบนรถอีกรอบก่อนนะครับ';
-  IconData get goIcon =>
-      meetup ? Icons.flag_rounded : Icons.directions_bus_rounded;
+  bool get meetup => kind == 'meetup';
+
+  /// เช็คถึงบ้าน — ไม่มีเวลานัด ไม่มีนับถอยหลัง ไม่มีขยายเวลา
+  bool get home => kind == 'home';
+
+  String _pick(String rest, String meetup, String home) =>
+      this.home ? home : (this.meetup ? meetup : rest);
+
+  IconData get icon => home
+      ? Icons.home_rounded
+      : (meetup ? Icons.place_rounded : Icons.local_parking_rounded);
+  String get fallbackTitle => _pick('จุดพัก', 'นัดรวมพล', 'เช็คถึงบ้าน');
+  String get done => _pick('ออกรถแล้ว', 'เริ่มแล้ว', 'ปิดแล้ว');
+  String get deadline => _pick('กลับขึ้นรถ', 'นัดรวมพล', 'ถึงบ้าน');
+  String get arrived => _pick('ขึ้นรถแล้ว', 'มาถึงแล้ว', 'ถึงบ้านแล้ว');
+  String get meArrived =>
+      _pick('ฉันขึ้นรถแล้ว', 'ฉันมาถึงแล้ว', 'ฉันถึงบ้านแล้ว');
+  String get waiting => _pick('ยังไม่ขึ้น', 'ยังไม่มา', 'ยังไม่ได้บอก');
+  String get allIn => _pick('ขึ้นรถครบ', 'มาครบ', 'ถึงบ้านครบ');
+  String get go => _pick('ออกรถ', 'เริ่มเลย', 'ปิดการ์ด');
+  String get pickTitle =>
+      _pick('ใครขึ้นรถแล้วบ้าง', 'ใครมาถึงแล้วบ้าง', 'ใครถึงบ้านแล้วบ้าง');
+  String confirmGo(int missing) => _pick(
+    'ยังขาด $missing คน ออกรถเลยไหม?',
+    'ยังไม่มา $missing คน เริ่มเลยไหม?',
+    'ยังไม่ได้บอก $missing คน ปิดการ์ดเลยไหม?',
+  );
+  String get confirmHint => _pick(
+    'บางคนอาจขึ้นรถแล้วแต่ลืมกด ลองนับหัวบนรถอีกรอบก่อนนะครับ',
+    'บางคนอาจมาถึงแล้วแต่ลืมกด ลองนับหัวอีกรอบก่อนนะครับ',
+    'ปิดแล้วลูกทริปจะกดถึงบ้านไม่ได้อีก ลองโทรถามคนที่ยังไม่กดก่อนนะครับ',
+  );
+  IconData get goIcon => home
+      ? Icons.home_rounded
+      : (meetup ? Icons.flag_rounded : Icons.directions_bus_rounded);
 }
 
 /// กด "มาถึงแล้ว" ได้ตั้งแต่กี่ชั่วโมงก่อนนัด — ตรงกับ MEETUP_ARRIVE_WINDOW_HOURS
@@ -152,8 +169,10 @@ class ChatRestStopCard extends StatefulWidget {
 
 class _ChatRestStopCardState extends State<ChatRestStopCard>
     with _Ticker<ChatRestStopCard> {
+  // การ์ดถึงบ้านไม่มีนับถอยหลัง — ไม่ต้องวาดใหม่ทุกวินาที
   @override
-  bool get ticking => widget.stop['is_departed'] != true;
+  bool get ticking =>
+      widget.stop['is_departed'] != true && !_Words.of(widget.stop).home;
 
   @override
   void initState() {
@@ -204,13 +223,16 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
     final mine = myRestStopPassengers(stop, widget.myUserId);
     final mineWaiting = mine.where((p) => p['boarded'] != true).toList();
     final muted = AppTheme.mutedText(context);
-    final countdown = returnAt == null ? null : _countdown(returnAt);
+    final w = _Words.of(stop);
+    // ถึงบ้าน: return_at คือเวลาปิดการ์ดเอง ไม่ใช่เวลานัด — ไม่โชว์นับถอยหลัง
+    final countdown = (returnAt == null || w.home)
+        ? null
+        : _countdown(returnAt);
     final accent = departed
         ? muted
         : (countdown?.late == true
               ? AppTheme.errorColor
               : AppTheme.primaryColor);
-    final w = _Words.of(stop);
     // นัดรวมพลล่วงหน้า: กด "มาถึงแล้ว" ได้เมื่อใกล้เวลานัดเท่านั้น
     final tooEarly =
         w.meetup &&
@@ -242,35 +264,50 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
           ],
         ),
         const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              departed
-                  ? w.done
-                  : (returnAt == null ? '--:--' : _when(returnAt)),
-              style: appFont(
-                fontSize: AppText.sizeH1,
-                fontWeight: FontWeight.w800,
-                color: accent,
-                height: 1.1,
-              ),
+        if (w.home)
+          Text(
+            departed
+                ? (total > 0 && boarded >= total
+                      ? 'ทุกคนถึงบ้านปลอดภัยแล้ว'
+                      : 'ปิดเช็คถึงบ้านแล้ว')
+                : 'ถึงบ้านแล้วกดบอกหน่อยนะครับ ทีมงานจะได้หายห่วง',
+            style: appFont(
+              fontSize: AppText.sizeLabel,
+              fontWeight: FontWeight.w700,
+              color: departed ? muted : AppTheme.onSurface(context),
+              height: 1.4,
             ),
-            const SizedBox(width: 8),
-            if (!departed && countdown != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 3),
-                child: Text(
-                  '${w.deadline} · ${countdown.text}',
-                  style: appFont(
-                    fontSize: AppText.sizeLabel,
-                    fontWeight: FontWeight.w700,
-                    color: countdown.late ? AppTheme.errorColor : muted,
-                  ),
+          )
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                departed
+                    ? w.done
+                    : (returnAt == null ? '--:--' : _when(returnAt)),
+                style: appFont(
+                  fontSize: AppText.sizeH1,
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                  height: 1.1,
                 ),
               ),
-          ],
-        ),
+              const SizedBox(width: 8),
+              if (!departed && countdown != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Text(
+                    '${w.deadline} · ${countdown.text}',
+                    style: appFont(
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w700,
+                      color: countdown.late ? AppTheme.errorColor : muted,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         if (total > 0) ...[
           const SizedBox(height: 10),
           ClipRRect(
@@ -758,7 +795,9 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
   final Map<int, String> _phones = {};
 
   @override
-  bool get ticking => widget.stop.value?['is_departed'] != true;
+  bool get ticking =>
+      widget.stop.value?['is_departed'] != true &&
+      !_Words.of(widget.stop.value).home;
 
   @override
   void initState() {
@@ -836,10 +875,12 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
     final passengers = _maps(data['passengers']);
     final waiting = passengers.where((p) => p['boarded'] != true).toList();
     final boarded = passengers.where((p) => p['boarded'] == true).toList();
-    final returnAt = _time(data['return_at']);
-    final countdown = returnAt == null ? null : _countdown(returnAt);
-    final manage = widget.canManage && !departed;
     final w = _Words.of(data);
+    final returnAt = _time(data['return_at']);
+    final countdown = (returnAt == null || w.home)
+        ? null
+        : _countdown(returnAt);
+    final manage = widget.canManage && !departed;
 
     Widget row(Map<String, dynamic> p) {
       final id = _int(p['id']);
@@ -883,7 +924,9 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
       icon: Icons.fact_check_rounded,
       title: departed
           ? w.done
-          : '${w.deadline} ${returnAt == null ? '' : _when(returnAt)}',
+          : (w.home
+                ? w.pickTitle
+                : '${w.deadline} ${returnAt == null ? '' : _when(returnAt)}'),
       subtitle: [
         '${w.arrived} ${boarded.length}/${passengers.length} คน',
         if (!departed && countdown != null) countdown.text,
@@ -891,8 +934,11 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
       footer: manage
           ? Row(
               children: [
-                // พักรถขยายทีละนิด, นัดรวมพลเลื่อนทีละมากกว่า
-                for (final m in w.meetup ? const [10, 30] : const [5, 10]) ...[
+                // พักรถขยายทีละนิด, นัดรวมพลเลื่อนทีละมากกว่า, ถึงบ้านไม่มีเวลาให้ขยาย
+                for (final m
+                    in w.home
+                        ? const <int>[]
+                        : (w.meetup ? const [10, 30] : const [5, 10])) ...[
                   OutlinedButton(
                     onPressed: () {
                       HapticFeedback.selectionClick();

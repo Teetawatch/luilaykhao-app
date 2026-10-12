@@ -113,13 +113,20 @@ class _ConversationTile extends StatelessWidget {
   String _t(dynamic v) => v?.toString().trim() ?? '';
 
   String _previewText() {
+    final privateUnread =
+        int.tryParse('${conversation['private_unread']}') ?? 0;
+    if (privateUnread > 0) return '🔒 ข้อความส่วนตัวใหม่ $privateUnread ข้อความ';
     final last = conversation['last_message'];
     if (last is! Map) return 'ยังไม่มีข้อความ — เริ่มทักทายได้เลย';
     final role = _t(last['sender_role']);
     final body = _t(last['body']);
     final hasImage = _t(last['image_url']).isNotEmpty;
     final sender = _t(last['sender_name']);
-    final text = body.isNotEmpty ? body : (hasImage ? '📷 รูปภาพ' : '');
+    final text = body.isNotEmpty
+        ? body
+        : (last['has_audio'] == true
+              ? '🎤 ข้อความเสียง'
+              : (hasImage ? '📷 รูปภาพ' : ''));
     if (role == 'system') return text;
     if (sender.isEmpty) return text;
     return '$sender: $text';
@@ -149,7 +156,11 @@ class _ConversationTile extends StatelessWidget {
     final scheduleId = int.tryParse('${conversation['schedule_id']}') ?? 0;
     final title = _t(conversation['trip_title']);
     final vehicle = _t(conversation['vehicle_name']);
-    final unread = int.tryParse('${conversation['unread_count']}') ?? 0;
+    // ข้อความส่วนตัว (ถามทีมงาน) นับรวมในป้ายด้วย — เปิดห้องแล้วเห็นปุ่มกุญแจมีป้าย
+    final privateUnread =
+        int.tryParse('${conversation['private_unread']}') ?? 0;
+    final unread =
+        (int.tryParse('${conversation['unread_count']}') ?? 0) + privateUnread;
     final notifyLevel = ChatNotifyLevel.fromValue(conversation['notify_level']);
     // ห้องที่ปิดแจ้งเตือนไว้ ป้ายนับยังอยู่แต่เป็นสีเทา แบบ LINE
     final badgeColor = notifyLevel == ChatNotifyLevel.off

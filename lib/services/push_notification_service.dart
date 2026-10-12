@@ -174,6 +174,10 @@ class PushNotificationService {
   /// เพราะผู้ใช้กำลังเห็นมันขึ้นมาอยู่แล้ว
   final Map<Object, bool Function(int scheduleId)> _chatRoomWatchers = {};
 
+  /// เธรด "ถามทีมงานแบบส่วนตัว" ที่เปิดอยู่บนจอ ("scheduleId:userId ของลูกทริป")
+  /// — แจ้งเตือนของเธรดนี้ไม่ต้องเด้งทับหน้าที่ผู้ใช้กำลังอ่าน
+  String? visiblePrivateThread;
+
   Future<void> initialize({
     VoidCallback? onRefreshRequested,
     NotificationTapCallback? onNotificationTap,
@@ -274,6 +278,14 @@ class PushNotificationService {
         }
         if (type == 'chat_message') {
           _handleForegroundChat(message);
+          _onRefreshRequested?.call();
+          return;
+        }
+        // ข้อความส่วนตัวของเธรดที่เปิดอ่านอยู่ — ขึ้นในหน้าจอเองแล้ว ไม่ต้องเด้งทับ
+        if (type == 'chat_private' &&
+            visiblePrivateThread != null &&
+            visiblePrivateThread ==
+                '${message.data['schedule_id']}:${message.data['user_id']}') {
           _onRefreshRequested?.call();
           return;
         }

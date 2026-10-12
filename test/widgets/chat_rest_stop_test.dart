@@ -181,4 +181,117 @@ void main() {
     expect(find.text('ฉันมาถึงแล้ว'), findsOneWidget);
     expect(find.textContaining('นัดรวมพล · อีก'), findsOneWidget);
   });
+
+  // ── เช็คถึงบ้าน ─────────────────────────────────────────────────────────
+
+  Map<String, dynamic> homeStop({bool departed = false, bool allHome = false}) => {
+    ..._stop(left: const Duration(hours: 15)),
+    'kind': 'home',
+    'place': null,
+    'is_departed': departed,
+    'boarded_count': allHome ? 3 : 0,
+    'passengers': [
+      {'id': 1, 'name': 'สมชาย', 'user_id': 10, 'boarded': allHome},
+      {'id': 2, 'name': 'สมหญิง', 'user_id': 10, 'boarded': allHome},
+      {'id': 3, 'name': 'มานะ', 'user_id': 11, 'boarded': allHome, 'phone': '0811111111'},
+    ],
+  };
+
+  testWidgets('home check asks to tap when home — no clock, no countdown', (
+    tester,
+  ) async {
+    List<int>? ids;
+    await tester.pumpWidget(
+      _host(
+        ChatRestStopCard(
+          stop: homeStop(),
+          myUserId: 11,
+          canManage: false,
+          onBoard: (i, _) => ids = i,
+          onOpenRoll: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('เช็คถึงบ้าน'), findsOneWidget);
+    expect(find.textContaining('ถึงบ้านแล้วกดบอกหน่อยนะครับ'), findsOneWidget);
+    expect(find.text('ถึงบ้านแล้ว 0/3 คน'), findsOneWidget);
+    // return_at ของการ์ดนี้คือเวลาปิดเอง ไม่ใช่เวลานัด
+    expect(find.textContaining('อีก'), findsNothing);
+    expect(find.byIcon(Icons.home_rounded), findsWidgets);
+
+    await tester.tap(find.text('ฉันถึงบ้านแล้ว'));
+    expect(ids, [3]);
+  });
+
+  testWidgets('home check owner marks the whole group home in one tap', (
+    tester,
+  ) async {
+    List<int>? ids;
+    await tester.pumpWidget(
+      _host(
+        ChatRestStopCard(
+          stop: homeStop(),
+          myUserId: 10,
+          canManage: false,
+          onBoard: (i, _) => ids = i,
+          onOpenRoll: () {},
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('ถึงบ้านแล้ว (2 คน)'));
+    expect(ids, [1, 2]);
+  });
+
+  testWidgets('closed home check says everyone made it', (tester) async {
+    await tester.pumpWidget(
+      _host(
+        ChatRestStopCard(
+          stop: homeStop(departed: true, allHome: true),
+          myUserId: 11,
+          canManage: true,
+          onBoard: (_, _) {},
+          onOpenRoll: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('ทุกคนถึงบ้านปลอดภัยแล้ว'), findsOneWidget);
+    expect(find.text('ถึงบ้านครบ 3 คนแล้ว'), findsOneWidget);
+    expect(find.text('ฉันถึงบ้านแล้ว'), findsNothing);
+    expect(find.text('ดูรายชื่อ'), findsOneWidget);
+  });
+
+  testWidgets('home roll sheet offers close but no extend, and a call button', (
+    tester,
+  ) async {
+    final stop = ValueNotifier<Map<String, dynamic>?>(homeStop());
+    var closed = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RestStopRollSheet(
+            stop: stop,
+            canManage: true,
+            onToggle: (_, _) async {},
+            onExtend: (_) async {},
+            onDepart: () async => closed = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('ใครถึงบ้านแล้วบ้าง'), findsOneWidget);
+    expect(find.text('ยังไม่ได้บอก 3 คน — แตะเพื่อติ๊กแทน'), findsOneWidget);
+    expect(find.textContaining('นาที'), findsNothing);
+    expect(find.byIcon(Icons.call_rounded), findsOneWidget);
+
+    await tester.tap(find.text('ปิดการ์ด'));
+    await tester.pumpAndSettle();
+    expect(find.text('ยังไม่ได้บอก 3 คน ปิดการ์ดเลยไหม?'), findsOneWidget);
+    await tester.tap(find.text('ปิดการ์ด').last);
+    await tester.pumpAndSettle();
+    expect(closed, isTrue);
+  });
 }

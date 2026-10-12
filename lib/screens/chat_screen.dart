@@ -25,12 +25,14 @@ import '../widgets/chat_lost_item.dart';
 import '../widgets/chat_requests.dart';
 import '../widgets/chat_rest_stop.dart';
 import '../widgets/chat_staff_intro.dart';
+import '../widgets/chat_voice.dart';
 import '../widgets/chat_vote_sheet.dart';
 import '../widgets/moderation_sheet.dart';
 import '../theme/app_theme.dart';
 import '../services/quick_ask_matcher.dart';
 import '../widgets/weather_card.dart';
 import '../widgets/tier_badge.dart';
+import 'chat_private_screen.dart';
 import 'schedule_itinerary_screen.dart';
 import 'lost_items_screen.dart';
 import 'trip_rooms_screen.dart';
@@ -64,6 +66,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final _inputFocus = FocusNode();
   final _scroll = ScrollController();
   final _picker = ImagePicker();
+  // ข้อความเสียง — แตะไมค์ (ตอนช่องพิมพ์ว่าง) แถบกำลังอัดขึ้นแทนช่องพิมพ์
+  final _voice = VoiceRecordingController();
 
   bool _loading = true;
   bool _loadingMore = false;
@@ -184,6 +188,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _scroll.addListener(_onScroll);
     _input.addListener(_watchComposing);
+    // ครบ 2 นาทีหยุดอัดแล้วส่งเอง — คนที่พูดยาวขนาดนั้นตั้งใจจะส่งอยู่แล้ว
+    _voice.onAutoStop = (clip) {
+      if (!mounted) return;
+      setState(() {});
+      _sendVoiceClip(clip);
+      _snack('ครบ 2 นาที ส่งข้อความเสียงให้แล้ว');
+    };
     // ข้อความของห้องนี้ไม่ต้องเด้งแจ้งเตือนระหว่างที่ผู้ใช้กำลังดูห้องอยู่
     _roomWatchDisposer = PushNotificationService.instance.watchChatRoom(
       (scheduleId) =>
@@ -284,6 +295,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _restSheetStop.dispose();
     _collectionSheet.dispose();
     _supplyQueue.dispose();
+    _voice.dispose();
+    // ออกจากห้องแล้วเสียงไม่ควรเล่นค้างต่อไปหน้าอื่น
+    unawaited(ChatVoicePlayback.instance.stop());
     _input.removeListener(_watchComposing);
     _input.dispose();
     _inputFocus.dispose();
@@ -303,6 +317,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _markRead();
     } else {
       _stopPolling();
+      // สายเข้า/สลับแอประหว่างอัด — ทิ้งไปเลย ดีกว่าอัดเสียงรอบข้างค้างไว้
+      if (_voice.isRecording) {
+        unawaited(_voice.cancel().then((_) {
+          if (mounted) setState(() {});
+        }));
+      }
+      unawaited(ChatVoicePlayback.instance.stop());
     }
   }
 
@@ -668,6 +689,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       'sender_name': name,
       'body': m['body'],
       'has_image': (m['image_url']?.toString().isNotEmpty ?? false),
+      'has_audio': (m['audio_url']?.toString().isNotEmpty ?? false) ||
+          (m['_local_audio_path']?.toString().isNotEmpty ?? false),
     };
   }
 
@@ -710,8 +733,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     try {
       final Map<String, dynamic> server;
       final imagePath = opt['_local_image_path']?.toString();
+      final audioPath = opt['_local_audio_path']?.toString();
       final replyId = int.tryParse('${opt['_reply_to_id']}');
-      if (imagePath != null && imagePath.isNotEmpty) {
+      if (audioPath != null && audioPath.isNotEmpty) {
+        server = await app.sendChatVoice(
+          widget.scheduleId,
+          audioPath,
+          durationMs: int.tryParse('${opt['audio_duration_ms']}') ?? 0,
+          replyToId: replyId,
+        );
+      } else if (imagePath != null && imagePath.isNotEmpty) {
         server = await app.sendChatImage(
           widget.scheduleId,
           imagePath,
@@ -729,6 +760,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       _replaceOptimistic(token, server);
       _refreshRoom();
+      // ส่งถึงแล้ว ไฟล์ชั่วคราวหมดหน้าที่ (เว้นไว้ถ้ากำลังเล่นอยู่พอดี)
+      final sentAudio = opt['_local_audio_path']?.toString();
+      if (sentAudio != null &&
+          ChatVoicePlayback.instance.currentKey != sentAudio) {
+        deleteVoiceClip(sentAudio);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -815,6 +852,68 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       'sender_role': 'customer',
       'created_at': DateTime.now().toIso8601String(),
       '_local_image_path': picked.path,
+      'reply_to': ?replyPreview,
+      '_reply_to_id': ?replyId,
+      '_pending': true,
+    };
+    setState(() {
+      _messages.add(optimistic);
+      _replyingTo = null;
+    });
+    _scrollToBottom();
+    _dispatchOptimistic(token);
+  }
+
+  // ── ข้อความเสียง ───────────────────────────────────────────────────────
+
+  Future<void> _startVoice() async {
+    if (_sending || _editing != null || _voice.isRecording) return;
+    HapticFeedback.mediumImpact();
+    FocusScope.of(context).unfocus();
+    final result = await _voice.start();
+    if (!mounted) return;
+    switch (result) {
+      case VoiceStartResult.started:
+        setState(() {});
+      case VoiceStartResult.denied:
+        _snack('อนุญาตให้แอปใช้ไมโครโฟนในการตั้งค่าเครื่องก่อน แล้วลองอีกครั้งนะครับ');
+      case VoiceStartResult.failed:
+        _snack('เริ่มอัดเสียงไม่ได้ ลองอีกครั้งนะครับ');
+    }
+  }
+
+  Future<void> _finishVoice() async {
+    final clip = await _voice.stop();
+    if (!mounted) return;
+    setState(() {});
+    if (clip == null) {
+      _snack('ข้อความเสียงสั้นไป — แตะไมค์ พูด แล้วกดส่งเมื่อพูดจบนะครับ');
+      return;
+    }
+    HapticFeedback.mediumImpact();
+    _sendVoiceClip(clip);
+  }
+
+  Future<void> _cancelVoice() async {
+    HapticFeedback.selectionClick();
+    await _voice.cancel();
+    if (mounted) setState(() {});
+  }
+
+  /// แปะข้อความเสียงลงห้องทันที (เล่นจากไฟล์ในเครื่องได้เลย) แล้วอัปโหลดตามหลัง
+  void _sendVoiceClip(VoiceClip clip) {
+    final replyId = _replyingTo == null
+        ? null
+        : int.tryParse('${_replyingTo!['id']}');
+    final replyPreview = _replyPreviewOf(_replyingTo);
+    final token = _newClientToken();
+    final optimistic = <String, dynamic>{
+      'client_token': token,
+      'is_mine': true,
+      'sender_role': 'customer',
+      'created_at': DateTime.now().toIso8601String(),
+      '_local_audio_path': clip.path,
+      'audio_duration_ms': clip.durationMs,
       'reply_to': ?replyPreview,
       '_reply_to_id': ?replyId,
       '_pending': true,
@@ -1043,6 +1142,28 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       _openMeetup();
                     },
                   ),
+                if (_canModerate && _room?['can_open_home_check'] == true)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.home_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'เช็คถึงบ้าน',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ส่งทุกคนลงรถแล้ว — ลูกทริปกด "ถึงบ้านแล้ว" คุณเห็นว่าใครยังไม่ถึง',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openHomeCheck();
+                    },
+                  ),
                 if (_canModerate)
                   ListTile(
                     leading: const Icon(
@@ -1117,6 +1238,28 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                           ),
                         ),
                       );
+                    },
+                  ),
+                if (!_canModerate && _privateChat != null)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.lock_person_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'ถามทีมงานแบบส่วนตัว',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ทีมงานเห็นคนเดียว ไม่ขึ้นในห้องรวม — สุขภาพ ค่าใช้จ่าย เรื่องไม่สบายใจ',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openPrivateChat();
                     },
                   ),
                 if (!_canModerate && _canRequestStop) ...[
@@ -2446,6 +2589,94 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  // ── ถามทีมงานแบบส่วนตัว ────────────────────────────────────────────────
+
+  /// สรุปจากเซิร์ฟเวอร์ (null = ผู้ใช้นี้ไม่มีสิทธิ์ใช้) — ลูกทริป: unread + staff,
+  /// ทีมงาน: unread_threads
+  Map<String, dynamic>? get _privateChat => _room?['private_chat'] is Map
+      ? Map<String, dynamic>.from(_room!['private_chat'] as Map)
+      : null;
+
+  /// ป้ายบนปุ่ม — ลูกทริปนับข้อความจากทีมงาน ทีมงานนับคนที่รอคำตอบ
+  int get _privateBadge {
+    final p = _privateChat;
+    if (p == null) return 0;
+    return int.tryParse('${p[_canModerate ? 'unread_threads' : 'unread']}') ??
+        0;
+  }
+
+  Future<void> _openPrivateChat() async {
+    HapticFeedback.selectionClick();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _canModerate
+            ? ChatPrivateInboxScreen(
+                scheduleId: widget.scheduleId,
+                tripTitle: widget.title,
+              )
+            : ChatPrivateScreen(
+                scheduleId: widget.scheduleId,
+                tripTitle: widget.title,
+              ),
+      ),
+    );
+    // กลับมาแล้วป้ายต้องตรงกับที่เพิ่งอ่านไป
+    if (mounted) _refreshRoom(force: true);
+  }
+
+  /// ทีมงานเปิดการ์ด "ถึงบ้านแล้ว" — ยืนยันก่อน เพราะเด้งแจ้งเตือนถึงทุกคนในทริป
+  Future<void> _openHomeCheck() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'เปิดเช็คถึงบ้าน?',
+          style: appFont(
+            fontSize: AppText.sizeSubtitle,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: Text(
+          'ทุกคนจะได้แจ้งเตือนให้กด "ถึงบ้านแล้ว" เมื่อถึงบ้าน ครบทุกคนการ์ดปิดเอง '
+          'ใครยังไม่กดใน 2 ชั่วโมงระบบเตือนเขาอีกครั้ง (ไม่เด้งกลางดึก) และบอกคุณว่าเหลือใคร',
+          style: appFont(fontSize: AppText.sizeBody, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('ยกเลิก', style: appFont(fontWeight: FontWeight.w700)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'เปิดเลย',
+              style: appFont(
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      final message = await context.read<AppProvider>().openChatRestStop(
+            widget.scheduleId,
+            kind: 'home',
+          );
+      if (!mounted) return;
+      setState(() => _messages.add(message));
+      _scrollToBottom();
+      _markRead();
+      // เปิดไปแล้วซ่อนเมนูนี้ (มีได้ใบเดียว) — ดึงข้อมูลห้องใหม่ทันที
+      _refreshRoom(force: true);
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
   Future<void> _boardRestStop(
     int messageId,
     Map<String, dynamic> stop,
@@ -3024,6 +3255,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ),
         ),
         actions: [
+          if (_privateChat != null)
+            IconButton(
+              tooltip: _canModerate
+                  ? 'ข้อความส่วนตัวจากลูกทริป'
+                  : 'ถามทีมงานแบบส่วนตัว',
+              onPressed: _openPrivateChat,
+              icon: Badge(
+                isLabelVisible: _privateBadge > 0,
+                label: Text('$_privateBadge'),
+                backgroundColor: AppTheme.errorColor,
+                child: const Icon(Icons.lock_person_rounded),
+              ),
+            ),
           IconButton(
             tooltip: 'การแจ้งเตือน: ${_notifyLevel.label}',
             onPressed: _room == null || _savingNotify ? null : _openNotifySettings,
@@ -3563,6 +3807,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 message: _replyingTo!,
                 onCancel: _cancelReply,
               ),
+            if (_voice.isRecording)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 8, 12, 8),
+                child: ChatVoiceRecordingBar(
+                  controller: _voice,
+                  onCancel: _cancelVoice,
+                  onSend: _finishVoice,
+                ),
+              )
+            else
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
               child: Row(
@@ -3616,6 +3870,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               ),
             ),
             const SizedBox(width: 8),
+            // ยังไม่ได้พิมพ์อะไร = ปุ่มไมค์ (แบบ LINE) พิมพ์แล้วกลายเป็นปุ่มส่ง
+            if (!_isComposing && _editing == null && !_sending)
+              ChatVoiceMicButton(onTap: _startVoice)
+            else
             Material(
               color: AppTheme.primaryColor,
               shape: const CircleBorder(),
@@ -5690,6 +5948,12 @@ class _MessageBubble extends StatelessWidget {
     final hasText = !isDeleted && !isCard && body.isNotEmpty;
     final hasImage = imageUrl.isNotEmpty;
     final hasLocalImage = imageUrl.isEmpty && localImagePath.isNotEmpty;
+    // ข้อความเสียง — ระหว่างอัปโหลดเล่นจากไฟล์ในเครื่อง ส่งถึงแล้วเล่นจากเซิร์ฟเวอร์
+    final audioUrl = isDeleted ? '' : ApiConfig.mediaUrl(message['audio_url']);
+    final localAudioPath =
+        isDeleted ? '' : (message['_local_audio_path']?.toString() ?? '');
+    final hasVoice =
+        !isCard && (audioUrl.isNotEmpty || localAudioPath.isNotEmpty);
 
     final replyTo = message['reply_to'] is Map
         ? Map<String, dynamic>.from(message['reply_to'] as Map)
@@ -5894,6 +6158,16 @@ class _MessageBubble extends StatelessWidget {
                             onOrder: () => onOrderFood(foodRound),
                             onOpenSummary: () => onOpenFoodSummary(foodRound),
                             onPay: () => onPayFood(foodRound),
+                          )
+                        else if (hasVoice)
+                          ChatVoiceBubble(
+                            url: audioUrl.isEmpty ? null : audioUrl,
+                            localPath: audioUrl.isEmpty ? localAudioPath : null,
+                            durationMs: int.tryParse(
+                                  '${message['audio_duration_ms']}',
+                                ) ??
+                                0,
+                            foreground: fg,
                           )
                         else if (hasText)
                           _MessageText(
@@ -7253,7 +7527,11 @@ class _QuotedReply extends StatelessWidget {
     final name = reply['sender_name']?.toString() ?? 'ผู้ใช้';
     final body = reply['body']?.toString().trim() ?? '';
     final hasImage = reply['has_image'] == true;
-    final preview = body.isNotEmpty ? body : (hasImage ? '📷 รูปภาพ' : '');
+    final preview = body.isNotEmpty
+        ? body
+        : (reply['has_audio'] == true
+              ? '🎤 ข้อความเสียง'
+              : (hasImage ? '📷 รูปภาพ' : ''));
 
     // On my (primary-colored) bubbles use translucent white; on others a tint.
     final barColor = isMine ? Colors.white.withValues(alpha: 0.8) : AppTheme.primaryColor;
@@ -7411,7 +7689,11 @@ class _ReplyPreviewBar extends StatelessWidget {
             : (user['name']?.toString() ?? 'ผู้ใช้'));
     final body = message['body']?.toString().trim() ?? '';
     final hasImage = (message['image_url']?.toString().isNotEmpty ?? false);
-    final preview = body.isNotEmpty ? body : (hasImage ? '📷 รูปภาพ' : '');
+    final hasAudio = (message['audio_url']?.toString().isNotEmpty ?? false) ||
+        (message['_local_audio_path']?.toString().isNotEmpty ?? false);
+    final preview = body.isNotEmpty
+        ? body
+        : (hasAudio ? '🎤 ข้อความเสียง' : (hasImage ? '📷 รูปภาพ' : ''));
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),

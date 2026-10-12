@@ -1583,10 +1583,7 @@ class AppProvider extends ChangeNotifier {
     }
     if (results[7] != null) {
       chatConversations = List<dynamic>.from(api.data(results[7]) ?? []);
-      chatUnreadTotal = chatConversations.fold<int>(0, (sum, c) {
-        final n = int.tryParse('${(c as Map?)?['unread_count']}') ?? 0;
-        return sum + n;
-      });
+      chatUnreadTotal = _sumChatUnread();
     }
     if (results[8] != null) {
       final supportData = api.data(results[8]) as Map?;
@@ -3558,6 +3555,24 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  /// ส่งข้อความเสียง (ไฟล์ .m4a ที่อัดในแอป) — คืนข้อความที่เซิร์ฟเวอร์บันทึกแล้ว
+  Future<Map<String, dynamic>> sendChatVoice(
+    int scheduleId,
+    String audioPath, {
+    required int durationMs,
+    int? replyToId,
+  }) async {
+    final response = await api.postMultipart(
+      ApiEndpoints.chatMessages(scheduleId),
+      fields: {
+        'audio_duration_ms': '$durationMs',
+        if (replyToId != null) 'reply_to_id': '$replyToId',
+      },
+      files: {'audio': audioPath},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
   /// Toggle an emoji reaction on a message. Returns the updated reaction set.
   Future<List<dynamic>> reactChatMessage(
     int scheduleId,
@@ -3611,22 +3626,30 @@ class AppProvider extends ChangeNotifier {
     await api.post(ApiEndpoints.chatRead(scheduleId));
   }
 
-  /// Zero out the cached `unread_count` for one conversation and recompute the
-  /// bottom-nav total. No-op (beyond recompute) if the room isn't cached yet.
-  void _clearChatUnreadLocally(int scheduleId) {
+  /// ป้ายแท็บแชท = ข้อความห้องรวมที่ยังไม่อ่าน + ข้อความส่วนตัว (ถามทีมงาน) ที่ยังไม่อ่าน
+  int _sumChatUnread() => chatConversations.fold<int>(0, (sum, c) {
+    final m = c as Map?;
+    return sum +
+        (int.tryParse('${m?['unread_count']}') ?? 0) +
+        (int.tryParse('${m?['private_unread']}') ?? 0);
+  });
+
+  /// Zero out the cached `unread_count` (or `private_unread` when [private])
+  /// for one conversation and recompute the bottom-nav total. No-op (beyond
+  /// recompute) if the room isn't cached yet.
+  void _clearChatUnreadLocally(int scheduleId, {bool private = false}) {
+    final key = private ? 'private_unread' : 'unread_count';
     var changed = false;
     for (final c in chatConversations) {
       if (c is! Map) continue;
       final id = int.tryParse('${c['schedule_id'] ?? c['id']}');
       if (id != scheduleId) continue;
-      if ((int.tryParse('${c['unread_count']}') ?? 0) != 0) {
-        c['unread_count'] = 0;
+      if ((int.tryParse('${c[key]}') ?? 0) != 0) {
+        c[key] = 0;
         changed = true;
       }
     }
-    final newTotal = chatConversations.fold<int>(0, (sum, c) {
-      return sum + (int.tryParse('${(c as Map?)?['unread_count']}') ?? 0);
-    });
+    final newTotal = _sumChatUnread();
     if (changed || newTotal != chatUnreadTotal) {
       chatUnreadTotal = newTotal;
       notifyListeners();
@@ -3865,12 +3888,131 @@ class AppProvider extends ChangeNotifier {
     }
     final response = await api.get(ApiEndpoints.chatMyConversations);
     chatConversations = List<dynamic>.from(api.data(response) ?? const []);
-    chatUnreadTotal = chatConversations.fold<int>(0, (sum, c) {
-      final n = int.tryParse('${(c as Map?)?['unread_count']}') ?? 0;
-      return sum + n;
-    });
+    chatUnreadTotal = _sumChatUnread();
     notifyListeners();
     return chatConversations;
+  }
+
+  // ── ถามทีมงานแบบส่วนตัว ────────────────────────────────────────────────
+
+  /// กล่องข้อความของทีมงาน — ทุกเธรดส่วนตัวของรอบนี้ ล่าสุดอยู่บน
+  Future<List<Map<String, dynamic>>> chatPrivateThreads(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.chatPrivateThreads(scheduleId));
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    return (data['threads'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  /// ข้อความของเธรด — ลูกทริปไม่ต้องส่ง [userId] (ได้เธรดตัวเอง) ทีมงานต้องส่ง
+  /// คืน {messages, has_more, thread, customer, staff, viewer_role}
+  Future<Map<String, dynamic>> chatPrivateMessages(
+    int scheduleId, {
+    int? userId,
+    int? beforeId,
+    int? afterId,
+  }) async {
+    final response = await api.get(
+      ApiEndpoints.chatPrivateMessages(scheduleId),
+      query: {
+        'per_page': 30,
+        'user_id': ?userId,
+        'before_id': ?beforeId,
+        'after_id': ?afterId,
+      },
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// ส่งข้อความส่วนตัว — ตัวอักษร รูป หรือเสียง อย่างใดอย่างหนึ่ง
+  /// คืน {message, thread}
+  Future<Map<String, dynamic>> sendChatPrivate(
+    int scheduleId, {
+    int? userId,
+    String? body,
+    String? imagePath,
+    String? audioPath,
+    int? audioDurationMs,
+  }) async {
+    final dynamic response;
+    if (imagePath != null || audioPath != null) {
+      response = await api.postMultipart(
+        ApiEndpoints.chatPrivateMessages(scheduleId),
+        fields: {
+          if (userId != null) 'user_id': '$userId',
+          if (audioPath != null) 'audio_duration_ms': '${audioDurationMs ?? 0}',
+        },
+        files: {'image': ?imagePath, 'audio': ?audioPath},
+      );
+    } else {
+      response = await api.post(
+        ApiEndpoints.chatPrivateMessages(scheduleId),
+        body: {'user_id': ?userId, 'body': body ?? ''},
+      );
+    }
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// อ่านเธรดแล้ว — ลูกทริปอ่านเธรดตัวเองแล้วป้ายแชทลดลงทันที
+  Future<Map<String, dynamic>?> markChatPrivateRead(
+    int scheduleId, {
+    int? userId,
+    int? messageId,
+  }) async {
+    if (userId == null) _clearChatUnreadLocally(scheduleId, private: true);
+    final response = await api.post(
+      ApiEndpoints.chatPrivateRead(scheduleId),
+      body: {'user_id': ?userId, 'message_id': ?messageId},
+    );
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    return data['thread'] is Map
+        ? Map<String, dynamic>.from(data['thread'] as Map)
+        : null;
+  }
+
+  Future<Map<String, dynamic>> deleteChatPrivate(
+    int scheduleId,
+    int messageId,
+  ) async {
+    final response = await api.delete(
+      ApiEndpoints.chatPrivateMessage(scheduleId, messageId),
+    );
+    final data = Map<String, dynamic>.from(api.data(response) ?? {});
+    return Map<String, dynamic>.from(data['message'] as Map);
+  }
+
+  /// ฟังเธรดส่วนตัว — ลูกทริปฟังช่องของเธรดตัวเอง ทีมงานฟังช่องรวมของรอบ
+  /// (ทุกเธรดมาทางเดียว แล้วกรองด้วย thread_user_id) คืนตัวยกเลิกตัวเดียว
+  Future<VoidCallback> subscribeChatPrivate(
+    int scheduleId, {
+    required bool asStaff,
+    int? userId,
+    RealtimeEventHandler? onMessage,
+    RealtimeEventHandler? onUpdated,
+    RealtimeEventHandler? onRead,
+  }) async {
+    final channel = asStaff
+        ? 'private-chat.private-staff.$scheduleId'
+        : 'private-chat.private.$scheduleId.$userId';
+    final disposers = <VoidCallback>[];
+
+    Future<void> bind(String event, RealtimeEventHandler? h) async {
+      if (h == null) return;
+      disposers.add(
+        await realtime.subscribe(channel: channel, event: event, handler: h),
+      );
+    }
+
+    await bind('chat.private.message', onMessage);
+    await bind('chat.private.updated', onUpdated);
+    await bind('chat.private.read', onRead);
+
+    return () {
+      for (final d in disposers) {
+        d();
+      }
+    };
   }
 
   /// Subscribe to a schedule's chat channel. Returns a disposer.
@@ -4339,16 +4481,19 @@ class AppProvider extends ChangeNotifier {
   // ── จุดพัก (นัดเวลากลับรถ + เช็คชื่อขึ้นรถ) / ขอแวะห้องน้ำ ──────────────
 
   /// ทีมงานประกาศพัก — คืนข้อความการ์ดที่เพิ่งลงห้อง
-  /// ส่ง [minutes] = พักรถตอนนี้, หรือ [meetAt] = นัดรวมพลล่วงหน้า
+  /// ส่ง [minutes] = พักรถตอนนี้, [meetAt] = นัดรวมพลล่วงหน้า,
+  /// หรือ [kind] = 'home' = เช็คถึงบ้านหลังส่งทุกคนลงรถ (ไม่ต้องมีเวลา)
   Future<Map<String, dynamic>> openChatRestStop(
     int scheduleId, {
     int? minutes,
     DateTime? meetAt,
     String? place,
+    String? kind,
   }) async {
     final response = await api.post(
       ApiEndpoints.chatRestStops(scheduleId),
       body: {
+        'kind': ?kind,
         'minutes': ?minutes,
         'meet_at': ?meetAt?.toUtc().toIso8601String(),
         'place': ?place,

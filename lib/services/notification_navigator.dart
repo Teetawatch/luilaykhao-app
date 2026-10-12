@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../main.dart' show appNavigatorKey;
 import '../models/sos_alert.dart';
 import '../providers/app_provider.dart';
+import '../screens/chat_private_screen.dart';
 import '../screens/chat_screen.dart';
 import '../screens/gift_screen.dart';
 import '../screens/gift_voucher_screen.dart';
@@ -159,6 +160,9 @@ class NotificationNavigator {
       case 'food_bill':
       case 'room_assignment':
         _openChat(data);
+      // ถามทีมงานแบบส่วนตัว — ลูกทริปเปิดเธรดตัวเอง ทีมงานเปิดเธรดของลูกทริปคนนั้น
+      case 'chat_private':
+        _openPrivateChat(data);
       case 'support_message':
         _openSupport();
       case 'schedule_announcement':
@@ -305,6 +309,22 @@ class NotificationNavigator {
     _withNav(
       (nav) => nav.push(
         MaterialPageRoute(builder: (_) => ChatScreen(scheduleId: id)),
+      ),
+    );
+  }
+
+  static void _openPrivateChat(Map<String, dynamic> data) {
+    final id = int.tryParse('${data['schedule_id']}') ?? 0;
+    final userId = int.tryParse('${data['user_id']}');
+    if (id == 0 || userId == null) {
+      _openChat(data);
+      return;
+    }
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => ChatPrivateScreen(scheduleId: id, threadUserId: userId),
+        ),
       ),
     );
   }
