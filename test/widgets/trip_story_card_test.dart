@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:luilaykhao_app/utils/share_card.dart';
+import 'package:luilaykhao_app/widgets/trip_story_share_sheet.dart';
 import 'package:luilaykhao_app/widgets/trip_story_card.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
@@ -405,6 +407,302 @@ void main() {
     });
   });
 
+  group('ปรับแต่งข้อมูลบนการ์ด', () {
+    Widget card({
+      StoryStyle style = StoryStyle.classic,
+      StoryCardParts parts = StoryCardParts.all,
+      StoryDateFormat dateFormat = StoryDateFormat.full,
+      String note = '',
+      String title = 'เขาหลวงสุโขทัย',
+      String location = 'สุโขทัย',
+    }) {
+      return _wrap(
+        Center(
+          child: TripStoryCard(
+            tripTitle: title,
+            location: location,
+            departureDate: DateTime(2026, 9, 5),
+            daysLeft: 5,
+            style: style,
+            parts: parts,
+            dateFormat: dateFormat,
+            note: note,
+          ),
+        ),
+      );
+    }
+
+    testWidgets('ปิดโลโก้ได้ทุกสไตล์', (tester) async {
+      _useTallSurface(tester);
+
+      for (final style in StoryStyle.values) {
+        await tester.pumpWidget(
+          card(style: style, parts: const StoryCardParts(logo: false)),
+        );
+
+        expect(tester.takeException(), isNull, reason: style.name);
+        expect(find.byType(StoryLogo), findsNothing, reason: style.name);
+        expect(find.text('เขาหลวงสุโขทัย'), findsOneWidget, reason: style.name);
+      }
+    });
+
+    testWidgets('ปิดตัวนับ จุดหมาย และวันที่ — เหลือชื่อทริปยืนเดี่ยว', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+
+      for (final style in StoryStyle.values) {
+        await tester.pumpWidget(
+          card(
+            style: style,
+            parts: const StoryCardParts(
+              countdown: false,
+              location: false,
+              date: false,
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull, reason: style.name);
+        expect(find.textContaining('5'), findsNothing, reason: style.name);
+        expect(find.text('วัน'), findsNothing, reason: style.name);
+        expect(find.text('สุโขทัย'), findsNothing, reason: style.name);
+        expect(find.textContaining('2569'), findsNothing, reason: style.name);
+        expect(find.text('เขาหลวงสุโขทัย'), findsOneWidget, reason: style.name);
+      }
+    });
+
+    testWidgets('"แค่เดือน" ไม่บอกวันที่ เดาไม่ได้ว่าบ้านว่างวันไหน', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+      await tester.pumpWidget(card(dateFormat: StoryDateFormat.month));
+
+      expect(find.textContaining('กันยายน 2569'), findsOneWidget);
+      expect(find.textContaining('5 กันยายน'), findsNothing);
+    });
+
+    test('ทุกรูปแบบวันที่เป็นปี พ.ศ.', () {
+      for (final format in StoryDateFormat.values) {
+        expect(format.format(DateTime(2026, 9, 5)), contains('2569'));
+      }
+      expect(StoryDateFormat.fromName('ไม่มี'), StoryDateFormat.full);
+    });
+
+    testWidgets('ข้อความของเจ้าของการ์ดขึ้นทุกสไตล์ และของยาวสุดก็ไม่ล้น', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+      final note = 'ท' * kStoryNoteMaxLength;
+
+      for (final style in StoryStyle.values) {
+        await tester.pumpWidget(card(style: style, note: 'ทริปวันเกิดปีนี้'));
+        expect(find.text('ทริปวันเกิดปีนี้'), findsOneWidget, reason: style.name);
+
+        await tester.pumpWidget(
+          card(
+            style: style,
+            note: note,
+            title: 'ท' * kStoryTitleMaxLength,
+            location: 'จ' * kStoryLocationMaxLength,
+          ),
+        );
+        expect(tester.takeException(), isNull, reason: style.name);
+        expect(
+          tester.getSize(find.byType(TripStoryCard)),
+          const Size(kStoryCardWidth, kStoryCardHeight),
+          reason: style.name,
+        );
+      }
+    });
+
+    testWidgets('การ์ดจบทริปปิดตัวเลขสรุปได้', (tester) async {
+      _useTallSurface(tester);
+      await tester.pumpWidget(
+        _wrap(
+          Center(
+            child: TripStoryCard.recap(
+              tripTitle: 'เขาหลวงสุโขทัย',
+              location: 'สุโขทัย',
+              dateLabel: '5 – 7 กันยายน 2569',
+              highlight: StoryCountdown.recap(format: (n) => '$n', days: 3),
+              stats: const [StoryStat('1,240 ม.', 'ความสูงสะสม')],
+              parts: const StoryCardParts(stats: false),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('1,240 ม.'), findsNothing);
+      expect(find.textContaining('5 – 7 กันยายน 2569'), findsOneWidget);
+    });
+
+    test('StoryCardParts อ่านของเก่าที่ไม่มีบางช่องเป็น "เปิด"', () {
+      const parts = StoryCardParts(logo: false, date: false);
+
+      expect(StoryCardParts.fromJson(parts.toJson()), parts);
+      expect(
+        StoryCardParts.fromJson(const {'logo': false, 'date': 'เพี้ยน'}),
+        const StoryCardParts(logo: false),
+      );
+    });
+  });
+
+  group('storyShareCaption', () {
+    test('นับวันตามการ์ด และแนบลิงก์เมื่อมี', () {
+      final text = storyShareCaption(
+        tripTitle: 'ดอยม่อนจอง',
+        daysLeft: 41,
+        isRecap: false,
+        url: 'https://example.test/s/abc',
+      );
+
+      expect(text, contains('อีก 41 วันจะได้ไป "ดอยม่อนจอง"'));
+      expect(text, contains('https://example.test/s/abc'));
+    });
+
+    test('ซ่อนตัวนับบนการ์ด คำบรรยายก็ไม่บอกจำนวนวัน', () {
+      final text = storyShareCaption(
+        tripTitle: 'ดอยม่อนจอง',
+        daysLeft: 41,
+        isRecap: false,
+        showCountdown: false,
+      );
+
+      expect(text, isNot(contains('41')));
+      expect(text, contains('ดอยม่อนจอง'));
+      expect(text, isNot(contains('http')));
+    });
+  });
+
+  group('TripStoryShareSheet', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    Future<void> pumpSheet(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 2600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TripStoryShareSheet(
+              tripTitle: 'ดอยม่อนจอง',
+              location: 'เชียงใหม่',
+              departureDate: DateTime(2026, 11, 20),
+              daysLeft: 41,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('มีปุ่ม X ปิด sheet ได้ ไม่ต้องรู้ว่าต้องปัดลง', (tester) async {
+      tester.view.physicalSize = const Size(1200, 2600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => TripStoryShareSheet(
+                    tripTitle: 'ดอยม่อนจอง',
+                    location: 'เชียงใหม่',
+                    departureDate: DateTime(2026, 11, 20),
+                    daysLeft: 41,
+                  ),
+                ),
+                child: const Text('เปิด'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('เปิด'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TripStoryShareSheet), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+      expect(find.byType(TripStoryShareSheet), findsNothing);
+    });
+
+    testWidgets('แท็บข้อมูล: แตะ "โลโก้" แล้วโลโก้หายจากการ์ด และถูกจำไว้', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+      expect(find.byType(StoryLogo), findsOneWidget);
+
+      await tester.tap(find.text('ข้อมูล'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('โลโก้'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StoryLogo), findsNothing);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('story_look_v1'), contains('"logo":false'));
+    });
+
+    testWidgets('แท็บข้อมูล: เลือกรูปแบบวันที่จากตัวอย่างจริงบนชิป', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      await tester.tap(find.text('ข้อมูล'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('พฤศจิกายน 2569'));
+      await tester.pumpAndSettle();
+
+      final card = tester.widget<TripStoryCard>(find.byType(TripStoryCard));
+      expect(card.dateFormat, StoryDateFormat.month);
+    });
+
+    testWidgets('แท็บข้อความ: เพิ่มบรรทัดของตัวเองลงการ์ด', (tester) async {
+      await pumpSheet(tester);
+
+      await tester.tap(find.text('ข้อความ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ข้อความของคุณ'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'ทริปวันเกิดปีนี้');
+      await tester.tap(find.text('ใช้คำนี้'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(TripStoryCard),
+          matching: find.text('ทริปวันเกิดปีนี้'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('ลบชื่อทริปจนว่าง = กลับไปใช้ชื่อเดิม การ์ดต้องบอกว่าไปไหน', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      await tester.tap(find.text('ข้อความ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ชื่อทริป'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.tap(find.text('ใช้คำนี้'));
+      await tester.pumpAndSettle();
+
+      final card = tester.widget<TripStoryCard>(find.byType(TripStoryCard));
+      expect(card.tripTitle, 'ดอยม่อนจอง');
+    });
+  });
+
   group('shareWidgetAsPng', () {
     testWidgets('จับภาพได้ 1080×1920 ที่ pixelRatio 3.0', (tester) async {
       _useTallSurface(tester);
@@ -435,6 +733,54 @@ void main() {
       expect(image.width, 1080);
       expect(image.height, 1920);
       image.dispose();
+    });
+
+    testWidgets('มุมภาพเป็นมุมฉากทึบทุกสไตล์ ไม่มีมุมโค้งโปร่งใสติดไปในสตอรี่', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+
+      for (final style in StoryStyle.values) {
+        final key = GlobalKey();
+        await tester.pumpWidget(
+          _wrap(
+            Center(
+              child: RepaintBoundary(
+                key: key,
+                child: TripStoryCard(
+                  tripTitle: 'เขาหลวงสุโขทัย',
+                  location: 'สุโขทัย',
+                  departureDate: null,
+                  daysLeft: 5,
+                  style: style,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final boundary =
+            key.currentContext!.findRenderObject() as RenderRepaintBoundary;
+        // toImage/toByteData ต้องรันนอก fake async ของ testWidgets
+        final alphas = await tester.runAsync(() async {
+          final image = await boundary.toImage();
+          final bytes = await image.toByteData();
+          final w = image.width;
+          final h = image.height;
+          image.dispose();
+
+          int alphaAt(int x, int y) => bytes!.getUint8((y * w + x) * 4 + 3);
+
+          return [
+            alphaAt(0, 0),
+            alphaAt(w - 1, 0),
+            alphaAt(0, h - 1),
+            alphaAt(w - 1, h - 1),
+          ];
+        });
+
+        expect(alphas, everyElement(255), reason: style.name);
+      }
     });
 
     testWidgets('ย่อการ์ดให้พอดีจอแล้ว PNG ยังออกมา 1080×1920 เท่าเดิม', (

@@ -9,8 +9,10 @@
 ///
 /// **การ์ดใบนี้เป็นของเจ้าของทริป ไม่ใช่ป้ายโฆษณา**
 /// สตอรี่คือที่ที่คนอยากอวดว่า *ฉัน* กำลังจะไปไหน จึงไม่มี QR ชวนเพื่อนหรือคำ
-/// ขายอยู่บนการ์ด เหลือแค่โลโก้เล็ก ๆ เป็นลายเซ็น แล้วเปิดให้เจ้าของเลือก
-/// [StoryStyle] กับความโปร่งใสของรูปเองว่าจะอวดในแบบไหน
+/// ขายอยู่บนการ์ด เหลือแค่โลโก้เล็ก ๆ เป็นลายเซ็น (ซึ่งปิดได้ด้วย) แล้วเปิดให้
+/// เจ้าของเลือก [StoryStyle] ความโปร่งใสของรูป ชิ้นส่วนที่จะโชว์
+/// ([StoryCardParts]) รูปแบบวันที่ ([StoryDateFormat]) และคำบนการ์ดเองว่าจะอวด
+/// ในแบบไหน
 ///
 /// **สิ่งที่จงใจไม่ใส่ในการ์ด: เลขที่จอง**
 /// การ์ดใบนี้ถูกสร้างมาเพื่อให้คนแปลกหน้าเห็น การประกาศวันเดินทางก็เท่ากับบอก
@@ -73,6 +75,128 @@ enum StoryStyle {
     return StoryStyle.classic;
   }
 }
+
+/// ชิ้นส่วนบนการ์ดที่เจ้าของเปิด/ปิดเองได้
+///
+/// ชื่อทริปไม่อยู่ในนี้ — การ์ดที่ไม่บอกว่าไปไหนก็ไม่เหลืออะไรให้อวด แต่แก้คำได้
+/// ทางอื่น (ดู [TripStoryCard.tripTitle])
+@immutable
+class StoryCardParts {
+  /// โลโก้ลุยเลเขา — บางคนอยากได้การ์ดที่เป็นของตัวเองล้วน ๆ
+  final bool logo;
+
+  /// ตัวนับ ("อีก 5 วัน") หรือตัวเด่นของการ์ดจบทริป ("12.4 กม.")
+  final bool countdown;
+
+  final bool location;
+
+  /// วันที่ — ปิดได้เพราะการประกาศวันเดินทางก็เท่ากับบอกว่าบ้านว่างวันไหน
+  final bool date;
+
+  /// แถวตัวเลขสรุปของการ์ดจบทริป
+  final bool stats;
+
+  const StoryCardParts({
+    this.logo = true,
+    this.countdown = true,
+    this.location = true,
+    this.date = true,
+    this.stats = true,
+  });
+
+  static const all = StoryCardParts();
+
+  StoryCardParts copyWith({
+    bool? logo,
+    bool? countdown,
+    bool? location,
+    bool? date,
+    bool? stats,
+  }) {
+    return StoryCardParts(
+      logo: logo ?? this.logo,
+      countdown: countdown ?? this.countdown,
+      location: location ?? this.location,
+      date: date ?? this.date,
+      stats: stats ?? this.stats,
+    );
+  }
+
+  Map<String, bool> toJson() => {
+    'logo': logo,
+    'countdown': countdown,
+    'location': location,
+    'date': date,
+    'stats': stats,
+  };
+
+  /// ช่องที่ไม่มี/เสีย (ของรุ่นก่อน) ถือว่าเปิด — หน้าตาเดิมของการ์ด
+  factory StoryCardParts.fromJson(Map<dynamic, dynamic> json) {
+    bool flag(String key) => json[key] is bool ? json[key] as bool : true;
+
+    return StoryCardParts(
+      logo: flag('logo'),
+      countdown: flag('countdown'),
+      location: flag('location'),
+      date: flag('date'),
+      stats: flag('stats'),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is StoryCardParts &&
+      other.logo == logo &&
+      other.countdown == countdown &&
+      other.location == location &&
+      other.date == date &&
+      other.stats == stats;
+
+  @override
+  int get hashCode => Object.hash(logo, countdown, location, date, stats);
+}
+
+/// รูปแบบวันเดินทางบนการ์ดนับถอยหลัง
+///
+/// การ์ดจบทริปไม่ใช้ เพราะได้ป้ายช่วงวันสำเร็จรูปมาจากผู้เรียกอยู่แล้ว
+enum StoryDateFormat {
+  /// "5 กันยายน 2569"
+  full('เต็ม'),
+
+  /// "5 ก.ย. 2569"
+  short('ย่อ'),
+
+  /// "ส. 5 ก.ย. 2569"
+  weekday('มีวันในสัปดาห์'),
+
+  /// "กันยายน 2569" — ไม่บอกวันที่ คนแปลกหน้าเดาไม่ได้ว่าบ้านว่างวันไหน
+  month('แค่เดือน');
+
+  const StoryDateFormat(this.label);
+
+  final String label;
+
+  String format(DateTime date) => switch (this) {
+    full => thaiDateFull(date),
+    short => thaiDateShort(date),
+    weekday => thaiDateShortWeekday(date),
+    month => thaiMonthYear(date),
+  };
+
+  static StoryDateFormat fromName(String? name) {
+    for (final value in values) {
+      if (value.name == name) return value;
+    }
+
+    return StoryDateFormat.full;
+  }
+}
+
+/// ความยาวสูงสุดของข้อความที่เจ้าของพิมพ์ลงการ์ดเอง — พอสำหรับหนึ่งประโยค
+/// และยังไม่ดันองค์ประกอบอื่นจนล้นการ์ดในสไตล์ที่แน่นที่สุด (โพสเตอร์)
+const int kStoryNoteMaxLength = 60;
+const int kStoryTitleMaxLength = 80;
+const int kStoryLocationMaxLength = 40;
 
 /// การวางรูปในกรอบการ์ด — เจ้าของการ์ดเลื่อน/ซูมรูปของตัวเองให้เข้าเฟรมได้
 ///
@@ -334,6 +458,15 @@ class TripStoryCard extends StatelessWidget {
   /// บรรทัดวันที่สำเร็จรูป ใช้แทน [departureDate] เมื่อเป็นช่วงวัน ("5 – 7 ก.ย.")
   final String? dateLabel;
 
+  /// ชิ้นส่วนที่เจ้าของการ์ดเลือกโชว์
+  final StoryCardParts parts;
+
+  /// รูปแบบของ [departureDate] — ไม่มีผลกับ [dateLabel]
+  final StoryDateFormat dateFormat;
+
+  /// ข้อความที่เจ้าของพิมพ์เอง เช่น "ทริปวันเกิดปีนี้" — ว่าง = ไม่มีบรรทัดนี้
+  final String note;
+
   const TripStoryCard({
     super.key,
     required this.tripTitle,
@@ -344,6 +477,9 @@ class TripStoryCard extends StatelessWidget {
     this.framing = StoryPhotoFraming.none,
     this.style = StoryStyle.classic,
     this.photoOpacity = kStoryPhotoOpacityDefault,
+    this.parts = StoryCardParts.all,
+    this.dateFormat = StoryDateFormat.full,
+    this.note = '',
   }) : highlight = null,
        stats = const [],
        dateLabel = null;
@@ -363,8 +499,11 @@ class TripStoryCard extends StatelessWidget {
     this.framing = StoryPhotoFraming.none,
     this.style = StoryStyle.classic,
     this.photoOpacity = kStoryPhotoOpacityDefault,
+    this.parts = StoryCardParts.all,
+    this.note = '',
   }) : departureDate = null,
-       daysLeft = null;
+       daysLeft = null,
+       dateFormat = StoryDateFormat.full;
 
   @override
   Widget build(BuildContext context) {
@@ -373,8 +512,9 @@ class TripStoryCard extends StatelessWidget {
     return SizedBox(
       width: kStoryCardWidth,
       height: kStoryCardHeight,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+      // มุมฉากเต็มใบ ไม่ใช่มุมโค้ง — มุมโค้งกลายเป็นพิกเซลโปร่งใสใน PNG ซึ่ง
+      // IG/FB ถมเป็นสีดำ/ขาว ภาพในสตอรี่จึงมีติ่งแปลก ๆ ที่มุมบนซ้าย-ขวา
+      child: ClipRect(
         child: switch (style) {
           StoryStyle.classic => _classic(countdown),
           StoryStyle.poster => _poster(countdown),
@@ -385,6 +525,13 @@ class TripStoryCard extends StatelessWidget {
       ),
     );
   }
+
+  /// ตัวเลขสรุปที่จะวาดจริง — ว่างเมื่อเจ้าของปิดไว้
+  List<StoryStat> get _stats => parts.stats ? stats : const [];
+
+  /// โลโก้ หรือ null เมื่อเจ้าของปิดไว้ — ผู้เรียกตัดระยะห่างที่ติดมาเองด้วย
+  Widget? _logo(double height, {Color? tint = Colors.white}) =>
+      parts.logo ? StoryLogo(height: height, tint: tint) : null;
 
   // ── ชั้นพื้นหลัง ────────────────────────────────────────────────────────
 
@@ -460,12 +607,14 @@ class TripStoryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const StoryLogo(height: 44, tint: Colors.white),
+              ?_logo(44),
               const Spacer(),
-              _countdownBlock(countdown, kickerColor: AppTheme.brandSoft),
-              const SizedBox(height: 22),
+              if (parts.countdown) ...[
+                _countdownBlock(countdown, kickerColor: AppTheme.brandSoft),
+                const SizedBox(height: 22),
+              ],
               _tripBlock(),
-              if (stats.isNotEmpty) ...[
+              if (_stats.isNotEmpty) ...[
                 const SizedBox(height: 18),
                 _statsRow(),
               ],
@@ -501,29 +650,29 @@ class TripStoryCard extends StatelessWidget {
               // กลางของพื้นที่ที่เหลือจากโลโก้ — วางซ้อนกันจึงไม่ดันกันเอง
               child: Stack(
                 children: [
-                  const Align(
-                    alignment: Alignment.topCenter,
-                    child: StoryLogo(height: 46, tint: Colors.white),
-                  ),
+                  if (parts.logo)
+                    Align(alignment: Alignment.topCenter, child: _logo(46)),
                   Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _countdownBlock(
-                          countdown,
-                          kickerColor: Colors.white.withValues(alpha: 0.78),
-                          align: CrossAxisAlignment.center,
-                          scale: 0.88,
-                        ),
-                        const SizedBox(height: 18),
-                        Container(
-                          width: 44,
-                          height: 2,
-                          color: Colors.white.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: 18),
+                        if (parts.countdown) ...[
+                          _countdownBlock(
+                            countdown,
+                            kickerColor: Colors.white.withValues(alpha: 0.78),
+                            align: CrossAxisAlignment.center,
+                            scale: 0.88,
+                          ),
+                          const SizedBox(height: 18),
+                          Container(
+                            width: 44,
+                            height: 2,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
                         _tripBlock(align: CrossAxisAlignment.center),
-                        if (stats.isNotEmpty) ...[
+                        if (_stats.isNotEmpty) ...[
                           const SizedBox(height: 20),
                           _statsRow(centered: true),
                         ],
@@ -553,22 +702,24 @@ class TripStoryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const StoryLogo(height: 34, tint: Colors.white),
+              ?_logo(34),
               const Spacer(),
-              Text(
-                countdown.inlineLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: appFont(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  height: 1.15,
+              if (parts.countdown) ...[
+                Text(
+                  countdown.inlineLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1.15,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
+                const SizedBox(height: 8),
+              ],
               _tripBlock(titleSize: 20, metaSize: 14),
-              if (stats.isNotEmpty) ...[
+              if (_stats.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _statsRow(),
               ],
@@ -613,22 +764,24 @@ class TripStoryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _countdownBlock(
-                        countdown,
-                        kickerColor: AppTheme.brandDeep,
-                        textColor: AppTheme.slate900,
-                        scale: 0.42,
-                        unitSize: 20,
-                        kickerSize: 13,
-                      ),
-                      const SizedBox(height: 6),
+                      if (parts.countdown) ...[
+                        _countdownBlock(
+                          countdown,
+                          kickerColor: AppTheme.brandDeep,
+                          textColor: AppTheme.slate900,
+                          scale: 0.42,
+                          unitSize: 20,
+                          kickerSize: 13,
+                        ),
+                        const SizedBox(height: 6),
+                      ],
                       _tripBlock(
                         titleColor: AppTheme.slate900,
                         metaColor: AppTheme.slate600,
                         titleSize: 20,
                         metaSize: 13,
                       ),
-                      if (stats.isNotEmpty) ...[
+                      if (_stats.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         _statsRow(
                           valueColor: AppTheme.slate900,
@@ -638,11 +791,13 @@ class TripStoryCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 14),
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 2),
-                  child: StoryLogo(height: 54),
-                ),
+                if (parts.logo) ...[
+                  const SizedBox(width: 14),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: _logo(54, tint: null),
+                  ),
+                ],
               ],
             ),
           ],
@@ -665,17 +820,19 @@ class TripStoryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const StoryLogo(height: 40, tint: Colors.white),
+              ?_logo(40),
               const Spacer(),
               Container(width: 36, height: 2, color: Colors.white),
               const SizedBox(height: 16),
-              _countdownBlock(
-                countdown,
-                kickerColor: Colors.white.withValues(alpha: 0.72),
-              ),
-              const SizedBox(height: 20),
+              if (parts.countdown) ...[
+                _countdownBlock(
+                  countdown,
+                  kickerColor: Colors.white.withValues(alpha: 0.72),
+                ),
+                const SizedBox(height: 20),
+              ],
               _tripBlock(metaColor: Colors.white.withValues(alpha: 0.72)),
-              if (stats.isNotEmpty) ...[
+              if (_stats.isNotEmpty) ...[
                 const SizedBox(height: 18),
                 _statsRow(labelColor: Colors.white.withValues(alpha: 0.6)),
               ],
@@ -767,7 +924,7 @@ class TripStoryCard extends StatelessWidget {
       runSpacing: 10,
       alignment: centered ? WrapAlignment.center : WrapAlignment.start,
       children: [
-        for (final stat in stats)
+        for (final stat in _stats)
           Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: centered
@@ -807,11 +964,15 @@ class TripStoryCard extends StatelessWidget {
   }) {
     final date = departureDate;
     final centered = align == CrossAxisAlignment.center;
-    final when = dateLabel ?? (date == null ? '' : thaiDateFull(date));
+    final when = !parts.date
+        ? ''
+        : dateLabel ?? (date == null ? '' : dateFormat.format(date));
+    final place = parts.location ? location.trim() : '';
     final meta = [
-      if (location.isNotEmpty) location,
+      if (place.isNotEmpty) place,
       if (when.isNotEmpty) when,
     ].join('  ·  ');
+    final ownWords = note.trim();
 
     return Column(
       crossAxisAlignment: align,
@@ -840,6 +1001,23 @@ class TripStoryCard extends StatelessWidget {
               fontSize: metaSize,
               fontWeight: FontWeight.w600,
               color: metaColor ?? Colors.white.withValues(alpha: 0.86),
+              height: 1.4,
+            ),
+          ),
+        ],
+        // คำของเจ้าของการ์ดเอง — ตัวเอียงให้อ่านออกว่าเป็นเสียงของคน ไม่ใช่ข้อมูลทริป
+        if (ownWords.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            ownWords,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: centered ? TextAlign.center : TextAlign.start,
+            style: appFont(
+              fontSize: metaSize,
+              fontWeight: FontWeight.w700,
+              fontStyle: FontStyle.italic,
+              color: titleColor,
               height: 1.4,
             ),
           ),

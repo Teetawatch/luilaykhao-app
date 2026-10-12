@@ -44,7 +44,11 @@ class ShareCardException implements Exception {
 ///
 /// โยน [ShareCardException] เมื่อทำไม่สำเร็จ เพื่อให้หน้าจอที่เรียกเลือกเองว่า
 /// จะแจ้งผู้ใช้ด้วย snackbar แบบไหน
-Future<void> shareWidgetAsPng({
+///
+/// คืน true เมื่อระบบยืนยันว่าผู้ใช้เลือกแอปปลายทางแล้วจริง ๆ — กดปิด share
+/// sheet ของระบบ หรือระบบบอกไม่ได้ (บาง Android) ได้ false ผู้เรียกที่จะปิดหน้า
+/// ตัวเองหลังแชร์จึงไม่ปิดใส่หน้าคนที่ยังไม่ได้แชร์
+Future<bool> shareWidgetAsPng({
   required GlobalKey boundaryKey,
   required String fileName,
   String? text,
@@ -76,7 +80,9 @@ Future<void> shareWidgetAsPng({
   final file = File('${dir.path}/$fileName');
   await file.writeAsBytes(bytes.buffer.asUint8List());
 
-  await SharePlus.instance.share(
+  final result = await SharePlus.instance.share(
     ShareParams(files: [XFile(file.path)], text: text),
   );
+
+  return result.status == ShareResultStatus.success;
 }

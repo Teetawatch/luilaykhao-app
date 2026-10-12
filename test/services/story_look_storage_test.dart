@@ -47,4 +47,35 @@ void main() {
     expect(look.style, StoryStyle.poster);
     expect(look.photoOpacity, 1.0);
   });
+
+  test('จำชิ้นส่วนที่ซ่อน รูปแบบวันที่ และการแนบลิงก์', () async {
+    await StoryLookStorage.instance.write(
+      const StoryLook(
+        style: StoryStyle.poster,
+        photoOpacity: 0.5,
+        parts: StoryCardParts(logo: false, date: false),
+        dateFormat: StoryDateFormat.month,
+        includeLink: false,
+      ),
+    );
+
+    final look = await StoryLookStorage.instance.read();
+
+    expect(look.parts, const StoryCardParts(logo: false, date: false));
+    expect(look.dateFormat, StoryDateFormat.month);
+    expect(look.includeLink, isFalse);
+  });
+
+  test('ค่าที่บันทึกจากรุ่นก่อน (ไม่มีช่องใหม่) ยังเปิดทุกอย่างเหมือนเดิม', () async {
+    SharedPreferences.setMockInitialValues({
+      'story_look_v1': '{"style":"mono","photo_opacity":0.7}',
+    });
+
+    final look = await StoryLookStorage.instance.read();
+
+    expect(look.style, StoryStyle.mono);
+    expect(look.parts, StoryCardParts.all);
+    expect(look.dateFormat, StoryDateFormat.full);
+    expect(look.includeLink, isTrue);
+  });
 }

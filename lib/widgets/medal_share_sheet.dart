@@ -16,6 +16,7 @@ import '../utils/share_card.dart';
 import 'app_snack.dart';
 import 'medal_art.dart';
 import 'medal_story_card.dart';
+import 'share_sheet_controls.dart';
 import 'trip_story_card.dart';
 
 /// เปิด sheet แชร์เหรียญลงสตอรี่
@@ -71,6 +72,7 @@ Future<void> showMedalShareSheet(BuildContext context, TripMedal medal) async {
   await showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: AppTheme.surface(context),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -371,7 +373,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
       // เพิ่งปรับอะไรไปก่อนกดแชร์ — รอเฟรมล่าสุดวาดจบก่อนจับภาพ
       await WidgetsBinding.instance.endOfFrame;
 
-      await shareWidgetAsPng(
+      final shared = await shareWidgetAsPng(
         boundaryKey: _cardKey,
         fileName: _look.backdrop == MedalBackdrop.transparent
             ? 'luilaykhao_medal_sticker.png'
@@ -383,6 +385,9 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
           context,
           'บันทึกทรงเหรียญไม่สำเร็จ ลิงก์เหรียญยังเป็นทรงเดิม ลองแชร์อีกครั้ง',
         );
+      } else if (shared && mounted) {
+        // แชร์ไปแล้วจริง = งานของ sheet นี้จบ (ดู TripStoryShareSheet._share)
+        Navigator.of(context).maybePop();
       }
     } catch (_) {
       if (mounted) AppSnack.error(context, 'แชร์ไม่สำเร็จ ลองใหม่อีกครั้ง');
@@ -430,22 +435,16 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 44,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 14),
-              decoration: BoxDecoration(
-                color: AppTheme.mutedText(context).withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-              ),
-            ),
+            const ShareSheetHeader(title: 'การ์ดเหรียญ'),
+            const SizedBox(height: 6),
             Flexible(child: _preview()),
             const SizedBox(height: 12),
-            _PanelTabs(
-              selected: _panel,
-              onSelected: (panel) {
+            ShareSheetTabs(
+              labels: [for (final panel in _Panel.values) panel.label],
+              selected: _panel.index,
+              onSelected: (index) {
                 HapticFeedback.selectionClick();
-                setState(() => _panel = panel);
+                setState(() => _panel = _Panel.values[index]);
               },
             ),
             const SizedBox(height: 10),
@@ -588,40 +587,40 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ChipRow(
+        ShareChipRow(
           children: [
-            _Pill(
+            SharePill(
               label: MedalBackdrop.color.label,
               swatch: medalBackdropColor(widget.medal.design.color, _look.tone),
               active: backdrop == MedalBackdrop.color,
               onTap: () => pick(MedalBackdrop.color),
             ),
-            _Pill(
+            SharePill(
               label: MedalBackdrop.dark.label,
               swatch: const Color(0xFF0E1412),
               active: backdrop == MedalBackdrop.dark,
               onTap: () => pick(MedalBackdrop.dark),
             ),
-            _Pill(
+            SharePill(
               label: MedalBackdrop.paper.label,
               swatch: const Color(0xFFFDFBF5),
               active: backdrop == MedalBackdrop.paper,
               onTap: () => pick(MedalBackdrop.paper),
             ),
             if (hasTripPhoto)
-              _Pill(
+              SharePill(
                 label: 'รูปทริป',
                 icon: Icons.landscape_rounded,
                 active: backdrop == MedalBackdrop.photo && !_usingOwnPhoto,
                 onTap: _useTripPhoto,
               ),
-            _Pill(
+            SharePill(
               label: MedalBackdrop.transparent.label,
               icon: Icons.layers_clear_rounded,
               active: backdrop == MedalBackdrop.transparent,
               onTap: () => pick(MedalBackdrop.transparent),
             ),
-            _Pill(
+            SharePill(
               label: _ownPhoto == null ? 'ใช้รูปของคุณ' : 'รูปของคุณ',
               icon: Icons.photo_library_rounded,
               busy: _picking,
@@ -640,7 +639,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
         ),
         const SizedBox(height: 6),
         if (_showsPhoto) ...[
-          _SliderRow(
+          ShareSliderRow(
             label: 'ความชัดของรูป',
             value: _look.photoOpacity,
             onChanged: (v) =>
@@ -660,9 +659,9 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
                 ),
               ),
               if (_usingOwnPhoto)
-                _TextAction(label: 'เปลี่ยนรูป', onTap: _pickPhoto),
+                ShareTextAction(label: 'เปลี่ยนรูป', onTap: _pickPhoto),
               if (!_framing.isDefault)
-                _TextAction(
+                ShareTextAction(
                   label: 'จัดรูปใหม่',
                   onTap: () => setState(
                     () => _framing = StoryPhotoFraming(
@@ -673,19 +672,19 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
             ],
           ),
         ] else if (backdrop == MedalBackdrop.transparent)
-          const _Hint(
+          const ShareHint(
             'บันทึกรูปลงเครื่อง แล้วใน IG Story กดสติกเกอร์ → รูปภาพ '
             'เพื่อวางเหรียญทับรูปของคุณ',
           )
         else if (backdrop == MedalBackdrop.color)
-          _SliderRow(
+          ShareSliderRow(
             label: 'ความเข้มของสี',
             value: _look.tone,
             onChanged: (v) => _update(_copy(_look, tone: v), remember: false),
             onSettled: () => _update(_look),
           )
         else
-          _Hint(
+          ShareHint(
             backdrop == MedalBackdrop.photo
                 ? 'ทริปนี้ยังไม่มีรูป — เลือก "ใช้รูปของคุณ" เพื่อใส่รูปพื้นหลัง'
                 : 'เลือกพื้นสีเหรียญหรือรูปถ่าย เพื่อปรับความเข้ม/ความชัด',
@@ -751,7 +750,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
           ),
         ),
         _FinishNote(medal: medal),
-        const _Hint(
+        const ShareHint(
           'กดแชร์แล้ว ทรงนี้จะใช้กับเหรียญใบนี้ทุกที่ '
           'ทั้งตู้เหรียญและลิงก์ที่เพื่อนกดเข้ามาดู',
         ),
@@ -763,11 +762,11 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ChipRow(
+        ShareChipRow(
           children: [
             for (final layout in MedalCardLayout.values)
               if (layout != MedalCardLayout.route || widget.medal.route != null)
-                _Pill(
+                SharePill(
                   label: layout.label,
                   icon: layout == MedalCardLayout.route
                       ? Icons.route_rounded
@@ -781,7 +780,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
           ],
         ),
         const SizedBox(height: 6),
-        _SliderRow(
+        ShareSliderRow(
           label: 'ขนาดเหรียญ',
           value:
               (_look.medalScale - kMedalScaleMin) /
@@ -816,17 +815,17 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            _Toggle(
+            ShareToggle(
               label: 'ชื่อผู้พิชิต',
               on: parts.holder,
               onTap: () => toggle(parts.copyWith(holder: !parts.holder)),
             ),
-            _Toggle(
+            ShareToggle(
               label: 'สถานที่ · วันที่',
               on: parts.meta,
               onTap: () => toggle(parts.copyWith(meta: !parts.meta)),
             ),
-            _Toggle(
+            ShareToggle(
               label: widget.medal.personal != null
                   ? 'ตัวเลขจาก GPS'
                   : 'ระยะทาง/ความสูง',
@@ -834,18 +833,18 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
               onTap: () => toggle(parts.copyWith(stats: !parts.stats)),
             ),
             if (widget.medal.attempt > 1)
-              _Toggle(
+              ShareToggle(
                 label: 'ครั้งที่ ${widget.medal.attempt}',
                 on: parts.attempt,
                 onTap: () => toggle(parts.copyWith(attempt: !parts.attempt)),
               ),
             if (widget.medal.records.isNotEmpty)
-              _Toggle(
+              ShareToggle(
                 label: 'สถิติส่วนตัว',
                 on: parts.records,
                 onTap: () => toggle(parts.copyWith(records: !parts.records)),
               ),
-            _Toggle(
+            ShareToggle(
               label: 'โลโก้',
               on: parts.logo,
               onTap: () => toggle(parts.copyWith(logo: !parts.logo)),
@@ -853,63 +852,13 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
           ],
         ),
         const SizedBox(height: 8),
-        const _Hint('เหรียญ ชื่อทริป และเลข Finisher อยู่บนการ์ดเสมอ'),
+        const ShareHint('เหรียญ ชื่อทริป และเลข Finisher อยู่บนการ์ดเสมอ'),
       ],
     );
   }
 }
 
 // ── ชิ้นส่วนของ sheet ───────────────────────────────────────────────────────
-
-class _PanelTabs extends StatelessWidget {
-  final _Panel selected;
-  final ValueChanged<_Panel> onSelected;
-
-  const _PanelTabs({required this.selected, required this.onSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        border: Border.all(color: AppTheme.border(context)),
-      ),
-      child: Row(
-        children: [
-          for (final panel in _Panel.values)
-            Expanded(
-              child: GestureDetector(
-                onTap: () => onSelected(panel),
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  height: 32,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: panel == selected
-                        ? AppTheme.primaryColor
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  ),
-                  child: Text(
-                    panel.label,
-                    style: appFont(
-                      fontSize: AppText.sizeLabel,
-                      fontWeight: FontWeight.w800,
-                      color: panel == selected
-                          ? Colors.white
-                          : AppTheme.onSurface(context),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
 
 /// ผิวเหรียญใบนี้ + ต้องมาอีกกี่ครั้งถึงผิวถัดไป — ผิวเลือกเองไม่ได้ ต้องเดินไปให้ได้
 class _FinishNote extends StatelessWidget {
@@ -1020,266 +969,6 @@ class _ShapeTile extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChipRow extends StatelessWidget {
-  final List<Widget> children;
-
-  const _ChipRow({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: children.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, i) => children[i],
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  final IconData? icon;
-  final Color? swatch;
-  final bool busy;
-
-  const _Pill({
-    required this.label,
-    required this.active,
-    required this.onTap,
-    this.icon,
-    this.swatch,
-    this.busy = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = active ? Colors.white : AppTheme.onSurface(context);
-
-    return GestureDetector(
-      onTap: busy ? null : onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: active
-              ? AppTheme.primaryColor
-              : AppTheme.subtleSurface(context),
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          border: Border.all(
-            color: active ? AppTheme.primaryColor : AppTheme.border(context),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (busy)
-              const SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else if (swatch != null)
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: swatch,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.border(context)),
-                ),
-              )
-            else if (icon != null)
-              Icon(icon, size: 16, color: fg),
-            if (busy || swatch != null || icon != null)
-              const SizedBox(width: 6),
-            Text(
-              label,
-              style: appFont(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: fg,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Toggle extends StatelessWidget {
-  final String label;
-  final bool on;
-  final VoidCallback onTap;
-
-  const _Toggle({required this.label, required this.on, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = on ? AppTheme.primaryColor : AppTheme.mutedText(context);
-
-    return Semantics(
-      toggled: on,
-      button: true,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: on
-                ? AppTheme.tintOf(context, AppTheme.primaryColor)
-                : AppTheme.subtleSurface(context),
-            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-            border: Border.all(
-              color: on ? AppTheme.primaryColor : AppTheme.border(context),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                on ? Icons.check_circle_rounded : Icons.circle_outlined,
-                size: 16,
-                color: fg,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: appFont(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: on
-                      ? AppTheme.onSurface(context)
-                      : AppTheme.mutedText(context),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// แถบเลื่อน 0–1 — [onChanged] ทุกเฟรมที่ลาก [onSettled] ตอนปล่อยนิ้ว (ค่อยจำ)
-class _SliderRow extends StatelessWidget {
-  final String label;
-  final double value;
-  final ValueChanged<double> onChanged;
-  final VoidCallback onSettled;
-
-  const _SliderRow({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-    required this.onSettled,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 104,
-          child: Text(
-            label,
-            style: appFont(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.mutedText(context),
-            ),
-          ),
-        ),
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 4,
-              activeTrackColor: AppTheme.primaryColor,
-              inactiveTrackColor: AppTheme.border(context),
-              thumbColor: AppTheme.primaryColor,
-              // แบนตามธีมของแอป — thumb มาตรฐานมีเงาติดมาด้วย
-              thumbShape: const RoundSliderThumbShape(
-                enabledThumbRadius: 9,
-                elevation: 0,
-                pressedElevation: 0,
-              ),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
-              overlayColor: AppTheme.primaryColor.withValues(alpha: 0.12),
-            ),
-            child: Slider(
-              value: value.clamp(0.0, 1.0),
-              onChanged: onChanged,
-              onChangeEnd: (_) {
-                HapticFeedback.selectionClick();
-                onSettled();
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TextAction extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _TextAction({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 12),
-        child: Text(
-          label,
-          style: appFont(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.primaryColor,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Hint extends StatelessWidget {
-  final String text;
-
-  const _Hint(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: appFont(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: AppTheme.mutedText(context),
         ),
       ),
     );
