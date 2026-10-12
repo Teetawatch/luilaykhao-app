@@ -21,6 +21,11 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- บันทึกการ์ดแชร์ลงคลังรูป (แพ็กเกจ gal) — Android 10 ลงไปต้องขอสิทธิ์เขียน
+         ที่เก็บข้อมูล ตั้งแต่ 11 ขึ้นไปเขียนผ่าน MediaStore ได้เองไม่ต้องขอ -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
 
     <application
         android:label="Luilaykhao"

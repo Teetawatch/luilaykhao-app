@@ -6,7 +6,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:luilaykhao_app/services/story_look_storage.dart';
+import 'package:luilaykhao_app/theme/app_theme.dart';
 import 'package:luilaykhao_app/utils/share_card.dart';
+import 'package:luilaykhao_app/widgets/share_sheet_controls.dart';
 import 'package:luilaykhao_app/widgets/trip_story_share_sheet.dart';
 import 'package:luilaykhao_app/widgets/trip_story_card.dart';
 
@@ -18,6 +21,24 @@ void _useTallSurface(WidgetTester tester) {
   tester.view.physicalSize = const Size(1200, 2000);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+}
+
+/// การ์ดทุกสไตล์เป็น 360×640 (PNG 1080×1920) ยกเว้นสติกเกอร์ ซึ่งกว้างเท่ากัน
+/// แต่สูงเท่าเนื้อหา — สติกเกอร์สูงเต็มจอจะลากย่อ/ย้ายใน IG ไม่ถนัด
+void _expectCardSize(WidgetTester tester, StoryStyle style) {
+  final size = tester.getSize(find.byType(TripStoryCard));
+
+  if (style == StoryStyle.sticker) {
+    expect(size.width, kStoryCardWidth, reason: style.name);
+    expect(size.height, lessThan(kStoryCardHeight), reason: style.name);
+    return;
+  }
+
+  expect(
+    size,
+    const Size(kStoryCardWidth, kStoryCardHeight),
+    reason: style.name,
+  );
 }
 
 /// รูปปกจิ๋ว 1×1 — มีไว้ให้พื้นหลังการ์ดเป็น Image ไม่ใช่ไล่เฉดสำรอง ซึ่งจะ
@@ -204,11 +225,7 @@ void main() {
         );
 
         expect(tester.takeException(), isNull, reason: style.name);
-        expect(
-          tester.getSize(find.byType(TripStoryCard)),
-          const Size(kStoryCardWidth, kStoryCardHeight),
-          reason: style.name,
-        );
+        _expectCardSize(tester, style);
         expect(find.text('เขาหลวงสุโขทัย'), findsOneWidget, reason: style.name);
         expect(find.byType(StoryLogo), findsOneWidget, reason: style.name);
       }
@@ -372,11 +389,7 @@ void main() {
         );
 
         expect(tester.takeException(), isNull, reason: style.name);
-        expect(
-          tester.getSize(find.byType(TripStoryCard)),
-          const Size(kStoryCardWidth, kStoryCardHeight),
-          reason: style.name,
-        );
+        _expectCardSize(tester, style);
         // สไตล์ "เรียบ" รวมตัวนับเป็นบรรทัดเดียว ตัวเลขจึงอยู่ในข้อความยาว
         expect(find.textContaining('12.4'), findsOneWidget, reason: style.name);
         expect(find.text('1,240 ม.'), findsOneWidget, reason: style.name);
@@ -497,7 +510,11 @@ void main() {
 
       for (final style in StoryStyle.values) {
         await tester.pumpWidget(card(style: style, note: 'ทริปวันเกิดปีนี้'));
-        expect(find.text('ทริปวันเกิดปีนี้'), findsOneWidget, reason: style.name);
+        expect(
+          find.text('ทริปวันเกิดปีนี้'),
+          findsOneWidget,
+          reason: style.name,
+        );
 
         await tester.pumpWidget(
           card(
@@ -508,11 +525,7 @@ void main() {
           ),
         );
         expect(tester.takeException(), isNull, reason: style.name);
-        expect(
-          tester.getSize(find.byType(TripStoryCard)),
-          const Size(kStoryCardWidth, kStoryCardHeight),
-          reason: style.name,
-        );
+        _expectCardSize(tester, style);
       }
     });
 
@@ -598,7 +611,9 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('มีปุ่ม X ปิด sheet ได้ ไม่ต้องรู้ว่าต้องปัดลง', (tester) async {
+    testWidgets('มีปุ่ม X ปิด sheet ได้ ไม่ต้องรู้ว่าต้องปัดลง', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 2600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -735,53 +750,57 @@ void main() {
       image.dispose();
     });
 
-    testWidgets('มุมภาพเป็นมุมฉากทึบทุกสไตล์ ไม่มีมุมโค้งโปร่งใสติดไปในสตอรี่', (
-      tester,
-    ) async {
-      _useTallSurface(tester);
+    testWidgets(
+      'มุมภาพเป็นมุมฉากทึบทุกสไตล์ ไม่มีมุมโค้งโปร่งใสติดไปในสตอรี่',
+      (tester) async {
+        _useTallSurface(tester);
 
-      for (final style in StoryStyle.values) {
-        final key = GlobalKey();
-        await tester.pumpWidget(
-          _wrap(
-            Center(
-              child: RepaintBoundary(
-                key: key,
-                child: TripStoryCard(
-                  tripTitle: 'เขาหลวงสุโขทัย',
-                  location: 'สุโขทัย',
-                  departureDate: null,
-                  daysLeft: 5,
-                  style: style,
+        // สติกเกอร์โปร่งใสโดยตั้งใจ — มีเทสของตัวเองในกลุ่ม "สติกเกอร์"
+        for (final style in StoryStyle.values.where(
+          (style) => style != StoryStyle.sticker,
+        )) {
+          final key = GlobalKey();
+          await tester.pumpWidget(
+            _wrap(
+              Center(
+                child: RepaintBoundary(
+                  key: key,
+                  child: TripStoryCard(
+                    tripTitle: 'เขาหลวงสุโขทัย',
+                    location: 'สุโขทัย',
+                    departureDate: null,
+                    daysLeft: 5,
+                    style: style,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
+          );
 
-        final boundary =
-            key.currentContext!.findRenderObject() as RenderRepaintBoundary;
-        // toImage/toByteData ต้องรันนอก fake async ของ testWidgets
-        final alphas = await tester.runAsync(() async {
-          final image = await boundary.toImage();
-          final bytes = await image.toByteData();
-          final w = image.width;
-          final h = image.height;
-          image.dispose();
+          final boundary =
+              key.currentContext!.findRenderObject() as RenderRepaintBoundary;
+          // toImage/toByteData ต้องรันนอก fake async ของ testWidgets
+          final alphas = await tester.runAsync(() async {
+            final image = await boundary.toImage();
+            final bytes = await image.toByteData();
+            final w = image.width;
+            final h = image.height;
+            image.dispose();
 
-          int alphaAt(int x, int y) => bytes!.getUint8((y * w + x) * 4 + 3);
+            int alphaAt(int x, int y) => bytes!.getUint8((y * w + x) * 4 + 3);
 
-          return [
-            alphaAt(0, 0),
-            alphaAt(w - 1, 0),
-            alphaAt(0, h - 1),
-            alphaAt(w - 1, h - 1),
-          ];
-        });
+            return [
+              alphaAt(0, 0),
+              alphaAt(w - 1, 0),
+              alphaAt(0, h - 1),
+              alphaAt(w - 1, h - 1),
+            ];
+          });
 
-        expect(alphas, everyElement(255), reason: style.name);
-      }
-    });
+          expect(alphas, everyElement(255), reason: style.name);
+        }
+      },
+    );
 
     testWidgets('ย่อการ์ดให้พอดีจอแล้ว PNG ยังออกมา 1080×1920 เท่าเดิม', (
       tester,
@@ -837,6 +856,174 @@ void main() {
           ),
         ),
       );
+    });
+  });
+
+  group('สติกเกอร์โปร่งใส', () {
+    Widget sticker({StickerInk ink = StickerInk.light, GlobalKey? key}) =>
+        _wrap(
+          Center(
+            child: RepaintBoundary(
+              key: key,
+              child: TripStoryCard(
+                tripTitle: 'ดอยหลวงเชียงดาว',
+                location: 'เชียงใหม่',
+                departureDate: DateTime(2026, 11, 20),
+                daysLeft: 12,
+                style: StoryStyle.sticker,
+                ink: ink,
+              ),
+            ),
+          ),
+        );
+
+    testWidgets('มุมภาพโปร่งใส — ไม่มีพื้นติดไปบนรูปของเจ้าของ', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+      final key = GlobalKey();
+      await tester.pumpWidget(sticker(key: key));
+
+      final boundary =
+          key.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final alphas = await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        final bytes = await image.toByteData();
+        final w = image.width;
+        final h = image.height;
+        image.dispose();
+
+        int alphaAt(int x, int y) => bytes!.getUint8((y * w + x) * 4 + 3);
+
+        return [
+          alphaAt(0, 0),
+          alphaAt(w - 1, 0),
+          alphaAt(0, h - 1),
+          alphaAt(w - 1, h - 1),
+        ];
+      });
+
+      expect(alphas, everyElement(0));
+    });
+
+    testWidgets('PNG กว้าง 1080 เท่าการ์ดอื่น แต่สูงแค่เนื้อหา', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+      final key = GlobalKey();
+      await tester.pumpWidget(sticker(key: key));
+
+      final boundary =
+          key.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = (await tester.runAsync(
+        () => boundary.toImage(pixelRatio: kShareCardPixelRatio),
+      ))!;
+
+      expect(image.width, 1080);
+      expect(image.height, lessThan(1920));
+      image.dispose();
+    });
+
+    testWidgets('ตัวขาวมีเงาดำ ตัวเข้มเป็นสีเข้มพร้อมขอบเรืองขาว', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+
+      await tester.pumpWidget(sticker());
+      var title = tester.widget<Text>(find.text('ดอยหลวงเชียงดาว'));
+      expect(title.style!.color, Colors.white);
+      expect(title.style!.shadows!.first.color.r, 0);
+
+      await tester.pumpWidget(sticker(ink: StickerInk.dark));
+      title = tester.widget<Text>(find.text('ดอยหลวงเชียงดาว'));
+      expect(title.style!.color, AppTheme.slate900);
+      expect(title.style!.shadows!.first.color.r, 1);
+    });
+
+    testWidgets('สไตล์อื่นไม่มีเงาตัวอักษร — มีเงาทับรูปอยู่แล้ว', (
+      tester,
+    ) async {
+      _useTallSurface(tester);
+      await tester.pumpWidget(
+        _wrap(
+          const Center(
+            child: TripStoryCard(
+              tripTitle: 'ดอยหลวงเชียงดาว',
+              location: 'เชียงใหม่',
+              departureDate: null,
+              daysLeft: 12,
+            ),
+          ),
+        ),
+      );
+
+      final title = tester.widget<Text>(find.text('ดอยหลวงเชียงดาว'));
+      expect(title.style!.shadows, isNull);
+    });
+
+    test('จำสีตัวอักษรข้ามครั้ง ค่าที่ไม่รู้จักตกมาที่ตัวขาว', () {
+      final look = StoryLook.defaults.copyWith(
+        style: StoryStyle.sticker,
+        stickerInk: StickerInk.dark,
+      );
+      final back = StoryLook.fromJson(look.toJson());
+      expect(back.style, StoryStyle.sticker);
+      expect(back.stickerInk, StickerInk.dark);
+
+      expect(
+        StoryLook.fromJson(const {'sticker_ink': 'neon'}).stickerInk,
+        StickerInk.light,
+      );
+      expect(StoryLook.fromJson(const {}).stickerInk, StickerInk.light);
+    });
+
+    testWidgets('share sheet: เลือกสติกเกอร์แล้วมีชิปสีตัวอักษรและคำแนะนำ IG', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(1200, 2600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TripStoryShareSheet(
+              tripTitle: 'ดอยม่อนจอง',
+              location: 'เชียงใหม่',
+              departureDate: DateTime(2026, 11, 20),
+              daysLeft: 41,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // ปุ่มบันทึกอยู่ข้างปุ่มแชร์เสมอ ไม่ว่าสไตล์ไหน
+      expect(find.byType(ShareSaveButton), findsOneWidget);
+
+      await tester.tap(find.text('สไตล์'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('สติกเกอร์'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ตัวขาว'), findsOneWidget);
+      await tester.tap(find.text('ตัวเข้ม'));
+      await tester.pumpAndSettle();
+
+      final card = tester.widget<TripStoryCard>(find.byType(TripStoryCard));
+      expect(card.style, StoryStyle.sticker);
+      expect(card.ink, StickerInk.dark);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('story_look_v1'),
+        contains('"sticker_ink":"dark"'),
+      );
+
+      await tester.tap(find.text('รูป'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('สติกเกอร์ไม่มีรูปพื้นหลัง'), findsOneWidget);
     });
   });
 }

@@ -87,20 +87,6 @@ Future<void> showMedalShareSheet(BuildContext context, TripMedal medal) async {
   );
 }
 
-/// ลายตารางหมากรุก 2×2 ช่อง (เทาอ่อน/ขาว) ขนาด 16px — พื้นหลังมาตรฐานของ
-/// "ภาพนี้โปร่งใส" ในโปรแกรมแต่งรูป
-final MemoryImage _checkerboard = MemoryImage(
-  Uint8List.fromList(const [
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, //
-    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, //
-    0x08, 0x00, 0x00, 0x00, 0x00, 0x57, 0xDD, 0x52, 0xF8, 0x00, 0x00, 0x00, //
-    0x0E, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0xF8, 0x7F, 0x83, 0xE1, //
-    0xC6, 0x7F, 0x00, 0x0B, 0x10, 0x03, 0xAF, 0x50, 0x3F, 0xB7, 0x5B, 0x00, //
-    0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82, //
-  ]),
-  scale: 1 / 8,
-);
-
 /// แท็บเครื่องมือใต้พรีวิว — แยกเป็นหมวดเพื่อให้ sheet ไม่สูงจนดันพรีวิว
 /// การ์ดให้เล็กจนมองไม่เห็นว่ากำลังปรับอะไร
 enum _Panel {
@@ -149,6 +135,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
 
   bool _picking = false;
   bool _sharing = false;
+  bool _saving = false;
 
   /// ทรงบนการ์ด — null = แบบของทริป (ภาพออกแบบเอง/ขอบหยัก)
   ///
@@ -396,6 +383,45 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
     }
   }
 
+  /// บันทึกการ์ดลงคลังรูป — สติกเกอร์โปร่งใสต้องอยู่ในคลังก่อนถึงจะแปะใน IG ได้
+  Future<void> _save() async {
+    if (_saving) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _saving = true);
+
+    final sticker = _look.backdrop == MedalBackdrop.transparent;
+
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      await saveWidgetToGallery(
+        boundaryKey: _cardKey,
+        fileName: sticker
+            ? 'luilaykhao_medal_sticker.png'
+            : 'luilaykhao_medal.png',
+      );
+      if (!mounted) return;
+      AppSnack.success(
+        context,
+        sticker
+            ? 'บันทึกสติกเกอร์แล้ว — ใน IG Story กดสติกเกอร์ → รูปภาพ'
+            : 'บันทึกรูปลงเครื่องแล้ว',
+      );
+    } on ShareCardException catch (e) {
+      if (mounted) {
+        AppSnack.error(
+          context,
+          shareCardFailureMessage(e.reason, saving: true),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        AppSnack.error(context, 'บันทึกรูปไม่สำเร็จ ลองใหม่อีกครั้ง');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   /// true เมื่อเซิร์ฟเวอร์มีทรงตรงกับการ์ดแล้ว (หรือไม่มีอะไรต้องบันทึก)
   ///
   /// บันทึกไม่ได้ (ออฟไลน์/เซิร์ฟเวอร์ช้า) ก็ยังแชร์ต่อ — รูปการ์ดเป็นของเจ้าของ
@@ -477,6 +503,14 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 4),
+                ShareSaveButton(
+                  busy: _saving,
+                  onPressed: _save,
+                  compact:
+                      MediaQuery.sizeOf(context).width <
+                      ShareSaveButton.compactBelow,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton.icon(
@@ -541,7 +575,7 @@ class _MedalShareSheetState extends State<MedalShareSheet> {
                   decoration: _look.backdrop == MedalBackdrop.transparent
                       ? BoxDecoration(
                           image: DecorationImage(
-                            image: _checkerboard,
+                            image: kShareCheckerboard,
                             repeat: ImageRepeat.repeat,
                             // ไม่ให้ภาพ 2×2 ถูกเบลอเป็นสีเทาเรียบตอนขยาย
                             filterQuality: FilterQuality.none,

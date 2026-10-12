@@ -11,6 +11,7 @@ import '../utils/share_card.dart';
 import '../utils/thai_date.dart';
 import '../models/trip_medal.dart';
 import '../widgets/medal_art.dart';
+import '../widgets/share_sheet_controls.dart' show ShareSaveButton;
 import 'conquest_map_screen.dart';
 import 'medals_screen.dart';
 
@@ -1144,6 +1145,33 @@ class _ShareSheet extends StatefulWidget {
 class _ShareSheetState extends State<_ShareSheet> {
   final GlobalKey _cardKey = GlobalKey();
   bool _sharing = false;
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (_saving) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _saving = true);
+    try {
+      await saveWidgetToGallery(
+        boundaryKey: _cardKey,
+        fileName: 'luilaykhao_passport.png',
+      );
+      if (mounted) AppSnack.success(context, 'บันทึกรูปลงเครื่องแล้ว');
+    } on ShareCardException catch (e) {
+      if (mounted) {
+        AppSnack.error(
+          context,
+          shareCardFailureMessage(e.reason, saving: true),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        AppSnack.error(context, 'บันทึกรูปไม่สำเร็จ ลองใหม่อีกครั้ง');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   Future<void> _share() async {
     if (_sharing) return;
@@ -1188,35 +1216,40 @@ class _ShareSheetState extends State<_ShareSheet> {
               child: _ShareCard(data: widget.data),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _sharing ? null : _share,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            Row(
+              children: [
+                ShareSaveButton(busy: _saving, onPressed: _save),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _sharing ? null : _share,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                      ),
+                    ),
+                    icon: _sharing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.ios_share_rounded, size: 18),
+                    label: Text(
+                      _sharing ? 'กำลังเตรียม...' : 'แชร์การ์ด',
+                      style: appFont(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
-                icon: _sharing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.ios_share_rounded, size: 18),
-                label: Text(
-                  _sharing ? 'กำลังเตรียม...' : 'แชร์การ์ด',
-                  style: appFont(
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+              ],
             ),
           ],
         ),

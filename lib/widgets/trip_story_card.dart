@@ -58,7 +58,14 @@ enum StoryStyle {
   polaroid('โพลารอยด์'),
 
   /// ขาวดำคอนทราสต์จัด
-  mono('ขาวดำ');
+  mono('ขาวดำ'),
+
+  /// ไม่มีพื้นหลัง — PNG โปร่งใสครอปพอดีเนื้อหา ไว้แปะทับรูป/วิดีโอของตัวเอง
+  /// ใน IG Story (สติกเกอร์ → รูปภาพ) แบบที่คนแชร์จาก Strava กัน
+  ///
+  /// ไม่ใช่ 9:16 เหมือนสไตล์อื่น: สติกเกอร์ที่สูงเต็มจอจะลากย่อ/ย้ายใน IG
+  /// ลำบาก เพราะนิ้วไปโดนพื้นที่ใสรอบ ๆ แทนตัวข้อความ
+  sticker('สติกเกอร์');
 
   const StoryStyle(this.label);
 
@@ -73,6 +80,25 @@ enum StoryStyle {
     }
 
     return StoryStyle.classic;
+  }
+}
+
+/// สีตัวอักษรของ [StoryStyle.sticker] — สติกเกอร์ไม่มีพื้นของตัวเอง จึงต้อง
+/// เลือกให้ตัดกับรูปที่จะแปะ: ตัวขาวสำหรับรูปมืด/วิว ตัวเข้มสำหรับฟ้าสว่าง/หิมะ
+enum StickerInk {
+  light('ตัวขาว'),
+  dark('ตัวเข้ม');
+
+  const StickerInk(this.label);
+
+  final String label;
+
+  static StickerInk fromName(String? name) {
+    for (final ink in values) {
+      if (ink.name == name) return ink;
+    }
+
+    return StickerInk.light;
   }
 }
 
@@ -467,6 +493,9 @@ class TripStoryCard extends StatelessWidget {
   /// ข้อความที่เจ้าของพิมพ์เอง เช่น "ทริปวันเกิดปีนี้" — ว่าง = ไม่มีบรรทัดนี้
   final String note;
 
+  /// สีตัวอักษรเมื่อเป็น [StoryStyle.sticker] — สไตล์อื่นไม่สนใจค่านี้
+  final StickerInk ink;
+
   const TripStoryCard({
     super.key,
     required this.tripTitle,
@@ -480,6 +509,7 @@ class TripStoryCard extends StatelessWidget {
     this.parts = StoryCardParts.all,
     this.dateFormat = StoryDateFormat.full,
     this.note = '',
+    this.ink = StickerInk.light,
   }) : highlight = null,
        stats = const [],
        dateLabel = null;
@@ -501,6 +531,7 @@ class TripStoryCard extends StatelessWidget {
     this.photoOpacity = kStoryPhotoOpacityDefault,
     this.parts = StoryCardParts.all,
     this.note = '',
+    this.ink = StickerInk.light,
   }) : departureDate = null,
        daysLeft = null,
        dateFormat = StoryDateFormat.full;
@@ -508,6 +539,12 @@ class TripStoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final countdown = highlight ?? StoryCountdown.fromDaysLeft(daysLeft);
+
+    // สติกเกอร์สูงเท่าเนื้อหา (กว้าง 360 เท่าใบอื่น → PNG กว้าง 1080) และไม่มี
+    // ClipRect — เงาตัวอักษรที่เลยขอบต้องไม่ถูกตัดเป็นเส้นตรง
+    if (style == StoryStyle.sticker) {
+      return SizedBox(width: kStoryCardWidth, child: _sticker(countdown));
+    }
 
     return SizedBox(
       width: kStoryCardWidth,
@@ -521,6 +558,8 @@ class TripStoryCard extends StatelessWidget {
           StoryStyle.minimal => _minimal(countdown),
           StoryStyle.polaroid => _polaroid(countdown),
           StoryStyle.mono => _mono(countdown),
+          // จัดการไปแล้วด้านบน — ใส่ไว้ให้ switch ครบทุกค่า
+          StoryStyle.sticker => _sticker(countdown),
         },
       ),
     );
@@ -843,6 +882,72 @@ class TripStoryCard extends StatelessWidget {
     );
   }
 
+  bool get _darkInk => style == StoryStyle.sticker && ink == StickerInk.dark;
+
+  /// เงาตัวอักษรของสติกเกอร์ — ไม่มีพื้นให้พึ่ง ข้อความจึงต้องอ่านออกเองบนรูป
+  /// ทุกแบบ: ตัวขาวมีเงาดำนุ่ม ๆ ตัวเข้มมีขอบเรืองขาว สไตล์อื่นมีเงาทับรูปอยู่แล้ว
+  List<Shadow>? get _textShadows {
+    if (style != StoryStyle.sticker) return null;
+
+    return ink == StickerInk.dark
+        ? const [
+            Shadow(color: Color(0xCCFFFFFF), blurRadius: 10),
+            Shadow(color: Color(0x99FFFFFF), blurRadius: 3),
+          ]
+        : const [
+            Shadow(
+              color: Color(0x8C000000),
+              blurRadius: 12,
+              offset: Offset(0, 2),
+            ),
+            Shadow(
+              color: Color(0x66000000),
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ];
+  }
+
+  Widget _sticker(StoryCountdown countdown) {
+    final dark = _darkInk;
+    final text = dark ? AppTheme.slate900 : Colors.white;
+    final soft = dark ? AppTheme.slate600 : Colors.white.withValues(alpha: 0.9);
+
+    return Padding(
+      // เผื่อขอบไว้ให้เงาตัวอักษรเบลอออกไปได้โดยไม่ชนขอบภาพ
+      padding: const EdgeInsets.fromLTRB(26, 26, 26, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (parts.logo) ...[
+            // โลโก้ไม่มีเงาให้ ใช้สีทึบตามหมึกแทน — บนรูปมืดเป็นขาว บนรูปสว่างเป็นเข้ม
+            _logo(40, tint: text)!,
+            const SizedBox(height: 16),
+          ],
+          if (parts.countdown) ...[
+            _countdownBlock(
+              countdown,
+              kickerColor: dark ? AppTheme.brandDeep : AppTheme.brandSoft,
+              textColor: text,
+              align: CrossAxisAlignment.center,
+              scale: 0.82,
+            ),
+            const SizedBox(height: 14),
+          ],
+          _tripBlock(
+            align: CrossAxisAlignment.center,
+            titleColor: text,
+            metaColor: soft,
+          ),
+          if (_stats.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _statsRow(valueColor: text, labelColor: soft, centered: true),
+          ],
+        ],
+      ),
+    );
+  }
+
   // ── บล็อกเนื้อหาที่ทุกสไตล์ใช้ร่วมกัน ───────────────────────────────────
 
   Widget _countdownBlock(
@@ -869,6 +974,7 @@ class TripStoryCard extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: kickerColor,
             letterSpacing: kickerSpacing,
+            shadows: _textShadows,
           ),
         ),
         const SizedBox(height: 2),
@@ -890,6 +996,7 @@ class TripStoryCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: textColor,
                   height: 1.02,
+                  shadows: _textShadows,
                 ),
               ),
             ),
@@ -901,6 +1008,7 @@ class TripStoryCard extends StatelessWidget {
                   fontSize: unitSize,
                   fontWeight: FontWeight.w700,
                   color: textColor,
+                  shadows: _textShadows,
                 ),
               ),
             ],
@@ -938,6 +1046,7 @@ class TripStoryCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: valueColor,
                   height: 1.15,
+                  shadows: _textShadows,
                 ),
               ),
               Text(
@@ -947,6 +1056,7 @@ class TripStoryCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: labelColor ?? Colors.white.withValues(alpha: 0.72),
                   height: 1.3,
+                  shadows: _textShadows,
                 ),
               ),
             ],
@@ -988,6 +1098,7 @@ class TripStoryCard extends StatelessWidget {
             fontWeight: FontWeight.w800,
             color: titleColor,
             height: 1.28,
+            shadows: _textShadows,
           ),
         ),
         if (meta.isNotEmpty) ...[
@@ -1002,6 +1113,7 @@ class TripStoryCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: metaColor ?? Colors.white.withValues(alpha: 0.86),
               height: 1.4,
+              shadows: _textShadows,
             ),
           ),
         ],
@@ -1019,6 +1131,7 @@ class TripStoryCard extends StatelessWidget {
               fontStyle: FontStyle.italic,
               color: titleColor,
               height: 1.4,
+              shadows: _textShadows,
             ),
           ),
         ],

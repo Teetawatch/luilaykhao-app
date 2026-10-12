@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -26,6 +27,25 @@ enum ShareCardFailure {
 
   /// เข้ารหัส PNG หรือเขียนไฟล์ไม่ผ่าน
   encodeFailed,
+
+  /// ผู้ใช้ไม่ให้สิทธิ์บันทึกลงคลังรูป — ต้องไปเปิดในตั้งค่าเอง
+  galleryDenied,
+
+  /// เครื่องเต็ม บันทึกรูปไม่ลง
+  galleryFull,
+}
+
+/// ข้อความแจ้งผู้ใช้ตามสาเหตุ — ทุกหน้าที่บันทึก/แชร์การ์ดใช้ชุดเดียวกัน
+String shareCardFailureMessage(ShareCardFailure reason, {bool saving = false}) {
+  return switch (reason) {
+    ShareCardFailure.galleryDenied =>
+      'แอปยังไม่ได้รับอนุญาตให้บันทึกรูป — เปิดสิทธิ์ "รูปภาพ" ในตั้งค่าของเครื่อง',
+    ShareCardFailure.galleryFull => 'พื้นที่ในเครื่องเต็ม บันทึกรูปไม่ได้',
+    _ =>
+      saving
+          ? 'บันทึกรูปไม่สำเร็จ ลองใหม่อีกครั้ง'
+          : 'แชร์ไม่สำเร็จ ลองใหม่อีกครั้ง',
+  };
 }
 
 class ShareCardException implements Exception {
@@ -54,6 +74,28 @@ Future<bool> shareWidgetAsPng({
   String? text,
   double pixelRatio = kShareCardPixelRatio,
 }) async {
+  final bytes = await renderWidgetAsPng(
+    boundaryKey: boundaryKey,
+    pixelRatio: pixelRatio,
+  );
+
+  final dir = await getTemporaryDirectory();
+  final file = File('${dir.path}/$fileName');
+  await file.writeAsBytes(bytes);
+
+  final result = await SharePlus.instance.share(
+    ShareParams(files: [XFile(file.path)], text: text),
+  );
+
+  return result.status == ShareResultStatus.success;
+}
+
+/// แปลงซับทรีใต้ [boundaryKey] เป็นไบต์ PNG — ทางเดียวที่ทั้งแชร์และบันทึกใช้
+/// จึงได้ภาพละเอียดเท่ากันทุกทาง
+Future<Uint8List> renderWidgetAsPng({
+  required GlobalKey boundaryKey,
+  double pixelRatio = kShareCardPixelRatio,
+}) async {
   final boundary =
       boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
 
@@ -76,13 +118,41 @@ Future<bool> shareWidgetAsPng({
     throw const ShareCardException(ShareCardFailure.encodeFailed);
   }
 
-  final dir = await getTemporaryDirectory();
-  final file = File('${dir.path}/$fileName');
-  await file.writeAsBytes(bytes.buffer.asUint8List());
+  return bytes.buffer.asUint8List();
+}
 
-  final result = await SharePlus.instance.share(
-    ShareParams(files: [XFile(file.path)], text: text),
+/// บันทึกการ์ดลงคลังรูปของเครื่อง (ไม่ผ่าน share sheet)
+///
+/// คนที่จะแปะสติกเกอร์ใน IG Story ต้องมีรูปอยู่ในคลังก่อน (สติกเกอร์ → รูปภาพ)
+/// และ share sheet ของ Android หลายรุ่นไม่มีปุ่ม "บันทึกรูป" ให้กด
+///
+/// ไม่ใส่อัลบั้ม: บน iOS การสร้างอัลบั้มต้องขอสิทธิ์อ่านคลังรูปทั้งหมด ส่วนการ
+/// เพิ่มรูปอย่างเดียวขอแค่สิทธิ์ "เพิ่มรูป" ซึ่งคนยอมกดง่ายกว่ามาก
+///
+/// โยน [ShareCardException] เมื่อทำไม่สำเร็จ
+Future<void> saveWidgetToGallery({
+  required GlobalKey boundaryKey,
+  required String fileName,
+  double pixelRatio = kShareCardPixelRatio,
+}) async {
+  final bytes = await renderWidgetAsPng(
+    boundaryKey: boundaryKey,
+    pixelRatio: pixelRatio,
   );
 
-  return result.status == ShareResultStatus.success;
+  try {
+    if (!await Gal.hasAccess() && !await Gal.requestAccess()) {
+      throw const ShareCardException(ShareCardFailure.galleryDenied);
+    }
+
+    // gal ใส่นามสกุลจากชนิดไฟล์ให้เอง — ส่งชื่อเปล่า ๆ ไม่งั้นได้ .png.png
+    final name = fileName.replaceAll(RegExp(r'\.png$'), '');
+    await Gal.putImageBytes(bytes, name: name);
+  } on GalException catch (e) {
+    throw ShareCardException(switch (e.type) {
+      GalExceptionType.accessDenied => ShareCardFailure.galleryDenied,
+      GalExceptionType.notEnoughSpace => ShareCardFailure.galleryFull,
+      _ => ShareCardFailure.encodeFailed,
+    });
+  }
 }

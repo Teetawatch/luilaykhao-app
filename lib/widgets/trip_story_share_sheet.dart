@@ -63,6 +63,7 @@ class TripStoryShareSheet extends StatefulWidget {
 class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
   final GlobalKey _cardKey = GlobalKey();
   bool _sharing = false;
+  bool _saving = false;
   bool _picking = false;
   String? _shareUrl;
   StoryLook _look = StoryLook.defaults;
@@ -89,6 +90,9 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
   static const Size _cardFrame = Size(kStoryCardWidth, kStoryCardHeight);
 
   ImageProvider? get _photo => _usingOwnPhoto ? _ownImage : widget.coverImage;
+
+  /// สไตล์สติกเกอร์ไม่มีรูปพื้นหลัง — ปิดการลากรูป และพรีวิวบนลายหมากรุก
+  bool get _isSticker => _look.style == StoryStyle.sticker;
 
   @override
   void initState() {
@@ -253,7 +257,7 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
   /// [displayScale] คืออัตราส่วนที่พรีวิวถูกย่อลงมาให้พอดีจอ — นิ้วขยับบนจอ
   /// 10 พิกเซลจึงไม่เท่ากับรูปขยับ 10 หน่วยบนการ์ด ต้องหารกลับก่อนเสมอ
   void _onScaleUpdate(ScaleUpdateDetails details, double displayScale) {
-    if (_photo == null || displayScale <= 0) return;
+    if (_photo == null || _isSticker || displayScale <= 0) return;
 
     final scale = (_gestureScale * details.scale).clamp(1.0, 4.0);
     final moved = (details.localFocalPoint - _gestureFocal) / displayScale;
@@ -338,9 +342,7 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
 
       final shared = await shareWidgetAsPng(
         boundaryKey: _cardKey,
-        fileName: widget.isRecap
-            ? 'luilaykhao_recap.png'
-            : 'luilaykhao_countdown.png',
+        fileName: _fileName(),
         text: _shareText(),
       );
 
@@ -354,6 +356,41 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
+  }
+
+  /// บันทึกลงคลังรูป — sheet ไม่ปิดเอง เผื่อคนอยากได้ทั้งการ์ดและสติกเกอร์
+  Future<void> _save() async {
+    if (_saving) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _saving = true);
+
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      await saveWidgetToGallery(boundaryKey: _cardKey, fileName: _fileName());
+      if (!mounted) return;
+      AppSnack.success(
+        context,
+        _isSticker
+            ? 'บันทึกสติกเกอร์แล้ว — ใน IG Story กดสติกเกอร์ → รูปภาพ'
+            : 'บันทึกรูปลงเครื่องแล้ว',
+      );
+    } on ShareCardException catch (e) {
+      if (mounted) {
+        AppSnack.error(context, shareCardFailureMessage(e.reason, saving: true));
+      }
+    } catch (_) {
+      if (mounted) AppSnack.error(context, 'บันทึกรูปไม่สำเร็จ ลองใหม่อีกครั้ง');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  String _fileName() {
+    final kind = widget.isRecap ? 'recap' : 'countdown';
+
+    return _isSticker
+        ? 'luilaykhao_${kind}_sticker.png'
+        : 'luilaykhao_$kind.png';
   }
 
   /// คำบรรยายที่ติดไปกับรูป — บางแอป (IG Story) ทิ้งไป บางแอป (LINE, FB) ใช้
@@ -386,6 +423,7 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
         photoOpacity: _look.photoOpacity,
         parts: _look.parts,
         note: _note,
+        ink: _look.stickerInk,
       );
     }
 
@@ -401,6 +439,7 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
       parts: _look.parts,
       dateFormat: _look.dateFormat,
       note: _note,
+      ink: _look.stickerInk,
     );
   }
 
@@ -456,6 +495,14 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
                       color: AppTheme.mutedText(context),
                     ),
                   ),
+                ),
+                const SizedBox(width: 4),
+                ShareSaveButton(
+                  busy: _saving,
+                  onPressed: _save,
+                  compact:
+                      MediaQuery.sizeOf(context).width <
+                      ShareSaveButton.compactBelow,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -514,10 +561,28 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
             width: kStoryCardWidth * displayScale,
             height: kStoryCardHeight * displayScale,
             child: GestureDetector(
-              onScaleStart: _onScaleStart,
-              onScaleUpdate: (details) => _onScaleUpdate(details, displayScale),
+              onScaleStart: _isSticker ? null : _onScaleStart,
+              onScaleUpdate: _isSticker
+                  ? null
+                  : (details) => _onScaleUpdate(details, displayScale),
               child: FittedBox(
-                child: RepaintBoundary(key: _cardKey, child: _card()),
+                // ลายหมากรุกอยู่ *นอก* RepaintBoundary — ให้เห็นว่าพื้นโปร่ง
+                // แต่ไม่ติดไปกับ PNG ที่แชร์/บันทึกออกไป
+                child: DecoratedBox(
+                  decoration: _isSticker
+                      ? BoxDecoration(
+                          image: DecorationImage(
+                            image: kShareCheckerboard,
+                            repeat: ImageRepeat.repeat,
+                            filterQuality: FilterQuality.none,
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusMd,
+                          ),
+                        )
+                      : const BoxDecoration(),
+                  child: RepaintBoundary(key: _cardKey, child: _card()),
+                ),
               ),
             ),
           ),
@@ -528,6 +593,13 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
 
   Widget _photoPanel() {
     final hasTripPhoto = widget.coverImage != null;
+
+    if (_isSticker) {
+      return const ShareHint(
+        'สติกเกอร์ไม่มีรูปพื้นหลัง — บันทึกลงเครื่อง แล้วใน IG Story '
+        'กดสติกเกอร์ → รูปภาพ เพื่อแปะทับรูปหรือวิดีโอของคุณเอง',
+      );
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -606,7 +678,30 @@ class _TripStoryShareSheetState extends State<TripStoryShareSheet> {
               ),
           ],
         ),
-        const ShareHint('สไตล์ที่เลือกจะถูกจำไว้ใช้กับการ์ดใบต่อไปด้วย'),
+        if (_isSticker) ...[
+          const SizedBox(height: 8),
+          ShareChipRow(
+            children: [
+              for (final ink in StickerInk.values)
+                SharePill(
+                  label: ink.label,
+                  swatch: ink == StickerInk.light
+                      ? Colors.white
+                      : AppTheme.slate900,
+                  active: _look.stickerInk == ink,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    _update(_look.copyWith(stickerInk: ink));
+                  },
+                ),
+            ],
+          ),
+          const ShareHint(
+            'ตัวขาวเหมาะกับรูปวิว/กลางคืน ตัวเข้มเหมาะกับท้องฟ้าสว่าง — '
+            'กด "บันทึก" แล้วแปะใน IG Story ผ่านสติกเกอร์ → รูปภาพ',
+          ),
+        ] else
+          const ShareHint('สไตล์ที่เลือกจะถูกจำไว้ใช้กับการ์ดใบต่อไปด้วย'),
       ],
     );
   }

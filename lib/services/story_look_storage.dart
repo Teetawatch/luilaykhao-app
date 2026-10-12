@@ -25,12 +25,16 @@ class StoryLook {
   /// ชื่อทริปกับวันเดินทาง คนที่ซ่อนวันที่บนการ์ดจึงอาจไม่อยากแนบ
   final bool includeLink;
 
+  /// สีตัวอักษรของสไตล์สติกเกอร์ — จำไว้เพราะคนมักแปะบนรูปโทนเดิม ๆ
+  final StickerInk stickerInk;
+
   const StoryLook({
     required this.style,
     required this.photoOpacity,
     this.parts = StoryCardParts.all,
     this.dateFormat = StoryDateFormat.full,
     this.includeLink = true,
+    this.stickerInk = StickerInk.light,
   });
 
   static const defaults = StoryLook(
@@ -44,6 +48,7 @@ class StoryLook {
     StoryCardParts? parts,
     StoryDateFormat? dateFormat,
     bool? includeLink,
+    StickerInk? stickerInk,
   }) {
     return StoryLook(
       style: style ?? this.style,
@@ -51,6 +56,7 @@ class StoryLook {
       parts: parts ?? this.parts,
       dateFormat: dateFormat ?? this.dateFormat,
       includeLink: includeLink ?? this.includeLink,
+      stickerInk: stickerInk ?? this.stickerInk,
     );
   }
 
@@ -60,6 +66,7 @@ class StoryLook {
     'parts': parts.toJson(),
     'date_format': dateFormat.name,
     'include_link': includeLink,
+    'sticker_ink': stickerInk.name,
   };
 
   /// ค่าที่ไม่รู้จัก/เสีย (รุ่นเก่า/ใหม่กว่า) ตกไปใช้ค่าตั้งต้นทีละช่อง ไม่ทิ้งทั้งชุด
@@ -76,6 +83,7 @@ class StoryLook {
       parts: parts is Map ? StoryCardParts.fromJson(parts) : StoryCardParts.all,
       dateFormat: StoryDateFormat.fromName(json['date_format']?.toString()),
       includeLink: link is bool ? link : true,
+      stickerInk: StickerInk.fromName(json['sticker_ink']?.toString()),
     );
   }
 }

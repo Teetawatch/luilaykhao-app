@@ -47,6 +47,7 @@ class _YearReviewScreenState extends State<YearReviewScreen> {
   bool _loading = true;
   bool _error = false;
   bool _sharing = false;
+  bool _saving = false;
   int _page = 0;
 
   @override
@@ -122,6 +123,34 @@ class _YearReviewScreenState extends State<YearReviewScreen> {
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  Future<void> _save(YearReview review) async {
+    if (_saving) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _saving = true);
+
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      await saveWidgetToGallery(
+        boundaryKey: _cardKey,
+        fileName: 'luilaykhao_year_${review.year}.png',
+      );
+      if (mounted) AppSnack.success(context, 'บันทึกรูปลงเครื่องแล้ว');
+    } on ShareCardException catch (e) {
+      if (mounted) {
+        AppSnack.error(
+          context,
+          shareCardFailureMessage(e.reason, saving: true),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        AppSnack.error(context, 'บันทึกรูปไม่สำเร็จ ลองใหม่อีกครั้ง');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _share(YearReview review) async {
@@ -293,6 +322,8 @@ class _YearReviewScreenState extends State<YearReviewScreen> {
         cardKey: _cardKey,
         sharing: _sharing,
         onShare: () => _share(r),
+        saving: _saving,
+        onSave: () => _save(r),
       ),
     ];
   }
@@ -525,12 +556,16 @@ class _ShareSlide extends StatelessWidget {
   final GlobalKey cardKey;
   final bool sharing;
   final VoidCallback onShare;
+  final bool saving;
+  final VoidCallback onSave;
 
   const _ShareSlide({
     required this.review,
     required this.cardKey,
     required this.sharing,
     required this.onShare,
+    required this.saving,
+    required this.onSave,
   });
 
   @override
@@ -563,33 +598,70 @@ class _ShareSlide extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: sharing ? null : onShare,
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF0E1412),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          Row(
+            children: [
+              // พื้นสไลด์เป็นสีเข้ม — ปุ่มบันทึกจึงเป็นเส้นขาวแทนปุ่มกลางของ sheet
+              OutlinedButton.icon(
+                onPressed: saving ? null : onSave,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.white54,
+                  side: const BorderSide(color: Colors.white70),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                  ),
+                ),
+                icon: saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.download_rounded, size: 18),
+                label: Text(
+                  'บันทึก',
+                  style: appFont(
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-              icon: sharing
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.ios_share_rounded, size: 18),
-              label: Text(
-                sharing ? 'กำลังเตรียม...' : 'แชร์สรุปปีนี้',
-                style: appFont(
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF0E1412),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: sharing ? null : onShare,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0E1412),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    ),
+                  ),
+                  icon: sharing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.ios_share_rounded, size: 18),
+                  label: Text(
+                    sharing ? 'กำลังเตรียม...' : 'แชร์สรุปปีนี้',
+                    style: appFont(
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0E1412),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
