@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../config/api_config.dart';
 import '../config/api_endpoints.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import 'app_snack.dart';
+import 'review_share_sheet.dart';
 import 'travel_widgets.dart' show PrimaryCTAButton;
 
 const _starColor = Color(0xFFFFB400);
@@ -68,6 +70,9 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
   bool _submitting = false;
   bool _submitted = false;
   String? _error;
+
+  /// คำรีวิวที่ส่งไปแล้ว — การ์ดแชร์ใช้คำนี้ ไม่ใช่ช่องพิมพ์ที่อาจถูกแก้ต่อ
+  String _sentComment = '';
 
   // Optional per-category ratings (0 = ไม่ระบุ)
   final Map<String, int> _categoryRatings = {
@@ -281,6 +286,7 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
       setState(() {
         _submitting = false;
         _submitted = true;
+        _sentComment = comment;
       });
     } catch (e) {
       if (!mounted) return;
@@ -289,6 +295,49 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
         _submitting = false;
       });
     }
+  }
+
+  /// เปิดการ์ดคำรีวิวทับ sheet นี้ — รูปใช้ไฟล์ในเครื่องที่เพิ่งเลือก (โหลดทันที
+  /// ไม่ต้องรอเน็ต) เฉพาะรูปที่อัปขึ้นสำเร็จ คือรูปที่อยู่ในรีวิวจริง
+  Future<void> _shareReview() async {
+    final app = context.read<AppProvider>();
+    final photos = <ImageProvider>[
+      for (var i = 0; i < _selectedImages.length; i++)
+        if (i < _uploadedUrls.length && _uploadedUrls[i].isNotEmpty)
+          FileImage(_selectedImages[i]),
+    ];
+
+    await showReviewShareSheet(
+      context,
+      comment: _sentComment,
+      rating: _rating,
+      tripTitle: widget.tripTitle,
+      reviewerName: _reviewerFirstName(app),
+      photos: photos,
+      tripUrl: _tripUrl(app),
+    );
+  }
+
+  /// ชื่อต้นบนการ์ด — สตอรี่เป็นที่สาธารณะ ไม่จำเป็นต้องมีนามสกุล
+  String _reviewerFirstName(AppProvider app) {
+    String full = '${app.user?['name'] ?? ''}';
+    for (final option in _reviewAs) {
+      if (option.id == _passengerId) full = option.name;
+    }
+
+    final parts = full.trim().split(RegExp(r'\s+'));
+    return parts.isEmpty ? '' : parts.first;
+  }
+
+  String? _tripUrl(AppProvider app) {
+    for (final raw in app.bookings) {
+      if (raw is! Map || '${raw['id']}' != '${widget.bookingId}') continue;
+      final schedule = raw['schedule'];
+      final trip = schedule is Map ? schedule['trip'] : null;
+      final slug = trip is Map ? '${trip['slug'] ?? ''}' : '';
+      return slug.isEmpty ? null : '${ApiConfig.siteUrl}/trips/$slug';
+    }
+    return null;
   }
 
   @override
@@ -315,6 +364,9 @@ class _ReviewSubmissionDialogState extends State<ReviewSubmissionDialog> {
                       tripTitle: widget.tripTitle,
                       rating: _rating,
                       onDone: () => Navigator.of(context).pop(true),
+                      // ชวนแชร์เฉพาะคนที่ประทับใจ — คนให้ 1–3 ดาวไม่ควรถูกขอให้
+                      // ประกาศรีวิวนั้นต่อ ส่วนคนที่อยากแชร์ก็ยังทำได้จาก "รีวิวของฉัน"
+                      onShare: _rating >= 4 ? _shareReview : null,
                     )
                   : _buildForm(context),
             ),
@@ -1027,11 +1079,15 @@ class _ReviewSuccessView extends StatelessWidget {
   final int rating;
   final VoidCallback onDone;
 
+  /// เปิดการ์ดแชร์คำรีวิว — null = ไม่ชวนแชร์ (ให้ดาวน้อย)
+  final VoidCallback? onShare;
+
   const _ReviewSuccessView({
     super.key,
     required this.tripTitle,
     required this.rating,
     required this.onDone,
+    this.onShare,
   });
 
   @override
@@ -1113,11 +1169,30 @@ class _ReviewSuccessView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          PrimaryCTAButton(
-            label: 'เสร็จสิ้น',
-            icon: Icons.check_circle_outline_rounded,
-            onPressed: onDone,
-          ),
+          if (onShare != null) ...[
+            PrimaryCTAButton(
+              label: 'แชร์รีวิวนี้ลงสตอรี่',
+              icon: Icons.ios_share_rounded,
+              onPressed: onShare,
+            ),
+            const SizedBox(height: 6),
+            TextButton(
+              onPressed: onDone,
+              child: Text(
+                'เสร็จสิ้น',
+                style: appFont(
+                  fontSize: AppText.sizeBody,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+            ),
+          ] else
+            PrimaryCTAButton(
+              label: 'เสร็จสิ้น',
+              icon: Icons.check_circle_outline_rounded,
+              onPressed: onDone,
+            ),
         ],
       ),
     );

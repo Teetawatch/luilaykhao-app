@@ -72,7 +72,11 @@ void main() {
       reviewResponse: (request) {
         sent = jsonDecode(request.body) as Map<String, dynamic>;
         return http.Response(
-          jsonEncode({'success': true, 'message': 'รีวิวสำเร็จแล้ว', 'data': {}}),
+          jsonEncode({
+            'success': true,
+            'message': 'รีวิวสำเร็จแล้ว',
+            'data': {},
+          }),
           201,
           headers: {'content-type': 'application/json; charset=utf-8'},
         );
@@ -95,6 +99,8 @@ void main() {
         expect(sent?['comment'], 'วิวสวยมาก สตาฟใจดี');
         expect(find.text('ส่งรีวิวเรียบร้อยแล้ว'), findsOneWidget);
         expect(find.textContaining('"ภูกระดึง"'), findsOneWidget);
+        // 4 ดาวขึ้นไป = ชวนแชร์คำรีวิวลงสตอรี่ทันที
+        expect(find.text('แชร์รีวิวนี้ลงสตอรี่'), findsOneWidget);
 
         await tester.tap(find.text('เสร็จสิ้น'));
         await tester.pumpAndSettle();
@@ -145,6 +151,61 @@ void main() {
         expect(find.text('คุณรีวิวทริปนี้ไปแล้ว'), findsOneWidget);
         expect(find.text('ส่งรีวิวเรียบร้อยแล้ว'), findsNothing);
         expect(find.text('ส่งรีวิว'), findsOneWidget);
+      },
+    );
+  });
+
+  testWidgets('ให้ 3 ดาวไม่ชวนแชร์ เปิดการ์ดแชร์ได้เมื่อประทับใจ', (
+    tester,
+  ) async {
+    http.Response ok(http.Request _) => http.Response(
+      jsonEncode({'success': true, 'message': 'รีวิวสำเร็จแล้ว', 'data': {}}),
+      201,
+      headers: {'content-type': 'application/json; charset=utf-8'},
+    );
+
+    await run(
+      tester,
+      reviewResponse: ok,
+      body: () async {
+        await openSheet(tester);
+        await tester.tap(find.bySemanticsLabel('ให้ 3 ดาว'));
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'พอใช้ได้ครับ');
+        await tester.tap(find.text('ส่งรีวิว'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('ส่งรีวิวเรียบร้อยแล้ว'), findsOneWidget);
+        expect(find.text('แชร์รีวิวนี้ลงสตอรี่'), findsNothing);
+      },
+    );
+  });
+
+  testWidgets('กดแชร์แล้วเห็นการ์ดคำรีวิวที่เพิ่งเขียน', (tester) async {
+    await run(
+      tester,
+      reviewResponse: (_) => http.Response(
+        jsonEncode({'success': true, 'message': 'รีวิวสำเร็จแล้ว', 'data': {}}),
+        201,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+      body: () async {
+        await openSheet(tester);
+        await tester.enterText(find.byType(TextField), 'ทะเลหมอกสวยที่สุด');
+        await tester.tap(find.text('ส่งรีวิว'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('แชร์รีวิวนี้ลงสตอรี่'));
+        // โลโก้ถูกโหลดเข้าแคชก่อนเปิด sheet — เป็น IO จริง ต้องปล่อยให้วิ่งนอก
+        // fake async ของเทสก่อน
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 300)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('แชร์รีวิวของคุณ'), findsOneWidget);
+        expect(find.text('“ทะเลหมอกสวยที่สุด”'), findsOneWidget);
+        expect(find.text('รีวิวทริป ภูกระดึง'), findsOneWidget);
       },
     );
   });

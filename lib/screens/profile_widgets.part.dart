@@ -448,6 +448,25 @@ class _ReviewCard extends StatelessWidget {
 
   const _ReviewCard({required this.review});
 
+  Future<void> _share(BuildContext context) {
+    final slug = _cleanText(review['trip_slug']);
+    final name = _cleanText(review['user_name']).split(RegExp(r'\s+')).first;
+
+    return showReviewShareSheet(
+      context,
+      comment: _cleanText(review['comment']),
+      rating: _numberValue(review['rating']),
+      tripTitle: _cleanText(review['trip_title'], fallback: 'ทริปของฉัน'),
+      reviewerName: name,
+      photos: [
+        for (final url in asList(review['images']))
+          if (ApiConfig.mediaUrl(url).isNotEmpty)
+            NetworkImage(ApiConfig.mediaUrl(url)),
+      ],
+      tripUrl: slug.isEmpty ? null : '${ApiConfig.siteUrl}/trips/$slug',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rating = _numberValue(review['rating']);
@@ -490,6 +509,19 @@ class _ReviewCard extends StatelessWidget {
                   color: AppTheme.textSecondary,
                 ),
               ),
+              // แชร์คำรีวิวเป็นการ์ดสตอรี่ — เปิดได้ทุกรีวิวที่มีคำ ไม่ว่ากี่ดาว
+              // เพราะคนกดเองจากหน้านี้ ไม่ใช่แอปไปชวน
+              if (_cleanText(review['comment']).isNotEmpty)
+                IconButton(
+                  tooltip: 'แชร์รีวิวลงสตอรี่',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _share(context),
+                  icon: Icon(
+                    Icons.ios_share_rounded,
+                    size: 20,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
             ],
           ),
           if (_cleanText(review['comment']).isNotEmpty) ...[
