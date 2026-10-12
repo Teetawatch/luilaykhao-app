@@ -861,6 +861,12 @@ class _StaffSummaryRow extends StatelessWidget {
             value: totalReviews == 0 ? '–' : avgRating.toStringAsFixed(1),
             label: 'คะแนนเฉลี่ย',
             color: AppTheme.warningColor,
+            // แตะเพื่ออ่านว่าลูกค้าเขียนถึงเราว่าอะไร ไม่ใช่แค่เห็นตัวเลข
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => StaffReviewsScreen(initialSummary: summary),
+              ),
+            ),
           ),
         ),
       ],
@@ -873,27 +879,42 @@ class _StaffStatBox extends StatelessWidget {
   final String value;
   final String label;
   final Color color;
+  final VoidCallback? onTap;
 
   const _StaffStatBox({
     required this.icon,
     required this.value,
     required this.label,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final radius = BorderRadius.circular(AppTheme.radiusMd);
+    final box = Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        borderRadius: radius,
         border: Border.all(color: color.withValues(alpha: 0.14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: color),
+          Row(
+            children: [
+              Icon(icon, size: 18, color: color),
+              if (onTap != null) ...[
+                const Spacer(),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppTheme.mutedText(context),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: 8),
           Text(
             value,
@@ -916,6 +937,16 @@ class _StaffStatBox extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: radius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: radius,
+        child: Semantics(button: true, child: box),
       ),
     );
   }

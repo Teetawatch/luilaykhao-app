@@ -143,7 +143,9 @@ class SkeletonListTile extends StatelessWidget {
           ),
           if (showTrailing) ...[
             const SizedBox(width: 12),
-            const SkeletonLine(widthFactor: 1, height: 11),
+            // SkeletonLine กว้างเป็นสัดส่วนของพ่อ — ใน Row ความกว้างไม่จำกัด
+            // ต้องให้กรอบมันเอง ไม่งั้นโยน "forces an infinite width" ทั้งรายการ
+            const SizedBox(width: 40, child: SkeletonLine(height: 11)),
           ],
         ],
       ),

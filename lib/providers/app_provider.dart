@@ -1659,6 +1659,28 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// รีวิวที่ลูกค้าเขียนถึงสตาฟคนนี้ ใหม่สุดก่อน — [summary] คือภาพรวมของ
+  /// รีวิวทั้งหมด (เฉลี่ย / จำนวน / แยกตามดาว) ไม่ใช่แค่หน้านี้
+  Future<
+    ({List<dynamic> items, bool hasMore, Map<String, dynamic> summary})
+  >
+  staffReviewsPage({int page = 1, int perPage = 20}) async {
+    final response = await api.get(
+      ApiEndpoints.staffReviewsMy,
+      query: {'page': page, 'per_page': perPage},
+    );
+    final items = List<dynamic>.from(api.data(response) ?? []);
+    final meta = api.meta(response);
+    final currentPage =
+        int.tryParse('${meta?['current_page'] ?? page}') ?? page;
+    final lastPage =
+        int.tryParse('${meta?['last_page'] ?? currentPage}') ?? currentPage;
+    final summary = meta?['summary'] is Map
+        ? Map<String, dynamic>.from(meta!['summary'] as Map)
+        : <String, dynamic>{};
+    return (items: items, hasMore: currentPage < lastPage, summary: summary);
+  }
+
   Future<Map<String, dynamic>> booking(String ref) async {
     final response = await api.get('bookings/$ref');
     return Map<String, dynamic>.from(api.data(response) as Map);
