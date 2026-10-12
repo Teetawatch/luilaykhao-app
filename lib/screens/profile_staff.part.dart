@@ -126,6 +126,14 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                         const SizedBox(height: 12),
                         _StaffToolbar(schedule: primarySchedule),
                       ],
+                      if (app.staffPhotoRounds.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _StaffPhotoRoundsCard(
+                          rounds: app.staffPhotoRounds
+                              .map((e) => asMap(e))
+                              .toList(),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       _StaffIntroEntry(
                         filled: app.user?['has_staff_intro'] == true,
@@ -549,7 +557,7 @@ class _StaffToolbar extends StatelessWidget {
     final trip = _toMap(schedule['trip']);
     final tripTitle = _cleanText(trip['title'], fallback: 'ทริป');
 
-    // เครื่องมือของสตาฟมี 9 อย่าง — เรียงแถวเดียวป้ายจะโดนตัดจนอ่านไม่ออก
+    // เครื่องมือของสตาฟมี 10 อย่าง — เรียงแถวเดียวป้ายจะโดนตัดจนอ่านไม่ออก
     // จึงตัด 4 ช่องต่อแถวแล้วให้ล้นลงแถวถัดไปเอง
     final tools = <Widget>[
       _StaffToolTile(
@@ -613,6 +621,15 @@ class _StaffToolbar extends StatelessWidget {
         onTap: () => _pushPremium(
           context,
           ChatScreen(scheduleId: scheduleId, title: tripTitle),
+        ),
+      ),
+      _StaffToolTile(
+        icon: Icons.add_photo_alternate_outlined,
+        label: 'รูปทริป',
+        color: const Color(0xFFDB2777),
+        onTap: () => _pushPremium(
+          context,
+          StaffPhotosScreen(scheduleId: scheduleId, title: tripTitle),
         ),
       ),
       _StaffToolTile(
@@ -1671,6 +1688,20 @@ class _StaffScheduleAction extends StatelessWidget {
               ),
             ),
           ],
+          // อัปรูปทริปเข้าอัลบั้มรอบ — โชว์เฉพาะช่วงที่เซิร์ฟเวอร์เปิดรับ
+          // (วันเดินทางถึงไม่กี่วันหลังกลับ) รอบข้างหน้ายังไม่มีรูปให้อัป
+          if (hasSchedule && schedule['photo_upload_open'] == true) ...[
+            divider(),
+            _StaffActionRow(
+              icon: Icons.add_photo_alternate_outlined,
+              label: _photoActionLabel(schedule['photos_count']),
+              color: const Color(0xFFDB2777),
+              onTap: () => _pushPremium(
+                context,
+                StaffPhotosScreen(scheduleId: scheduleId, title: tripTitle),
+              ),
+            ),
+          ],
           // Group chat — available to assigned staff for coordinating the trip
           if (hasSchedule) ...[
             divider(),
@@ -1697,6 +1728,122 @@ class _StaffScheduleAction extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+String _photoActionLabel(dynamic count) {
+  final n = int.tryParse('$count') ?? 0;
+  return n > 0 ? 'อัปรูปทริป · มีแล้ว $n รูป' : 'อัปรูปทริปเข้าอัลบั้ม';
+}
+
+/// รอบที่จบไปแล้วแต่ยังอัปรูปได้ — สตาฟถูกปลดจากรอบตั้งแต่ตีสี่ของวันหลังกลับ
+/// รอบนั้นจึงหายจากรายการงาน ทั้งที่รูปส่วนใหญ่ถูกคัดตอนถึงบ้าน
+class _StaffPhotoRoundsCard extends StatelessWidget {
+  final List<Map<String, dynamic>> rounds;
+
+  const _StaffPhotoRoundsCard({required this.rounds});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: AppTheme.cardDecoration(context, radius: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            child: Text(
+              'ทริปที่เพิ่งจบ · ยังอัปรูปได้',
+              style: appFont(
+                fontSize: AppText.sizeBody,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          for (var i = 0; i < rounds.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                color: AppTheme.border(context).withValues(alpha: 0.5),
+              ),
+            _photoRoundRow(context, rounds[i], last: i == rounds.length - 1),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _photoRoundRow(
+    BuildContext context,
+    Map<String, dynamic> round, {
+    required bool last,
+  }) {
+    final id = _numberValue(round['id']);
+    final title = _cleanText(round['trip_title'], fallback: 'ทริป');
+    final until = DateTime.tryParse('${round['upload_until'] ?? ''}');
+    final count = int.tryParse('${round['photos_count']}') ?? 0;
+
+    return InkWell(
+      borderRadius: last
+          ? const BorderRadius.vertical(bottom: Radius.circular(20))
+          : BorderRadius.zero,
+      onTap: () => _pushPremium(
+        context,
+        StaffPhotosScreen(scheduleId: id, title: title),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 12, 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFDB2777).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              ),
+              child: const Icon(
+                Icons.add_photo_alternate_outlined,
+                size: 20,
+                color: Color(0xFFDB2777),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      fontSize: AppText.sizeBody,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      count > 0 ? 'มีแล้ว $count รูป' : 'ยังไม่มีรูป',
+                      if (until != null) 'อัปได้ถึง ${thaiDateShort(until)}',
+                    ].join(' · '),
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.mutedText(context),
+            ),
+          ],
+        ),
       ),
     );
   }

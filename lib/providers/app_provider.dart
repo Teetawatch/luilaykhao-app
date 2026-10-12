@@ -160,6 +160,9 @@ class AppProvider extends ChangeNotifier {
   List<dynamic> activeSeatLocks = [];
   List<dynamic> staffSchedules = [];
   Map<String, dynamic> staffSummary = {};
+
+  /// รอบที่จบและถูกปลดแล้ว แต่ยังอัปรูปเข้าอัลบั้มได้ (ไม่อยู่ใน [staffSchedules])
+  List<dynamic> staffPhotoRounds = [];
   // Trip group-chat rooms the user belongs to (for the "แชท" tab) + total unread.
   List<dynamic> chatConversations = [];
   int chatUnreadTotal = 0;
@@ -1593,6 +1596,7 @@ class AppProvider extends ChangeNotifier {
       final staffData = api.data(results[9]) as Map?;
       staffSchedules = List<dynamic>.from(staffData?['schedules'] ?? []);
       staffSummary = Map<String, dynamic>.from(staffData?['summary'] ?? {});
+      staffPhotoRounds = List<dynamic>.from(staffData?['photo_rounds'] ?? []);
     }
 
     final cache = OfflineCache.instance;
@@ -1656,6 +1660,7 @@ class AppProvider extends ChangeNotifier {
     final data = api.data(response) as Map?;
     staffSchedules = List<dynamic>.from(data?['schedules'] ?? []);
     staffSummary = Map<String, dynamic>.from(data?['summary'] ?? {});
+    staffPhotoRounds = List<dynamic>.from(data?['photo_rounds'] ?? []);
     notifyListeners();
   }
 
@@ -2367,6 +2372,45 @@ class AppProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>> loadStaffRentals(int scheduleId) async {
     final response = await api.get(ApiEndpoints.staffRentals(scheduleId));
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    return Map<String, dynamic>.from(data);
+  }
+
+  /// อัลบั้มรอบฝั่งสตาฟ — รูปทั้งหมดของรอบ + กรอบวันที่ยังอัปได้
+  Future<Map<String, dynamic>> loadStaffPhotos(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.staffPhotos(scheduleId));
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    return Map<String, dynamic>.from(data);
+  }
+
+  /// อัปรูปหนึ่งชุดเข้าอัลบั้มรอบ (หน้าจอแบ่งชุดเอง) — คืน {uploaded, photos_count}
+  Future<Map<String, dynamic>> uploadStaffPhotos(
+    int scheduleId,
+    List<String> paths,
+  ) async {
+    final files = <String, String>{
+      for (var i = 0; i < paths.length; i++) 'files[$i]': paths[i],
+    };
+    final response = await api.postMultipart(
+      ApiEndpoints.staffPhotos(scheduleId),
+      fields: const {},
+      files: files,
+    );
+    final data = api.data(response);
+    if (data is! Map) return const {};
+    return Map<String, dynamic>.from(data);
+  }
+
+  /// ลบรูปที่ตัวเองอัป — คืนอัลบั้มชุดใหม่ทั้งก้อน
+  Future<Map<String, dynamic>> deleteStaffPhoto(
+    int scheduleId,
+    int photoId,
+  ) async {
+    final response = await api.delete(
+      ApiEndpoints.staffPhoto(scheduleId, photoId),
+    );
     final data = api.data(response);
     if (data is! Map) return const {};
     return Map<String, dynamic>.from(data);
