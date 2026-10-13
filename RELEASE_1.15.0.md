@@ -138,7 +138,7 @@ charter quotes. Both are paid by Thai bank transfer / PromptPay QR like every bo
 and neither unlocks any digital content or app feature.
 
 Other new things, no new data or permissions
-Finisher medals and a yearly recap generated on the device; one boarding QR per
+Finisher medals and a yearly recap, with share images drawn on the device; one boarding QR per
 traveller; handing a seat to another person by link; a card showing the plate and
 photo of the customer's van; private questions to staff in the chat; polls and food
 orders in the chat; refunds or re-booking when a departure is cancelled.
