@@ -73,24 +73,15 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
     final name = _cleanText(user['name']);
     final phone = _cleanText(user['phone']);
     if (name.isEmpty || phone.isEmpty) {
-      final go = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text('ข้อมูลไม่ครบ', style: appFont(fontWeight: FontWeight.w900)),
-          content: Text(
-            'กรุณาเพิ่มชื่อและเบอร์โทรศัพท์ในโปรไฟล์ก่อนติดต่อทีมงาน',
-            style: appFont(),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ปิด')),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('แก้ไขโปรไฟล์'),
-            ),
-          ],
-        ),
+      final go = await showConfirmDialog(
+        context,
+        title: 'ข้อมูลไม่ครบ',
+        message: 'กรุณาเพิ่มชื่อและเบอร์โทรศัพท์ในโปรไฟล์ก่อนติดต่อทีมงาน',
+        icon: Icons.person_outline_rounded,
+        confirmLabel: 'แก้ไขโปรไฟล์',
+        cancelLabel: 'ปิด',
       );
-      if (go == true && mounted) {
+      if (go && mounted) {
         _pushPremium(context, EditProfileScreen(initialUser: app.user ?? {}));
       }
       return;

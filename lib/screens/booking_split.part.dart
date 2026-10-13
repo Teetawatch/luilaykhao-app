@@ -61,62 +61,31 @@ class _BookingSplitSectionState extends State<_BookingSplitSection> {
   }
 
   Future<void> _startSplit() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'แบ่งจ่ายกับเพื่อน',
-          style: appFont(fontWeight: FontWeight.w800),
-        ),
-        content: Text(
-          'ระบบจะหารยอดคงเหลือเท่ากันตามจำนวนผู้เดินทาง '
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'แบ่งจ่ายกับเพื่อน',
+      message: 'ระบบจะหารยอดคงเหลือเท่ากันตามจำนวนผู้เดินทาง '
           'เพื่อนจ่ายส่วนของตัวเองผ่านแอปหรือลิงก์ได้เลย '
           'และคุณแก้ยอดของแต่ละคนภายหลังได้',
-          style: appFont(fontSize: AppText.sizeBody, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('เริ่มแบ่งจ่าย'),
-          ),
-        ],
-      ),
+      icon: Icons.call_split_rounded,
+      confirmLabel: 'เริ่มแบ่งจ่าย',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     HapticFeedback.mediumImpact();
     await _run(() => context.read<AppProvider>().setupBookingSplit(_ref));
   }
 
   Future<void> _cancelSplit() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ยกเลิกการแบ่งจ่าย?',
-          style: appFont(fontWeight: FontWeight.w800),
-        ),
-        content: Text(
-          'ส่วนที่เพื่อนจ่ายแล้วยังคงอยู่ ยอดที่เหลือกลับไปชำระรวมตามปกติ',
-          style: appFont(fontSize: AppText.sizeBody, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ไม่ยกเลิก'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('ยกเลิกการแบ่งจ่าย'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ยกเลิกการแบ่งจ่าย?',
+      message: 'ส่วนที่เพื่อนจ่ายแล้วยังคงอยู่ ยอดที่เหลือกลับไปชำระรวมตามปกติ',
+      tone: ConfirmTone.danger,
+      icon: Icons.call_merge_rounded,
+      confirmLabel: 'ยกเลิกการแบ่งจ่าย',
+      cancelLabel: 'ไม่ยกเลิก',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     await _run(() => context.read<AppProvider>().cancelBookingSplit(_ref));
   }
 

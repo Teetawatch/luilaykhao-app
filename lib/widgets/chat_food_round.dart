@@ -7,6 +7,7 @@ import 'app_snack.dart';
 import 'chat_food_bill.dart';
 import 'sheet_close_button.dart';
 import 'travel_widgets.dart';
+import 'confirm_dialog.dart';
 
 // รับออเดอร์อาหารในห้องแชททริป — แวะร้านตามสั่งขากลับ แต่ละคนพิมพ์เมนูของตัวเอง
 // ระหว่างนั่งรถ แล้วน้องสตาฟถือรายการรวมไปสั่งร้านทีเดียว
@@ -1142,44 +1143,21 @@ class FoodRoundSummarySheet extends StatelessWidget {
   ) async {
     final paid =
         order['pay_status'] == 'paid' || order['pay_status'] == 'short';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          paid
-              ? 'ยกเลิกสถานะจ่ายแล้วของ ${order['name']}?'
-              : '${order['name']} จ่าย ${baht(order['balance'] ?? order['amount'])} แล้ว?',
-          style: appFont(
-            fontSize: AppText.sizeSubtitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: paid
-            ? null
-            : Text(
-                'เช็กยอดเข้าในแอปธนาคาร (หรือรับเงินสด) แล้วค่อยยืนยันนะครับ',
-                style: appFont(fontSize: AppText.sizeBody),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ยังก่อน', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              paid ? 'ยกเลิก' : 'ได้รับแล้ว',
-              style: appFont(
-                fontWeight: FontWeight.w800,
-                color: paid ? AppTheme.errorColor : AppTheme.primaryColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: paid
+          ? 'ยกเลิกสถานะจ่ายแล้วของ ${order['name']}?'
+          : '${order['name']} จ่าย ${baht(order['balance'] ?? order['amount'])} แล้ว?',
+      message: paid
+          ? null
+          : 'เช็กยอดเข้าในแอปธนาคาร (หรือรับเงินสด) แล้วค่อยยืนยันนะครับ',
+      tone: paid ? ConfirmTone.danger : ConfirmTone.primary,
+      icon: paid ? Icons.undo_rounded : Icons.payments_outlined,
+      confirmLabel: paid ? 'ยกเลิก' : 'ได้รับแล้ว',
+      cancelLabel: 'ยังก่อน',
     );
     // ขาดเพราะราคาขึ้นทีหลัง = ยืนยันยอดใหม่ทับ ไม่ใช่ยกเลิก
-    if (ok == true) {
+    if (ok) {
       await onSetPaid!(
         _int(order['id']),
         order['pay_status'] == 'short' ? true : !paid,
@@ -1191,35 +1169,14 @@ class FoodRoundSummarySheet extends StatelessWidget {
     BuildContext context,
     Map<String, dynamic> order,
   ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ลบออเดอร์ของ ${order['name']}?',
-          style: appFont(
-            fontSize: AppText.sizeSubtitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ไม่ลบ', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'ลบ',
-              style: appFont(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.errorColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: 'ลบออเดอร์ของ ${order['name']}?',
+      tone: ConfirmTone.danger,
+      confirmLabel: 'ลบ',
+      cancelLabel: 'ไม่ลบ',
     );
-    if (ok == true) await onDeleteOrder(_int(order['id']));
+    if (ok) await onDeleteOrder(_int(order['id']));
   }
 }
 

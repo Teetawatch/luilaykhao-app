@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import 'app_snack.dart';
+import 'confirm_dialog.dart';
 
 /// ชีต "รายงาน / บล็อก" ที่ใช้ได้กับทุกที่ที่มีเนื้อหาจากผู้ใช้คนอื่น —
 /// แชท รีวิว โพสต์ในฟีด คอมเมนต์ และรูปในกำแพงรูป
@@ -269,30 +270,18 @@ class ModerationSheet {
   }) async {
     final who = name.trim().isEmpty ? 'ผู้ใช้คนนี้' : name.trim();
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('บล็อก $who?', style: appFont(fontWeight: FontWeight.w800)),
-        content: Text(
+    final ok = await showConfirmDialog(
+      context,
+      title: 'บล็อก $who?',
+      message:
           'คุณจะไม่เห็นข้อความ รีวิว และโพสต์ของ$who อีก และเขาก็จะไม่เห็นของคุณเช่นกัน '
           'เลิกบล็อกได้ที่ โปรไฟล์ > ผู้ใช้ที่ถูกบล็อก',
-          style: appFont(fontSize: AppText.sizeBody, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('ยกเลิก', style: appFont(fontWeight: FontWeight.w600)),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text('บล็อก', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+      tone: ConfirmTone.danger,
+      icon: Icons.block_rounded,
+      confirmLabel: 'บล็อก',
     );
 
-    if (!context.mounted || ok != true) return;
+    if (!context.mounted || !ok) return;
 
     try {
       await context.read<AppProvider>().blockUser(userId);

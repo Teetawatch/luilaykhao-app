@@ -12,6 +12,7 @@ import '../providers/app_provider.dart';
 import '../services/sos_outbox.dart';
 import '../theme/app_theme.dart';
 import 'sos_fallback_sheet.dart';
+import 'confirm_dialog.dart';
 
 /// Emergency "ขอความช่วยเหลือฉุกเฉิน" action. Captures GPS, lets the traveller
 /// pick a message + optional photo, and dispatches an SOS for the schedule —
@@ -68,31 +69,17 @@ class _SosButtonState extends State<SosButton> {
     final alert = _myOpenAlert;
     if (alert == null || _closing) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ปิดเคส SOS?',
-          style: appFont(fontWeight: FontWeight.w900),
-        ),
-        content: Text(
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ปิดเคส SOS?',
+      message:
           'ยืนยันว่าคุณปลอดภัยแล้ว ระบบจะแจ้งสตาฟและเพื่อนร่วมทริปว่าเคสนี้ปิดแล้ว',
-          style: appFont(fontSize: AppText.sizeLabel, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ยังไม่ปิด', style: appFont()),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('ฉันปลอดภัยแล้ว'),
-          ),
-        ],
-      ),
+      icon: Icons.verified_user_outlined,
+      confirmLabel: 'ฉันปลอดภัยแล้ว',
+      cancelLabel: 'ยังไม่ปิด',
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _closing = true);
     final messenger = ScaffoldMessenger.of(context);
@@ -217,36 +204,16 @@ class _SosButtonState extends State<SosButton> {
   }
 
   Future<void> _successDialog({required bool hasLocation}) {
-    return showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_rounded,
-              color: AppTheme.primaryColor,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'ส่ง SOS แล้ว',
-              style: appFont(fontWeight: FontWeight.w900),
-            ),
-          ],
-        ),
-        content: Text(
-          hasLocation
-              ? 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนพร้อมตำแหน่งของคุณแล้ว'
-              : 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนแล้ว '
-                    '(ไม่สามารถระบุตำแหน่ง GPS ได้)',
-          style: appFont(fontSize: AppText.sizeLabel, height: 1.5),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('ตกลง'),
-          ),
-        ],
-      ),
+    return showConfirmDialog(
+      context,
+      title: 'ส่ง SOS แล้ว',
+      message: hasLocation
+          ? 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนพร้อมตำแหน่งของคุณแล้ว'
+          : 'สตาฟและเพื่อนร่วมทริปได้รับการแจ้งเตือนแล้ว '
+                '(ไม่สามารถระบุตำแหน่ง GPS ได้)',
+      tone: ConfirmTone.success,
+      confirmLabel: 'ตกลง',
+      cancelLabel: null,
     );
   }
 

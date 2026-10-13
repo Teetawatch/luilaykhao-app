@@ -65,6 +65,7 @@ import 'year_review_screen.dart' show YearReviewScreen;
 import 'my_tracks_screen.dart' show MyTracksScreen;
 import 'public_profile_settings_screen.dart'
     show PublicProfileSettingsScreen;
+import '../widgets/confirm_dialog.dart';
 
 part 'profile_edit.part.dart';
 part 'profile_bookings.part.dart';
@@ -1530,31 +1531,15 @@ class LogoutSection extends StatelessWidget {
     BuildContext context,
     VoidCallback onLogout,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ออกจากระบบ',
-          style: appFont(fontWeight: FontWeight.w900),
-        ),
-        content: Text(
-          'คุณต้องการออกจากระบบใช่หรือไม่?',
-          style: appFont(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
-            child: const Text('ออกจากระบบ'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ออกจากระบบ',
+      message: 'คุณต้องการออกจากระบบใช่หรือไม่?',
+      tone: ConfirmTone.danger,
+      icon: Icons.logout_rounded,
+      confirmLabel: 'ออกจากระบบ',
     );
-    if (confirmed == true) onLogout();
+    if (confirmed) onLogout();
   }
 
   @override

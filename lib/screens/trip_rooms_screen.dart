@@ -11,6 +11,7 @@ import '../widgets/chat_rest_stop.dart'
 import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// ห้องพักของรอบ — ลูกทริปเห็นห้องของตัวเอง (และห้องทั้งหมด) ทีมงานจัดคนเข้าห้อง
 ///
@@ -281,42 +282,16 @@ class _TripRoomsScreenState extends State<TripRoomsScreen> {
       if (picked == null) return;
       stay = picked.isEmpty ? null : picked;
     } else {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(
-            'ประกาศห้องพักในแชท?',
-            style: appFont(
-              fontSize: AppText.sizeSubtitle,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          content: Text(
+      final ok = await showConfirmDialog(
+        context,
+        title: 'ประกาศห้องพักในแชท?',
+        message:
             'รายชื่อทุกห้องจะขึ้นในห้องแชท และทุกคนได้แจ้งเตือนว่าพักห้องไหนกับใคร',
-            style: appFont(fontSize: AppText.sizeBody),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(
-                'ยังก่อน',
-                style: appFont(fontWeight: FontWeight.w700),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(
-                'ประกาศ',
-                style: appFont(
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ),
-          ],
-        ),
+        icon: Icons.campaign_outlined,
+        confirmLabel: 'ประกาศ',
+        cancelLabel: 'ยังก่อน',
       );
-      if (ok != true) return;
+      if (!ok) return;
     }
     HapticFeedback.mediumImpact();
     await _run(

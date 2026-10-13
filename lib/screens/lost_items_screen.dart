@@ -14,6 +14,7 @@ import '../widgets/chat_rest_stop.dart'
 import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// ของที่ลืมไว้ในทริป
 ///
@@ -191,39 +192,15 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
     }, done: 'ลบแล้ว');
   }
 
-  Future<bool> _confirm(String title, String body, String action) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          title,
-          style: appFont(
-            fontSize: AppText.sizeSubtitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: body.isEmpty
-            ? null
-            : Text(body, style: appFont(fontSize: AppText.sizeBody)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ไม่', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              action,
-              style: appFont(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.errorColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+  Future<bool> _confirm(String title, String body, String action) {
+    return showConfirmDialog(
+      context,
+      title: title,
+      message: body,
+      tone: ConfirmTone.danger,
+      confirmLabel: action,
+      cancelLabel: 'ไม่',
     );
-    return ok == true;
   }
 
   @override

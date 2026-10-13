@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../services/trek_recorder_service.dart';
 import '../theme/app_theme.dart';
+import 'confirm_dialog.dart';
 
 /// "บันทึกการเดินของฉัน" — lets the customer record their own GPS trace during
 /// the walk, so their Passport ends up holding the distance they actually
@@ -100,25 +101,16 @@ class _TrekRecorderCardState extends State<TrekRecorderCard> {
   }
 
   Future<void> _confirmDiscard() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('ลบเส้นทางที่บันทึกไว้?'),
-        content: const Text('ข้อมูลที่บันทึกในเครื่องจะหายไปและกู้คืนไม่ได้'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('ยกเลิก'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('ลบ'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ลบเส้นทางที่บันทึกไว้?',
+      message: 'ข้อมูลที่บันทึกในเครื่องจะหายไปและกู้คืนไม่ได้',
+      tone: ConfirmTone.danger,
+      icon: Icons.wrong_location_outlined,
+      confirmLabel: 'ลบ',
     );
 
-    if (confirmed == true) await _recorder.discard();
+    if (confirmed) await _recorder.discard();
   }
 
   @override

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import 'sheet_close_button.dart';
 import 'travel_widgets.dart';
+import 'confirm_dialog.dart';
 
 // จุดพักระหว่างทาง — นัดเวลากลับรถ + เช็คชื่อขึ้นรถ และ "ขอแวะห้องน้ำ" แบบไม่บอกชื่อ
 //
@@ -816,42 +817,16 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
   Future<void> _confirmDepart(int missing) async {
     final w = _Words.of(widget.stop.value);
     if (missing > 0) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(
-            w.confirmGo(missing),
-            style: appFont(
-              fontSize: AppText.sizeSubtitle,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          content: Text(
-            w.confirmHint,
-            style: appFont(fontSize: AppText.sizeBody),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(
-                'รอก่อน',
-                style: appFont(fontWeight: FontWeight.w700),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(
-                w.go,
-                style: appFont(
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.errorColor,
-                ),
-              ),
-            ),
-          ],
-        ),
+      final ok = await showConfirmDialog(
+        context,
+        title: w.confirmGo(missing),
+        message: w.confirmHint,
+        tone: ConfirmTone.warning,
+        icon: Icons.directions_bus_rounded,
+        confirmLabel: w.go,
+        cancelLabel: 'รอก่อน',
       );
-      if (ok != true) return;
+      if (!ok) return;
     }
     HapticFeedback.mediumImpact();
     await widget.onDepart();

@@ -37,6 +37,7 @@ import 'chat_private_screen.dart';
 import 'schedule_itinerary_screen.dart';
 import 'lost_items_screen.dart';
 import 'trip_rooms_screen.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// Group chat room for a trip schedule. Members are the customers booked on
 /// the schedule, the assigned staff, and admins. Real-time via Reverb.
@@ -2228,39 +2229,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         (k) => k['key'] == kind,
         orElse: () => {'label': kind, 'emoji': ''},
       );
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(
-            '${meta['emoji']} ${meta['label']} ${_stopCounts[kind] ?? 0} คน',
-            style: appFont(
-              fontSize: AppText.sizeSubtitle,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          content: Text(
+      final ok = await showConfirmDialog(
+        context,
+        title: '${meta['emoji']} ${meta['label']} ${_stopCounts[kind] ?? 0} คน',
+        message:
             'จัดการแล้วกดรับทราบ ระบบบอกห้องและแจ้งคนที่ขอให้เอง (ไม่เอ่ยชื่อ)',
-            style: appFont(fontSize: AppText.sizeBody),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('ยังก่อน', style: appFont(fontWeight: FontWeight.w700)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(
-                'รับทราบ',
-                style: appFont(
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ),
-          ],
-        ),
+        icon: Icons.done_all_rounded,
+        confirmLabel: 'รับทราบ',
+        cancelLabel: 'ยังก่อน',
       );
-      if (ok != true || !mounted) return;
+      if (!ok || !mounted) return;
     }
     try {
       final result = await context.read<AppProvider>().acknowledgeChatStopRequests(
@@ -2627,40 +2605,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   /// ทีมงานเปิดการ์ด "ถึงบ้านแล้ว" — ยืนยันก่อน เพราะเด้งแจ้งเตือนถึงทุกคนในทริป
   Future<void> _openHomeCheck() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'เปิดเช็คถึงบ้าน?',
-          style: appFont(
-            fontSize: AppText.sizeSubtitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Text(
+    final ok = await showConfirmDialog(
+      context,
+      title: 'เปิดเช็คถึงบ้าน?',
+      message:
           'ทุกคนจะได้แจ้งเตือนให้กด "ถึงบ้านแล้ว" เมื่อถึงบ้าน ครบทุกคนการ์ดปิดเอง '
           'ใครยังไม่กดใน 2 ชั่วโมงระบบเตือนเขาอีกครั้ง (ไม่เด้งกลางดึก) และบอกคุณว่าเหลือใคร',
-          style: appFont(fontSize: AppText.sizeBody, height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ยกเลิก', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'เปิดเลย',
-              style: appFont(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.primaryColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+      icon: Icons.home_outlined,
+      confirmLabel: 'เปิดเลย',
     );
-    if (ok != true || !mounted) return;
+    if (!ok || !mounted) return;
     try {
       final message = await context.read<AppProvider>().openChatRestStop(
             widget.scheduleId,
@@ -2819,26 +2773,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   Future<void> _deleteMessage(Map<String, dynamic> message) async {
     final id = int.tryParse('${message['id']}');
     if (id == null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('ลบข้อความ', style: appFont(fontWeight: FontWeight.w800)),
-        content: Text('ต้องการลบข้อความนี้ใช่ไหม? การลบไม่สามารถย้อนกลับได้',
-            style: appFont()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ยกเลิก', style: appFont(fontWeight: FontWeight.w600)),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('ลบ', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ลบข้อความนี้?',
+      message: 'การลบไม่สามารถย้อนกลับได้',
+      tone: ConfirmTone.danger,
+      confirmLabel: 'ลบ',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     try {
       final updated = await context
           .read<AppProvider>()

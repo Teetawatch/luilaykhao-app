@@ -11,6 +11,7 @@ import '../widgets/gift_voucher_card.dart' show voucherBaht;
 import '../widgets/travel_widgets.dart';
 import 'customer_app_screen.dart' show BookingDetailSheet;
 import 'payment_screen.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// ป้ายสถานะคำขอเหมาทริป (ต้องตรงกับ CharterRequest::STATUS_* ฝั่งหลังบ้าน)
 String charterStatusLabel(String status) => switch (status) {
@@ -846,27 +847,16 @@ class _CharterRequestDetailScreenState
   }
 
   Future<void> _accept(Map quote) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('ตอบรับใบเสนอราคา?'),
-        content: Text(
-          '${quote['group_size']} คน · รวม ${voucherBaht(quote['total'])}\n'
-          'ทีมงานจะเปิดรอบเดินทางของกลุ่มและส่งการจองให้ชำระเงินในแอป',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยังก่อน'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('ตอบรับ'),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: 'ตอบรับใบเสนอราคา?',
+      message: 'ทีมงานจะเปิดรอบเดินทางของกลุ่มและส่งการจองให้ชำระเงินในแอป',
+      detail: '${quote['group_size']} คน · รวม ${voucherBaht(quote['total'])}',
+      icon: Icons.handshake_outlined,
+      confirmLabel: 'ตอบรับ',
+      cancelLabel: 'ยังก่อน',
     );
-    if (ok == true) await _respond('accept');
+    if (ok) await _respond('accept');
   }
 
   Future<void> _decline() async {
@@ -901,25 +891,16 @@ class _CharterRequestDetailScreenState
   }
 
   Future<void> _cancel() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('ยกเลิกคำขอนี้?'),
-        content: const Text('ยกเลิกแล้วส่งคำขอใหม่ได้เสมอ'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ไม่ใช่ตอนนี้'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
-            child: const Text('ยกเลิกคำขอ'),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: 'ยกเลิกคำขอนี้?',
+      message: 'ยกเลิกแล้วส่งคำขอใหม่ได้เสมอ',
+      tone: ConfirmTone.danger,
+      icon: Icons.close_rounded,
+      confirmLabel: 'ยกเลิกคำขอ',
+      cancelLabel: 'ไม่ใช่ตอนนี้',
     );
-    if (ok == true) await _respond('cancel');
+    if (ok) await _respond('cancel');
   }
 
   void _openBooking(String ref, String status) {

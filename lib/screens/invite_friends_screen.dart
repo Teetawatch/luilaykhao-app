@@ -8,6 +8,7 @@ import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// หน้า "เชิญเพื่อนร่วมทริป" — เจ้าของการจองสร้างลิงก์คำเชิญ ส่งให้เพื่อน แล้ว
 /// เพื่อนเข้าร่วมการจองใบเดียวกันด้วยบัญชีของตัวเอง (ไม่ต้องจองใหม่/จ่ายเพิ่ม)
@@ -99,39 +100,19 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
   Future<void> _revoke(Map<String, dynamic> member) async {
     final name = _memberName(member);
     final isPending = textOf(member['status']) != 'active';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          isPending ? 'ยกเลิกคำเชิญนี้?' : 'นำ$nameออก?',
-          style: appFont(
-            fontSize: AppText.sizeTitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Text(
-          isPending
-              ? 'ลิงก์ที่ส่งไปแล้วจะใช้ไม่ได้อีก และที่นั่งจะกลับมาให้เชิญคนใหม่ได้'
-              : '$nameจะออกจากแชทกลุ่มและดูข้อมูลทริปนี้ไม่ได้อีก '
-                    'แต่ที่นั่งในการจองยังอยู่ครบเหมือนเดิม',
-          style: appFont(fontSize: AppText.sizeLabel, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ไม่ใช่ตอนนี้'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.dangerColor,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(isPending ? 'ยกเลิกคำเชิญ' : 'นำออก'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: isPending ? 'ยกเลิกคำเชิญนี้?' : 'นำ$nameออก?',
+      message: isPending
+          ? 'ลิงก์ที่ส่งไปแล้วจะใช้ไม่ได้อีก และที่นั่งจะกลับมาให้เชิญคนใหม่ได้'
+          : '$nameจะออกจากแชทกลุ่มและดูข้อมูลทริปนี้ไม่ได้อีก '
+                'แต่ที่นั่งในการจองยังอยู่ครบเหมือนเดิม',
+      tone: ConfirmTone.danger,
+      icon: isPending ? Icons.link_off_rounded : Icons.person_remove_outlined,
+      confirmLabel: isPending ? 'ยกเลิกคำเชิญ' : 'นำออก',
+      cancelLabel: 'ไม่ใช่ตอนนี้',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _busy = true);
     try {

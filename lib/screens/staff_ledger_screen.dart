@@ -14,6 +14,7 @@ import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart' show PrimaryCTAButton;
 import 'staff_check_in_screen.dart' show asList, asMap, money, textOf;
+import '../widgets/confirm_dialog.dart';
 
 /// สมุดบัญชีหน้างานของรอบเดินทาง
 ///
@@ -131,37 +132,15 @@ class _StaffLedgerScreenState extends State<StaffLedgerScreen> {
   }
 
   Future<void> _delete(Map<String, dynamic> entry) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          'ลบรายการนี้?',
-          style: appFont(
-            fontSize: AppText.sizeSubtitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Text(
-          '${textOf(entry['name'], 'รายการนี้')} · ${money(entry['amount'])}',
-          style: appFont(fontSize: AppText.sizeBody),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text('ยกเลิก', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
-            ),
-            child: Text('ลบ', style: appFont(fontWeight: FontWeight.w800)),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ลบรายการนี้?',
+      detail: '${textOf(entry['name'], 'รายการนี้')} · ${money(entry['amount'])}',
+      tone: ConfirmTone.danger,
+      confirmLabel: 'ลบ',
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     try {
       final data = await context.read<AppProvider>().deleteStaffLedgerEntry(

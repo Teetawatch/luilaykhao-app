@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import 'confirm_dialog.dart';
 
 /// Bottom sheet listing the travellers this customer has saved, so booking for
 /// the same group again is a tap per person instead of eleven fields per person.
@@ -72,25 +73,17 @@ class _SavedTravellerPickerState extends State<SavedTravellerPicker> {
     final id = int.tryParse('${traveller['id'] ?? ''}');
     if (id == null) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('ลบออกจากสมุด?'),
-        content: Text('${traveller['name'] ?? ''} จะถูกลบออกจากสมุดผู้ร่วมเดินทาง'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('ยกเลิก'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('ลบ'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ลบออกจากสมุด?',
+      message: 'จะถูกลบออกจากสมุดผู้ร่วมเดินทาง',
+      detail: '${traveller['name'] ?? ''}',
+      tone: ConfirmTone.danger,
+      icon: Icons.person_remove_outlined,
+      confirmLabel: 'ลบ',
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     try {
       await context.read<AppProvider>().deleteSavedTraveller(id);

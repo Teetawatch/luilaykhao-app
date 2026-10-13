@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/travel_widgets.dart';
 import 'trip_detail_screen.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// "คิวรอที่นั่ง" — the customer-facing surface for the waitlist the backend
 /// already manages. Shows every active (waiting/offered) entry, the queue
@@ -106,36 +107,16 @@ class _WaitlistScreenState extends State<WaitlistScreen> {
     final scheduleId = int.tryParse('${entry['schedule_id']}') ?? 0;
     if (scheduleId == 0) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ออกจากคิวรอ?',
-          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
-        ),
-        content: Text(
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ออกจากคิวรอ?',
+      message:
           'คุณจะเสียลำดับคิวปัจจุบัน หากต้องการกลับเข้าคิวภายหลังจะต้องเริ่มต่อท้ายใหม่',
-          style: appFont(fontSize: AppText.sizeBody, color: AppTheme.mutedText(ctx)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ยกเลิก', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'ออกจากคิว',
-              style: appFont(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.errorColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+      tone: ConfirmTone.danger,
+      icon: Icons.hourglass_disabled_rounded,
+      confirmLabel: 'ออกจากคิว',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     HapticFeedback.mediumImpact();
     try {

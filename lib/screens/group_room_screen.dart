@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/vehicle_seat_map.dart';
 import 'payment_screen.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// Live "group room" for the Group Trip Invite feature. The host shares the
 /// invite code; friends join, claim a seat and fill their details, and everyone
@@ -358,27 +359,17 @@ class _GroupRoomScreenState extends State<GroupRoomScreen> {
     final plan = _plan;
     if (plan == null) return;
     final isHost = _isHost;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isHost ? 'ยกเลิกกลุ่ม?' : 'ออกจากกลุ่ม?'),
-        content: Text(isHost
-            ? 'การยกเลิกจะปล่อยที่นั่งทั้งหมดและปิดกลุ่มนี้'
-            : 'คุณจะออกจากกลุ่มและปล่อยที่นั่งที่เลือกไว้'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(isHost ? 'ยกเลิกกลุ่ม' : 'ออกจากกลุ่ม'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: isHost ? 'ยกเลิกกลุ่ม?' : 'ออกจากกลุ่ม?',
+      message: isHost
+          ? 'การยกเลิกจะปล่อยที่นั่งทั้งหมดและปิดกลุ่มนี้'
+          : 'คุณจะออกจากกลุ่มและปล่อยที่นั่งที่เลือกไว้',
+      tone: ConfirmTone.danger,
+      icon: Icons.group_remove_outlined,
+      confirmLabel: isHost ? 'ยกเลิกกลุ่ม' : 'ออกจากกลุ่ม',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     try {
       if (isHost) {

@@ -11,6 +11,7 @@ import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import 'login_screen.dart';
+import '../widgets/confirm_dialog.dart';
 
 class StaffCheckInScreen extends StatefulWidget {
   /// เปิดกล้องให้ทันทีที่เข้าหน้านี้ — ใช้กับปุ่มที่สัญญาว่าจะได้สแกนเลย
@@ -161,33 +162,16 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
     if (code == null || id == null || _undoing.contains(id)) return;
 
     final name = textOf(person['display_name'], textOf(person['name'], '-'));
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ยกเลิกเช็คอินของ $name?',
-          style: appFont(
-            fontSize: AppText.sizeSubtitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Text(
-          'ใช้เมื่อติ๊กผิดคน — $name จะกลับไปอยู่ในรายชื่อที่ยังไม่ขึ้นรถ',
-          style: appFont(fontSize: AppText.sizeBody, height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ไม่ใช่'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('ยกเลิกเช็คอิน'),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: 'ยกเลิกเช็คอินของ $name?',
+      message: 'ใช้เมื่อติ๊กผิดคน — $name จะกลับไปอยู่ในรายชื่อที่ยังไม่ขึ้นรถ',
+      tone: ConfirmTone.warning,
+      icon: Icons.undo_rounded,
+      confirmLabel: 'ยกเลิกเช็คอิน',
+      cancelLabel: 'ไม่ใช่',
     );
-    if (ok != true || !mounted) return;
+    if (!ok || !mounted) return;
 
     setState(() {
       _undoing.add(id);

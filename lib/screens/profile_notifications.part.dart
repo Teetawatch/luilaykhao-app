@@ -47,34 +47,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _clearAll() async {
     HapticFeedback.mediumImpact();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ลบการแจ้งเตือนทั้งหมด',
-          style: appFont(fontWeight: FontWeight.w900),
-        ),
-        content: Text(
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ลบการแจ้งเตือนทั้งหมด',
+      message:
           'การแจ้งเตือนทั้งหมดจะถูกลบและไม่สามารถกู้คืนได้ ต้องการดำเนินการต่อหรือไม่?',
-          style: appFont(height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ยกเลิก', style: appFont()),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
-            child: Text(
-              'ลบทั้งหมด',
-              style: appFont(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
-      ),
+      tone: ConfirmTone.danger,
+      icon: Icons.notifications_off_outlined,
+      confirmLabel: 'ลบทั้งหมด',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _clearing = true);
     try {

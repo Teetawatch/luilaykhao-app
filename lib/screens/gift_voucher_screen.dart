@@ -10,6 +10,7 @@ import '../widgets/app_snack.dart';
 import '../widgets/gift_voucher_card.dart';
 import '../widgets/travel_widgets.dart';
 import 'gift_voucher_purchase_screen.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// "บัตรของขวัญ" 🎁 — บัตรแบบระบุยอดเงิน ผู้รับเลือกทริปและวันเองได้
 ///
@@ -179,27 +180,16 @@ class _GiftVoucherScreenState extends State<GiftVoucherScreen> {
   }
 
   Future<void> _cancel(Map<String, dynamic> voucher) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('ยกเลิกบัตรนี้?'),
-        content: Text(
-          'บัตร ${voucherBaht(voucher['amount'])} ยังไม่ได้ชำระเงิน ยกเลิกแล้วสร้างใหม่ได้เสมอ',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ไม่ใช่ตอนนี้'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
-            child: const Text('ยกเลิกบัตร'),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: 'ยกเลิกบัตรนี้?',
+      message: 'บัตร ${voucherBaht(voucher['amount'])} ยังไม่ได้ชำระเงิน ยกเลิกแล้วสร้างใหม่ได้เสมอ',
+      tone: ConfirmTone.danger,
+      icon: Icons.credit_card_off_outlined,
+      confirmLabel: 'ยกเลิกบัตร',
+      cancelLabel: 'ไม่ใช่ตอนนี้',
     );
-    if (ok != true || !mounted) return;
+    if (!ok || !mounted) return;
     try {
       await context.read<AppProvider>().cancelGiftVoucher(
         int.parse('${voucher['id']}'),

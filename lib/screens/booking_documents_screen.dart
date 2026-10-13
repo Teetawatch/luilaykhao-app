@@ -10,6 +10,7 @@ import '../widgets/app_snack.dart';
 import '../widgets/document_attach_field.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// เอกสารแนบของการจอง — ตามมาแนบทีหลังได้ที่นี่
 ///
@@ -96,31 +97,16 @@ class _BookingDocumentsScreenState extends State<BookingDocumentsScreen> {
     final id = int.tryParse(textOf(file['id']));
     if (id == null || _deleting != null) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('ลบเอกสารนี้?', style: appFont(fontWeight: FontWeight.w800)),
-        content: Text(
-          '${textOf(file['original_name'])}\nลบแล้วต้องแนบใหม่ครับ',
-          style: appFont(height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
-            ),
-            child: const Text('ลบไฟล์'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ลบเอกสารนี้?',
+      message: 'ลบแล้วต้องแนบใหม่ครับ',
+      detail: textOf(file['original_name']),
+      tone: ConfirmTone.danger,
+      confirmLabel: 'ลบไฟล์',
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _deleting = id);
     try {

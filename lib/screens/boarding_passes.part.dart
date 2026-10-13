@@ -156,34 +156,15 @@ class _BoardingPassesState extends State<_BoardingPasses> {
     final id = int.tryParse(textOf(chosen['passenger_id']));
     if (id == null) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'คุณคือ ${textOf(chosen['name'])}?',
-          style: appFont(
-            fontSize: AppText.sizeSubtitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Text(
-          'บัตรขึ้นรถและการแจ้งเตือนวันเดินทางจะผูกกับชื่อนี้ — ถ้าเลือกผิด '
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'คุณคือ ${textOf(chosen['name'])}?',
+      message: 'บัตรขึ้นรถและการแจ้งเตือนวันเดินทางจะผูกกับชื่อนี้ — ถ้าเลือกผิด '
           'ต้องให้คนจองนำคุณออกแล้วเชิญใหม่',
-          style: appFont(fontSize: AppText.sizeBody, height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('ใช่ ฉันเอง'),
-          ),
-        ],
-      ),
+      icon: Icons.badge_outlined,
+      confirmLabel: 'ใช่ ฉันเอง',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     try {
       await context.read<AppProvider>().claimBookingPassenger(_ref, id);

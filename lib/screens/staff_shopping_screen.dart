@@ -13,6 +13,7 @@ import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart' show PrimaryCTAButton;
 import 'staff_check_in_screen.dart' show asList, asMap, money, textOf;
+import '../widgets/confirm_dialog.dart';
 
 /// ใบซื้อของก่อนออกทริป
 ///
@@ -125,31 +126,14 @@ class _StaffShoppingScreenState extends State<StaffShoppingScreen> {
   }
 
   Future<void> _deleteItem(Map<String, dynamic> item) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          'ลบ "${textOf(item['name'])}"?',
-          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
-        ),
-        content: Text(
-          'ลบออกจากใบซื้อของของรอบนี้เท่านั้น',
-          style: appFont(fontSize: AppText.sizeBody),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('ยกเลิก'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
-            child: const Text('ลบ'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ลบ "${textOf(item['name'])}"?',
+      message: 'ลบออกจากใบซื้อของของรอบนี้เท่านั้น',
+      tone: ConfirmTone.danger,
+      confirmLabel: 'ลบ',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     try {
       final data = await context.read<AppProvider>().deleteStaffShoppingItem(

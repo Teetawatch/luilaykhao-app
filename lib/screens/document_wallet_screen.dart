@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart' show PrimaryCTAButton;
+import '../widgets/confirm_dialog.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Storage keys & helpers
@@ -147,27 +148,15 @@ class _DocumentWalletScreenState extends State<DocumentWalletScreen> {
   }
 
   Future<void> _confirmClear() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('ล้างข้อมูล Wallet',
-            style: appFont(fontWeight: FontWeight.w900)),
-        content: Text('ข้อมูลผู้เดินทางที่บันทึกไว้จะถูกลบทั้งหมด',
-            style: appFont()),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('ยกเลิก')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.errorColor),
-            child: const Text('ล้างข้อมูล'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ล้างข้อมูล Wallet',
+      message: 'ข้อมูลผู้เดินทางที่บันทึกไว้จะถูกลบทั้งหมด',
+      tone: ConfirmTone.danger,
+      icon: Icons.delete_sweep_outlined,
+      confirmLabel: 'ล้างข้อมูล',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     await DocumentWallet.clear();
     await _loadWallet();
     if (!mounted) return;

@@ -470,6 +470,28 @@ class AppTheme {
         ),
         actionTextColor: brandSoft,
       ),
+      // Every remaining AlertDialog (input prompts, the delete-account form)
+      // picks up the same flat card as [showConfirmDialog] from here.
+      dialogTheme: DialogThemeData(
+        backgroundColor: surfaceLight,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusLg),
+        ),
+        titleTextStyle: appFont(
+          color: textMain,
+          fontSize: AppText.sizeTitle,
+          fontWeight: FontWeight.w800,
+          height: 1.3,
+        ),
+        contentTextStyle: appFont(
+          color: textSecondary,
+          fontSize: AppText.sizeBody,
+          height: 1.5,
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
@@ -586,6 +608,27 @@ class AppTheme {
           height: 1.4,
         ),
         actionTextColor: brandSoft,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surfaceDark,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusLg),
+          side: const BorderSide(color: outlineDark),
+        ),
+        titleTextStyle: appFont(
+          color: darkTextMain,
+          fontSize: AppText.sizeTitle,
+          fontWeight: FontWeight.w800,
+          height: 1.3,
+        ),
+        contentTextStyle: appFont(
+          color: darkTextSecondary,
+          fontSize: AppText.sizeBody,
+          height: 1.5,
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

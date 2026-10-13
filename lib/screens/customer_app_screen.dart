@@ -79,6 +79,7 @@ import 'group_room_screen.dart';
 import 'referral_screen.dart' show ReferralScreen;
 import '../models/group_plan.dart';
 import '../services/checklist_storage.dart';
+import '../widgets/confirm_dialog.dart';
 
 part 'my_bookings_screen.dart';
 part 'home_explore.part.dart';

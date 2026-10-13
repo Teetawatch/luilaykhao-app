@@ -8,6 +8,7 @@ import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// "ของขวัญ" 🎁 — สองหน้าที่ในจอเดียว:
 /// 1) รับของขวัญ: กรอกโค้ดที่ได้จากผู้ให้ → ดูการ์ดของขวัญ → กดรับ
@@ -101,30 +102,17 @@ class _GiftScreenState extends State<GiftScreen> {
       final booking = await context.read<AppProvider>().claimGift(_code.text);
       if (!mounted) return;
       final ref = '${booking['booking_ref'] ?? ''}';
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(
-            'รับของขวัญสำเร็จ 🎉',
-            style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
-          ),
-          content: Text(
-            'ทริปนี้เป็นของคุณแล้ว ดูรายละเอียดได้ที่ "การจองของฉัน" '
-            '(เลขการจอง $ref)\n\nอย่าลืมกรอกข้อมูลส่วนตัวในโปรไฟล์ให้ครบ '
+      await showConfirmDialog(
+        context,
+        title: 'รับของขวัญสำเร็จ 🎉',
+        message: 'ทริปนี้เป็นของคุณแล้ว ดูรายละเอียดได้ที่ "การจองของฉัน" '
+            'อย่าลืมกรอกข้อมูลส่วนตัวในโปรไฟล์ให้ครบ '
             'เพื่อให้ทีมงานดูแลคุณได้เต็มที่',
-            style: appFont(
-              fontSize: AppText.sizeBody,
-              height: 1.6,
-              color: AppTheme.mutedText(ctx),
-            ),
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('เยี่ยมเลย'),
-            ),
-          ],
-        ),
+        detail: 'เลขการจอง $ref',
+        tone: ConfirmTone.success,
+        icon: Icons.card_giftcard_rounded,
+        confirmLabel: 'เยี่ยมเลย',
+        cancelLabel: null,
       );
       if (!mounted) return;
       Navigator.pop(context, true);

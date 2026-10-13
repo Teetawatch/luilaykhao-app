@@ -7,6 +7,7 @@ import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// หน้า "ส่งต่อที่นั่ง" — คนที่ไปไม่ได้ (น้ำท่วม ป่วย ติดงาน) ออกลิงก์ให้คนอื่น
 /// มารับที่นั่งไปแทน ที่นั่งจะได้ไม่ว่างเปล่า
@@ -107,36 +108,16 @@ class _SeatHandoverScreenState extends State<SeatHandoverScreen> {
 
   Future<void> _cancel(Map<String, dynamic> seat) async {
     final open = asMap(seat['open_handover']);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ยกเลิกลิงก์นี้?',
-          style: appFont(
-            fontSize: AppText.sizeTitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Text(
-          'ลิงก์ที่ส่งไปแล้วจะใช้รับที่นั่งไม่ได้อีก',
-          style: appFont(fontSize: AppText.sizeLabel, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ไม่ใช่ตอนนี้'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.dangerColor,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('ยกเลิกลิงก์'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ยกเลิกลิงก์นี้?',
+      message: 'ลิงก์ที่ส่งไปแล้วจะใช้รับที่นั่งไม่ได้อีก',
+      tone: ConfirmTone.danger,
+      icon: Icons.link_off_rounded,
+      confirmLabel: 'ยกเลิกลิงก์',
+      cancelLabel: 'ไม่ใช่ตอนนี้',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     final passengerId = int.tryParse(textOf(seat['passenger_id'])) ?? 0;
     setState(() => _busyPassengerId = passengerId);

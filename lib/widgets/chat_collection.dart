@@ -9,6 +9,7 @@ import 'chat_food_bill.dart'
 import 'chat_rest_stop.dart'
     show RestStopSheetFrame, RestStopSheetLabel, restStopFieldDecoration;
 import 'travel_widgets.dart';
+import 'confirm_dialog.dart';
 
 // เก็บเงินหน้างาน — ค่าใช้จ่ายนอกแพ็กเกจ (ค่าเข้าอุทยานต่างชาติ ค่าลูกหาบ ทิปไกด์)
 //
@@ -561,43 +562,20 @@ class CollectionListSheet extends StatelessWidget {
 
   Future<void> _toggle(BuildContext context, Map<String, dynamic> due) async {
     final paid = due['status'] == 'paid';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          paid
-              ? 'ยกเลิกสถานะจ่ายแล้วของ ${due['name']}?'
-              : '${due['name']} จ่าย ${baht(due['amount'])} แล้ว?',
-          style: appFont(
-            fontSize: AppText.sizeSubtitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: paid
-            ? null
-            : Text(
-                'เช็กยอดเข้าในแอปธนาคาร หรือรับเงินสดแล้วค่อยยืนยันนะครับ',
-                style: appFont(fontSize: AppText.sizeBody),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ยังก่อน', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              paid ? 'ยกเลิก' : 'ได้รับแล้ว',
-              style: appFont(
-                fontWeight: FontWeight.w800,
-                color: paid ? AppTheme.errorColor : AppTheme.primaryColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: paid
+          ? 'ยกเลิกสถานะจ่ายแล้วของ ${due['name']}?'
+          : '${due['name']} จ่าย ${baht(due['amount'])} แล้ว?',
+      message: paid
+          ? null
+          : 'เช็กยอดเข้าในแอปธนาคาร หรือรับเงินสดแล้วค่อยยืนยันนะครับ',
+      tone: paid ? ConfirmTone.danger : ConfirmTone.primary,
+      icon: paid ? Icons.undo_rounded : Icons.payments_outlined,
+      confirmLabel: paid ? 'ยกเลิก' : 'ได้รับแล้ว',
+      cancelLabel: 'ยังก่อน',
     );
-    if (ok == true) await onSetPaid([_int(due['passenger_id'])], !paid);
+    if (ok) await onSetPaid([_int(due['passenger_id'])], !paid);
   }
 
   @override

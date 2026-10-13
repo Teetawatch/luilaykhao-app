@@ -92,36 +92,16 @@ class _CancelPendingButtonState extends State<_CancelPendingButton> {
     final ref = textOf(widget.booking['booking_ref']);
     if (ref.isEmpty) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ยกเลิกการจองนี้?',
-          style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
-        ),
-        content: Text(
-          'ที่นั่งจะถูกคืนให้คนอื่นทันที และการจองนี้จะกู้กลับมาไม่ได้',
-          style: appFont(fontSize: AppText.sizeBody, color: AppTheme.mutedText(ctx)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('เก็บไว้ก่อน', style: appFont(fontWeight: FontWeight.w700)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'ยกเลิกการจอง',
-              style: appFont(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.errorColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'ยกเลิกการจองนี้?',
+      message: 'ที่นั่งจะถูกคืนให้คนอื่นทันที และการจองนี้จะกู้กลับมาไม่ได้',
+      tone: ConfirmTone.danger,
+      icon: Icons.event_busy_rounded,
+      confirmLabel: 'ยกเลิกการจอง',
+      cancelLabel: 'เก็บไว้ก่อน',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     HapticFeedback.mediumImpact();
     setState(() => _busy = true);

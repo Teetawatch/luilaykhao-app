@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/travel_widgets.dart';
 import 'seat_handover_screen.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// "ไปครบไหม" — บอกทีมงานล่วงหน้าว่าใครในใบจองไม่ไป
 ///
@@ -88,34 +89,17 @@ class _TripAttendanceScreenState extends State<TripAttendanceScreen> {
     final going = people.length - _notGoing.length;
 
     if (going == 0) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(
-            'ไม่มีใครไปเลย?',
-            style: appFont(
-              fontSize: AppText.sizeSubtitle,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          content: Text(
-            'การแจ้งไม่ไปไม่ใช่การยกเลิกการจอง และไม่ได้คืนเงินอัตโนมัติ '
+      final ok = await showConfirmDialog(
+        context,
+        title: 'ไม่มีใครไปเลย?',
+        message: 'การแจ้งไม่ไปไม่ใช่การยกเลิกการจอง และไม่ได้คืนเงินอัตโนมัติ '
             'ถ้าต้องการยกเลิกหรือเลื่อนรอบ ทักทีมงานในแชทได้เลย',
-            style: appFont(fontSize: AppText.sizeBody, height: 1.45),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('กลับไปแก้'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('ยืนยัน'),
-            ),
-          ],
-        ),
+        tone: ConfirmTone.warning,
+        icon: Icons.group_off_outlined,
+        confirmLabel: 'ยืนยัน',
+        cancelLabel: 'กลับไปแก้',
       );
-      if (ok != true || !mounted) return;
+      if (!ok || !mounted) return;
     }
 
     setState(() => _saving = true);

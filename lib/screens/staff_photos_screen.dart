@@ -15,6 +15,7 @@ import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart' show PrimaryCTAButton;
 import 'staff_check_in_screen.dart' show asMap, asList, textOf;
+import '../widgets/confirm_dialog.dart';
 
 /// รูปต่อคำขอที่แอปส่ง — เซิร์ฟเวอร์รับได้ถึง 20 แต่บนเน็ตมือถือชุดเล็กกว่า
 /// พลาดแล้วเสียน้อยกว่า และไม่ชนเพดาน body ของ nginx
@@ -211,34 +212,15 @@ class _StaffPhotosScreenState extends State<StaffPhotosScreen> {
     final id = int.tryParse('${photo['id']}');
     if (id == null || _deleting.contains(id)) return;
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ลบรูปนี้?',
-          style: appFont(
-            fontSize: AppText.sizeTitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Text(
-          'ลูกค้าจะไม่เห็นรูปนี้ในอัลบั้มอีก',
-          style: appFont(fontSize: AppText.sizeBody),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
-            child: const Text('ลบรูป'),
-          ),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: 'ลบรูปนี้?',
+      message: 'ลูกค้าจะไม่เห็นรูปนี้ในอัลบั้มอีก',
+      tone: ConfirmTone.danger,
+      icon: Icons.hide_image_outlined,
+      confirmLabel: 'ลบรูป',
     );
-    if (ok != true || !mounted) return;
+    if (!ok || !mounted) return;
 
     setState(() => _deleting.add(id));
     try {
@@ -282,34 +264,17 @@ class _StaffPhotosScreenState extends State<StaffPhotosScreen> {
     AppSnack.show(context, message);
   }
 
-  Future<bool> _confirmLeave() async {
-    final leave = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'ยังอัปรูปไม่เสร็จ',
-          style: appFont(
-            fontSize: AppText.sizeTitle,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Text(
+  Future<bool> _confirmLeave() {
+    return showConfirmDialog(
+      context,
+      title: 'ยังอัปรูปไม่เสร็จ',
+      message:
           'ออกจากหน้านี้ได้ รูปจะอัปต่อจนเสร็จ แต่ถ้ามีรูปที่อัปไม่ขึ้นจะไม่เห็นปุ่มลองใหม่',
-          style: appFont(fontSize: AppText.sizeBody),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('ออกเลย'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('รอให้เสร็จ'),
-          ),
-        ],
-      ),
+      tone: ConfirmTone.warning,
+      icon: Icons.cloud_upload_outlined,
+      confirmLabel: 'ออกเลย',
+      cancelLabel: 'รอให้เสร็จ',
     );
-    return leave == true;
   }
 
   @override

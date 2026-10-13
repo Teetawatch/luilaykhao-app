@@ -27,6 +27,7 @@ import '../widgets/vehicle_seat_map.dart';
 import 'custom_pickup_picker_screen.dart';
 import 'document_wallet_screen.dart';
 import 'payment_screen.dart';
+import '../widgets/confirm_dialog.dart';
 
 part 'booking_flow_summary.part.dart';
 part 'booking_flow_seats.part.dart';
@@ -523,30 +524,19 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     if (draft == null || !mounted) return;
     if (!BookingDraftStore.isWorthRestoring(draft)) return;
 
-    final restore = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('กรอกค้างไว้เมื่อครั้งก่อน'),
-        content: const Text(
-          'พบข้อมูลผู้เดินทางที่คุณกรอกค้างไว้สำหรับทริปนี้ '
+    final restore = await showConfirmDialog(
+      context,
+      title: 'กรอกค้างไว้เมื่อครั้งก่อน',
+      message: 'พบข้อมูลผู้เดินทางที่คุณกรอกค้างไว้สำหรับทริปนี้ '
           'ต้องการกรอกต่อจากเดิมไหม?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('เริ่มใหม่'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('กรอกต่อ'),
-          ),
-        ],
-      ),
+      icon: Icons.edit_note_rounded,
+      confirmLabel: 'กรอกต่อ',
+      cancelLabel: 'เริ่มใหม่',
     );
 
     if (!mounted) return;
 
-    if (restore != true) {
+    if (!restore) {
       await BookingDraftStore.clear(_draftSlug);
       return;
     }

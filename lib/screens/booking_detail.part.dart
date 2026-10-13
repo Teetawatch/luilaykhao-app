@@ -1323,43 +1323,21 @@ class _PostponementRefundSheetState extends State<_PostponementRefundSheet> {
   Future<void> _submit() async {
     if (!_canSubmit) return;
     final app = context.read<AppProvider>();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          _amount > 0 ? 'ยืนยันขอรับเงินคืน?' : 'ยืนยันยกเลิกการจอง?',
-          style: appFont(
-            fontWeight: FontWeight.w800,
-            fontSize: AppText.sizeTitle,
-          ),
-        ),
-        content: Text(
-          _amount > 0
-              ? 'ยกเลิกการจองและขอรับเงินคืน ${money(_amount)} เข้า '
-                    '$_bank ${_numberController.text.trim()} '
-                    'ยกเลิกแล้วย้อนกลับไม่ได้'
-              : 'ยกเลิกแล้วย้อนกลับไม่ได้',
-          style: appFont(fontSize: AppText.sizeBody, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('ไม่ใช่', style: appFont(fontWeight: FontWeight.w600)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'ยืนยัน',
-              style: appFont(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.warningColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: _amount > 0 ? 'ยืนยันขอรับเงินคืน?' : 'ยืนยันยกเลิกการจอง?',
+      message: _amount > 0
+          ? 'ยกเลิกการจองและขอรับเงินคืนเข้าบัญชีนี้ ยกเลิกแล้วย้อนกลับไม่ได้'
+          : 'ยกเลิกแล้วย้อนกลับไม่ได้',
+      detail: _amount > 0
+          ? '${money(_amount)}\n$_bank ${_numberController.text.trim()}'
+          : null,
+      tone: ConfirmTone.danger,
+      icon: Icons.event_busy_rounded,
+      confirmLabel: 'ยืนยัน',
+      cancelLabel: 'ไม่ใช่',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     HapticFeedback.selectionClick();
     setState(() {
@@ -3476,8 +3454,6 @@ Color _flexiGreen(bool isDark) =>
     isDark ? const Color(0xFF30D158) : const Color(0xFF34C759);
 Color _flexiOrange(bool isDark) =>
     isDark ? const Color(0xFFFF9F0A) : const Color(0xFFFF9500);
-Color _flexiRed(bool isDark) =>
-    isDark ? const Color(0xFFE11D48) : const Color(0xFFE11D48);
 
 /// ระบบ Flexi-Price (Go Together) — การ์ดข้อเสนอ "ไปต่อกันไหม?" เมื่อรอบเดินทาง
 /// มีผู้จองไม่ครบ ผู้จัดขอเก็บส่วนต่างค่ารถท่านละ X (เก็บวันเดินทาง) เพื่อให้ทริป
@@ -3524,37 +3500,16 @@ class _FlexiOfferCardState extends State<_FlexiOfferCard> {
 
     // ปฏิเสธเป็น action ที่กลับไม่ได้ — ยืนยันก่อน
     if (!accept) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(
-            'ยืนยันการสละสิทธิ์?',
-            style: appFont(fontWeight: FontWeight.w800, fontSize: AppText.sizeTitle),
-          ),
-          content: Text(
-            'หากคุณไม่ไปต่อ ทริปรอบนี้อาจไม่สามารถออกเดินทางได้ '
+      final confirmed = await showConfirmDialog(
+        context,
+        title: 'ยืนยันการสละสิทธิ์?',
+        message: 'หากคุณไม่ไปต่อ ทริปรอบนี้อาจไม่สามารถออกเดินทางได้ '
             'และทีมงานจะติดต่อกลับเรื่องการคืนเงิน ยืนยันหรือไม่?',
-            style: appFont(fontSize: AppText.sizeBody, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('ยกเลิก', style: appFont(fontWeight: FontWeight.w600)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(
-                'ยืนยันสละสิทธิ์',
-                style: appFont(
-                  fontWeight: FontWeight.w700,
-                  color: _flexiRed(AppTheme.isDark(context)),
-                ),
-              ),
-            ),
-          ],
-        ),
+        tone: ConfirmTone.danger,
+        icon: Icons.do_not_disturb_on_outlined,
+        confirmLabel: 'ยืนยันสละสิทธิ์',
       );
-      if (confirmed != true) return;
+      if (!confirmed) return;
     }
 
     HapticFeedback.selectionClick();

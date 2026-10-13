@@ -20,6 +20,7 @@ import 'incident_list_screen.dart';
 import 'report_incident_screen.dart';
 import 'staff_check_in_screen.dart'
     show StaffCheckInScreen, asMap, asList, textOf;
+import '../widgets/confirm_dialog.dart';
 
 /// Full passenger manifest for one schedule — shows every confirmed booking
 /// with contact name, callable phone and pickup point so staff can coordinate
@@ -155,37 +156,15 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       ].join('\n\n');
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'เช็คอินให้ $name',
-          style: appFont(fontSize: AppText.sizeSubtitle, fontWeight: FontWeight.w800),
-        ),
-        content: Text(
-          message,
-          style: appFont(fontSize: AppText.sizeBody, height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'ยกเลิก',
-              style: appFont(fontWeight: FontWeight.w700),
-            ),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'เช็คอิน',
-              style: appFont(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'เช็คอินให้ $name',
+      message: message,
+      icon: Icons.how_to_reg_rounded,
+      confirmLabel: 'เช็คอิน',
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _checkingIn.add(key));
     try {
