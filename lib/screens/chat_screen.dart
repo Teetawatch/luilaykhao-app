@@ -28,6 +28,7 @@ import '../widgets/chat_staff_intro.dart';
 import '../widgets/chat_voice.dart';
 import '../widgets/chat_vote_sheet.dart';
 import '../widgets/moderation_sheet.dart';
+import '../widgets/sheet_close_button.dart';
 import '../theme/app_theme.dart';
 import '../services/quick_ask_matcher.dart';
 import '../widgets/weather_card.dart';
@@ -5450,21 +5451,25 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
                 child: Row(
                   children: [
                     const Icon(Icons.bar_chart_rounded,
                         size: 20, color: AppTheme.primaryColor),
                     const SizedBox(width: 8),
-                    Text(
-                      'สร้างโพล',
-                      style: appFont(
-                        fontSize: AppText.sizeSubtitle,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.onSurface(context),
-                        letterSpacing: -0.2,
+                    Expanded(
+                      child: Text(
+                        'สร้างโพล',
+                        style: appFont(
+                          fontSize: AppText.sizeSubtitle,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                          letterSpacing: -0.2,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    const SheetCloseButton(),
                   ],
                 ),
               ),

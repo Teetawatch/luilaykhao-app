@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_theme.dart';
 import 'app_snack.dart';
+import 'sheet_close_button.dart';
 import 'travel_widgets.dart';
 
 // หารบิลค่าอาหาร — ต่อจากรอบรับออเดอร์ (chat_food_round.dart)
@@ -582,7 +583,7 @@ class BillSheetFrame extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 2),
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 2),
                 child: Row(
                   children: [
                     Icon(icon, size: 20, color: AppTheme.primaryColor),
@@ -598,6 +599,8 @@ class BillSheetFrame extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    const SheetCloseButton(),
                   ],
                 ),
               ),

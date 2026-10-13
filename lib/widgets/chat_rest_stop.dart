@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_theme.dart';
+import 'sheet_close_button.dart';
 import 'travel_widgets.dart';
 
 // จุดพักระหว่างทาง — นัดเวลากลับรถ + เช็คชื่อขึ้นรถ และ "ขอแวะห้องน้ำ" แบบไม่บอกชื่อ
@@ -1143,7 +1144,7 @@ class RestStopSheetFrame extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 2),
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 2),
                 child: Row(
                   children: [
                     Icon(icon, size: 20, color: AppTheme.primaryColor),
@@ -1159,6 +1160,8 @@ class RestStopSheetFrame extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    const SheetCloseButton(),
                   ],
                 ),
               ),

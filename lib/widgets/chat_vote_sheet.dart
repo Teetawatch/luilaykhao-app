@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
+import 'sheet_close_button.dart';
 import 'travel_widgets.dart';
 
 /// ผลลัพธ์จากชีตเริ่มโหวต — options ว่าง = ใช้ เห็นด้วย / ไม่เห็นด้วย ของเซิร์ฟเวอร์
@@ -121,7 +122,7 @@ class _CreateVoteSheetState extends State<CreateVoteSheet> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 2),
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 2),
                 child: Row(
                   children: [
                     const Icon(
@@ -130,15 +131,19 @@ class _CreateVoteSheetState extends State<CreateVoteSheet> {
                       color: AppTheme.primaryColor,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'โหวตตัดสิน',
-                      style: appFont(
-                        fontSize: AppText.sizeSubtitle,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.onSurface(context),
-                        letterSpacing: -0.2,
+                    Expanded(
+                      child: Text(
+                        'โหวตตัดสิน',
+                        style: appFont(
+                          fontSize: AppText.sizeSubtitle,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.onSurface(context),
+                          letterSpacing: -0.2,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    const SheetCloseButton(),
                   ],
                 ),
               ),
