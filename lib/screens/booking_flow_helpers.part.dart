@@ -356,6 +356,75 @@ class _PassengerControllers {
   final documents = ValueNotifier<Map<String, List<String>>>(
     <String, List<String>>{},
   );
+  // การ์ดผู้เดินทางพับได้ — สถานะอยู่ที่นี่เพื่อให้หน้าจอกางการ์ดที่ยังกรอก
+  // ไม่ครบตอนกดชำระเงินได้ (ช่องในการ์ดที่พับยังอยู่ในฟอร์ม แค่ไม่ได้วาด)
+  final expanded = ValueNotifier<bool>(false);
+  final cardKey = GlobalKey();
+
+  /// เปลี่ยนเมื่อช่องไหนก็ได้ของคนนี้เปลี่ยน — หัวการ์ดใช้ฟังเพื่อนับช่องที่ขาด
+  late final Listenable changes = Listenable.merge([
+    title,
+    name,
+    nickname,
+    phone,
+    email,
+    idCard,
+    nameEn,
+    passportNo,
+    passportExpiresAt,
+    birthDate,
+    bloodGroup,
+    emergencyContact,
+    emergencyPhone,
+    pickupPointId,
+  ]);
+
+  /// ยังไม่ได้แตะเลยสักช่อง — หัวการ์ดชวนให้แตะกรอก แทนการบอกว่าขาดกี่ช่อง
+  bool get isBlank => [
+    title,
+    name,
+    nickname,
+    phone,
+    idCard,
+    bloodGroup,
+    emergencyContact,
+    emergencyPhone,
+  ].every((c) => c.text.trim().isEmpty) && birthDate.value == null;
+
+  /// จำนวนช่องบังคับที่ยังไม่ผ่าน — เรียกตัวตรวจชุดเดียวกับที่ฟอร์มใช้ จึงไม่มี
+  /// กฎซ้ำสองที่ (เอกสารแนบตรวจแยกที่หน้าจอ เพราะไม่ใช่ FormField)
+  int missingCount({
+    bool international = false,
+    bool needsPickup = false,
+    DateTime? minPassportExpiry,
+  }) {
+    final digits13 = _exactDigitsValidator(
+      requiredMessage: '-',
+      lengthMessage: '-',
+      length: 13,
+    );
+    final expiry = passportExpiresAt.value;
+    final checks = <bool>[
+      _titleValue(title.text) != null,
+      _thaiNameValidator(name.text) == null,
+      nickname.text.trim().isNotEmpty,
+      _phoneValidator('-')(phone.text) == null,
+      _optionalEmailValidator(email.text) == null,
+      digits13(idCard.text) == null,
+      _bloodGroupValue(bloodGroup.text) != null,
+      birthDate.value != null,
+      emergencyContact.text.trim().isNotEmpty,
+      _phoneValidator('-')(emergencyPhone.text) == null,
+      if (needsPickup) pickupPointId.value != null,
+      if (international) ...[
+        nameEn.text.trim().isNotEmpty,
+        passportNo.text.trim().length >= 5,
+        expiry != null &&
+            (minPassportExpiry == null || !expiry.isBefore(minPassportExpiry)),
+      ],
+    ];
+    return checks.where((ok) => !ok).length;
+  }
 
   void applyWallet(Map<String, dynamic> wallet) {
     final t = (wallet['title'] as String? ?? '').trim();
@@ -469,6 +538,7 @@ class _PassengerControllers {
     halalFood.dispose();
     pickupPointId.dispose();
     documents.dispose();
+    expanded.dispose();
   }
 }
 
@@ -490,7 +560,7 @@ InputDecoration _fieldDecoration({
     isDense: true,
     filled: true,
     fillColor: AppTheme.fieldSurface(context),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
     prefixIcon: Icon(icon, size: 19, color: AppTheme.mutedText(context)),
     prefixIconConstraints: const BoxConstraints(minWidth: 44),
     border: OutlineInputBorder(
@@ -816,12 +886,6 @@ String _pickupLocationLabel(Map<String, dynamic> point) {
     point['pickup_location'] ?? point['region_label'] ?? point['region'],
     'ยังไม่ระบุจุดขึ้นรถ',
   );
-}
-
-String _pickupPriceText(dynamic value) {
-  final price = _asNum(value);
-  if (price <= 0) return 'ไม่มีค่าใช้จ่ายเพิ่ม';
-  return money(price);
 }
 
 /// วัดระยะเส้นตรง — ใช้แค่จัดอันดับว่าจุดรับไหนใกล้หมุดกว่ากัน

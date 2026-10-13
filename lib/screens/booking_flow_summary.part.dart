@@ -126,7 +126,7 @@ class TripSummaryCard extends StatelessWidget {
         ? 'Join Trip'
         : _pickupRegionLabel(pickupPoint);
     final pickupLocationLabel = isJoinTrip
-        ? 'รวมกลุ่มเดินทางตามเงื่อนไขรอบนี้'
+        ? 'เดินทางไปเอง · เจอกันที่จุดนัดพบ'
         : _pickupLocationLabel(pickupPoint);
 
     return Container(
@@ -312,12 +312,9 @@ class TravelInfoSection extends StatelessWidget {
               .map(asMap)
               .where((item) => int.tryParse(item['id'].toString()) != null)
               .toList();
+    // ทุกภูมิภาคของรอบนี้เป็นชิปให้สลับได้ — เดิม dropdown โชว์แค่ภูมิภาคที่
+    // เลือกอยู่ จึงย้ายไปขึ้นรถภูมิภาคอื่นไม่ได้เลย
     final regionMaps = _pickupRegionOptions(pickupMaps);
-    final visibleRegionMaps = selectedRegion == null
-        ? regionMaps
-        : regionMaps
-              .where((point) => _pickupRegionKey(point) == selectedRegion)
-              .toList();
     final filteredPickupMaps = selectedRegion == null
         ? pickupMaps
         : pickupMaps
@@ -339,66 +336,52 @@ class TravelInfoSection extends StatelessWidget {
     final showVehicleOptions =
         !isJoinTrip && !isFlight && vehicleOptionMaps.length > 1;
 
+    // รอบที่ถูกซ่อนเพราะไม่มีจุดขึ้นรถในภูมิภาคที่เลือก — บอกไว้ ไม่งั้นลูกค้า
+    // จะนึกว่ารอบนั้นหายไปเฉย ๆ
+    final hiddenByRegion = allScheduleMaps.length - scheduleMaps.length;
+    final selectedRegionLabel = filteredPickupMaps.isNotEmpty
+        ? _pickupRegionLabel(filteredPickupMaps.first)
+        : (selectedRegion ?? '');
+
     return _SectionShell(
       title: 'ข้อมูลการเดินทาง',
       icon: Icons.route_rounded,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PremiumDropdown<int>(
-            key: ValueKey('schedule-$selectedScheduleId'),
-            label: 'รอบเดินทาง',
-            icon: Icons.calendar_today_rounded,
-            value: selectedScheduleId,
-            items: scheduleMaps.map((schedule) {
-              final id = int.parse(schedule['id'].toString());
-              final isCharter = _asBool(schedule['is_charter']);
-              // Actual vehicle departure (may be the night before the trip day).
-              final departsAt = scheduleDepartsAt(schedule);
-              final departHint = departsAt != null
-                  ? ' · ออก ${departsAt.hour.toString().padLeft(2, '0')}:${departsAt.minute.toString().padLeft(2, '0')} น.'
-                  : '';
-              return DropdownMenuItem<int>(
-                value: id,
-                enabled: !isCharter,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${dateText(schedule['departure_date'])}$departHint  ·  ${isCharter ? 'รอบเหมา' : 'เหลือ ${textOf(schedule['available_seats'], '0')} ที่'}${_asBool(schedule['join_trip_enabled']) ? '  ·  ${_joinTripSeatLabel(schedule)}' : ''}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (isCharter)
-                      Container(
-                        margin: const EdgeInsets.only(left: 6),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF7C3AED).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                          border: Border.all(
-                            color: const Color(0xFF7C3AED).withValues(alpha: 0.30),
-                          ),
-                        ),
-                        child: Text(
-                          'เหมา',
-                          style: appFont(
-                            fontSize: AppText.sizeMicro,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF7C3AED),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }).toList(),
-            onChanged: onScheduleChanged,
+          _FieldHeading(
+            title: 'เลือกรอบเดินทาง',
+            trailing: scheduleMaps.isEmpty ? null : '${scheduleMaps.length} รอบ',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+          if (scheduleMaps.isEmpty)
+            const _CompactNotice(
+              icon: Icons.event_busy_rounded,
+              text: 'ยังไม่มีรอบเดินทางที่เปิดจอง',
+            )
+          else
+            _ScheduleDateStrip(
+              schedules: scheduleMaps,
+              selectedId: selectedScheduleId,
+              onChanged: onScheduleChanged,
+            ),
+          if (hiddenByRegion > 0 && selectedRegionLabel.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'แสดงเฉพาะรอบที่มีจุดขึ้นรถใน$selectedRegionLabel',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+                color: _mutedTextColor(context),
+              ),
+            ),
+          ],
+          if (selectedSchedule.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _RoundOverview(schedule: selectedSchedule),
+          ],
           if (joinTripEnabled) ...[
+            const SizedBox(height: 12),
             _JoinTripSwitch(
               selected: isJoinTrip,
               price: joinTripPrice,
@@ -406,117 +389,55 @@ class TravelInfoSection extends StatelessWidget {
               full: _joinTripIsFull(selectedSchedule),
               onChanged: onJoinTripChanged,
             ),
-            const SizedBox(height: 12),
           ],
           if (showVehicleOptions) ...[
+            const SizedBox(height: 20),
             _VehicleOptionPicker(
               options: vehicleOptionMaps,
               selectedId: vehicleOptionId,
               onChanged: onVehicleOptionChanged,
             ),
-            const SizedBox(height: 12),
           ],
+          const SizedBox(height: 20),
           if (isFlight)
             _FlightMeetingCard(schedule: selectedSchedule)
           else if (isJoinTrip)
-            const _CompactNotice(
-              icon: Icons.groups_rounded,
-              text:
-                  'จองแบบ Join Trip ใช้ราคาเหมาร่วมจาก Laravel และไม่ต้องล็อกที่นั่งรถ',
-            )
-          else if (pickupMaps.isEmpty)
-            const _CompactNotice(
-              icon: Icons.place_outlined,
-              text: 'ยังไม่มีจุดรับสำหรับรอบนี้',
-            )
-          else
-            Column(
-              children: [
-                _PremiumDropdown<String>(
-                  key: ValueKey('region-$selectedRegion'),
-                  label: 'ภูมิภาคที่จะขึ้นรถ',
-                  icon: Icons.travel_explore_rounded,
-                  value: selectedRegion,
-                  items: visibleRegionMaps.map((region) {
-                    final value = _pickupRegionKey(region);
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(
-                        _pickupRegionLabel(region),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }).toList(),
+            const _JoinTripInfoCard()
+          else ...[
+            _FieldHeading(
+              title: 'เลือกจุดขึ้นรถ',
+              trailing: pickupMaps.isEmpty ? null : '${pickupMaps.length} จุด',
+            ),
+            const SizedBox(height: 10),
+            if (pickupMaps.isEmpty)
+              const _CompactNotice(
+                icon: Icons.place_outlined,
+                text: 'ยังไม่มีจุดรับสำหรับรอบนี้ — ปักหมุดจุดรับของคุณได้ด้านล่าง',
+              )
+            else ...[
+              if (regionMaps.length > 1) ...[
+                _RegionChips(
+                  regions: regionMaps,
+                  points: pickupMaps,
+                  selectedKey: selectedRegion,
                   onChanged: onRegionChanged,
                 ),
                 const SizedBox(height: 12),
-                if (filteredPickupMaps.isEmpty)
-                  const _CompactNotice(
-                    icon: Icons.directions_bus_outlined,
-                    text: 'ยังไม่มีจุดขึ้นรถในภูมิภาคนี้',
-                  )
-                else
-                  _PremiumDropdown<int>(
-                    key: ValueKey(
-                      'pickup-$selectedRegion-$selectedPickupPointId',
-                    ),
-                    label: 'จุดขึ้นรถ',
-                    icon: Icons.directions_bus_filled_rounded,
-                    value: selectedPickupPointId,
-                    selectedItemBuilder: (context) =>
-                        filteredPickupMaps.map((point) {
-                          final location = _pickupLocationLabel(point);
-                          return Text(
-                            location,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: appFont(
-                              color: _premiumText(context),
-                              fontSize: AppText.sizeBody,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          );
-                        }).toList(),
-                    items: filteredPickupMaps.map((point) {
-                      final id = int.parse(point['id'].toString());
-                      final location = _pickupLocationLabel(point);
-                      final price = _pickupPriceText(point['price']);
-                      final notes = textOf(point['notes']).trim();
-                      return DropdownMenuItem<int>(
-                        value: id,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              location,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: appFont(
-                                fontSize: AppText.sizeBody,
-                                fontWeight: FontWeight.w700,
-                                color: _premiumText(context),
-                              ),
-                            ),
-                            Text(
-                              notes.isEmpty ? price : '$notes  ·  $price',
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: appFont(
-                                fontSize: AppText.sizeCaption,
-                                fontWeight: FontWeight.w600,
-                                color: _mutedTextColor(context),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: onPickupChanged,
-                  ),
               ],
-            ),
-          if (!isJoinTrip && !isFlight) ...[
+              if (filteredPickupMaps.isEmpty)
+                const _CompactNotice(
+                  icon: Icons.directions_bus_outlined,
+                  text: 'ยังไม่มีจุดขึ้นรถในภูมิภาคนี้',
+                )
+              else
+                _PickupPointList(
+                  key: ValueKey('pickup-list-$selectedScheduleId-$selectedRegion'),
+                  points: filteredPickupMaps,
+                  // ปักหมุดเองอยู่ = ยังไม่ได้ใช้จุดที่กำหนด ไม่ติ๊กจุดไหนค้างไว้
+                  selectedId: customPickup == null ? selectedPickupPointId : null,
+                  onChanged: onPickupChanged,
+                ),
+            ],
             const SizedBox(height: 12),
             _CustomPickupTile(
               customPickup: customPickup,
@@ -530,10 +451,786 @@ class TravelInfoSection extends StatelessWidget {
           ],
           // รอบที่บินไปอาจผูกรถไว้ในระบบเพื่องานอื่น แต่ลูกค้าไม่ได้ขึ้นคันนั้น
           if (!isJoinTrip && !isFlight && selectedVehicle.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             _VehiclePhotoPreview(vehicle: selectedVehicle),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// หัวข้อย่อยในการ์ด — ชื่อช่องทางซ้าย ตัวเลขสรุปเล็ก ๆ ทางขวา
+class _FieldHeading extends StatelessWidget {
+  final String title;
+  final String? trailing;
+
+  const _FieldHeading({required this.title, this.trailing});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: appFont(
+              fontSize: AppText.sizeLabel,
+              fontWeight: FontWeight.w700,
+              color: _premiumText(context),
+            ),
+          ),
+        ),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w600,
+              color: _mutedTextColor(context),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// แถบวันที่เลื่อนแนวนอน แทน dropdown รอบเดินทาง — เห็นวัน เวลารถออก และที่ว่าง
+/// ของทุกรอบพร้อมกัน ไม่ต้องกดเปิดดูทีละรอบ
+class _ScheduleDateStrip extends StatefulWidget {
+  final List<Map<String, dynamic>> schedules;
+  final int? selectedId;
+  final ValueChanged<int?> onChanged;
+
+  const _ScheduleDateStrip({
+    required this.schedules,
+    required this.selectedId,
+    required this.onChanged,
+  });
+
+  @override
+  State<_ScheduleDateStrip> createState() => _ScheduleDateStripState();
+}
+
+class _ScheduleDateStripState extends State<_ScheduleDateStrip> {
+  static const double _cardWidth = 88;
+  static const double _gap = 8;
+
+  final _controller = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelected(animate: false));
+  }
+
+  @override
+  void didUpdateWidget(covariant _ScheduleDateStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedId != widget.selectedId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelected(animate: true));
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// เลื่อนให้รอบที่เลือกอยู่กลางแถบ — คำนวณ offset เอง เพราะ
+  /// Scrollable.ensureVisible จะลากหน้าจอแนวตั้งที่ครอบอยู่ให้ขยับตามไปด้วย
+  void _revealSelected({required bool animate}) {
+    if (!mounted || !_controller.hasClients) return;
+    final index = widget.schedules.indexWhere(
+      (s) => int.tryParse(s['id'].toString()) == widget.selectedId,
+    );
+    if (index < 0) return;
+    final position = _controller.position;
+    final target = (index * (_cardWidth + _gap) -
+            (position.viewportDimension - _cardWidth) / 2)
+        .clamp(0.0, position.maxScrollExtent);
+    if (animate) {
+      _controller.animateTo(
+        target,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _controller.jumpTo(target);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _controller,
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < widget.schedules.length; i++) ...[
+              if (i > 0) const SizedBox(width: _gap),
+              _ScheduleDateCard(
+                schedule: widget.schedules[i],
+                width: _cardWidth,
+                selected: int.tryParse(widget.schedules[i]['id'].toString()) ==
+                    widget.selectedId,
+                onTap: () {
+                  final id = int.tryParse(widget.schedules[i]['id'].toString());
+                  if (id == null || id == widget.selectedId) return;
+                  HapticFeedback.selectionClick();
+                  widget.onChanged(id);
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleDateCard extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+  final double width;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ScheduleDateCard({
+    required this.schedule,
+    required this.width,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isCharter = _asBool(schedule['is_charter']);
+    final date = DateTime.tryParse(textOf(schedule['departure_date']));
+    final departsAt = scheduleDepartsAt(schedule);
+    final seats = int.tryParse(textOf(schedule['available_seats'], '0')) ?? 0;
+
+    final (String seatText, Color seatColor) = isCharter
+        ? ('รอบเหมา', const Color(0xFF7C3AED))
+        : seats <= 0
+        ? ('เต็มแล้ว', AppTheme.dangerColor)
+        : seats <= 3
+        ? ('เหลือ $seats ที่', AppTheme.warningColor)
+        : ('ว่าง $seats ที่', _softAccent);
+
+    final accent = selected ? _softAccent : _premiumText(context);
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: !isCharter,
+      child: Opacity(
+        opacity: isCharter ? 0.5 : 1,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isCharter ? null : onTap,
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              width: width,
+              padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
+              decoration: BoxDecoration(
+                color: selected
+                    ? AppTheme.selectedTint(context)
+                    : AppTheme.surface(context),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                border: Border.all(
+                  color: selected ? _softAccent : _cardBorder(context),
+                  width: selected ? 1.5 : 1,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    date == null ? '-' : DateFormat('EEE', 'th_TH').format(date),
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      fontWeight: FontWeight.w700,
+                      color: selected ? _softAccent : _mutedTextColor(context),
+                    ),
+                  ),
+                  Text(
+                    date == null ? '-' : '${date.day}',
+                    style: appFont(
+                      fontSize: AppText.sizeH1,
+                      fontWeight: FontWeight.w800,
+                      color: accent,
+                      height: 1.15,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  Text(
+                    date == null
+                        ? ''
+                        : '${DateFormat('MMM', 'th_TH').format(date)} '
+                              '${(date.year + 543) % 100}',
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      fontWeight: FontWeight.w700,
+                      color: accent,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    departsAt == null
+                        ? 'ไม่ระบุเวลา'
+                        : 'ออก ${DateFormat('HH:mm').format(departsAt)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      fontSize: AppText.sizeMicro,
+                      fontWeight: FontWeight.w600,
+                      color: _mutedTextColor(context),
+                    ),
+                  ),
+                  const Spacer(),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.tintOf(context, seatColor),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                    ),
+                    child: Text(
+                      seatText,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        fontSize: AppText.sizeMicro,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onTintOf(context, seatColor),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// สรุปรอบที่เลือกในบรรทัดเดียว — ช่วงวัน จำนวนวัน และเวลารถออก ถ้ารถออก
+/// ก่อนวันทริป (เช่นออกคืนวันศุกร์) ขึ้นเป็นสีเตือน เพราะเป็นจุดที่คนพลาดบ่อยสุด
+class _RoundOverview extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+
+  const _RoundOverview({required this.schedule});
+
+  String _rangeText(DateTime start, DateTime? end) {
+    if (end == null || !end.isAfter(start)) return thaiDateShortWeekday(start);
+    final sameMonth = start.month == end.month && start.year == end.year;
+    final head = DateFormat(sameMonth ? 'EEE d' : 'EEE d MMM', 'th_TH').format(start);
+    return '$head – ${thaiDateShortWeekday(end)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final start = DateTime.tryParse(textOf(schedule['departure_date']));
+    if (start == null) return const SizedBox.shrink();
+    final end = DateTime.tryParse(textOf(schedule['return_date']));
+    final days = end == null || !end.isAfter(start)
+        ? 1
+        : end.difference(start).inDays + 1;
+    final departsAt = scheduleDepartsAt(schedule);
+    final departsEarly = _asBool(schedule['departs_before_trip_day']) &&
+        departsAt != null;
+
+    final departText = departsAt == null
+        ? null
+        : departsEarly
+        ? 'ขึ้นรถ ${DateFormat('EEEE', 'th_TH').format(departsAt)}ที่ '
+              '${thaiDateShort(departsAt)} เวลา '
+              '${DateFormat('HH:mm').format(departsAt)} น. — ก่อนวันทริป'
+        : 'รถออก ${DateFormat('HH:mm').format(departsAt)} น.';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _fieldBackground(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _OverviewLine(
+            icon: Icons.calendar_month_rounded,
+            text: _rangeText(start, end),
+            // ไม่มีวันกลับ = ไม่รู้ว่ากี่วัน อย่าเดาว่าไปเช้าเย็นกลับ
+            trailing: end == null ? null : '$days วัน',
+          ),
+          if (departText != null) ...[
+            const SizedBox(height: 8),
+            _OverviewLine(
+              icon: departsEarly
+                  ? Icons.nights_stay_rounded
+                  : Icons.departure_board_rounded,
+              text: departText,
+              color: departsEarly ? AppTheme.warningColor : null,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OverviewLine extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final String? trailing;
+  final Color? color;
+
+  const _OverviewLine({
+    required this.icon,
+    required this.text,
+    this.trailing,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = color == null ? null : AppTheme.onTintOf(context, color!);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: tone ?? _mutedTextColor(context)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: appFont(
+              fontSize: AppText.sizeLabel,
+              fontWeight: FontWeight.w700,
+              color: tone ?? _premiumText(context),
+              height: 1.35,
+            ),
+          ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          Text(
+            trailing!,
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w700,
+              color: _mutedTextColor(context),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// ภูมิภาคเป็นชิปแตะเดียว แทน dropdown ที่มีให้เลือกแค่ไม่กี่ค่า
+class _RegionChips extends StatelessWidget {
+  final List<Map<String, dynamic>> regions;
+  final List<Map<String, dynamic>> points;
+  final String? selectedKey;
+  final ValueChanged<String?> onChanged;
+
+  const _RegionChips({
+    required this.regions,
+    required this.points,
+    required this.selectedKey,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: regions.map((region) {
+        final key = _pickupRegionKey(region);
+        final selected = key == selectedKey;
+        final count = points.where((p) => _pickupRegionKey(p) == key).length;
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: selected
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    onChanged(key);
+                  },
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: selected ? _softAccent : AppTheme.surface(context),
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                border: Border.all(
+                  color: selected ? _softAccent : _cardBorder(context),
+                ),
+              ),
+              child: Text.rich(
+                TextSpan(
+                  text: _pickupRegionLabel(region),
+                  children: [
+                    TextSpan(
+                      text: '  $count',
+                      style: appFont(
+                        fontWeight: FontWeight.w600,
+                        color: selected
+                            ? Colors.white.withValues(alpha: 0.8)
+                            : _mutedTextColor(context),
+                      ),
+                    ),
+                  ],
+                ),
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? Colors.white : _premiumText(context),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+/// จุดขึ้นรถเป็นการ์ดเลือกแบบ radio — เห็นเวลาขึ้นรถ หมายเหตุ และราคาของทุกจุด
+/// ในครั้งเดียว จุดเยอะเกินจะพับไว้ก่อน (จุดที่เลือกอยู่ไม่ถูกพับทิ้ง)
+class _PickupPointList extends StatefulWidget {
+  final List<Map<String, dynamic>> points;
+  final int? selectedId;
+  final ValueChanged<int?> onChanged;
+
+  const _PickupPointList({
+    super.key,
+    required this.points,
+    required this.selectedId,
+    required this.onChanged,
+  });
+
+  @override
+  State<_PickupPointList> createState() => _PickupPointListState();
+}
+
+class _PickupPointListState extends State<_PickupPointList> {
+  static const int _collapsedCount = 4;
+
+  late bool _expanded = _selectedIndex >= _collapsedCount;
+
+  int get _selectedIndex => widget.points.indexWhere(
+    (p) => int.tryParse(p['id'].toString()) == widget.selectedId,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final points = widget.points;
+    final canCollapse = points.length > _collapsedCount + 1;
+    final visible = !canCollapse || _expanded
+        ? points
+        : points.take(_collapsedCount).toList();
+    final hiddenCount = points.length - visible.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < visible.length; i++) ...[
+          if (i > 0) const SizedBox(height: 8),
+          _PickupPointOption(
+            point: visible[i],
+            selected:
+                int.tryParse(visible[i]['id'].toString()) == widget.selectedId,
+            onTap: () {
+              final id = int.tryParse(visible[i]['id'].toString());
+              if (id == null) return;
+              HapticFeedback.selectionClick();
+              widget.onChanged(id);
+            },
+          ),
+        ],
+        if (canCollapse)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: TextButton.icon(
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                setState(() => _expanded = !_expanded);
+              },
+              icon: Icon(
+                _expanded
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+                size: 20,
+              ),
+              label: Text(
+                _expanded ? 'ย่อรายการ' : 'ดูจุดขึ้นรถอีก $hiddenCount จุด',
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: TextButton.styleFrom(foregroundColor: _softAccent),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _PickupPointOption extends StatelessWidget {
+  final Map<String, dynamic> point;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _PickupPointOption({
+    required this.point,
+    required this.selected,
+    required this.onTap,
+  });
+
+  Future<void> _openMap() async {
+    final uri = Uri.tryParse(textOf(point['map_url']).trim());
+    if (uri == null) return;
+    HapticFeedback.selectionClick();
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final location = _pickupLocationLabel(point);
+    final time = textOf(point['pickup_time']).trim();
+    final notes = textOf(point['notes']).trim();
+    final hasMap = textOf(point['map_url']).trim().isNotEmpty;
+    // ราคาจุดขึ้นรถเป็นราคาเต็มต่อคนที่ทับราคารอบ — 0 = ใช้ราคารอบตามปกติ
+    final price = _asNum(point['price']);
+    final originalPrice = _asNum(point['original_price']);
+    final discounted = price > 0 && originalPrice > price;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 170),
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppTheme.selectedTint(context)
+                  : AppTheme.surface(context),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              border: Border.all(
+                color: selected ? _softAccent : _cardBorder(context),
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 170),
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? _softAccent : Colors.transparent,
+                      border: Border.all(
+                        color: selected ? _softAccent : AppTheme.border(context),
+                        width: 2,
+                      ),
+                    ),
+                    child: selected
+                        ? const Icon(
+                            Icons.check_rounded,
+                            size: 12,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        location,
+                        style: appFont(
+                          fontSize: AppText.sizeBody,
+                          fontWeight: FontWeight.w700,
+                          color: _premiumText(context),
+                          height: 1.3,
+                        ),
+                      ),
+                      if (time.isNotEmpty || hasMap) ...[
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (time.isNotEmpty)
+                              _PointTag(
+                                icon: Icons.schedule_rounded,
+                                text: 'ขึ้นรถ $time น.',
+                                strong: true,
+                                onTint: selected,
+                              ),
+                            if (hasMap)
+                              _PointTag(
+                                icon: Icons.map_outlined,
+                                text: 'ดูแผนที่',
+                                onTap: _openMap,
+                              ),
+                          ],
+                        ),
+                      ],
+                      if (notes.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          notes,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: appFont(
+                            fontSize: AppText.sizeCaption,
+                            fontWeight: FontWeight.w500,
+                            color: _mutedTextColor(context),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // ราคา 0 = ใช้ราคารอบตามปกติ ไม่ต้องเขียนซ้ำทุกการ์ด
+                if (price > 0) ...[
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (discounted)
+                        Text(
+                          money(originalPrice),
+                          style: appFont(
+                            fontSize: AppText.sizeMicro,
+                            fontWeight: FontWeight.w600,
+                            color: _mutedTextColor(context),
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      Text(
+                        money(price),
+                        style: appFont(
+                          fontSize: AppText.sizeBody,
+                          fontWeight: FontWeight.w800,
+                          color: selected || discounted
+                              ? _softAccent
+                              : _premiumText(context),
+                        ),
+                      ),
+                      Text(
+                        'ต่อคน',
+                        style: appFont(
+                          fontSize: AppText.sizeMicro,
+                          fontWeight: FontWeight.w600,
+                          color: _mutedTextColor(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PointTag extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final bool strong;
+  // การ์ดที่เลือกอยู่พื้นเป็นสีเขียวอ่อนเดียวกับป้าย — ต้องสลับเป็นพื้นขาว
+  // ไม่งั้นป้ายจมหายเหลือแต่ตัวหนังสือลอย ๆ
+  final bool onTint;
+  final VoidCallback? onTap;
+
+  const _PointTag({
+    required this.icon,
+    required this.text,
+    this.strong = false,
+    this.onTint = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = strong
+        ? AppTheme.onTintOf(context, _softAccent)
+        : _mutedTextColor(context);
+    final tag = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: onTint
+            ? AppTheme.surface(context)
+            : strong
+            ? AppTheme.tintOf(context, _softAccent)
+            : _fieldBackground(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+        border: strong ? null : Border.all(color: _cardBorder(context)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: fg),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: strong ? FontWeight.w800 : FontWeight.w700,
+                color: fg,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (onTap == null) return tag;
+    // ขยายพื้นที่แตะขึ้นลงโดยไม่เปลี่ยนหน้าตาป้าย — ป้ายสูงแค่ ~20dp
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: tag,
       ),
     );
   }
@@ -1110,6 +1807,127 @@ class _VehicleOptionTile extends StatelessWidget {
   }
 }
 
+/// มาแทนขั้นตอน "เลือกจุดขึ้นรถ" เมื่อเปิดจอยทริป — ลูกค้าไม่ได้นั่งรถทีม
+/// จึงต้องบอกให้ชัดว่าไปเองแล้วต้องทำอะไรต่อ แทนที่จะปล่อยช่องว่างไว้
+class _JoinTripInfoCard extends StatelessWidget {
+  const _JoinTripInfoCard();
+
+  static const _steps = [
+    (
+      icon: Icons.directions_walk_rounded,
+      title: 'เดินทางไปเองถึงจุดนัดพบ',
+      detail: 'ไม่ต้องเลือกจุดขึ้นรถหรือที่นั่งบนรถ',
+    ),
+    (
+      icon: Icons.campaign_outlined,
+      title: 'รับข้อมูลจุดนัดพบและเวลานัด',
+      detail: 'ทีมงานจะแจ้งให้ทราบก่อนวันเดินทาง',
+    ),
+    (
+      icon: Icons.qr_code_2_rounded,
+      title: 'เช็คอินด้วย QR Code',
+      detail: 'ได้รับหลังทีมงานยืนยันการชำระเงิน',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _fieldBackground(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: _cardBorder(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _softAccent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                ),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  size: 20,
+                  color: _softAccent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'คุณเลือกจอยทริป',
+                      style: appFont(
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w900,
+                        color: _premiumText(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'เดินทางไปเอง แล้วร่วมกิจกรรมกับกลุ่มที่จุดนัดพบ',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w600,
+                        color: _mutedTextColor(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Divider(height: 1, color: _cardBorder(context)),
+          for (final step in _steps)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(step.icon, size: 18, color: _softAccent),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step.title,
+                          style: appFont(
+                            fontSize: AppText.sizeCaption,
+                            fontWeight: FontWeight.w800,
+                            color: _premiumText(context),
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          step.detail,
+                          style: appFont(
+                            fontSize: AppText.sizeLabel,
+                            fontWeight: FontWeight.w600,
+                            color: _mutedTextColor(context),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _JoinTripSwitch extends StatelessWidget {
   final bool selected;
   final num price;
@@ -1167,7 +1985,16 @@ class _JoinTripSwitch extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    price > 0 ? '${money(price)} / คน' : 'ใช้ราคาจากรอบเดินทาง',
+                    'เดินทางไปเอง ไม่ต้องนั่งรถทีม',
+                    style: appFont(
+                      color: _mutedTextColor(context),
+                      fontSize: AppText.sizeCaption,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    price > 0 ? '${money(price)} / คน' : 'ราคาตามรอบเดินทาง',
                     style: appFont(
                       color: _mutedTextColor(context),
                       fontSize: AppText.sizeCaption,

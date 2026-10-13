@@ -276,7 +276,7 @@ class VehicleSeatMap extends StatelessWidget {
     bool selectable,
     _SeatMetrics metrics,
   ) {
-    final visual = _visualFor(tone);
+    final visual = _visualFor(context, tone);
     final emphasised = tone == SeatTone.picking || tone == SeatTone.mine;
     // ที่นั่งของผู้ใช้ในโหมดเน้น — ทำให้เด่นชัดเป็นพิเศษ
     final spotlight = highlightMine && tone == SeatTone.mine;
@@ -370,7 +370,7 @@ class VehicleSeatMap extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: appFont(
-                color: visual.labelColor(context),
+                color: visual.label,
                 fontSize: metrics.labelSize,
                 fontWeight: spotlight ? FontWeight.w900 : FontWeight.w700,
               ),
@@ -417,27 +417,29 @@ class VehicleSeatLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ตัวอย่างสีเล็กลงและช่องไฟแคบลง ให้สี่สถานะพอดีบรรทัดเดียวบนมือถือ —
+    // เดิมแตกเป็น 3 + 1 แถวดูไม่เป็นระเบียบ
     return Wrap(
-      spacing: 14,
-      runSpacing: 10,
+      spacing: 12,
+      runSpacing: 8,
       alignment: WrapAlignment.center,
       children: tones.map((tone) {
-        final visual = _visualFor(tone);
+        final visual = _visualFor(context, tone);
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 22,
-              height: 22,
-              padding: const EdgeInsets.all(4),
+              width: 18,
+              height: 18,
+              padding: const EdgeInsets.all(3.5),
               decoration: BoxDecoration(
                 color: visual.fill,
-                borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                border: Border.all(color: visual.border, width: 1.5),
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: visual.border, width: 1.2),
               ),
               child: _SeatGlyph(color: visual.glyph),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 5),
             Text(
               labelOverrides[tone] ?? _labels[tone] ?? '',
               style: appFont(
@@ -463,7 +465,7 @@ class _SeatVisual {
   final Color badge;
   final Color badgeIconColor;
   final IconData? badgeIcon;
-  final Color Function(BuildContext context) labelColor;
+  final Color label;
 
   const _SeatVisual({
     required this.fill,
@@ -472,72 +474,82 @@ class _SeatVisual {
     required this.badge,
     required this.badgeIconColor,
     required this.badgeIcon,
-    required this.labelColor,
+    required this.label,
   });
 }
 
 const _accent = AppTheme.primaryColor; // Emerald 600
 const _warning = AppTheme.warningColor; // Amber 600
-const _danger = AppTheme.errorColor; // Rose 600
 
 const double _bodyPadding = 16;
 
 const double _rowNumberWidth = 18;
 
-_SeatVisual _visualFor(SeatTone tone) {
+/// สีของแต่ละสถานะ คำนวณจากธีม — เดิมเป็นพาสเทลตายตัวที่สว่างจ้าบนโหมดมืด
+///
+/// หลักคือให้ "ที่ยังเลือกได้" เด่นที่สุด: ว่าง = เบาะขาวขอบเขียว, ที่เลือก =
+/// เขียวทึบ, กำลังจอง = ส้ม ส่วนที่จองไปแล้วจางเป็นเทา (เดิมเป็นแดง + แม่กุญแจ
+/// ซึ่งอ่านเหมือนข้อผิดพลาด และแย่งสายตาจากที่นั่งที่ยังว่าง)
+_SeatVisual _visualFor(BuildContext context, SeatTone tone) {
+  final dark = AppTheme.isDark(context);
+  final muted = AppTheme.mutedText(context);
   switch (tone) {
     case SeatTone.picking:
     case SeatTone.mine:
-      return _SeatVisual(
+      return const _SeatVisual(
         fill: _accent,
         border: _accent,
         glyph: Colors.white,
         badge: Colors.white,
         badgeIconColor: _accent,
         badgeIcon: Icons.check_rounded,
-        labelColor: (_) => _accent,
+        label: _accent,
       );
     case SeatTone.group:
       return _SeatVisual(
-        fill: _warning.withValues(alpha: 0.16),
-        border: _warning.withValues(alpha: 0.40),
-        glyph: _warning,
-        badge: _warning,
+        fill: AppTheme.tintOf(context, AppTheme.infoColor),
+        border: AppTheme.infoColor.withValues(alpha: 0.45),
+        glyph: AppTheme.onTintOf(context, AppTheme.infoColor),
+        badge: AppTheme.infoColor,
         badgeIconColor: Colors.white,
         badgeIcon: Icons.groups_rounded,
-        labelColor: (_) => const Color(0xFF92400E),
+        label: AppTheme.onTintOf(context, AppTheme.infoColor),
       );
     case SeatTone.locked:
       return _SeatVisual(
-        fill: const Color(0xFFFFF3E0),
-        border: const Color(0xFFFFD9A0),
-        glyph: const Color(0xFFE08A00),
-        badge: const Color(0xFFE08A00),
+        fill: AppTheme.tintOf(context, _warning),
+        border: _warning.withValues(alpha: 0.5),
+        glyph: AppTheme.onTintOf(context, _warning),
+        badge: _warning,
         badgeIconColor: Colors.white,
         badgeIcon: Icons.schedule_rounded,
-        labelColor: (_) => const Color(0xFF92400E),
+        label: AppTheme.onTintOf(context, _warning),
       );
-    // ไฟจราจร: ว่าง = เขียว, จองแล้ว = แดง + แม่กุญแจ — อ่านออกตั้งแต่ระยะสายตา
-    // แรกโดยไม่ต้องไล่อ่านคำอธิบายสี
     case SeatTone.booked:
       return _SeatVisual(
-        fill: const Color(0xFFFFF1F2),
-        border: const Color(0xFFFECDD3),
-        glyph: const Color(0xFFFB7185),
-        badge: _danger,
+        fill: Color.lerp(
+          AppTheme.fieldSurface(context),
+          muted,
+          dark ? 0.16 : 0.10,
+        )!,
+        border: Colors.transparent,
+        glyph: muted.withValues(alpha: dark ? 0.45 : 0.35),
+        badge: muted,
         badgeIconColor: Colors.white,
-        badgeIcon: Icons.lock_rounded,
-        labelColor: (_) => const Color(0xFFFB7185),
+        badgeIcon: null,
+        label: muted.withValues(alpha: 0.6),
       );
     case SeatTone.available:
       return _SeatVisual(
-        fill: const Color(0xFFECFDF5),
-        border: const Color(0xFFA7F3D0),
-        glyph: _accent,
+        fill: dark
+            ? AppTheme.tintOf(context, _accent)
+            : AppTheme.surface(context),
+        border: _accent.withValues(alpha: dark ? 0.55 : 0.45),
+        glyph: dark ? AppTheme.onTintOf(context, _accent) : _accent,
         badge: _accent,
         badgeIconColor: Colors.white,
         badgeIcon: null,
-        labelColor: (context) => AppTheme.mutedText(context),
+        label: AppTheme.onSurface(context),
       );
   }
 }
@@ -584,7 +596,9 @@ double _naturalRowWidth(List<_SeatRowData> rows, {required int noseSlots}) {
 double _fitScale(double available, double natural) {
   if (natural <= 0 || available <= 0) return 1;
 
-  return math.min(1.0, available / natural).clamp(0.62, 1.0);
+  // รถตู้ผังแคบ — ขยายเบาะขึ้นได้ถึง 1.2 เท่าให้แตะง่ายและไม่เหลือที่ว่างโล่ง
+  // ส่วนรถบัสที่กว้างเต็มจออยู่แล้วก็ยังย่อลงได้เหมือนเดิม
+  return (available / natural).clamp(0.62, 1.2);
 }
 
 /// A clean, front-facing armchair silhouette drawn as a single-color glyph so

@@ -1,158 +1,5 @@
 part of 'booking_flow_screen.dart';
 
-class _HalalFoodSelector extends StatelessWidget {
-  final ValueNotifier<bool> selected;
-  final ValueChanged<bool> onChanged;
-
-  const _HalalFoodSelector({required this.selected, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: selected,
-      builder: (context, wantsHalal, _) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ต้องการอาหารฮาลาล', style: _labelStyle(context)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _HalalChoiceButton(
-                    label: 'ต้องการ',
-                    icon: Icons.check_circle_outline_rounded,
-                    selected: wantsHalal,
-                    onTap: () => onChanged(true),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _HalalChoiceButton(
-                    label: 'ไม่ต้องการ',
-                    icon: Icons.cancel_outlined,
-                    selected: !wantsHalal,
-                    onTap: () => onChanged(false),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _HalalChoiceButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _HalalChoiceButton({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: selected
-              ? _softAccent.withValues(alpha: 0.10)
-              : _fieldBackground(context),
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          border: Border.all(
-            color: selected ? _softAccent : _cardBorder(context),
-            width: selected ? 1.4 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: selected ? _softAccent : _mutedTextColor(context), size: 18),
-            const SizedBox(width: 7),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: appFont(
-                  color: selected ? _softAccent : _mutedTextColor(context),
-                  fontSize: AppText.sizeLabel,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PremiumDropdown<T> extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final T? value;
-  final List<DropdownMenuItem<T>> items;
-  final ValueChanged<T?> onChanged;
-  final String? Function(T?)? validator;
-  final DropdownButtonBuilder? selectedItemBuilder;
-
-  const _PremiumDropdown({
-    super.key,
-    required this.label,
-    required this.icon,
-    required this.value,
-    required this.items,
-    required this.onChanged,
-    this.validator,
-    this.selectedItemBuilder,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: _labelStyle(context)),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<T>(
-          initialValue: value,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
-          decoration: _fieldDecoration(
-            context: context,
-            icon: icon,
-            hint: label,
-          ),
-          style: appFont(
-            color: _premiumText(context),
-            fontSize: AppText.sizeBody,
-            fontWeight: FontWeight.w700,
-          ),
-          dropdownColor: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          selectedItemBuilder: selectedItemBuilder,
-          items: items,
-          onChanged: items.isEmpty ? null : onChanged,
-          validator: validator,
-        ),
-      ],
-    );
-  }
-}
-
 class _PremiumTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -165,7 +12,6 @@ class _PremiumTextField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final TextInputAction? textInputAction;
   final List<TextInputFormatter>? inputFormatters;
-  final ValueChanged<String>? onSubmitted;
 
   const _PremiumTextField({
     required this.controller,
@@ -179,7 +25,6 @@ class _PremiumTextField extends StatelessWidget {
     this.autofillHints,
     this.textInputAction,
     this.inputFormatters,
-    this.onSubmitted,
   });
 
   @override
@@ -199,7 +44,6 @@ class _PremiumTextField extends StatelessWidget {
           autofillHints: autofillHints,
           textInputAction: textInputAction,
           inputFormatters: inputFormatters,
-          onFieldSubmitted: onSubmitted,
           decoration: _fieldDecoration(
             context: context,
             icon: icon,

@@ -95,4 +95,76 @@ void main() {
     await tester.tap(chip('Z9'));
     expect(removed, ['Z9']);
   });
+
+  // ยังไม่เลือกอะไร = แค่คำแนะนำ ไม่มีกล่องเตือนซ้ำ (เดิมมีกล่องเหลือง
+  // "กรุณาเลือกที่นั่งก่อน…" ขึ้นตั้งแต่ยังไม่ได้แตะ)
+  testWidgets('no selection shows a hint, not a warning box', (tester) async {
+    await pump(tester, <String>{});
+
+    expect(find.textContaining('แตะที่นั่งว่างเพื่อเลือก'), findsOneWidget);
+    expect(find.textContaining('กรุณาเลือกที่นั่ง'), findsNothing);
+    expect(find.textContaining('ที่นั่งที่เลือก'), findsNothing);
+  });
+
+  testWidgets('the summary carries the seats subtotal', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: SeatSelectionSection(
+              seatMap: seatMap,
+              isLoading: false,
+              error: null,
+              selectedSeatIds: const {'A1', 'D2'},
+              seatsSubtotal: 5980,
+              onSeatTap: (_) {},
+              onRetry: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('ที่นั่งที่เลือก 2 ที่'), findsOneWidget);
+    expect(find.text('฿5,980.00'), findsOneWidget);
+  });
+
+  testWidgets('a seat someone else holds says when it frees up', (
+    tester,
+  ) async {
+    final held = Map<String, dynamic>.from(seatMap)
+      ..['seats'] = [
+        ...seatMap['seats'] as List,
+        {
+          ...seat('B1', 1, 2, status: 'locked'),
+          'locked_ttl_seconds': 420,
+        },
+      ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: SeatSelectionSection(
+              seatMap: held,
+              isLoading: false,
+              error: null,
+              selectedSeatIds: const {},
+              onSeatTap: (_) {},
+              onRetry: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.textContaining('ที่นั่ง B1 มีคนกำลังจอง — ว่างอีกครั้งใน 7:00'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('อัปเดตทุก'), findsNothing);
+    // ตัวนับถอยหลังเป็น Timer — ถอดวิดเจ็ตออกให้มันหยุดก่อนจบเทสต์
+    await tester.pumpWidget(const SizedBox());
+  });
 }

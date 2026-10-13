@@ -97,6 +97,27 @@ class TravelerFormSection extends StatelessWidget {
     this.documentRequirements = const [],
   });
 
+  /// พับคนที่กรอกเสร็จ แล้วกางคนถัดไปและเลื่อนไปหา — กรอกทีละคนเป็นจังหวะ
+  void _advance(BuildContext context, int index) {
+    FocusScope.of(context).unfocus();
+    passengers[index].expanded.value = false;
+    final target = index + 1 < passengers.length
+        ? passengers[index + 1]
+        : passengers[index];
+    if (target != passengers[index]) target.expanded.value = true;
+    // รอให้การ์ดที่พับหดเสร็จก่อน ไม่งั้นตำแหน่งที่เลื่อนไปจะคลาดตอนมันหด
+    Future.delayed(const Duration(milliseconds: 230), () {
+      final ctx = target.cardKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        alignment: 0.05,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return _SectionShell(
@@ -111,11 +132,13 @@ class TravelerFormSection extends StatelessWidget {
             ),
       child: Column(
         children: [
-          ...List.generate(passengers.length, (index) {
-            return _TravelerCard(
+          for (var index = 0; index < passengers.length; index++) ...[
+            if (index > 0) const SizedBox(height: 10),
+            _TravelerCard(
+              key: ObjectKey(passengers[index]),
               index: index,
+              total: passengers.length,
               controllers: passengers[index],
-              isLast: index == passengers.length - 1,
               seatId: index < selectedSeatIds.length
                   ? selectedSeatIds[index]
                   : null,
@@ -126,17 +149,18 @@ class TravelerFormSection extends StatelessWidget {
               onUseProfile: () => onUseProfile(index),
               onUseWallet: () => onUseWallet(index),
               onUseSavedTraveller: () => onUseSavedTraveller(index),
-            );
-          }),
+              onDone: () => _advance(context, index),
+            ),
+          ],
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
             child: passengers.length > 1
                 ? Padding(
                     key: const ValueKey('group-notes'),
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: 16),
                     child: _PremiumTextField(
                       controller: groupNotes,
-                      label: 'หมายเหตุกลุ่ม',
+                      label: 'หมายเหตุถึงทีมงาน (ไม่บังคับ)',
                       hint: 'เช่น ขอที่นั่งใกล้กัน',
                       icon: Icons.notes_rounded,
                       maxLines: 2,
@@ -246,7 +270,6 @@ class PricingSummaryCard extends StatelessWidget {
             _PriceRow(
               label: 'ตัวเลือกเสริม',
               value: money(pricing.addonsTotal),
-              valueColor: const Color(0xFFB45309),
             ),
             const SizedBox(height: 10),
           ],
@@ -254,7 +277,6 @@ class PricingSummaryCard extends StatelessWidget {
             _PriceRow(
               label: 'ค่าเช่าอุปกรณ์',
               value: money(pricing.rentalsTotal),
-              valueColor: const Color(0xFF0369A1),
             ),
             const SizedBox(height: 10),
           ],
@@ -500,27 +522,36 @@ class _PromoField extends StatelessWidget {
       );
     }
 
+    // ป้ายอยู่นอกแถว ช่องกับปุ่มจึงสูงเท่ากันพอดี (เดิมปุ่มไปเสมอกับป้ายด้านบน)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _PremiumTextField(
-                controller: controller,
-                label: 'โค้ดส่วนลด',
-                hint: 'เช่น NEWLUILAY',
-                icon: Icons.local_offer_rounded,
-                textCapitalization: TextCapitalization.characters,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => onApply(),
+        Text('โค้ดส่วนลด', style: _labelStyle(context)),
+        const SizedBox(height: 8),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  textCapitalization: TextCapitalization.characters,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => onApply(),
+                  decoration: _fieldDecoration(
+                    context: context,
+                    icon: Icons.local_offer_rounded,
+                    hint: 'เช่น NEWLUILAY',
+                  ),
+                  style: appFont(
+                    color: _premiumText(context),
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            SizedBox(
-              height: 52,
-              child: FilledButton(
+              const SizedBox(width: 10),
+              FilledButton(
                 onPressed: loading ? null : onApply,
                 style: FilledButton.styleFrom(
                   backgroundColor: _softAccent,
@@ -543,12 +574,12 @@ class _PromoField extends StatelessWidget {
                         style: appFont(
                           color: Colors.white,
                           fontSize: AppText.sizeBody,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         if (error != null) ...[
           const SizedBox(height: 8),
@@ -579,8 +610,6 @@ class _PromoField extends StatelessWidget {
 /// group rarely wants the same thing: 4 people can travel together but only 2
 /// of them rent a mat.
 class AddonSelectionSection extends StatelessWidget {
-  static const Color _accent = Color(0xFFF59E0B);
-
   final List<_AddonOption> addons;
   final Map<int, int> quantities;
   final int travelerCount;
@@ -618,153 +647,34 @@ class AddonSelectionSection extends StatelessWidget {
               ),
             ),
           ),
-          if (selectedTotal > 0) ...[
-            _PriceRow(
-              label: 'รายการเสริมที่เลือก',
-              value: money(selectedTotal),
-              valueColor: const Color(0xFFB45309),
-            ),
-            const SizedBox(height: 12),
-          ],
           ...addons.map((addon) {
             final qty = quantities[addon.index] ?? 0;
-            final selected = qty > 0;
             final maxQty = addon.maxQuantityFor(travelerCount);
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? const Color(0xFFFFFBEB)
-                      : AppTheme.fieldSurface(context),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                  border: Border.all(
-                    color: selected ? _accent : AppTheme.border(context),
-                    width: selected ? 1.4 : 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    // Image (tap to zoom) or amber placeholder
-                    GestureDetector(
-                      onTap: addon.hasImage
-                          ? () => _openAddonImage(context, addon.imageUrl)
-                          : null,
-                      child: Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                            child: addon.hasImage
-                                ? CachedNetworkImage(
-                                    imageUrl: addon.imageUrl,
-                                    width: 60,
-                                    height: 60,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, _) => Container(
-                                      width: 60,
-                                      height: 60,
-                                      color: const Color(0xFFFEF3C7),
-                                    ),
-                                    errorWidget: (_, _, _) => Container(
-                                      width: 60,
-                                      height: 60,
-                                      color: const Color(0xFFFEF3C7),
-                                      child: const Icon(
-                                        Icons.broken_image_rounded,
-                                        size: 22,
-                                        color: Color(0xFFD97706),
-                                      ),
-                                    ),
-                                  )
-                                : Container(
-                                    width: 60,
-                                    height: 60,
-                                    color: const Color(0xFFFEF3C7),
-                                    child: const Icon(
-                                      Icons.add_task_rounded,
-                                      size: 24,
-                                      color: Color(0xFFD97706),
-                                    ),
-                                  ),
-                          ),
-                          if (addon.hasImage)
-                            Positioned(
-                              right: 2,
-                              bottom: 2,
-                              child: Container(
-                                padding: const EdgeInsets.all(1.5),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                                ),
-                                child: const Icon(
-                                  Icons.zoom_in_rounded,
-                                  size: 11,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            addon.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: appFont(
-                              color: AppTheme.onSurface(context),
-                              fontSize: AppText.sizeBody,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.1,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            '${money(addon.price)} ${addon.priceTypeLabel}',
-                            style: appFont(
-                              color: AppTheme.mutedText(context),
-                              fontSize: AppText.sizeCaption,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          if (selected) ...[
-                            const SizedBox(height: 3),
-                            Text(
-                              '+${money(addon.price * qty)}',
-                              style: appFont(
-                                color: const Color(0xFFB45309),
-                                fontWeight: FontWeight.w800,
-                                fontSize: AppText.sizeLabel,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Quantity stepper
-                    _QuantityStepper(
-                      quantity: qty,
-                      accent: _accent,
-                      onDecrement: qty > 0
-                          ? () => onChanged(addon.index, qty - 1)
-                          : null,
-                      onIncrement: qty < maxQty
-                          ? () => onChanged(addon.index, qty + 1)
-                          : null,
-                    ),
-                  ],
-                ),
+              child: _ExtraItemTile(
+                name: addon.name,
+                priceLabel: '${money(addon.price)} · ${addon.priceTypeLabel}',
+                lineTotal: addon.price * qty,
+                imageUrl: addon.imageUrl,
+                fallbackIcon: Icons.add_task_rounded,
+                quantity: qty,
+                onDecrement: qty > 0
+                    ? () => onChanged(addon.index, qty - 1)
+                    : null,
+                onIncrement: qty < maxQty
+                    ? () => onChanged(addon.index, qty + 1)
+                    : null,
               ),
             );
           }),
+          if (selectedTotal > 0) ...[
+            const SizedBox(height: 2),
+            _PriceRow(
+              label: 'รวมตัวเลือกเสริม',
+              value: money(selectedTotal),
+            ),
+          ],
         ],
       ),
     );
@@ -772,10 +682,8 @@ class AddonSelectionSection extends StatelessWidget {
 }
 
 /// Equipment rental picker — each item has a quantity stepper (rent 2 sleeping
-/// bags, 1 trekking pole, …). Sky-blue accent to set it apart from the amber
-/// add-ons above it.
+/// bags, 1 trekking pole, …).
 class RentalSelectionSection extends StatelessWidget {
-  static const Color _accent = Color(0xFF0369A1);
   static const int _maxQty = 20;
 
   final List<_RentalOption> rentals;
@@ -802,132 +710,243 @@ class RentalSelectionSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (selectedTotal > 0) ...[
-            _PriceRow(
-              label: 'ค่าเช่าอุปกรณ์ที่เลือก',
-              value: money(selectedTotal),
-              valueColor: _accent,
-            ),
-            const SizedBox(height: 12),
-          ],
           ...rentals.map((rental) {
             final qty = quantities[rental.index] ?? 0;
-            final selected = qty > 0;
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? const Color(0xFFEFF6FF)
-                      : AppTheme.fieldSurface(context),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                  border: Border.all(
-                    color: selected ? _accent : AppTheme.border(context),
-                    width: selected ? 1.4 : 1,
-                  ),
+              child: _ExtraItemTile(
+                name: rental.name,
+                description: rental.description,
+                priceLabel: '${money(rental.price)} · ต่อชิ้น',
+                lineTotal: rental.price * qty,
+                imageUrl: rental.imageUrl,
+                fallbackIcon: Icons.backpack_rounded,
+                quantity: qty,
+                onDecrement: qty > 0
+                    ? () => onChanged(rental.index, qty - 1)
+                    : null,
+                onIncrement: qty < _maxQty
+                    ? () => onChanged(rental.index, qty + 1)
+                    : null,
+              ),
+            );
+          }),
+          if (selectedTotal > 0) ...[
+            const SizedBox(height: 2),
+            _PriceRow(
+              label: 'รวมค่าเช่าอุปกรณ์',
+              value: money(selectedTotal),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// รายการเสริม / อุปกรณ์เช่าหนึ่งชิ้น — ยังไม่เลือกมีแค่ปุ่ม "เพิ่ม" ชื่อจึงได้
+/// ที่เต็มบรรทัด เลือกแล้วตัวปรับจำนวนกับยอดรวมของชิ้นนั้นลงไปอยู่แถวล่าง
+class _ExtraItemTile extends StatelessWidget {
+  final String name;
+  final String description;
+  final String priceLabel;
+  final num lineTotal;
+  final String imageUrl;
+  final IconData fallbackIcon;
+  final int quantity;
+  final VoidCallback? onDecrement;
+  final VoidCallback? onIncrement;
+
+  const _ExtraItemTile({
+    required this.name,
+    this.description = '',
+    required this.priceLabel,
+    required this.lineTotal,
+    required this.imageUrl,
+    required this.fallbackIcon,
+    required this.quantity,
+    required this.onDecrement,
+    required this.onIncrement,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = quantity > 0;
+    final hasImage = imageUrl.isNotEmpty;
+    // การ์ดที่เลือกพื้นเป็นสีเขียวอ่อนแล้ว — กล่องไอคอนสลับเป็นพื้นขาวไม่ให้จมหาย
+    final placeholder = Container(
+      width: 48,
+      height: 48,
+      color: selected
+          ? AppTheme.surface(context)
+          : AppTheme.tintOf(context, _softAccent),
+      child: Icon(
+        fallbackIcon,
+        size: 22,
+        color: AppTheme.onTintOf(context, _softAccent),
+      ),
+    );
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: selected
+            ? AppTheme.selectedTint(context)
+            : AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: selected ? _softAccent : _cardBorder(context),
+          width: selected ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: hasImage
+                    ? () => _openAddonImage(context, imageUrl)
+                    : null,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  child: hasImage
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          memCacheWidth: 144,
+                          placeholder: (_, _) => placeholder,
+                          errorWidget: (_, _, _) => placeholder,
+                        )
+                      : placeholder,
                 ),
-                child: Row(
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image (tap to zoom) or blue placeholder
-                    GestureDetector(
-                      onTap: rental.hasImage
-                          ? () => _openAddonImage(context, rental.imageUrl)
-                          : null,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                        child: rental.hasImage
-                            ? CachedNetworkImage(
-                                imageUrl: rental.imageUrl,
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                                placeholder: (_, _) => Container(
-                                  width: 60,
-                                  height: 60,
-                                  color: const Color(0xFFDBEAFE),
-                                ),
-                                errorWidget: (_, _, _) => Container(
-                                  width: 60,
-                                  height: 60,
-                                  color: const Color(0xFFDBEAFE),
-                                  child: const Icon(
-                                    Icons.broken_image_rounded,
-                                    size: 22,
-                                    color: _accent,
-                                  ),
-                                ),
-                              )
-                            : Container(
-                                width: 60,
-                                height: 60,
-                                color: const Color(0xFFDBEAFE),
-                                child: const Icon(
-                                  Icons.backpack_rounded,
-                                  size: 24,
-                                  color: _accent,
-                                ),
-                              ),
+                    Text(
+                      name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: appFont(
+                        color: _premiumText(context),
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            rental.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: appFont(
-                              color: AppTheme.onSurface(context),
-                              fontSize: AppText.sizeBody,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.1,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            '${money(rental.price)} / ชิ้น',
-                            style: appFont(
-                              color: AppTheme.mutedText(context),
-                              fontSize: AppText.sizeCaption,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          if (selected) ...[
-                            const SizedBox(height: 3),
-                            Text(
-                              '+${money(rental.price * qty)}',
-                              style: appFont(
-                                color: _accent,
-                                fontWeight: FontWeight.w800,
-                                fontSize: AppText.sizeLabel,
-                              ),
-                            ),
-                          ],
-                        ],
+                    if (description.isNotEmpty)
+                      Text(
+                        description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          color: _mutedTextColor(context),
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Quantity stepper
-                    _QuantityStepper(
-                      quantity: qty,
-                      accent: _accent,
-                      onDecrement: qty > 0
-                          ? () => onChanged(rental.index, qty - 1)
-                          : null,
-                      onIncrement: qty < _maxQty
-                          ? () => onChanged(rental.index, qty + 1)
-                          : null,
+                    const SizedBox(height: 2),
+                    Text(
+                      priceLabel,
+                      style: appFont(
+                        color: _mutedTextColor(context),
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
               ),
-            );
-          }),
+              if (!selected) ...[
+                const SizedBox(width: 8),
+                _AddPillButton(onTap: onIncrement),
+              ],
+            ],
+          ),
+          if (selected) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '+${money(lineTotal)}',
+                    style: appFont(
+                      color: AppTheme.onTintOf(context, _softAccent),
+                      fontSize: AppText.sizeBody,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                _QuantityStepper(
+                  quantity: quantity,
+                  accent: _softAccent,
+                  onDecrement: onDecrement,
+                  onIncrement: onIncrement,
+                ),
+              ],
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _AddPillButton extends StatelessWidget {
+  final VoidCallback? onTap;
+
+  const _AddPillButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled
+            ? () {
+                HapticFeedback.selectionClick();
+                onTap!();
+              }
+            : null,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 36),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            border: Border.all(
+              color: enabled
+                  ? _softAccent.withValues(alpha: 0.5)
+                  : _cardBorder(context),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.add_rounded,
+                size: 16,
+                color: enabled ? _softAccent : _mutedTextColor(context),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'เพิ่ม',
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w800,
+                  color: enabled ? _softAccent : _mutedTextColor(context),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1429,10 +1448,15 @@ class _SeatDrivenTravelerCount extends StatelessWidget {
   }
 }
 
+/// การ์ดผู้เดินทางหนึ่งคน — พับ/กางได้ หัวการ์ดบอกชื่อและจำนวนช่องที่ยังขาด
+/// เพื่อให้กลุ่มหลายคนไม่ต้องเลื่อนผ่านฟอร์มยาวทุกคนในคราวเดียว
+///
+/// การ์ดที่พับยังเก็บช่องไว้ในฟอร์ม (Visibility.maintainState) ตัวตรวจของฟอร์ม
+/// จึงยังทำงานครบทุกคน หน้าจอเป็นคนกางการ์ดที่ไม่ผ่านให้เห็นเอง
 class _TravelerCard extends StatelessWidget {
   final int index;
+  final int total;
   final _PassengerControllers controllers;
-  final bool isLast;
   final String? seatId;
   final List<dynamic> pickupPoints;
   final bool isInternational;
@@ -1441,11 +1465,13 @@ class _TravelerCard extends StatelessWidget {
   final VoidCallback onUseProfile;
   final VoidCallback onUseWallet;
   final VoidCallback onUseSavedTraveller;
+  final VoidCallback onDone;
 
   const _TravelerCard({
+    super.key,
     required this.index,
+    required this.total,
     required this.controllers,
-    required this.isLast,
     this.seatId,
     this.pickupPoints = const [],
     this.isInternational = false,
@@ -1454,650 +1480,1038 @@ class _TravelerCard extends StatelessWidget {
     required this.onUseProfile,
     required this.onUseWallet,
     required this.onUseSavedTraveller,
+    required this.onDone,
   });
+
+  /// คนเดียวไม่มีอะไรให้พับ — ฟอร์มเปิดค้างไว้เสมอ
+  bool get _collapsible => total > 1;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return ValueListenableBuilder<bool>(
+      valueListenable: controllers.expanded,
+      builder: (context, expanded, _) {
+        final open = expanded || !_collapsible;
+        return AnimatedContainer(
+          key: controllers.cardKey,
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            border: Border.all(
+              color: open && _collapsible
+                  ? _softAccent.withValues(alpha: 0.45)
+                  : _cardBorder(context),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: _premiumText(context),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: appFont(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: AppText.sizeCaption,
-                    ),
-                  ),
-                ),
+              _TravelerCardHeader(
+                index: index,
+                controllers: controllers,
+                seatId: seatId,
+                open: open,
+                collapsible: _collapsible,
+                needsPickup: pickupPoints.isNotEmpty,
+                isInternational: isInternational,
+                minPassportExpiry: minPassportExpiry,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'ผู้เดินทาง',
-                  style: appFont(
-                    fontWeight: FontWeight.w800,
-                    color: _premiumText(context),
-                    fontSize: AppText.sizeSubtitle,
-                  ),
-                ),
-              ),
-              if (seatId != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _fieldBackground(context),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    border: Border.all(color: _cardBorder(context)),
-                  ),
-                  child: Text(
-                    'ที่นั่ง $seatId',
-                    style: appFont(
-                      color: _mutedTextColor(context),
-                      fontSize: AppText.sizeCaption,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                onSelected: (val) {
-                  if (val == 'profile') onUseProfile();
-                  if (val == 'wallet') onUseWallet();
-                  if (val == 'book') onUseSavedTraveller();
-                },
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                ),
-                itemBuilder: (_) => [
-                  // สมุดผู้ร่วมเดินทางอยู่บนสุด — เป็นทางที่ใช้บ่อยที่สุดเมื่อ
-                  // จองให้คนอื่น ส่วนโปรไฟล์ใช้ได้กับตัวเองคนเดียว
-                  PopupMenuItem(
-                    value: 'book',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.people_alt_rounded,
-                            size: 18, color: _softAccent),
-                        const SizedBox(width: 10),
-                        Text('สมุดผู้ร่วมเดินทาง',
-                            style: appFont(
-                                fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'profile',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.account_circle_outlined,
-                            size: 18, color: _softAccent),
-                        const SizedBox(width: 10),
-                        Text('ดึงข้อมูลโปรไฟล์',
-                            style: appFont(
-                                fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'wallet',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.wallet_rounded,
-                            size: 18, color: _softAccent),
-                        const SizedBox(width: 10),
-                        Text('กรอกจาก Wallet',
-                            style: appFont(
-                                fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                  ),
-                ],
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _softAccent.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.edit_note_rounded,
-                          size: 16, color: _softAccent),
-                      const SizedBox(width: 4),
-                      Text(
-                        'กรอกจาก',
-                        style: appFont(
-                          fontSize: AppText.sizeLabel,
-                          fontWeight: FontWeight.w800,
-                          color: _softAccent,
-                        ),
-                      ),
-                      const Icon(Icons.arrow_drop_down_rounded,
-                          size: 16, color: _softAccent),
-                    ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: Visibility(
+                  visible: open,
+                  maintainState: true,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+                    child: _buildBody(context),
                   ),
                 ),
               ),
             ],
           ),
-          // Per-passenger pickup point selector
-          if (pickupPoints.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            ValueListenableBuilder<int?>(
-              valueListenable: controllers.pickupPointId,
-              builder: (context, selectedId, _) {
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _fieldBackground(context),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    border: Border.all(color: _cardBorder(context)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on_rounded,
-                              size: 16, color: _softAccent),
-                          const SizedBox(width: 6),
-                          Text(
-                            'จุดขึ้นรถ',
-                            style: appFont(
-                              fontSize: AppText.sizeLabel,
-                              fontWeight: FontWeight.w700,
-                              color: _premiumText(context),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '*',
-                            style: appFont(
-                              fontSize: AppText.sizeLabel,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: pickupPoints.map((pt) {
-                          final ptMap = asMap(pt);
-                          final ptId = int.tryParse(ptMap['id'].toString());
-                          final isSelected = selectedId == ptId;
-                          final location = ptMap['pickup_location'] as String? ?? '';
-                          final price = _asNum(ptMap['price']);
-                          return GestureDetector(
-                            onTap: () => controllers.pickupPointId.value = ptId,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? const Color(0xFF059669).withValues(alpha: 0.1)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? const Color(0xFF059669)
-                                      : _cardBorder(context),
-                                  width: isSelected ? 2 : 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    isSelected
-                                        ? Icons.check_circle_rounded
-                                        : Icons.radio_button_unchecked_rounded,
-                                    size: 16,
-                                    color: isSelected
-                                        ? const Color(0xFF059669)
-                                        : _mutedTextColor(context),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    location,
-                                    style: appFont(
-                                      fontSize: AppText.sizeLabel,
-                                      fontWeight: FontWeight.w700,
-                                      color: isSelected
-                                          ? const Color(0xFF059669)
-                                          : _premiumText(context),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    money(price),
-                                    style: appFont(
-                                      fontSize: AppText.sizeCaption,
-                                      color: _mutedTextColor(context),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      if (selectedId == null) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          '* กรุณาเลือกจุดขึ้นรถ',
-                          style: appFont(
-                            fontSize: AppText.sizeCaption,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                );
-              },
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    final showPickup = pickupPoints.length > 1 ||
+        (pickupPoints.isNotEmpty && controllers.pickupPointId.value == null);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Divider(height: 1, color: _cardBorder(context)),
+        const SizedBox(height: 14),
+        _QuickFillRow(
+          onUseSavedTraveller: onUseSavedTraveller,
+          onUseProfile: onUseProfile,
+          onUseWallet: onUseWallet,
+        ),
+        if (showPickup) ...[
+          const SizedBox(height: 16),
+          _PassengerPickupChips(
+            pickupPoints: pickupPoints,
+            selected: controllers.pickupPointId,
+          ),
+        ],
+        const _FormGroupLabel(
+          icon: Icons.badge_rounded,
+          text: 'ข้อมูลส่วนตัว',
+        ),
+        _ChoiceChipsField(
+          label: 'คำนำหน้า',
+          controller: controllers.title,
+          options: _titleOptions,
+          normalize: _titleValue,
+          errorText: 'กรุณาเลือกคำนำหน้า',
+        ),
+        const SizedBox(height: 12),
+        _PremiumTextField(
+          controller: controllers.name,
+          label: 'ชื่อ-นามสกุล (ภาษาไทยตามบัตรประชาชน)',
+          hint: 'สมชาย ลุยเลยเขา',
+          icon: Icons.person_rounded,
+          validator: _thaiNameValidator,
+          autofillHints: const [AutofillHints.name],
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 12),
+        _FieldPair(
+          first: _PremiumTextField(
+            controller: controllers.nickname,
+            label: 'ชื่อเล่น',
+            hint: 'เช่น ต้น',
+            icon: Icons.face_rounded,
+            validator: _requiredValidator('กรุณากรอกชื่อเล่น'),
+            textInputAction: TextInputAction.next,
+          ),
+          second: _PremiumTextField(
+            controller: controllers.phone,
+            label: 'เบอร์โทรศัพท์',
+            hint: '0812345678',
+            icon: Icons.phone_android_rounded,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
+            validator: _phoneValidator('กรุณากรอกเบอร์โทรศัพท์'),
+            autofillHints: const [AutofillHints.telephoneNumber],
+            textInputAction: TextInputAction.next,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _PremiumTextField(
+          controller: controllers.email,
+          label: 'อีเมล (ไม่บังคับ)',
+          hint: 'name@example.com',
+          icon: Icons.alternate_email_rounded,
+          keyboardType: TextInputType.emailAddress,
+          validator: _optionalEmailValidator,
+          autofillHints: const [AutofillHints.email],
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 12),
+        _FieldPair(
+          first: _PremiumTextField(
+            controller: controllers.idCard,
+            label: 'เลขบัตรประชาชน (ใช้ทำประกัน)',
+            hint: 'เลข 13 หลัก',
+            icon: Icons.credit_card_rounded,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(13),
+            ],
+            validator: _exactDigitsValidator(
+              requiredMessage: 'กรุณากรอกเลขบัตรประชาชน',
+              lengthMessage: 'เลขบัตรประชาชนต้องมี 13 หลัก',
+              length: 13,
             ),
-          ],
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 360;
-              final titleDropdown = _PremiumDropdown<String>(
-                key: ValueKey('title-$index-${controllers.title.text}'),
-                label: 'คำนำหน้า',
-                icon: Icons.badge_outlined,
-                value: _titleValue(controllers.title.text),
-                items: _titleOptions.map((title) {
-                  return DropdownMenuItem<String>(
-                    value: title,
-                    child: Text(title, overflow: TextOverflow.ellipsis),
-                  );
-                }).toList(),
-                validator: _requiredValidator('กรุณาเลือกคำนำหน้า'),
-                onChanged: (value) {
-                  controllers.title.text = value ?? '';
-                },
-              );
-              final nameField = _PremiumTextField(
-                controller: controllers.name,
-                label: 'ชื่อ-นามสกุล (ภาษาไทย)',
-                hint: 'สมชาย ลุยเลยเขา',
-                icon: Icons.person_rounded,
-                validator: _thaiNameValidator,
-                autofillHints: const [AutofillHints.name],
-                textInputAction: TextInputAction.next,
-              );
-
-              if (isCompact) {
-                return Column(
-                  children: [
-                    titleDropdown,
-                    const SizedBox(height: 12),
-                    nameField,
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  SizedBox(width: 124, child: titleDropdown),
-                  const SizedBox(width: 12),
-                  Expanded(child: nameField),
-                ],
-              );
-            },
+            textInputAction: TextInputAction.next,
           ),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 390;
-              final nicknameField = _PremiumTextField(
-                controller: controllers.nickname,
-                label: 'ชื่อเล่น',
-                hint: 'ชื่อเล่น',
-                icon: Icons.face_rounded,
-                validator: _requiredValidator('กรุณากรอกชื่อเล่น'),
-                textInputAction: TextInputAction.next,
-              );
-              final phoneField = _PremiumTextField(
-                controller: controllers.phone,
-                label: 'เบอร์โทรศัพท์',
-                hint: '081-234-5678',
-                icon: Icons.phone_android_rounded,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(10),
-                ],
-                validator: _phoneValidator('กรุณากรอกเบอร์โทรศัพท์'),
-                autofillHints: const [AutofillHints.telephoneNumber],
-                textInputAction: TextInputAction.next,
-              );
-              final emailField = _PremiumTextField(
-                controller: controllers.email,
-                label: 'อีเมลผู้โดยสาร',
-                hint: 'name@example.com',
-                icon: Icons.alternate_email_rounded,
-                keyboardType: TextInputType.emailAddress,
-                validator: _optionalEmailValidator,
-                autofillHints: const [AutofillHints.email],
-                textInputAction: TextInputAction.next,
-              );
-
-              if (isCompact) {
-                return Column(
-                  children: [
-                    nicknameField,
-                    const SizedBox(height: 12),
-                    phoneField,
-                    const SizedBox(height: 12),
-                    emailField,
-                  ],
-                );
-              }
-
-              return Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: nicknameField),
-                      const SizedBox(width: 12),
-                      Expanded(child: phoneField),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  emailField,
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 390;
-              final idCardField = _PremiumTextField(
-                controller: controllers.idCard,
-                label: 'เลขบัตรประชาชน (สำหรับประกัน)',
-                hint: 'เลข 13 หลัก',
-                icon: Icons.credit_card_rounded,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(13),
-                ],
-                validator: _exactDigitsValidator(
-                  requiredMessage: 'กรุณากรอกเลขบัตรประชาชน',
-                  lengthMessage: 'เลขบัตรประชาชนต้องมี 13 หลัก',
-                  length: 13,
-                ),
-                textInputAction: TextInputAction.next,
-              );
-              final bloodDropdown = _PremiumDropdown<String>(
-                key: ValueKey('blood-$index-${controllers.bloodGroup.text}'),
-                label: 'กรุ๊ปเลือด',
-                icon: Icons.bloodtype_rounded,
-                value: _bloodGroupValue(controllers.bloodGroup.text),
-                items: _bloodGroupOptions.map((group) {
-                  return DropdownMenuItem<String>(
-                    value: group,
-                    child: Text(group, overflow: TextOverflow.ellipsis),
-                  );
-                }).toList(),
-                validator: _requiredValidator('กรุณาเลือกกรุ๊ปเลือด'),
-                onChanged: (value) {
-                  controllers.bloodGroup.text = value ?? '';
-                },
-              );
-
-              if (isCompact) {
-                return Column(
-                  children: [
-                    idCardField,
-                    const SizedBox(height: 12),
-                    bloodDropdown,
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: idCardField),
-                  const SizedBox(width: 12),
-                  SizedBox(width: 132, child: bloodDropdown),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          _PremiumDatePicker(
+          second: _PremiumDatePicker(
             value: controllers.birthDate,
-            label: 'วัน/เดือน/ปีเกิด',
+            label: 'วันเกิด',
             icon: Icons.cake_rounded,
             validator: (date) =>
                 date == null ? 'กรุณาเลือกวัน/เดือน/ปีเกิด' : null,
           ),
-          // เอกสารเดินทาง — ข้อมูลชุดนี้เอาไปออกตั๋วเครื่องบินตรง ๆ สะกดผิด
-          // แม้ตัวเดียวคือขึ้นเครื่องไม่ได้ จึงแยกกล่องให้เห็นชัดว่าคนละชุดกัน
-          if (isInternational) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7).withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                border: Border.all(color: const Color(0xFFFCD34D)),
+        ),
+        // เอกสารเดินทาง — ข้อมูลชุดนี้เอาไปออกตั๋วเครื่องบินตรง ๆ สะกดผิด
+        // แม้ตัวเดียวคือขึ้นเครื่องไม่ได้ จึงแยกกล่องให้เห็นชัดว่าคนละชุดกัน
+        if (isInternational) ...[
+          const SizedBox(height: 16),
+          _PassportBox(
+            controllers: controllers,
+            minPassportExpiry: minPassportExpiry,
+          ),
+        ],
+        const _FormGroupLabel(
+          icon: Icons.health_and_safety_rounded,
+          text: 'สุขภาพและอาหาร',
+        ),
+        _ChoiceChipsField(
+          label: 'กรุ๊ปเลือด',
+          controller: controllers.bloodGroup,
+          options: _bloodGroupOptions,
+          normalize: _bloodGroupValue,
+          errorText: 'กรุณาเลือกกรุ๊ปเลือด',
+        ),
+        const SizedBox(height: 12),
+        _HalalSwitchRow(selected: controllers.halalFood),
+        const SizedBox(height: 12),
+        _PremiumTextField(
+          controller: controllers.allergies,
+          label: 'แพ้อาหาร / ข้อจำกัดอาหาร (ไม่บังคับ)',
+          hint: 'เช่น แพ้อาหารทะเล, ไม่ทานเนื้อ, แพ้ถั่ว',
+          icon: Icons.restaurant_menu_rounded,
+          maxLines: 2,
+          textInputAction: TextInputAction.newline,
+        ),
+        const SizedBox(height: 12),
+        _PremiumTextField(
+          controller: controllers.healthNotes,
+          label: 'โรคประจำตัว / หมายเหตุสุขภาพ (ไม่บังคับ)',
+          hint: 'เช่น หอบหืด พกยาพ่นติดตัว',
+          icon: Icons.medical_information_rounded,
+          maxLines: 2,
+          textInputAction: TextInputAction.newline,
+        ),
+        // เอกสารแนบที่ทริปขอ — รายการและข้อความ "ใช้สำหรับ..." มาจากที่แอดมิน
+        // ตั้งไว้บนทริป ไฟล์ถูกเก็บไว้ในหน้าจอก่อน แล้วส่งขึ้นหลังสร้างการจอง
+        if (documentRequirements.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _TravelerDocumentBox(
+            requirements: documentRequirements,
+            documents: controllers.documents,
+          ),
+        ],
+        const _FormGroupLabel(
+          icon: Icons.contact_emergency_rounded,
+          text: 'ผู้ติดต่อฉุกเฉิน',
+        ),
+        _FieldPair(
+          first: _PremiumTextField(
+            controller: controllers.emergencyContact,
+            label: 'ชื่อผู้ติดต่อ',
+            hint: 'เช่น คุณแม่ สมศรี',
+            icon: Icons.person_outline_rounded,
+            validator: _requiredValidator('กรุณากรอกชื่อผู้ติดต่อฉุกเฉิน'),
+            autofillHints: const [AutofillHints.name],
+            textInputAction: TextInputAction.next,
+          ),
+          second: _PremiumTextField(
+            controller: controllers.emergencyPhone,
+            label: 'เบอร์ติดต่อฉุกเฉิน',
+            hint: '0891234567',
+            icon: Icons.phone_enabled_rounded,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
+            validator: _phoneValidator('กรุณากรอกเบอร์ติดต่อฉุกเฉิน'),
+            autofillHints: const [AutofillHints.telephoneNumber],
+            textInputAction: TextInputAction.done,
+          ),
+        ),
+        if (_collapsible) ...[
+          const SizedBox(height: 18),
+          OutlinedButton.icon(
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              onDone();
+            },
+            icon: Icon(
+              index < total - 1
+                  ? Icons.arrow_downward_rounded
+                  : Icons.check_rounded,
+              size: 18,
+            ),
+            label: Text(
+              index < total - 1
+                  ? 'ถัดไป · ผู้เดินทางคนที่ ${index + 2}'
+                  : 'เรียบร้อย',
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w800,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _softAccent,
+              minimumSize: const Size.fromHeight(46),
+              side: BorderSide(color: _softAccent.withValues(alpha: 0.4)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _TravelerCardHeader extends StatelessWidget {
+  final int index;
+  final _PassengerControllers controllers;
+  final String? seatId;
+  final bool open;
+  final bool collapsible;
+  final bool needsPickup;
+  final bool isInternational;
+  final DateTime? minPassportExpiry;
+
+  const _TravelerCardHeader({
+    required this.index,
+    required this.controllers,
+    required this.seatId,
+    required this.open,
+    required this.collapsible,
+    required this.needsPickup,
+    required this.isInternational,
+    required this.minPassportExpiry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controllers.changes,
+      builder: (context, _) {
+        final missing = controllers.missingCount(
+          international: isInternational,
+          needsPickup: needsPickup,
+          minPassportExpiry: minPassportExpiry,
+        );
+        final complete = missing == 0;
+        final blank = controllers.isBlank;
+        final name = controllers.name.text.trim();
+
+        final (String status, Color statusColor) = complete
+            ? ('ข้อมูลครบแล้ว', _softAccent)
+            : blank
+            ? (
+                collapsible && !open ? 'แตะเพื่อกรอกข้อมูล' : 'ยังไม่ได้กรอก',
+                _mutedTextColor(context),
+              )
+            : ('ยังขาดอีก $missing ช่อง', AppTheme.warningColor);
+
+        return Semantics(
+          button: collapsible,
+          expanded: collapsible ? open : null,
+          child: InkWell(
+            onTap: collapsible
+                ? () {
+                    HapticFeedback.selectionClick();
+                    controllers.expanded.value = !open;
+                  }
+                : null,
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+              child: Row(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.flight_takeoff_rounded,
-                        size: 18,
-                        color: Color(0xFFB45309),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'เอกสารเดินทาง',
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: complete
+                          ? _softAccent
+                          : AppTheme.tintOf(context, _softAccent),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: complete
+                          ? const Icon(
+                              Icons.check_rounded,
+                              size: 20,
+                              color: Colors.white,
+                            )
+                          : Text(
+                              '${index + 1}',
                               style: appFont(
-                                fontSize: AppText.sizeLabel,
+                                color: AppTheme.onTintOf(context, _softAccent),
                                 fontWeight: FontWeight.w800,
-                                color: _premiumText(context),
+                                fontSize: AppText.sizeBody,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'กรอกให้ตรงกับหน้าพาสปอร์ตทุกตัวอักษร เพราะใช้ออกตั๋วเครื่องบิน',
-                              style: appFont(
-                                fontSize: AppText.sizeCaption,
-                                color: _mutedTextColor(context),
-                              ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name.isEmpty ? 'ผู้เดินทางคนที่ ${index + 1}' : name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: appFont(
+                            fontWeight: FontWeight.w800,
+                            color: _premiumText(context),
+                            fontSize: AppText.sizeBody,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          status,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: appFont(
+                            fontWeight: FontWeight.w700,
+                            color: complete || !blank
+                                ? AppTheme.onTintOf(context, statusColor)
+                                : statusColor,
+                            fontSize: AppText.sizeCaption,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (seatId != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _fieldBackground(context),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        border: Border.all(color: _cardBorder(context)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.event_seat_rounded,
+                            size: 13,
+                            color: _mutedTextColor(context),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            seatId!,
+                            style: appFont(
+                              color: _premiumText(context),
+                              fontSize: AppText.sizeCaption,
+                              fontWeight: FontWeight.w800,
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (collapsible) ...[
+                    const SizedBox(width: 4),
+                    AnimatedRotation(
+                      turns: open ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: _mutedTextColor(context),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// ปุ่มกรอกเร็ว — เดิมซ่อนอยู่ในเมนู "กรอกจาก" ที่คนส่วนใหญ่ไม่เคยกด
+/// สมุดผู้ร่วมเดินทางอยู่ซ้ายสุด เป็นทางที่ใช้บ่อยที่สุดเมื่อจองให้คนอื่น
+class _QuickFillRow extends StatelessWidget {
+  final VoidCallback onUseSavedTraveller;
+  final VoidCallback onUseProfile;
+  final VoidCallback onUseWallet;
+
+  const _QuickFillRow({
+    required this.onUseSavedTraveller,
+    required this.onUseProfile,
+    required this.onUseWallet,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'กรอกเร็วจากข้อมูลที่บันทึกไว้',
+          style: appFont(
+            fontSize: AppText.sizeCaption,
+            fontWeight: FontWeight.w700,
+            color: _mutedTextColor(context),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _QuickFillChip(
+              icon: Icons.people_alt_rounded,
+              label: 'สมุดผู้ร่วมเดินทาง',
+              onTap: onUseSavedTraveller,
+            ),
+            _QuickFillChip(
+              icon: Icons.account_circle_rounded,
+              label: 'โปรไฟล์ของฉัน',
+              onTap: onUseProfile,
+            ),
+            _QuickFillChip(
+              icon: Icons.wallet_rounded,
+              label: 'Wallet',
+              onTap: onUseWallet,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickFillChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickFillChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.tintOf(context, _softAccent),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: AppTheme.onTintOf(context, _softAccent),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.onTintOf(context, _softAccent),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// หัวข้อกลุ่มช่องในการ์ด — แบ่งฟอร์มยาวเป็นก้อนที่อ่านทีละเรื่อง
+class _FormGroupLabel extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _FormGroupLabel({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 22, bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: _softAccent),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: appFont(
+              fontSize: AppText.sizeLabel,
+              fontWeight: FontWeight.w800,
+              color: _premiumText(context),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Divider(height: 1, color: _cardBorder(context))),
+        ],
+      ),
+    );
+  }
+}
+
+/// สองช่องเคียงกันเมื่อจอกว้างพอ (แท็บเล็ต) — จอโทรศัพท์เรียงลงมาทีละช่อง
+/// เพราะช่องครึ่งจอบนมือถือเหลือที่ให้พิมพ์แค่ไม่กี่ตัว
+class _FieldPair extends StatelessWidget {
+  final Widget first;
+  final Widget second;
+
+  const _FieldPair({required this.first, required this.second});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 420) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [first, const SizedBox(height: 12), second],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: first),
+            const SizedBox(width: 12),
+            Expanded(child: second),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// ตัวเลือกไม่กี่ค่า (คำนำหน้า / กรุ๊ปเลือด) เป็นปุ่มแตะเดียว แทน dropdown
+/// ที่ต้องกดสองครั้ง ค่าจริงยังอยู่ใน controller เดิม การเติมจากโปรไฟล์จึงใช้ได้
+/// เหมือนเดิม และยังเป็น FormField ที่ฟอร์มตรวจได้
+class _ChoiceChipsField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final List<String> options;
+  final String? Function(String) normalize;
+  final String errorText;
+
+  const _ChoiceChipsField({
+    required this.label,
+    required this.controller,
+    required this.options,
+    required this.normalize,
+    required this.errorText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final current = normalize(controller.text);
+        return FormField<String>(
+          // สร้างใหม่เมื่อค่าเปลี่ยน — ข้อความเตือนเดิมหายทันทีที่เลือก
+          key: ValueKey('$label-$current'),
+          initialValue: current,
+          validator: (_) => normalize(controller.text) == null ? errorText : null,
+          builder: (field) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: _labelStyle(context)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    for (var i = 0; i < options.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(
+                        child: _ChoiceChip(
+                          label: options[i],
+                          selected: options[i] == current,
+                          error: field.hasError,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            controller.text = options[i];
+                          },
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  _PremiumTextField(
-                    controller: controllers.nameEn,
-                    label: 'ชื่อ-สกุลภาษาอังกฤษ (ตามพาสปอร์ต)',
-                    hint: 'SOMCHAI JAIDEE',
-                    icon: Icons.badge_rounded,
-                    textCapitalization: TextCapitalization.characters,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                        RegExp(r"[A-Za-z\s.'-]"),
+                  ],
+                ),
+                if (field.hasError) ...[
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Text(
+                      field.errorText!,
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.errorColor,
                       ),
-                      _UpperCaseFormatter(),
-                    ],
-                    validator: _requiredValidator(
-                      'กรุณากรอกชื่อ-สกุลภาษาอังกฤษตามพาสปอร์ต',
                     ),
-                    textInputAction: TextInputAction.next,
                   ),
-                  const SizedBox(height: 12),
-                  _PremiumTextField(
-                    controller: controllers.passportNo,
-                    label: 'เลขที่พาสปอร์ต',
-                    hint: 'AA1234567',
-                    icon: Icons.menu_book_rounded,
-                    textCapitalization: TextCapitalization.characters,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                      LengthLimitingTextInputFormatter(20),
-                      _UpperCaseFormatter(),
-                    ],
-                    validator: (value) {
-                      final text = (value ?? '').trim();
-                      if (text.isEmpty) return 'กรุณากรอกเลขที่พาสปอร์ต';
-                      if (text.length < 5) return 'เลขที่พาสปอร์ตไม่ถูกต้อง';
-                      return null;
-                    },
-                    textInputAction: TextInputAction.next,
+                ],
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ChoiceChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final bool error;
+  final VoidCallback onTap;
+
+  const _ChoiceChip({
+    required this.label,
+    required this.selected,
+    required this.error,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? _softAccent : _fieldBackground(context),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(
+                color: selected
+                    ? _softAccent
+                    : error
+                    ? AppTheme.errorColor
+                    : _cardBorder(context),
+              ),
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: appFont(
+                fontSize: AppText.sizeBody,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : _premiumText(context),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ฮาลาลเป็นคำถามใช่/ไม่ใช่ — สวิตช์บรรทัดเดียวพอ ไม่ต้องใช้ปุ่มใหญ่สองปุ่ม
+class _HalalSwitchRow extends StatelessWidget {
+  final ValueNotifier<bool> selected;
+
+  const _HalalSwitchRow({required this.selected});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: selected,
+      builder: (context, wantsHalal, _) {
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              selected.value = !wantsHalal;
+            },
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+              decoration: BoxDecoration(
+                color: _fieldBackground(context),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                border: Border.all(color: _cardBorder(context)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.restaurant_rounded,
+                    size: 19,
+                    color: _mutedTextColor(context),
                   ),
-                  const SizedBox(height: 12),
-                  _PremiumDatePicker(
-                    value: controllers.passportExpiresAt,
-                    label: 'วันหมดอายุพาสปอร์ต',
-                    icon: Icons.event_available_rounded,
-                    future: true,
-                    firstDate: minPassportExpiry,
-                    helpText: 'เลือกวันหมดอายุพาสปอร์ต',
-                    hint: 'แตะเพื่อเลือกวันหมดอายุ',
-                    validator: (date) {
-                      if (date == null) {
-                        return 'กรุณาระบุวันหมดอายุพาสปอร์ต';
-                      }
-                      final minimum = minPassportExpiry;
-                      if (minimum != null && date.isBefore(minimum)) {
-                        return 'พาสปอร์ตต้องเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง';
-                      }
-                      return null;
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'ต้องการอาหารฮาลาล',
+                      style: appFont(
+                        fontSize: AppText.sizeBody,
+                        fontWeight: FontWeight.w700,
+                        color: _premiumText(context),
+                      ),
+                    ),
+                  ),
+                  Switch.adaptive(
+                    value: wantsHalal,
+                    onChanged: (value) {
+                      HapticFeedback.selectionClick();
+                      selected.value = value;
                     },
                   ),
                 ],
               ),
             ),
-          ],
-          const SizedBox(height: 12),
-          _HalalFoodSelector(
-            selected: controllers.halalFood,
-            onChanged: (value) => controllers.halalFood.value = value,
           ),
-          const SizedBox(height: 12),
-          _PremiumTextField(
-            controller: controllers.allergies,
-            label: 'การแพ้อาหาร / อื่นๆ',
-            hint: 'เช่น แพ้อาหารทะเล, ไม่ทานเนื้อ, แพ้ถั่ว',
-            icon: Icons.restaurant_menu_rounded,
-            maxLines: 2,
-            textInputAction: TextInputAction.newline,
-          ),
-          const SizedBox(height: 12),
-          _PremiumTextField(
-            controller: controllers.healthNotes,
-            label: 'โรคประจำตัว / หมายเหตุสุขภาพ',
-            hint: 'ไม่มี',
-            icon: Icons.health_and_safety_rounded,
-            maxLines: 2,
-            textInputAction: TextInputAction.newline,
-          ),
-          // เอกสารแนบที่ทริปขอ — รายการและข้อความ "ใช้สำหรับ..." มาจากที่แอดมิน
-          // ตั้งไว้บนทริป ไฟล์ถูกเก็บไว้ในหน้าจอก่อน แล้วส่งขึ้นหลังสร้างการจอง
-          if (documentRequirements.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _TravelerDocumentBox(
-              requirements: documentRequirements,
-              documents: controllers.documents,
-            ),
-          ],
-          const SizedBox(height: 16),
-          Text(
-            'ผู้ติดต่อฉุกเฉิน',
-            style: appFont(
-              color: _premiumText(context),
-              fontWeight: FontWeight.w800,
-              fontSize: AppText.sizeBody,
-            ),
-          ),
-          const SizedBox(height: 10),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 390;
-              final contactField = _PremiumTextField(
-                controller: controllers.emergencyContact,
-                label: 'ชื่อผู้ติดต่อ',
-                hint: 'ชื่อผู้ติดต่อ',
-                icon: Icons.contact_emergency_rounded,
-                validator: _requiredValidator('กรุณากรอกชื่อผู้ติดต่อฉุกเฉิน'),
-                autofillHints: const [AutofillHints.name],
-                textInputAction: TextInputAction.next,
-              );
-              final phoneField = _PremiumTextField(
-                controller: controllers.emergencyPhone,
-                label: 'เบอร์ติดต่อฉุกเฉิน',
-                hint: '089-xxx-xxxx',
-                icon: Icons.phone_enabled_rounded,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(10),
-                ],
-                validator: _phoneValidator('กรุณากรอกเบอร์ติดต่อฉุกเฉิน'),
-                autofillHints: const [AutofillHints.telephoneNumber],
-                textInputAction: TextInputAction.next,
-              );
+        );
+      },
+    );
+  }
+}
 
-              if (isCompact) {
-                return Column(
-                  children: [
-                    contactField,
-                    const SizedBox(height: 12),
-                    phoneField,
-                  ],
+/// จุดขึ้นรถรายคน — ค่าเริ่มต้นคือจุดของการจอง เปลี่ยนเฉพาะคนที่ขึ้นคนละที่
+class _PassengerPickupChips extends StatelessWidget {
+  final List<dynamic> pickupPoints;
+  final ValueNotifier<int?> selected;
+
+  const _PassengerPickupChips({
+    required this.pickupPoints,
+    required this.selected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int?>(
+      valueListenable: selected,
+      builder: (context, selectedId, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('จุดขึ้นรถของคนนี้', style: _labelStyle(context)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: pickupPoints.map((raw) {
+                final point = asMap(raw);
+                final id = int.tryParse(point['id'].toString());
+                final isSelected = id != null && id == selectedId;
+                final time = textOf(point['pickup_time']).trim();
+                final price = _asNum(point['price']);
+                final meta = [
+                  if (time.isNotEmpty) time,
+                  if (price > 0) money(price),
+                ].join(' · ');
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      selected.value = id;
+                    },
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppTheme.selectedTint(context)
+                            : _fieldBackground(context),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                        border: Border.all(
+                          color: isSelected ? _softAccent : _cardBorder(context),
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isSelected
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            size: 16,
+                            color: isSelected
+                                ? _softAccent
+                                : _mutedTextColor(context),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text.rich(
+                              TextSpan(
+                                text: _pickupLocationLabel(point),
+                                children: [
+                                  if (meta.isNotEmpty)
+                                    TextSpan(
+                                      text: '  $meta',
+                                      style: appFont(
+                                        fontWeight: FontWeight.w600,
+                                        color: _mutedTextColor(context),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              style: appFont(
+                                fontSize: AppText.sizeLabel,
+                                fontWeight: FontWeight.w700,
+                                color: _premiumText(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
-              }
+              }).toList(),
+            ),
+            if (selectedId == null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'กรุณาเลือกจุดขึ้นรถ',
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.errorColor,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
 
-              return Row(
-                children: [
-                  Expanded(child: contactField),
-                  const SizedBox(width: 12),
-                  Expanded(child: phoneField),
-                ],
-              );
+/// ช่องพาสปอร์ตของทริปต่างประเทศ — กรอบสีเตือนให้รู้ว่าต้องตรงหน้าพาสปอร์ต
+class _PassportBox extends StatelessWidget {
+  final _PassengerControllers controllers;
+  final DateTime? minPassportExpiry;
+
+  const _PassportBox({
+    required this.controllers,
+    required this.minPassportExpiry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = AppTheme.onTintOf(context, AppTheme.warningColor);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.warningTint(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: AppTheme.warningColor.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.flight_takeoff_rounded, size: 18, color: tone),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'เอกสารเดินทาง',
+                      style: appFont(
+                        fontSize: AppText.sizeLabel,
+                        fontWeight: FontWeight.w800,
+                        color: _premiumText(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'กรอกให้ตรงกับหน้าพาสปอร์ตทุกตัวอักษร เพราะใช้ออกตั๋วเครื่องบิน',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: _mutedTextColor(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _PremiumTextField(
+            controller: controllers.nameEn,
+            label: 'ชื่อ-สกุลภาษาอังกฤษ (ตามพาสปอร์ต)',
+            hint: 'SOMCHAI JAIDEE',
+            icon: Icons.badge_rounded,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z\s.'-]")),
+              _UpperCaseFormatter(),
+            ],
+            validator: _requiredValidator(
+              'กรุณากรอกชื่อ-สกุลภาษาอังกฤษตามพาสปอร์ต',
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          _PremiumTextField(
+            controller: controllers.passportNo,
+            label: 'เลขที่พาสปอร์ต',
+            hint: 'AA1234567',
+            icon: Icons.menu_book_rounded,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+              LengthLimitingTextInputFormatter(20),
+              _UpperCaseFormatter(),
+            ],
+            validator: (value) {
+              final text = (value ?? '').trim();
+              if (text.isEmpty) return 'กรุณากรอกเลขที่พาสปอร์ต';
+              if (text.length < 5) return 'เลขที่พาสปอร์ตไม่ถูกต้อง';
+              return null;
+            },
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          _PremiumDatePicker(
+            value: controllers.passportExpiresAt,
+            label: 'วันหมดอายุพาสปอร์ต',
+            icon: Icons.event_available_rounded,
+            future: true,
+            firstDate: minPassportExpiry,
+            helpText: 'เลือกวันหมดอายุพาสปอร์ต',
+            hint: 'แตะเพื่อเลือกวันหมดอายุ',
+            validator: (date) {
+              if (date == null) return 'กรุณาระบุวันหมดอายุพาสปอร์ต';
+              final minimum = minPassportExpiry;
+              if (minimum != null && date.isBefore(minimum)) {
+                return 'พาสปอร์ตต้องเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง';
+              }
+              return null;
             },
           ),
-          if (!isLast)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Divider(height: 1, color: _cardBorder(context)),
-            ),
         ],
       ),
     );

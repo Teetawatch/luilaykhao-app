@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -134,7 +135,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   final _giftRecipientName = TextEditingController();
   final _giftFromName = TextEditingController();
   final _giftMessage = TextEditingController();
-  final List<_PassengerControllers> _passengers = [_PassengerControllers()];
+  // คนแรกกางการ์ดไว้ให้เริ่มกรอกได้เลย คนที่เพิ่มทีหลังพับไว้ก่อน
+  final List<_PassengerControllers> _passengers = [
+    _PassengerControllers()..expanded.value = true,
+  ];
 
   // Applied discount code — validated inline so the customer sees the final
   // discount + net total here, before the payment step. {code, type, value}.
@@ -344,6 +348,12 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   /// เอกสารที่ทริปนี้ขอให้แนบ — แอดมินกำหนดเองต่อทริป ว่างคือไม่ต้องแนบอะไร
   List<dynamic> get _documentRequirements =>
       _isGift ? const [] : asList(widget.trip['document_requirements']);
+
+  /// จุดขึ้นรถที่ให้เลือกรายคน — ทริปต่างประเทศ จอยทริป และรอบที่บินไม่มี
+  List<dynamic> get _passengerPickupPoints =>
+      _isInternational || _isJoinTrip || _isFlightSchedule
+      ? const []
+      : _pickupPoints;
 
   /// รอบที่เลือกบินไปไหม — ถ้าใช่ ขั้นตอน "จุดขึ้นรถ" กลายเป็น "จุดนัดพบ"
   /// ที่สนามบิน ไม่มีจุดรับให้เลือกและไม่ต้องปักหมุดอะไรทั้งนั้น
@@ -1409,6 +1419,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         // ล็อกของคนอื่นนับถอยหลังถึงศูนย์ = ที่นั่งน่าจะหลุดแล้ว ดึงผังใหม่ทันที
         // ไม่ต้องรอรอบ poll ถัดไป (Redis TTL หมดเองไม่มี event ยิงมาทาง Reverb)
         onLockExpired: () => _loadSeatMap(silent: true),
+        seatsSubtotal: _selectedSeatIds.isEmpty ? 0 : _pricing.tripSubtotal,
       );
     }
 
@@ -1451,9 +1462,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             groupNotes: _groupNotes,
             isSeatSelectionMode: _hasSeatMap,
             selectedSeatIds: _hasSeatMap ? _selectedSeatList : const <String>[],
-            pickupPoints: _isInternational || _isJoinTrip || _isFlightSchedule
-                ? const []
-                : _pickupPoints,
+            pickupPoints: _passengerPickupPoints,
             isInternational: _isInternational,
             minPassportExpiry: _minPassportExpiry,
             documentRequirements: _documentRequirements,
@@ -1889,6 +1898,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
         _pickupPoints.isNotEmpty) {
       for (var i = 0; i < _passengers.length; i++) {
         if (_passengers[i].pickupPointId.value == null) {
+          _passengers[i].expanded.value = true;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('กรุณาเลือกจุดขึ้นรถสำหรับผู้เดินทางคนที่ ${i + 1}')),
           );
@@ -1906,8 +1916,29 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       return;
     }
     if (!_formKey.currentState!.validate()) {
-      final ctx = _travelerFormKey.currentContext;
-      if (ctx != null) {
+      // การ์ดที่พับอยู่ยังถูกตรวจ แต่ข้อความเตือนมองไม่เห็น — กางคนที่ยังไม่ครบ
+      // แล้วพาไปที่คนแรก (ไม่เจอใครขาดเลย = กางทุกคนไว้ก่อน กันเตือนซ่อนอยู่)
+      final needsPickup = _passengerPickupPoints.isNotEmpty;
+      final incomplete = _passengers
+          .where(
+            (p) =>
+                p.missingCount(
+                  international: _isInternational,
+                  needsPickup: needsPickup,
+                  minPassportExpiry: _minPassportExpiry,
+                ) >
+                0,
+          )
+          .toList();
+      for (final p in incomplete.isEmpty ? _passengers : incomplete) {
+        p.expanded.value = true;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      final ctx = incomplete.isEmpty
+          ? _travelerFormKey.currentContext
+          : incomplete.first.cardKey.currentContext;
+      if (ctx != null && ctx.mounted) {
         await Scrollable.ensureVisible(
           ctx,
           duration: const Duration(milliseconds: 380),
