@@ -28,6 +28,7 @@ import 'custom_pickup_picker_screen.dart';
 import 'document_wallet_screen.dart';
 import 'payment_screen.dart';
 import '../widgets/confirm_dialog.dart';
+import '../widgets/join_trip_explainer_sheet.dart';
 
 part 'booking_flow_summary.part.dart';
 part 'booking_flow_seats.part.dart';

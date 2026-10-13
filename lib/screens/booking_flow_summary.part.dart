@@ -385,6 +385,7 @@ class TravelInfoSection extends StatelessWidget {
             _JoinTripSwitch(
               selected: isJoinTrip,
               price: joinTripPrice,
+              regularPrice: _asNum(selectedSchedule['price']),
               seatLabel: _joinTripSeatLabel(selectedSchedule),
               full: _joinTripIsFull(selectedSchedule),
               onChanged: onJoinTripChanged,
@@ -1952,6 +1953,9 @@ class _JoinTripInfoCard extends StatelessWidget {
 class _JoinTripSwitch extends StatelessWidget {
   final bool selected;
   final num price;
+
+  /// ราคาแบบนั่งรถทีมของรอบเดียวกัน — ไว้เทียบในชีต "จอยทริปคืออะไร?"
+  final num regularPrice;
   /// สรุปโควตาจอย เช่น "จอยแล้ว 3/10 · ว่าง 7 ที่" — ว่างไว้เมื่อไม่มีข้อมูล
   final String seatLabel;
   /// โควตาเต็มแล้ว: เปิดสวิตช์ไม่ได้ ต้องบอกให้ชัดว่าทำไม
@@ -1961,10 +1965,22 @@ class _JoinTripSwitch extends StatelessWidget {
   const _JoinTripSwitch({
     required this.selected,
     required this.price,
+    this.regularPrice = 0,
     required this.seatLabel,
     required this.full,
     required this.onChanged,
   });
+
+  Future<void> _explain(BuildContext context) async {
+    final choose = await JoinTripExplainerSheet.show(
+      context,
+      joinPrice: price,
+      regularPrice: regularPrice,
+      quotaLabel: seatLabel,
+      canSelect: !selected && !full,
+    );
+    if (choose) onChanged(true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2033,6 +2049,41 @@ class _JoinTripSwitch extends StatelessWidget {
                       ),
                     ),
                   ],
+                  // ลูกค้าถามบ่อยว่าจอยทริปคืออะไร — ลิงก์แยกจากการกดเลือก
+                  // แตะตรงนี้เปิดคำอธิบาย ไม่สลับสวิตช์
+                  // padding แนวตั้งให้พื้นที่แตะสูงราว 40 โดยไม่ดันการ์ดให้สูงขึ้นมาก
+                  InkWell(
+                    onTap: () => _explain(context),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 8, 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            size: 15,
+                            color: AppTheme.onTintOf(
+                              context,
+                              AppTheme.primaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'จอยทริปคืออะไร?',
+                            style: appFont(
+                              color: AppTheme.onTintOf(
+                                context,
+                                AppTheme.primaryColor,
+                              ),
+                              fontSize: AppText.sizeLabel,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
