@@ -155,7 +155,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      // ไอคอนแถบสถานะขาวบนรูป hero แต่พอแถบหัวทึบเป็นพื้นสว่างต้องเปลี่ยนเป็น
+      // สีเข้ม ไม่งั้นเวลา/แบตเตอรี่หายไปกับพื้นขาว
+      value: _topBarProgress > 0.5 && !AppTheme.isDark(context)
+          ? SystemUiOverlayStyle.dark
+          : SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: AppTheme.surface(context),
         body: Stack(
@@ -178,14 +182,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ],
                   ),
+                  // เรียงจากเรื่องของลูกค้าเอง → หาทริป → เหตุผลที่น่าเชื่อ →
+                  // ดีล → อ่านเล่น/ชวนเพื่อน
+                  _YourTripSection(app: app),
                   // แคมเปญวันพิเศษ (9.9) — วางใต้ทริปของฉัน ไม่ใช่บนสุด เพราะ
                   // ทริปที่จองแล้วสำคัญกับเจ้าของแอปมากกว่าของที่เรากำลังขาย
                   if (app.saleCampaign != null)
                     _SaleCampaignBanner(campaign: app.saleCampaign!),
-                  _YourTripSection(app: app),
                   // Browse-continuity: trips the user opened before, so they can
                   // pick up where they left off (hidden until something's viewed).
                   _RecentlyViewedSection(app: app),
+                  // ชิปหมวดหมู่กรอง "ทริปแนะนำ" — ต้องวางติดกัน กดแล้วเห็นผล
+                  // ทันที ไม่ใช่รายการเปลี่ยนอยู่นอกจอใต้ฟีดรูป
                   _CategoryChipsSection(
                     categories: app.categories.map(asMap).toList(),
                     activeType: _activeType,
@@ -194,18 +202,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       app.loadPublicData(type: type);
                     },
                   ),
-                  // Photos from people who actually went, before anything we
-                  // are selling — the community is the point, the trips are how
-                  // you join it. Mirrors CommunityFeedStrip on the website.
-                  const _TravelerFeedSection(),
                   _PopularTripsSection(
                     trips: showTrips,
                     activeType: _activeType,
                   ),
                   _UpcomingDeparturesSection(app: app),
-                  // Writing from real trips — the clearest "real people" signal
-                  // we have, so it sits with the content, not buried at the end.
-                  const _ArticlesTeaserSection(),
+                  // เหตุผลที่น่าเชื่อ: รูปจริงจากคนที่เพิ่งกลับมา แล้วตามด้วย
+                  // คำรีวิว — สองอย่างนี้บอกเรื่องเดียวกันจึงอยู่ด้วยกัน
+                  // (Mirrors CommunityFeedStrip on the website.)
+                  const _TravelerFeedSection(),
                   _CustomerReviewsSection(
                     reviews: app.reviews
                         .map(asMap)
@@ -229,6 +234,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         .where((p) => p.isNotEmpty)
                         .toList(),
                   ),
+                  // Writing from real trips — reading for later, after the
+                  // things that help someone pick and book.
+                  const _ArticlesTeaserSection(),
                   // Secondary features (invite a group / refer a friend).
                   _GroupTripSection(app: app),
                   _ReferralBanner(app: app),
@@ -654,206 +662,202 @@ class _HeroTopBar extends StatelessWidget {
       backgroundProgress,
     )!;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.vertical(
-        bottom: Radius.circular(AppTheme.radiusLg * backgroundProgress),
-      ),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 22 * backgroundProgress,
-          sigmaY: 22 * backgroundProgress,
+    // บนรูป hero แถบใสสนิท พอเลื่อนลงค่อย ๆ ทึบจนเป็นพื้นเต็ม ขอบล่างตรง —
+    // แบบเดียวกับหัวแท็บอื่น (TravelSliverAppBar) ไม่โปร่งค้างไว้ครึ่ง ๆ
+    // เพราะรูปการ์ดที่เลื่อนผ่านข้างใต้จะซึมขึ้นมาทำให้ชื่อกับกระดิ่งดูจาง
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context).withValues(
+          alpha: backgroundProgress,
         ),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            color: AppTheme.surface(context).withValues(alpha: 0.78 * backgroundProgress),
-            border: Border(
-              bottom: BorderSide(
-                color: AppTheme.outlineColor.withValues(
-                  alpha: 0.45 * backgroundProgress,
-                ),
-                width: 0.5,
-              ),
+        border: Border(
+          bottom: BorderSide(
+            color: AppTheme.outlineColor.withValues(
+              alpha: 0.6 * backgroundProgress,
             ),
+            width: 0.5,
           ),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
-              child: Row(
-                children: [
-                  // Bounded width so the tagline/next-trip weather line can
-                  // ellipsize instead of shoving the bell off-screen; Align
-                  // keeps the profile tap target hugging its content.
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: GestureDetector(
-                        onTap: onProfileTap,
-                        behavior: HitTestBehavior.opaque,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Thin ring lifts the photo avatar off a busy
-                            // hero; it fades to a hairline once the bar
-                            // turns solid on scroll.
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppTheme.surface(context),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Color.lerp(
-                                    Colors.white.withValues(alpha: 0.85),
-                                    AppTheme.outlineColor,
-                                    backgroundProgress,
-                                  )!,
-                                  width: 2,
-                                ),
-                              ),
-                              child: ClipOval(
-                                child: avatar.isNotEmpty
-                                    ? Image.network(avatar, fit: BoxFit.cover)
-                                    : Image.asset(
-                                        'logo.png',
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, _, _) => Center(
-                                          child: Text(
-                                            initial,
-                                            style: const TextStyle(
-                                              color: AppTheme.primaryColor,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+          child: Row(
+            children: [
+              // Bounded width so the tagline/next-trip weather line can
+              // ellipsize instead of shoving the bell off-screen; Align
+              // keeps the profile tap target hugging its content.
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: GestureDetector(
+                    onTap: onProfileTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Thin ring lifts the photo avatar off a busy
+                        // hero; it fades to a hairline once the bar
+                        // turns solid on scroll.
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppTheme.surface(context),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Color.lerp(
+                                Colors.white.withValues(alpha: 0.85),
+                                AppTheme.outlineColor,
+                                backgroundProgress,
+                              )!,
+                              width: 2,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: avatar.isNotEmpty
+                                ? Image.network(avatar, fit: BoxFit.cover)
+                                : Image.asset(
+                                    'logo.png',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Center(
+                                      child: Text(
+                                        initial,
+                                        style: const TextStyle(
+                                          color: AppTheme.primaryColor,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'สวัสดี, $firstName',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: appFont(
-                                      color: textColor,
-                                      fontSize: AppText.sizeTitle,
-                                      height: 1.1,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.2,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  if (weatherTrip != null)
-                                    _HeaderTripWeather(
-                                      booking: weatherTrip!,
-                                      backgroundProgress: backgroundProgress,
-                                    )
-                                  else
-                                    Text(
-                                      'พร้อมออกเดินทางครั้งใหม่?',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: appFont(
-                                        color: Color.lerp(
-                                          Colors.white.withValues(alpha: 0.92),
-                                          AppTheme.textSecondary,
-                                          backgroundProgress,
-                                        ),
-                                        fontSize: AppText.sizeLabel,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'สวัสดี, $firstName',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: appFont(
+                                  color: textColor,
+                                  fontSize: AppText.sizeTitle,
+                                  height: 1.1,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
+                                ),
                               ),
+                              const SizedBox(height: 2),
+                              if (weatherTrip != null)
+                                _HeaderTripWeather(
+                                  booking: weatherTrip!,
+                                  backgroundProgress: backgroundProgress,
+                                )
+                              else
+                                Text(
+                                  'พร้อมออกเดินทางครั้งใหม่?',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: appFont(
+                                    color: Color.lerp(
+                                      Colors.white.withValues(alpha: 0.92),
+                                      AppTheme.textSecondary,
+                                      backgroundProgress,
+                                    ),
+                                    fontSize: AppText.sizeLabel,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Badge sits in an outer Stack so the count isn't clipped by
+              // the bell's ClipOval. The bell is the home for the unread
+              // notification count (not the bottom "บัญชี" tab).
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  ClipOval(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color.lerp(
+                            Colors.white.withValues(alpha: 0.18),
+                            AppTheme.subtleSurface(context),
+                            backgroundProgress,
+                          ),
+                          border: Border.all(
+                            color: Colors.white.withValues(
+                              alpha: 0.30 * (1 - backgroundProgress),
                             ),
-                          ],
+                            width: 1,
+                          ),
+                        ),
+                        child: IconButton(
+                          tooltip: 'การแจ้งเตือน',
+                          padding: EdgeInsets.zero,
+                          onPressed: onNotificationsTap,
+                          icon: Icon(
+                            Icons.notifications_outlined,
+                            color: iconColor,
+                            size: 22,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Badge sits in an outer Stack so the count isn't clipped by
-                  // the bell's ClipOval. The bell is the home for the unread
-                  // notification count (not the bottom "บัญชี" tab).
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      ClipOval(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withValues(
-                                alpha: 0.18 + (0.54 * backgroundProgress),
-                              ),
-                              border: Border.all(
-                                color: Colors.white.withValues(
-                                  alpha: 0.30 * (1 - backgroundProgress),
-                                ),
-                                width: 1,
-                              ),
-                            ),
-                            child: IconButton(
-                              tooltip: 'การแจ้งเตือน',
-                              padding: EdgeInsets.zero,
-                              onPressed: onNotificationsTap,
-                              icon: Icon(
-                                Icons.notifications_outlined,
-                                color: iconColor,
-                                size: 22,
-                              ),
-                            ),
+                  if (notificationCount > 0)
+                    Positioned(
+                      top: -3,
+                      right: -3,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        alignment: Alignment.center,
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor,
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                          border: Border.all(color: AppTheme.surface(context), width: 2),
+                        ),
+                        child: Text(
+                          notificationCount > 99
+                              ? '99+'
+                              : '$notificationCount',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: AppText.sizeMicro,
+                            fontWeight: FontWeight.w900,
+                            height: 1.1,
                           ),
                         ),
                       ),
-                      if (notificationCount > 0)
-                        Positioned(
-                          top: -3,
-                          right: -3,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                              vertical: 2,
-                            ),
-                            alignment: Alignment.center,
-                            constraints: const BoxConstraints(
-                              minWidth: 18,
-                              minHeight: 18,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.errorColor,
-                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                              border: Border.all(color: AppTheme.surface(context), width: 2),
-                            ),
-                            child: Text(
-                              notificationCount > 99
-                                  ? '99+'
-                                  : '$notificationCount',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: AppText.sizeMicro,
-                                fontWeight: FontWeight.w900,
-                                height: 1.1,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -1593,249 +1597,6 @@ class _TrustHub extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class HomeTopSection extends StatefulWidget {
-  final AppProvider app;
-  final Map<String, dynamic>? user;
-  final ValueChanged<String> onCategorySelected;
-  final ValueChanged<String> onSearch;
-
-  const HomeTopSection({
-    super.key,
-    required this.app,
-    required this.user,
-    required this.onCategorySelected,
-    required this.onSearch,
-  });
-
-  @override
-  State<HomeTopSection> createState() => _HomeTopSectionState();
-}
-
-class _HomeTopSectionState extends State<HomeTopSection> {
-  String? _selectedSlug;
-  int? _selectedScheduleId;
-  String? _selectedPickupRegionKey;
-  Future<List<dynamic>>? _schedulesFuture;
-  bool _isPickupExpanded = false;
-
-  @override
-  void didUpdateWidget(covariant HomeTopSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final trips = _tripOptions;
-    if (_selectedSlug != null &&
-        !trips.any((trip) => trip['slug']?.toString() == _selectedSlug)) {
-      _selectedSlug = null;
-      _selectedScheduleId = null;
-      _selectedPickupRegionKey = null;
-      _schedulesFuture = null;
-    }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  List<Map<String, dynamic>> get _tripOptions {
-    return widget.app.trips
-        .map(asMap)
-        .where((trip) => textOf(trip['slug']).isNotEmpty)
-        .toList();
-  }
-
-  void _selectTrip(String? slug) {
-    if (slug == null || slug == _selectedSlug) return;
-    setState(() {
-      _selectedSlug = slug;
-      _selectedScheduleId = null;
-      _selectedPickupRegionKey = null;
-      _schedulesFuture = widget.app.schedules(slug);
-      _isPickupExpanded = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final trips = _tripOptions;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-        border: Border.all(
-          color: AppTheme.border(context).withValues(alpha: 0.55),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          HomeHeader(user: widget.user),
-          const SizedBox(height: 20),
-          const TripFinderEntryCard(),
-          const SizedBox(height: 12),
-          // สองทางเข้าสำหรับคนที่ยังไม่รู้ว่าอยากไปไหน — คิดจากเดือนที่ว่าง
-          // หรือคิดจากพื้นที่ ต่างจากรายการทริปด้านล่างที่ตอบว่า "รอบไหนว่าง"
-          const _DiscoveryRow(),
-          const SizedBox(height: 20),
-          if (widget.app.almostFullTrips.isNotEmpty) ...[
-            Row(
-              children: [
-                Icon(
-                  Icons.event_seat_rounded,
-                  color: AppTheme.mutedText(context),
-                  size: 20,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'รอบที่ที่นั่งเหลือน้อย',
-                  style: appFont(
-                    fontSize: AppText.sizeSubtitle,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.onSurface(context),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 440,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.zero,
-                itemCount: widget.app.almostFullTrips.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 14),
-                itemBuilder: (context, index) => SizedBox(
-                  width: 280,
-                  child: TripCard(
-                    trip: asMap(widget.app.almostFullTrips[index]),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-          Text(
-            'ทริปที่กำลังเปิดรับสมัคร',
-            style: appFont(
-              color: AppTheme.onSurface(context),
-              fontSize: AppText.sizeSubtitle,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 12),
-          DestinationDropdown(
-            slug: _selectedSlug,
-            options: trips,
-            onChanged: _selectTrip,
-          ),
-          if (_selectedSlug != null) ...[
-            const SizedBox(height: 20),
-            Text(
-              'เลือกภาคที่จะขึ้นและวันเดินทาง',
-              style: appFont(
-                color: AppTheme.onSurface(context),
-                fontSize: AppText.sizeSubtitle,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            DateSelectorCard(
-              schedulesFuture: _schedulesFuture,
-              selectedScheduleId: _selectedScheduleId,
-              onChanged: (id) => setState(() => _selectedScheduleId = id),
-              onRegionChanged: (regionKey) =>
-                  setState(() => _selectedPickupRegionKey = regionKey),
-              app: context.read<AppProvider>(),
-              isExpanded: _isPickupExpanded,
-              onToggleExpand: () =>
-                  setState(() => _isPickupExpanded = !_isPickupExpanded),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryCTAButton(
-                label: 'ดูรายละเอียดทริป',
-                icon: Icons.explore_rounded,
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => TripDetailScreen(
-                      slug: _selectedSlug!,
-                      initialScheduleId: _selectedScheduleId,
-                      initialPickupRegionKey: _selectedPickupRegionKey,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class HomeHeader extends StatelessWidget {
-  final Map<String, dynamic>? user;
-
-  const HomeHeader({super.key, required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    final name = textOf(user?['name'], 'ลูกทริปลุยเลเขา');
-    final firstName =
-        name.split(' ').where((part) => part.isNotEmpty).firstOrNull ?? name;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'สวัสดี, $firstName',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: appFont(
-                  color: AppTheme.textMain,
-                  fontSize: AppText.sizeH1,
-                  height: 1.16,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'วันนี้อยากออกเดินทางแบบไหนดี?',
-                style: appFont(
-                  color: AppTheme.textSecondary,
-                  fontSize: AppText.sizeLabel,
-                  height: 1.4,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          ),
-          child: const Icon(
-            Icons.travel_explore_rounded,
-            color: AppTheme.primaryColor,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -5250,7 +5011,6 @@ class _ReferralBannerState extends State<_ReferralBanner> {
   }
 }
 
-
 // ─── Articles Teaser Section ──────────────────────────────────────────────────
 // Surfaces the latest blog articles on home and routes into the full reader.
 // Renders nothing until articles load, so it never disrupts a fresh install.
@@ -5619,110 +5379,6 @@ class _TravelerFeedSectionState extends State<_TravelerFeedSection> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// สองปุ่มเข้าหน้าค้นหาแบบไม่ผูกกับรอบขาย: "เที่ยวไหนดี" (คิดจากเดือน/ภาค)
-/// และ "แผนที่" (คิดจากพื้นที่) — คนที่ยังไม่มีปลายทางในหัวไม่มีอะไรให้กด
-/// บนหน้าแรกเดิมเลยนอกจากเลื่อนดูรายการทริป
-class _DiscoveryRow extends StatelessWidget {
-  const _DiscoveryRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _DiscoveryTile(
-            icon: Icons.calendar_month_rounded,
-            title: 'เที่ยวไหนดี',
-            subtitle: 'ปลายทางตามเดือนที่ว่าง',
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const PlacesScreen())),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _DiscoveryTile(
-            icon: Icons.map_rounded,
-            title: 'ทริปบนแผนที่',
-            subtitle: 'ดูว่าแถวไหนมีอะไร',
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const TripMapScreen())),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _DiscoveryTile(
-            icon: Icons.photo_library_rounded,
-            title: 'รูปจากคนไปจริง',
-            subtitle: 'เดือนนั้นที่นั่นเป็นยังไง',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CommunityGalleryScreen()),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DiscoveryTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _DiscoveryTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.subtleSurface(context),
-      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 22, color: AppTheme.primaryColor),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: appFont(
-                  fontSize: AppText.sizeBody,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.onSurface(context),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: appFont(
-                  fontSize: AppText.sizeCaption,
-                  height: 1.35,
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.mutedText(context),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

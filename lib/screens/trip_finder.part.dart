@@ -413,63 +413,6 @@ class _TripFinderScreenState extends State<TripFinderScreen> {
   }
 }
 
-/// Prominent entry point shown on the Explore tab that opens the Trip Finder.
-class TripFinderEntryCard extends StatelessWidget {
-  const TripFinderEntryCard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const TripFinderScreen()),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor,
-            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppTheme.surface(context).withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                ),
-                child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 26),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('ค้นหาทริปที่ใช่',
-                        style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800, color: Colors.white)),
-                    const SizedBox(height: 2),
-                    Text('ตอบ 3 ข้อ เจอทริปที่ชอบใน 1 นาที',
-                        style: appFont(fontSize: AppText.sizeLabel, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.9))),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _OptionCard extends StatelessWidget {
   final String label;
   final String? desc;
