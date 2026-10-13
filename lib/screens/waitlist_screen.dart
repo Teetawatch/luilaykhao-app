@@ -282,59 +282,66 @@ class _WaitlistCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (image.isNotEmpty)
-                CachedNetworkImage(
-                  imageUrl: image,
-                  width: 92,
-                  height: 104,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, _, _) => Container(
-                    width: 92,
-                    color: AppTheme.subtleSurface(context),
-                    child: const Icon(Icons.landscape_rounded),
-                  ),
-                ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+          // การ์ดอยู่ใน ListView ซึ่งสูงได้ไม่จำกัด — Row ที่ stretch ตรง ๆ จะ
+          // พังทั้งหน้า (จอว่างใน release) ต้องให้ IntrinsicHeight กำหนดความสูง
+          // จากเนื้อหาก่อน รูปจึงยืดเต็มการ์ดได้
+          IntrinsicHeight(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 104),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (image.isNotEmpty)
+                    CachedNetworkImage(
+                      imageUrl: image,
+                      width: 92,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, _, _) => Container(
+                        width: 92,
+                        color: AppTheme.subtleSurface(context),
+                        child: const Icon(Icons.landscape_rounded),
+                      ),
+                    ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              '${trip['title'] ?? 'ทริป'}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: appFont(
-                                fontSize: AppText.sizeSubtitle,
-                                fontWeight: FontWeight.w800,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${trip['title'] ?? 'ทริป'}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: appFont(
+                                    fontSize: AppText.sizeSubtitle,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              _WaitlistStatusChip(status: status),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          _WaitlistStatusChip(status: status),
+                          const SizedBox(height: 6),
+                          _MetaRow(
+                            icon: Icons.event_rounded,
+                            text: dateLabel.isEmpty ? '-' : dateLabel,
+                          ),
+                          const SizedBox(height: 4),
+                          _MetaRow(
+                            icon: Icons.event_seat_rounded,
+                            text: 'รอ $seatCount ที่นั่ง',
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      _MetaRow(
-                        icon: Icons.event_rounded,
-                        text: dateLabel.isEmpty ? '-' : dateLabel,
-                      ),
-                      const SizedBox(height: 4),
-                      _MetaRow(
-                        icon: Icons.event_seat_rounded,
-                        text: 'รอ $seatCount ที่นั่ง',
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
           // ── status footer ──────────────────────────────────────────────
           if (isOffered)
