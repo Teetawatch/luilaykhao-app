@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:luilaykhao_app/providers/app_provider.dart';
+import 'package:luilaykhao_app/providers/wishlist_provider.dart';
 import 'package:luilaykhao_app/screens/customer_app_screen.dart';
 import 'package:luilaykhao_app/services/search_history_service.dart';
 import 'package:provider/provider.dart';
@@ -78,8 +79,12 @@ void main() {
         provider.api.token = 'test-token';
 
         await tester.pumpWidget(
-          ChangeNotifierProvider<AppProvider>.value(
-            value: provider,
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<AppProvider>.value(value: provider),
+              // การ์ดทริปมีปุ่มหัวใจ — แอปจริงมี provider นี้ที่ราก (main.dart)
+              ChangeNotifierProvider(create: (_) => WishlistProvider()),
+            ],
             child: MaterialApp(
               home: AllTripsScreen(initialSearch: initialSearch),
             ),

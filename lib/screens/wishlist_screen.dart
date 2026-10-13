@@ -7,10 +7,15 @@ import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../providers/wishlist_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/travel_widgets.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 
 class WishlistScreen extends StatelessWidget {
-  const WishlistScreen({super.key});
+  /// เปิดจากแท็บ "ถูกใจ" ในแถบเมนูล่าง — ส่งมาแล้วหน้าว่างจะมีปุ่มพาไปหน้าทริป
+  /// (เปิดจากเมนูบัญชีไม่ส่ง เพราะกดย้อนกลับก็กลับไปที่เดิมได้อยู่แล้ว)
+  final VoidCallback? onBrowseTrips;
+
+  const WishlistScreen({super.key, this.onBrowseTrips});
 
   @override
   Widget build(BuildContext context) {
@@ -19,24 +24,32 @@ class WishlistScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.background(context),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
-        title: Text(
-          'ทริปที่ชอบ',
-          style: AppTheme.appBarTitleStyle(context),
-        ),
-      ),
-      body: items.isEmpty
-          ? _EmptyState()
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              itemBuilder: (_, index) => _WishlistTile(item: items[index]),
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemCount: items.length,
+      body: CustomScrollView(
+        slivers: [
+          const TravelSliverAppBar(title: 'ทริปที่ชอบ'),
+          if (items.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _EmptyState(onBrowseTrips: onBrowseTrips),
+            )
+          else
+            SliverPadding(
+              // เป็นแท็บหลักได้ — แถบเมนูล่างลอยทับเนื้อหา (extendBody) จึงต้อง
+              // เผื่อระยะล่างตาม MediaQuery ไม่งั้นการ์ดใบสุดท้ายจมใต้แถบ
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                32 + MediaQuery.paddingOf(context).bottom,
+              ),
+              sliver: SliverList.separated(
+                itemBuilder: (_, index) => _WishlistTile(item: items[index]),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemCount: items.length,
+              ),
             ),
+        ],
+      ),
     );
   }
 }
@@ -174,11 +187,20 @@ class _WishlistTile extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
+  final VoidCallback? onBrowseTrips;
+
+  const _EmptyState({this.onBrowseTrips});
+
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.fromLTRB(
+          32,
+          32,
+          32,
+          32 + MediaQuery.paddingOf(context).bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -207,6 +229,31 @@ class _EmptyState extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+            if (onBrowseTrips != null) ...[
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: onBrowseTrips,
+                icon: const Icon(Icons.explore_rounded, size: 18),
+                label: Text(
+                  'ดูทริปทั้งหมด',
+                  style: appFont(
+                    fontSize: AppText.sizeBody,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

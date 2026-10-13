@@ -131,10 +131,10 @@ void main() {
       }
       expect(tabs, [0, 1, 2, 3, 4]);
 
-      // ลูกค้า 5 แท็บ: ซ้าย 2 ขวา 3 — สองแท็บแรกอยู่ซ้ายปุ่ม ที่เหลืออยู่ขวา
+      // ลูกค้า 6 แท็บ (มี "ถูกใจ" = หน้า 5): ซ้าย 3 ขวา 3
       final mid = tester.getCenter(qrButton).dx;
-      expect(tester.getCenter(find.text('ทริป')).dx, lessThan(mid));
-      expect(tester.getCenter(find.text('การจอง')).dx, greaterThan(mid));
+      expect(tester.getCenter(find.text('การจอง')).dx, lessThan(mid));
+      expect(tester.getCenter(find.text('แชท')).dx, greaterThan(mid));
     });
 
     testWidgets(

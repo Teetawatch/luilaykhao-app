@@ -1629,6 +1629,12 @@ class _AllTripCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  // หัวใจมุมขวาล่างของรูป — มุมบนมีป้ายประเภท/คะแนนเต็มแล้ว
+                  Positioned(
+                    right: 10,
+                    bottom: 10,
+                    child: WishlistButton(trip: trip, size: 36, onImage: true),
+                  ),
                   // Bottom-left scarcity badge.
                   if (almostFull)
                     Positioned(

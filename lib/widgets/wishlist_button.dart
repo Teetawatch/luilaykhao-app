@@ -9,11 +9,16 @@ class WishlistButton extends StatelessWidget {
   final double size;
   final bool dense;
 
+  /// วางทับรูปปกบนการ์ดทริป — พื้นวงกลมดำโปร่งกับหัวใจขาว ให้เห็นชัดบนทุกรูป
+  /// แทนพื้นสีการ์ดที่จะกลืนไปกับรูปสว่าง
+  final bool onImage;
+
   const WishlistButton({
     super.key,
     required this.trip,
     this.size = 40,
     this.dense = false,
+    this.onImage = false,
   });
 
   @override
@@ -29,16 +34,20 @@ class WishlistButton extends StatelessWidget {
       label: favourite ? 'ลบออกจากรายการที่ชอบ' : 'บันทึกเป็นทริปที่ชอบ',
       toggled: favourite,
       child: Material(
-      color: favourite
+      color: onImage
+          ? Colors.black.withValues(alpha: 0.38)
+          : favourite
           ? AppTheme.errorColor.withValues(alpha: 0.12)
           : AppTheme.surface(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(size / 2),
-        side: BorderSide(
-          color: favourite
-              ? AppTheme.errorColor.withValues(alpha: 0.32)
-              : AppTheme.border(context),
-        ),
+        side: onImage
+            ? BorderSide.none
+            : BorderSide(
+                color: favourite
+                    ? AppTheme.errorColor.withValues(alpha: 0.32)
+                    : AppTheme.border(context),
+              ),
       ),
       child: InkWell(
         onTap: () async {
@@ -64,6 +73,8 @@ class WishlistButton extends StatelessWidget {
             size: iconSize,
             color: favourite
                 ? AppTheme.errorColor
+                : onImage
+                ? Colors.white
                 : AppTheme.mutedText(context),
           ),
         ),

@@ -47,6 +47,7 @@ import '../widgets/travel_widgets.dart';
 import '../widgets/trip_story_share_sheet.dart';
 import '../widgets/vehicle_seat_map.dart';
 import '../widgets/weather_card.dart';
+import '../widgets/wishlist_button.dart';
 import 'login_screen.dart';
 import 'refund_status_screen.dart';
 import 'payment_screen.dart';
@@ -72,6 +73,7 @@ import 'travel_documents_screen.dart';
 import 'trip_day_screen.dart';
 import 'trip_feed_screen.dart';
 import 'trip_recap_screen.dart';
+import 'wishlist_screen.dart';
 import 'medals_screen.dart' show MedalDetailScreen;
 import '../models/trip_medal.dart';
 import '../widgets/medal_art.dart' show MedalArt;
@@ -318,13 +320,20 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
     }
 
     final showStaffCheckIn = app.canUseStaffCheckIn;
+    // เลขหน้า 0–4 ตายตัว — แจ้งเตือน/ลิงก์สลับแท็บด้วยเลขเหล่านี้ (ดู
+    // NotificationNavigator) ลำดับที่เห็นบนแถบเป็นอีกเรื่อง จัดใน CustomBottomNav
+    // หน้า 5 = "ถูกใจ" ของลูกค้า หรือ "งานสตาฟ" ของสตาฟ ทั้งสองแบบจึงมี 6 แท็บ
+    // แบ่งข้างละ 3 รอบปุ่ม QR เท่ากัน
     final pages = [
       const ExploreScreen(),
       const AllTripsScreen(showBackButton: false),
       const MyBookingsScreen(),
       const ChatListScreen(),
       const ProfileScreen(),
-      if (showStaffCheckIn) const StaffWorkScreen(),
+      if (showStaffCheckIn)
+        const StaffWorkScreen()
+      else
+        WishlistScreen(onBrowseTrips: () => selectTab(1)),
     ];
 
     return Scaffold(
@@ -397,8 +406,7 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
   Widget build(BuildContext context) {
     final isDark = AppTheme.isDark(context);
     final items = _buildItems();
-    // ปุ่ม QR อยู่กลางจอพอดีเสมอ: ลูกค้า 5 แท็บ = ซ้าย 2 ขวา 3, สตาฟ 6 แท็บ = 3/3
-    // สองฝั่งกว้างเท่ากัน ฝั่งที่มีแท็บมากกว่าจึงวางไอคอนชิดกันกว่าเล็กน้อย
+    // ปุ่ม QR อยู่กลางจอพอดีเสมอ: ลูกค้าและสตาฟมี 6 แท็บเท่ากัน = ซ้าย 3 ขวา 3
     final split = items.length ~/ 2;
 
     // Keep clearance from the home indicator, but trim a little of the
@@ -427,18 +435,19 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
         ? AppTheme.outlineDark.withValues(alpha: 0.7)
         : AppTheme.border(context);
 
+    // i = ตำแหน่งบนแถบ, items[i].page = เลขหน้าใน IndexedStack
     Widget navItem(int i) => Expanded(
       child: _NavItem(
         icon: items[i].icon,
         activeIcon: items[i].activeIcon,
         label: items[i].label,
-        isSelected: widget.index == i,
-        // Chat tab (index 3) → unread messages. Unread notifications live on
+        isSelected: widget.index == items[i].page,
+        // Chat tab (page 3) → unread messages. Unread notifications live on
         // the home header bell, not the "บัญชี" tab.
-        badge: i == 3 ? widget.unreadChatCount : 0,
+        badge: items[i].page == 3 ? widget.unreadChatCount : 0,
         onTap: () {
           HapticFeedback.selectionClick();
-          widget.onChanged(i);
+          widget.onChanged(items[i].page);
         },
       ),
     );
@@ -527,38 +536,54 @@ class _CustomBottomNavState extends State<CustomBottomNav> {
     );
   }
 
+  /// เรียงตามความสำคัญจากซ้ายไปขวา — หาทริป → จอง (ติดปุ่ม QR ซึ่งเปิดบัตร
+  /// จากการจอง) → คุยกับทีม → ที่บันทึกไว้/งานสตาฟ → บัญชีปิดท้ายตามธรรมเนียม
   List<_NavItemData> _buildItems() => [
     const _NavItemData(
+      page: 0,
       icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
       label: 'หน้าหลัก',
     ),
     const _NavItemData(
+      page: 1,
       icon: Icons.explore_outlined,
       activeIcon: Icons.explore_rounded,
       label: 'ทริป',
     ),
     const _NavItemData(
+      page: 2,
       icon: Icons.confirmation_number_outlined,
       activeIcon: Icons.confirmation_number_rounded,
       label: 'การจอง',
     ),
+    // ── ปุ่ม QR ──
     const _NavItemData(
+      page: 3,
       icon: Icons.forum_outlined,
       activeIcon: Icons.forum_rounded,
       label: 'แชท',
     ),
+    if (widget.showStaffCheckIn)
+      const _NavItemData(
+        page: 5,
+        icon: Icons.badge_outlined,
+        activeIcon: Icons.badge_rounded,
+        label: 'งานสตาฟ',
+      )
+    else
+      const _NavItemData(
+        page: 5,
+        icon: Icons.favorite_border_rounded,
+        activeIcon: Icons.favorite_rounded,
+        label: 'ถูกใจ',
+      ),
     const _NavItemData(
+      page: 4,
       icon: Icons.person_outline_rounded,
       activeIcon: Icons.person_rounded,
       label: 'บัญชี',
     ),
-    if (widget.showStaffCheckIn)
-      const _NavItemData(
-        icon: Icons.badge_outlined,
-        activeIcon: Icons.badge_rounded,
-        label: 'งานสตาฟ',
-      ),
   ];
 }
 
@@ -681,10 +706,13 @@ class _CheckInNavLabel extends StatelessWidget {
 }
 
 class _NavItemData {
+  /// เลขหน้าใน IndexedStack — ไม่ใช่ตำแหน่งบนแถบ
+  final int page;
   final IconData icon;
   final IconData activeIcon;
   final String label;
   const _NavItemData({
+    required this.page,
     required this.icon,
     required this.activeIcon,
     required this.label,
