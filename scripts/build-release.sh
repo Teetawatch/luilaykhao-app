@@ -118,7 +118,9 @@ verify_appbundle() {
   unzip -q -o "$aab" 'base/lib/arm64-v8a/libapp.so' 'base/manifest/AndroidManifest.xml' -d "$work"
   verify_snapshot "appbundle ($aab)" "$work/base/lib/arm64-v8a/libapp.so"
   # manifest ใน aab เป็น protobuf — versionName เก็บเป็นสตริงอ่านได้ด้วย strings
-  if ! strings -a "$work/base/manifest/AndroidManifest.xml" | grep -q -- "$EXPECTED_NAME"; then
+  # (ดัมป์ลงไฟล์ก่อน ด้วยเหตุผลเรื่อง SIGPIPE เดียวกับ verify_snapshot)
+  strings -a "$work/base/manifest/AndroidManifest.xml" > "$work/manifest.txt"
+  if ! grep -qF -- "$EXPECTED_NAME" "$work/manifest.txt"; then
     rm -rf "$work"
     echo "!! appbundle ไม่ใช่เวอร์ชัน $EXPECTED_NAME ตาม pubspec" >&2
     exit 1
