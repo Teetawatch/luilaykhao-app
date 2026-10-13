@@ -10,8 +10,10 @@
 - **ตำแหน่งต่อหลังล็อกจอ** — iOS เพิ่ม `UIBackgroundModes = location`, Android เพิ่ม
   `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION` (ไม่ขอ
   `ACCESS_BACKGROUND_LOCATION` และยังไม่เคยขอ always บน iOS) ใช้กับ 3 อย่างที่ผู้ใช้
-  กดเริ่มเองทุกครั้ง: บันทึกเส้นทางเดินป่า, แชร์ตำแหน่งให้เพื่อนร่วมรอบ, และสวิตช์
-  "ใช้มือถือนี้เป็น GPS ของรถ" (เฉพาะบัญชีทีมงาน)
+  ลูกค้ากดเริ่มเอง: บันทึกเส้นทางเดินป่า, แชร์ตำแหน่งให้เพื่อนร่วมรอบ — และ GPS ของรถ
+  (เฉพาะบัญชีทีมงาน) ซึ่ง **เปิดเองอัตโนมัติ** เมื่อทีมงานเปิดแอปในวันที่ดูแลรอบอยู่
+  ปิดเองเมื่อรอบจบ และทีมงานกดปิดได้ — โน้ตทั้งสองสโตร์ต้องพูดตามนี้ ห้ามบอกว่า
+  "ทุกอย่างเริ่มจากผู้ใช้กดเอง"
 - **ไมโครโฟน** — ข้อความเสียงในห้องแชททริป ขอสิทธิ์ตอนกดปุ่มไมค์ครั้งแรก
 
 ## ก่อนส่งตรวจ — สิ่งที่ต้องเช็ค
@@ -115,17 +117,20 @@ a completed, checked-in trip that has earned a medal.
 Two new permissions in this version
 1. Background location (UIBackgroundModes: location). Still "When In Use" only - the app
 never requests Always. It keeps reading location after the screen locks for three
-features, each started by the user tapping a button and stopped the same way:
+features:
 - Trek recorder: records the route a customer walks on a multi-hour hike. Open the
 in-progress booking > "วันเดินทาง", card "บันทึกการเดินของฉัน", tap "เริ่มบันทึก".
 The track stays on the device unless the customer taps "บันทึก" to save it.
 - Location sharing with travellers on the same departure (already reviewed in 1.13.0,
 now continues while locked). Off by default, visible only to that departure's members
 and staff during the trip window; turning it off deletes the record.
-- Staff accounts only: "use this phone as the van's GPS", so customers see where their
-van is.
-iOS shows the blue location indicator the whole time. Nothing runs at app launch or
-when no trip is in progress.
+Both of the above are started by the customer tapping a button and stopped the same way.
+- Staff accounts only (our employees, not customers): on a day a staff member is assigned
+to a departure, opening the app turns their phone into the van's GPS so customers see
+where their van is. It turns itself off when the departure ends, and the staff member
+can switch it off at any time; the app remembers that choice.
+iOS shows the blue location indicator the whole time. For customers nothing runs unless
+they start it; nothing runs at all when no trip is in progress.
 2. Microphone: voice messages in the trip group chat. Recording runs only from
 tapping the mic button until the user taps send or discard. Permission is asked on
 first use.
@@ -153,3 +158,45 @@ Other permissions (unchanged): Camera (QR check-in, documents), Photo Library / 
 (profile, documents, saving trip photos and share cards), Calendar write-only (Add to
 calendar), Face ID (optional unlock), Notifications, Live Activity.
 ```
+
+---
+
+## Google Play — Foreground service permissions (FOREGROUND_SERVICE_LOCATION)
+
+Play Console → Policy and programs → App content → **Foreground service permissions**
+
+**งานที่เลือก:** ตำแหน่งที่ผู้ใช้เริ่มเองและเห็นอยู่ตลอด — เลือกหมวดที่ใกล้ที่สุดกับ
+*การติดตามกิจกรรม/ฟิตเนส* (บันทึกเส้นทางเดินป่า) และ *การแชร์ตำแหน่ง* (แชร์ให้เพื่อน
+ร่วมรอบ + GPS ของรถ) ชื่อหมวดใน Console อาจต่างจากนี้เล็กน้อย
+
+**คำอธิบาย (วางได้เลย):**
+
+```
+Luilaykhao runs guided multi-hour hiking trips. The location foreground service is used
+only during a customer's own trip, for three tasks:
+1. Trek recording (activity tracking): the customer taps "เริ่มบันทึก" on the trip-day
+screen to record the route they walk. Hikers keep the phone in a pocket for hours, so
+recording must continue with the screen off. A persistent notification
+"กำลังบันทึกเส้นทางของคุณ" is shown the whole time; the customer stops it with
+"หยุดชั่วคราว" or "บันทึก".
+2. Location sharing with trip mates: the customer turns on "แชร์ตำแหน่งของฉัน" in the
+trip chat so people on the same departure can see where they are on the trail. A
+notification "กำลังแชร์ตำแหน่งกับเพื่อนร่วมทริป" is shown; turning it off stops the
+service and deletes the shared position.
+3. Staff accounts only: on a day a staff member is assigned to a departure, their phone
+shares the van's position so waiting customers see an accurate arrival time. Shown as
+"กำลังแชร์ตำแหน่งรถให้ลูกค้า"; it stops when the departure ends or when the staff
+member turns it off.
+We do not request ACCESS_BACKGROUND_LOCATION. Nothing runs outside a trip.
+```
+
+**วิดีโอ** (อัปโหลด YouTube แบบ *ไม่เป็นสาธารณะ / Unlisted* แล้ววางลิงก์) ความยาว
+30–90 วินาที อัดด้วย Screen record ของ Android เปิด "แสดงการแตะ" ไว้:
+
+1. เปิดแอป → การจองที่อยู่ในช่วงวันเดินทาง → **วันเดินทาง** → การ์ด
+   **"บันทึกการเดินของฉัน"** → กด **"เริ่มบันทึก"** (ถ้าเด้งขอสิทธิ์ เลือก "ขณะใช้แอป")
+2. ดึงแถบแจ้งเตือนลงมาให้เห็น **"กำลังบันทึกเส้นทางของคุณ"**
+3. กดปุ่มโฮม / ล็อกจอ เดินสักพัก (หรือตัดต่อข้ามเวลา) แล้วเปิดกลับมาให้เห็นว่าระยะทาง
+   เพิ่มขึ้นระหว่างที่จอปิด
+4. กด **"หยุดชั่วคราว"** หรือ **"บันทึก"** → ดึงแถบแจ้งเตือนให้เห็นว่าการแจ้งเตือนหายไป
+5. (ถ้าเวลาพอ) ห้องแชททริป → **"แชร์ตำแหน่งของฉัน"** → เห็นการแจ้งเตือน → ปิดสวิตช์
