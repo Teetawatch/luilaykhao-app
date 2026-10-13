@@ -495,10 +495,12 @@ class _CategoryAverageTile extends StatelessWidget {
   }
 }
 
+const Color _starColor = Color(0xFFF59E0B);
+
 class _ReviewCard extends StatelessWidget {
   final Map<String, dynamic> review;
 
-  /// When set, a small trip chip is shown under the comment. Used by the
+  /// When set, the card ends with a tappable trip row. Used by the
   /// all-reviews screen (where reviews span many trips); left null inside a
   /// single trip's detail page, where the trip is already obvious.
   final String? tripTitle;
@@ -507,14 +509,12 @@ class _ReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = AppTheme.isDark(context);
     final user = asMap(review['user']);
     final rating = _ratingValue(review).round().clamp(0, 5);
     final comment = textOf(review['comment']).trim();
     final name = textOf(user['name'], 'ผู้ใช้ทั่วไป');
-    final avatarUrl = ApiConfig.mediaUrl(textOf(user['avatar_url']));
     final date = _formatRelativeDate(review['created_at']);
-    final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final tier = TierBadge.fromUser(user, compact: true);
     final images = asList(review['images'])
         .map((e) => ApiConfig.mediaUrl(e.toString()))
         .where((s) => s.isNotEmpty)
@@ -524,340 +524,495 @@ class _ReviewCard extends StatelessWidget {
         .where((s) => s.isNotEmpty)
         .toList();
     final breakdown = _reviewBreakdown(review);
-
-    // avatar background color cycle
-    final colors = [
-      [const Color(0xFF059669), const Color(0xFF6EE7B7)],
-      [const Color(0xFF0891B2), const Color(0xFF67E8F9)],
-      [const Color(0xFF7C3AED), const Color(0xFFC4B5FD)],
-      [const Color(0xFFD97706), const Color(0xFFFDE68A)],
-    ];
-    final colorPair = colors[(initials.codeUnitAt(0)) % colors.length];
+    final reply = textOf(review['admin_reply']).trim();
+    final trip = tripTitle?.trim() ?? '';
+    final showTrip = trip.isNotEmpty && trip != '-';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : AppTheme.subtleSurface(context),
+          color: AppTheme.surface(context),
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : const Color(0xFFEEF2F7),
+            color: AppTheme.border(context).withValues(alpha: 0.7),
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                // avatar
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: avatarUrl.isEmpty
-                        ? LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: colorPair,
-                          )
-                        : null,
-                    shape: BoxShape.circle,
-                  ),
-                  child: avatarUrl.isNotEmpty
-                      ? ClipOval(
-                          child: CachedNetworkImage(
-                            imageUrl: avatarUrl,
-                            width: 42,
-                            height: 42,
-                            fit: BoxFit.cover,
-                            memCacheWidth: _thumbCacheWidth(context, 42),
-                            maxWidthDiskCache: _thumbCacheWidth(context, 42),
-                            errorWidget: (_, _, _) => Center(
-                              child: Text(
-                                initials,
-                                style: appFont(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: AppText.sizeTitle,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      : Center(
-                          child: Text(
-                            initials,
-                            style: appFont(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: AppText.sizeTitle,
-                            ),
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: appFont(
-                          fontSize: AppText.sizeBody,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : _premiumText,
-                        ),
+                      _ReviewAvatar(
+                        name: name,
+                        url: ApiConfig.mediaUrl(textOf(user['avatar_url'])),
                       ),
-                      const SizedBox(height: 3),
-                      // Stars and the relative date share one line when the
-                      // card is wide enough. On a narrow phone (or a large
-                      // text scale) a long date like "1 ชม. ที่แล้ว" used to
-                      // run out of this column and under the rating badge, so
-                      // it drops to its own line instead.
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 6,
-                        runSpacing: 2,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: List.generate(
-                              5,
-                              (i) => Icon(
-                                i < rating
-                                    ? Icons.star_rounded
-                                    : Icons.star_outline_rounded,
-                                size: 14,
-                                color: i < rating
-                                    ? const Color(0xFFF59E0B)
-                                    : AppTheme.border(context),
-                              ),
-                            ),
-                          ),
-                          if (date.isNotEmpty)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Name and tier badge wrap rather than squeeze, so a
+                            // long Thai name never pushes the badge off-card.
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              runSpacing: 2,
                               children: [
-                                Container(
-                                  width: 3,
-                                  height: 3,
-                                  decoration: BoxDecoration(
-                                    color: _mutedText.withValues(alpha: 0.4),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
                                 Text(
-                                  date,
+                                  name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: appFont(
-                                    fontSize: AppText.sizeCaption,
-                                    color: _mutedText,
-                                    fontWeight: FontWeight.w600,
+                                  style: AppText.body(
+                                    color: AppTheme.onSurface(context),
+                                    strong: true,
                                   ),
                                 ),
+                                ?tier,
                               ],
                             ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // rating badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFBEB),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                    border: Border.all(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 12,
-                        color: Color(0xFFF59E0B),
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '$rating.0',
-                        style: appFont(
-                          fontSize: AppText.sizeCaption,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF92400E),
+                            const SizedBox(height: 2),
+                            // Stars and the relative date share one line when
+                            // there's room; on a narrow phone or a large text
+                            // scale the date drops to its own line.
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              runSpacing: 2,
+                              children: [
+                                _StarRow(rating: rating, size: 14),
+                                if (date.isNotEmpty)
+                                  Text(
+                                    date,
+                                    maxLines: 1,
+                                    style: AppText.caption(
+                                      color: AppTheme.mutedText(context),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
+                      _ReviewModerationButton(review: review),
                     ],
                   ),
-                ),
-                _ReviewModerationButton(review: review),
-              ],
-            ),
-            if (comment.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.04)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : AppTheme.border(context),
-                  ),
-                ),
-                child: Text(
-                  comment,
-                  style: appFont(
-                    fontSize: AppText.sizeBody,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.75)
-                        : const Color(0xFF334155),
-                    height: 1.65,
-                  ),
-                ),
-              ),
-            ],
-            if (tripTitle != null &&
-                tripTitle!.trim().isNotEmpty &&
-                tripTitle!.trim() != '-') ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _softAccent.withValues(alpha: isDark ? 0.16 : 0.08),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.terrain_rounded,
-                      size: 14,
-                      color: _softAccent,
+                  if (comment.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _ExpandableReviewText(text: comment),
                     ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        tripTitle!.trim(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: appFont(
-                          fontSize: AppText.sizeCaption,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? const Color(0xFF6EE7B7) : _premiumText,
-                        ),
+                  ],
+                  if (breakdown.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: breakdown
+                          .map(
+                            (b) => _ReviewBreakdownChip(label: b.$1, value: b.$2),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                  if (videos.isNotEmpty || images.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _ReviewMediaStrip(images: images, videos: videos),
+                  ],
+                  if (reply.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _ReviewReply(
+                        text: reply,
+                        date: _formatRelativeDate(review['admin_replied_at']),
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
-            ],
-            if (breakdown.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: breakdown
-                    .map((b) => _ReviewBreakdownChip(label: b.$1, value: b.$2))
-                    .toList(),
+            ),
+            if (showTrip)
+              _ReviewTripRow(
+                title: trip,
+                slug: textOf(review['trip_slug']).trim(),
               ),
-            ],
-            if (videos.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 76,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: videos.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) => GestureDetector(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        fullscreenDialog: true,
-                        builder: (_) => _FullscreenVideoPlayer(url: videos[i]),
-                      ),
-                    ),
-                    child: _VideoThumbCard(
-                      url: videos[i],
-                      index: i,
-                      width: 110,
-                      height: 76,
-                      showLabel: false,
-                      // Reviews stack unbounded video tiles in a non-recycling
-                      // Column as more pages load; a live decoder per tile would
-                      // exhaust the platform pool and crash. Show the static
-                      // poster placeholder — tapping still opens a real player.
-                      livePreview: false,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            if (images.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 76,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: images.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) => GestureDetector(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        fullscreenDialog: true,
-                        builder: (_) =>
-                            _FullscreenGallery(images: images, initialIndex: i),
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                      child: CachedNetworkImage(
-                        imageUrl: images[i],
-                        width: 76,
-                        height: 76,
-                        fit: BoxFit.cover,
-                        memCacheWidth: _thumbCacheWidth(context, 76),
-                        maxWidthDiskCache: _thumbCacheWidth(context, 76),
-                        placeholder: (_, _) => Container(
-                          width: 76,
-                          height: 76,
-                          color: AppTheme.subtleSurface(context),
-                        ),
-                        errorWidget: (_, _, _) => Container(
-                          width: 76,
-                          height: 76,
-                          color: AppTheme.subtleSurface(context),
-                          child: Icon(
-                            Icons.broken_image_rounded,
-                            size: 22,
-                            color: AppTheme.mutedText(context),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Five small stars, filled up to [rating].
+class _StarRow extends StatelessWidget {
+  final int rating;
+  final double size;
+
+  const _StarRow({required this.rating, this.size = 14});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '$rating จาก 5 ดาว',
+      child: ExcludeSemantics(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(
+            5,
+            (i) => Icon(
+              Icons.star_rounded,
+              size: size,
+              color: i < rating
+                  ? _starColor
+                  : AppTheme.border(context),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Reviewer photo, or a flat tinted circle with their initial.
+class _ReviewAvatar extends StatelessWidget {
+  final String name;
+  final String url;
+
+  const _ReviewAvatar({required this.name, required this.url});
+
+  static const double _size = 40;
+  static const _hues = [
+    AppTheme.primaryColor,
+    AppTheme.infoColor,
+    AppTheme.warningColor,
+    AppTheme.flashSaleColor,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isNotEmpty
+        ? name.trim().characters.first.toUpperCase()
+        : '?';
+    final hue = _hues[initial.codeUnitAt(0) % _hues.length];
+    final fallback = Container(
+      width: _size,
+      height: _size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppTheme.tintOf(context, hue),
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        initial,
+        style: appFont(
+          color: AppTheme.onTintOf(context, hue),
+          fontWeight: FontWeight.w800,
+          fontSize: AppText.sizeSubtitle,
+        ),
+      ),
+    );
+    if (url.isEmpty) return fallback;
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: url,
+        width: _size,
+        height: _size,
+        fit: BoxFit.cover,
+        memCacheWidth: _thumbCacheWidth(context, _size),
+        maxWidthDiskCache: _thumbCacheWidth(context, _size),
+        placeholder: (_, _) => fallback,
+        errorWidget: (_, _, _) => fallback,
+      ),
+    );
+  }
+}
+
+/// Review body clamped to a few lines with an "อ่านต่อ" toggle, so one long
+/// story doesn't push every other review a screen further down.
+class _ExpandableReviewText extends StatefulWidget {
+  final String text;
+
+  const _ExpandableReviewText({required this.text});
+
+  static const int collapsedLines = 5;
+
+  @override
+  State<_ExpandableReviewText> createState() => _ExpandableReviewTextState();
+}
+
+class _ExpandableReviewTextState extends State<_ExpandableReviewText> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = appFont(
+      fontSize: AppText.sizeBody,
+      height: 1.6,
+      color: AppTheme.onSurface(context).withValues(alpha: 0.86),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(text: widget.text, style: style),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: _ExpandableReviewText.collapsedLines,
+        )..layout(maxWidth: constraints.maxWidth);
+        final overflows = painter.didExceedMaxLines;
+        painter.dispose();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.text,
+              style: style,
+              maxLines: _expanded ? null : _ExpandableReviewText.collapsedLines,
+              overflow: _expanded ? null : TextOverflow.ellipsis,
+            ),
+            if (overflows)
+              MinTapTarget(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _expanded = !_expanded);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _expanded ? 'ย่อ' : 'อ่านต่อ',
+                      style: AppText.label(
+                        color: AppTheme.primaryColor,
+                        strong: true,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Videos then photos in one swipeable row of square-cornered tiles.
+class _ReviewMediaStrip extends StatelessWidget {
+  final List<String> images;
+  final List<String> videos;
+
+  const _ReviewMediaStrip({required this.images, required this.videos});
+
+  static const double _tile = 88;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = videos.length + images.length;
+    return SizedBox(
+      height: _tile,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(right: 8),
+        itemCount: count,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          if (i < videos.length) {
+            return GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (_) => _FullscreenVideoPlayer(url: videos[i]),
+                ),
+              ),
+              child: _VideoThumbCard(
+                url: videos[i],
+                index: i,
+                width: 124,
+                height: _tile,
+                showLabel: false,
+                // Reviews stack unbounded video tiles in a non-recycling
+                // Column as more pages load; a live decoder per tile would
+                // exhaust the platform pool and crash. Show the static
+                // poster placeholder — tapping still opens a real player.
+                livePreview: false,
+              ),
+            );
+          }
+          final index = i - videos.length;
+          return GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                fullscreenDialog: true,
+                builder: (_) =>
+                    _FullscreenGallery(images: images, initialIndex: index),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              child: CachedNetworkImage(
+                imageUrl: images[index],
+                width: _tile,
+                height: _tile,
+                fit: BoxFit.cover,
+                memCacheWidth: _thumbCacheWidth(context, _tile),
+                maxWidthDiskCache: _thumbCacheWidth(context, _tile),
+                placeholder: (_, _) => Container(
+                  width: _tile,
+                  height: _tile,
+                  color: AppTheme.subtleSurface(context),
+                ),
+                errorWidget: (_, _, _) => Container(
+                  width: _tile,
+                  height: _tile,
+                  color: AppTheme.subtleSurface(context),
+                  child: Icon(
+                    Icons.broken_image_rounded,
+                    size: 22,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The team's public answer to a review (`admin_reply`), set apart as a quiet
+/// indented block so it reads as a reply rather than part of the review.
+class _ReviewReply extends StatelessWidget {
+  final String text;
+  final String date;
+
+  const _ReviewReply({required this.text, required this.date});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: BoxDecoration(
+        color: AppTheme.fieldSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.reply_rounded,
+                size: 16,
+                color: AppTheme.onTintOf(context, AppTheme.primaryColor),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'ตอบกลับจากทีมงาน',
+                style: AppText.label(
+                  color: AppTheme.onSurface(context),
+                  strong: true,
+                ),
+              ),
+              if (date.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '· $date',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(color: AppTheme.mutedText(context)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            text,
+            style: appFont(
+              fontSize: AppText.sizeLabel,
+              height: 1.55,
+              color: AppTheme.onSurface(context).withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Footer row naming the trip a review belongs to; opens that trip.
+class _ReviewTripRow extends StatelessWidget {
+  final String title;
+  final String slug;
+
+  const _ReviewTripRow({required this.title, required this.slug});
+
+  @override
+  Widget build(BuildContext context) {
+    final canOpen = slug.isNotEmpty;
+    return Material(
+      color: AppTheme.surface(context),
+      child: InkWell(
+        onTap: canOpen
+            ? () {
+                HapticFeedback.selectionClick();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => TripDetailScreen(slug: slug),
+                  ),
+                );
+              }
+            : null,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 11, 12, 11),
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: AppTheme.border(context).withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.terrain_rounded,
+                size: 16,
+                color: AppTheme.onTintOf(context, AppTheme.primaryColor),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.label(
+                    color: AppTheme.onSurface(context),
+                    strong: true,
+                  ),
+                ),
+              ),
+              if (canOpen)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppTheme.mutedText(context),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1081,34 +1236,26 @@ class _ReviewBreakdownChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-        border: Border.all(
-          color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
-        ),
+        color: AppTheme.fieldSurface(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
-            style: appFont(
-              fontSize: AppText.sizeCaption,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF92400E),
-            ),
+            style: AppText.caption(color: AppTheme.mutedText(context)),
           ),
-          const SizedBox(width: 4),
-          const Icon(Icons.star_rounded, size: 11, color: Color(0xFFF59E0B)),
+          const SizedBox(width: 5),
+          const Icon(Icons.star_rounded, size: 12, color: _starColor),
           const SizedBox(width: 2),
           Text(
             numberText(value),
-            style: appFont(
-              fontSize: AppText.sizeCaption,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF92400E),
+            style: AppText.caption(
+              color: AppTheme.onSurface(context),
+              strong: true,
             ),
           ),
         ],

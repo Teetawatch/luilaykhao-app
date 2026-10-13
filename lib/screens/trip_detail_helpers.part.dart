@@ -845,11 +845,13 @@ String _formatRelativeDate(dynamic value) {
   if (raw.isEmpty) return '';
 
   try {
-    final date = DateTime.parse(raw);
+    final date = DateTime.parse(raw).toLocal();
     final diff = DateTime.now().difference(date);
-    if (diff.inDays > 30) return '${date.day}/${date.month}/${date.year}';
+    if (diff.inDays >= 30) return thaiDateShort(date);
+    if (diff.inDays >= 7) return '${diff.inDays ~/ 7} สัปดาห์ที่แล้ว';
     if (diff.inDays > 0) return '${diff.inDays} วันที่แล้ว';
     if (diff.inHours > 0) return '${diff.inHours} ชม. ที่แล้ว';
+    if (diff.inMinutes > 0) return '${diff.inMinutes} นาทีที่แล้ว';
     return 'เมื่อครู่';
   } catch (_) {
     return '';

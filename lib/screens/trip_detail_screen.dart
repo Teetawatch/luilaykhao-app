@@ -28,6 +28,7 @@ import '../widgets/flash_countdown_pill.dart';
 import '../widgets/moderation_sheet.dart';
 import '../widgets/pickup_vehicle_guide.dart';
 import '../widgets/route_map_card.dart';
+import '../widgets/tier_badge.dart';
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
 import '../widgets/weather_card.dart';
 import 'booking_flow_screen.dart';

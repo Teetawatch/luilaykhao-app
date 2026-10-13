@@ -1077,6 +1077,7 @@ class AppProvider extends ChangeNotifier {
     int page = 1,
     int perPage = 12,
     int? rating,
+    bool withMedia = false,
   }) async {
     final response = await api.get(
       ApiEndpoints.reviews,
@@ -1084,6 +1085,7 @@ class AppProvider extends ChangeNotifier {
         'page': page,
         'per_page': perPage,
         'rating': ?rating,
+        if (withMedia) 'has_media': 1,
       },
     );
     final items = List<dynamic>.from(api.data(response) ?? []);
@@ -1094,6 +1096,13 @@ class AppProvider extends ChangeNotifier {
         int.tryParse('${meta?['last_page'] ?? currentPage}') ?? currentPage;
     final total = int.tryParse('${meta?['total'] ?? items.length}') ?? items.length;
     return (items: items, hasMore: currentPage < lastPage, total: total);
+  }
+
+  /// ภาพรวมรีวิวทั้งหมด (ค่าเฉลี่ย, จำนวนต่อดาว, ค่าเฉลี่ยรายหมวด, จำนวนที่มีรูป)
+  /// สำหรับหัวหน้า "รีวิวจากลูกทริป"
+  Future<Map<String, dynamic>> reviewStats() async {
+    final response = await api.get(ApiEndpoints.reviewsStats);
+    return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 
   /// ผังที่นั่งของรอบ — รอบที่วิ่งหลายคันต้องบอกด้วยว่าเป็นผังของคันไหน

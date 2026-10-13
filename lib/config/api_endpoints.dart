@@ -37,6 +37,7 @@ class ApiEndpoints {
   // Reviews
   static const reviews = 'reviews';
   static const reviewsMy = 'reviews/my';
+  static const reviewsStats = 'reviews/stats';
 
   // Promotions
   static const promotionsActive = 'promotions/active';
