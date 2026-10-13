@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 
 class _FakeApp extends AppProvider {
   final List<({int? rating, bool media, int page})> calls = [];
-  Map<String, dynamic>? stats;
+  Map<String, dynamic>? statsData;
   bool statsFail = false;
   List<Map<String, dynamic>> reviewsList = [];
 
@@ -29,9 +29,9 @@ class _FakeApp extends AppProvider {
   }
 
   @override
-  Future<Map<String, dynamic>> reviewStats() async {
+  Future<Map<String, dynamic>> reviewStats({int? tripId}) async {
     if (statsFail) throw Exception('offline');
-    return stats ?? {};
+    return statsData ?? {};
   }
 }
 
@@ -80,7 +80,7 @@ void main() {
 
   setUp(() {
     app = _FakeApp()
-      ..stats = {
+      ..statsData = {
         'total': 3,
         'average': 4.33,
         'distribution': {'5': 2, '4': 0, '3': 1, '2': 0, '1': 0},

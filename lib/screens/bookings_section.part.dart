@@ -1,14 +1,5 @@
 part of 'customer_app_screen.dart';
 
-BoxDecoration _ecoCardDecoration(BuildContext context) {
-  return AppTheme.cardDecoration(
-    context,
-    radius: 32,
-    borderColor: AppTheme.border(context).withValues(alpha: 0.45),
-    shadowOpacity: 0.05,
-  );
-}
-
 // ─── Bookings Header ──────────────────────────────────────────────────────────
 
 class _BookingsHeader extends StatelessWidget {

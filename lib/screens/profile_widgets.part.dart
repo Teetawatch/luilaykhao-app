@@ -516,7 +516,7 @@ class _ReviewCard extends StatelessWidget {
                   tooltip: 'แชร์รีวิวลงสตอรี่',
                   visualDensity: VisualDensity.compact,
                   onPressed: () => _share(context),
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.ios_share_rounded,
                     size: 20,
                     color: AppTheme.primaryColor,

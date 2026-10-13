@@ -91,64 +91,6 @@ class PackageListSection extends StatelessWidget {
   }
 }
 
-class _PlannerSelectFrame extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Widget child;
-
-  const _PlannerSelectFrame({
-    required this.icon,
-    required this.label,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      decoration: BoxDecoration(
-        color: AppTheme.subtleSurface(context),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(
-          color: AppTheme.border(context).withValues(alpha: 0.5),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 14),
-            child: Icon(
-              icon,
-              color: AppTheme.primaryColor.withValues(alpha: 0.7),
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: appFont(
-                    color: AppTheme.mutedText(context),
-                    fontSize: AppText.sizeCaption,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                child,
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 String _tripTypeLabel(String type) {
   return switch (type.toLowerCase()) {
     'all' => 'ทริปทั้งหมด',

@@ -49,7 +49,7 @@ void main() {
   ) async {
     await pump(
       tester,
-      GiftVoucherCard.fromJson({
+      GiftVoucherCard.fromJson(const {
         'amount': 2000,
         'balance': 500,
         'status': 'active',
@@ -72,7 +72,7 @@ void main() {
   testWidgets('บัตรที่รอจ่ายโชว์ป้ายสถานะและไม่มีรหัส', (tester) async {
     await pump(
       tester,
-      GiftVoucherCard.fromJson({
+      GiftVoucherCard.fromJson(const {
         'amount': 1000,
         'balance': 0,
         'status': 'pending',
@@ -100,7 +100,7 @@ void main() {
         ),
         child: MaterialApp(
           home: Scaffold(
-            body: GiftVoucherCard.fromJson({
+            body: GiftVoucherCard.fromJson(const {
               'amount': 50000,
               'balance': 49999.5,
               'status': 'active',
