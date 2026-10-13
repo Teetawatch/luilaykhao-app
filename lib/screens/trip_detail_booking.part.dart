@@ -29,7 +29,9 @@ class StickyBookingBar extends StatelessWidget {
     // โควตาจอยเต็มแล้วต้องกดไม่ได้ ไม่งั้นลูกค้ากรอกฟอร์มจนจบแล้วค่อยโดนปฏิเสธ
     final joinTripFull = _joinTripIsFull(selectedSchedule);
     // จอยทริปไม่กินที่นั่งบนรถ รอบที่ที่นั่งเต็มแล้วจึงยังจอยได้ตราบใดที่โควตาจอยเหลือ
+    final opensAt = _scheduleOpensAt(selectedSchedule);
     final joinTripCanBook = joinTripEnabled &&
+        opensAt == null &&
         !_asBool(selectedSchedule['is_charter']) &&
         !_isSchedulePast(selectedSchedule) &&
         !joinTripFull;
@@ -84,13 +86,21 @@ class StickyBookingBar extends StatelessWidget {
     // with no seats left — distinct from a past/closed one which can't be queued.
     final isFull = hasSchedule &&
         !isCharter &&
+        opensAt == null &&
         !_isSchedulePast(selectedSchedule) &&
         _scheduleAvailableSeats(selectedSchedule) <= 0;
 
     // ป้ายปุ่มสะท้อนสถานะของรอบที่เลือกจริง ไม่ใช่ขึ้น "จองเลย" ตลอด
     final String bookLabel;
     final IconData bookIcon;
-    if (isBookable || !hasSchedule || isCharter) {
+    String? bookCaption;
+    if (hasSchedule && !isCharter && opensAt != null) {
+      // Short on purpose: the price beside it is the bar's headline and a
+      // wide button pushed it into "฿3,200.0…".
+      bookLabel = 'เปิดจอง';
+      bookCaption = _opensAtLabel(opensAt, unit: false);
+      bookIcon = Icons.schedule_rounded;
+    } else if (isBookable || !hasSchedule || isCharter) {
       // charter มีป้าย "รอบเหมา" อยู่แล้วในส่วนราคา ปุ่มจึงคงข้อความปกติไว้
       bookLabel = 'จองเลย';
       bookIcon = Icons.hiking_rounded;
@@ -330,6 +340,7 @@ class StickyBookingBar extends StatelessWidget {
                           _BookingButton(
                             enabled: isBookable,
                             label: bookLabel,
+                            caption: bookCaption,
                             icon: bookIcon,
                             onPressed: handleBookingTap,
                           ),
@@ -387,6 +398,58 @@ class StickyBookingBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Rebuilds [builder] once the clock passes [at].
+///
+/// Nothing else would: the schedules payload is identical before and after a
+/// round opens (the seat poll skips unchanged data), so without this the bar
+/// would keep saying "ยังไม่เปิดจอง" past the opening time.
+class _RebuildAt extends StatefulWidget {
+  final DateTime? at;
+  final WidgetBuilder builder;
+
+  const _RebuildAt({required this.at, required this.builder});
+
+  @override
+  State<_RebuildAt> createState() => _RebuildAtState();
+}
+
+class _RebuildAtState extends State<_RebuildAt> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _arm();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RebuildAt oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.at != widget.at) _arm();
+  }
+
+  void _arm() {
+    _timer?.cancel();
+    final at = widget.at;
+    if (at == null) return;
+    final wait = at.difference(DateTime.now());
+    if (wait.isNegative) return;
+    // A second of slack so the rebuild lands after the opening instant.
+    _timer = Timer(wait + const Duration(seconds: 1), () {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context);
 }
 
 /// Sold-out CTA: lets a signed-in customer queue for a seat on a full round,
@@ -482,20 +545,34 @@ class _WaitlistButtonState extends State<_WaitlistButton> {
 
   Future<void> _refreshStatus() async {
     final app = context.read<AppProvider>();
-    if (!app.isLoggedIn || widget.scheduleId == 0) {
-      if (mounted) setState(() => _checking = false);
+    // Switching between two full rounds fires two lookups; only the answer
+    // for the round still on screen may land, or the button would show the
+    // previous round's "อยู่ในคิวแล้ว".
+    final scheduleId = widget.scheduleId;
+    if (!app.isLoggedIn || scheduleId == 0) {
+      if (mounted) {
+        setState(() {
+          _inQueue = false;
+          _checking = false;
+        });
+      }
       return;
     }
-    setState(() => _checking = true);
+    setState(() {
+      _inQueue = false;
+      _checking = true;
+    });
     try {
-      final status = await app.waitlistStatus(widget.scheduleId);
-      if (!mounted) return;
+      final status = await app.waitlistStatus(scheduleId);
+      if (!mounted || widget.scheduleId != scheduleId) return;
       setState(() {
         _inQueue = status['in_waitlist'] == true;
         _checking = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _checking = false);
+      if (mounted && widget.scheduleId == scheduleId) {
+        setState(() => _checking = false);
+      }
     }
   }
 
@@ -522,13 +599,16 @@ class _WaitlistButtonState extends State<_WaitlistButton> {
       return;
     }
 
+    final scheduleId = widget.scheduleId;
     setState(() => _busy = true);
     HapticFeedback.mediumImpact();
     try {
-      await app.joinWaitlist(widget.scheduleId);
+      await app.joinWaitlist(scheduleId);
       if (!mounted) return;
       setState(() {
-        _inQueue = true;
+        // Still queued for the round they tapped, even if they've since
+        // switched to another — only mark the button for that same round.
+        if (widget.scheduleId == scheduleId) _inQueue = true;
         _busy = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -610,12 +690,16 @@ class _WaitlistButtonState extends State<_WaitlistButton> {
 class _BookingButton extends StatefulWidget {
   final bool enabled;
   final String label;
+
+  /// Small second line under [label], e.g. when a round opens for booking.
+  final String? caption;
   final IconData icon;
   final VoidCallback onPressed;
 
   const _BookingButton({
     required this.enabled,
     required this.label,
+    this.caption,
     required this.icon,
     required this.onPressed,
   });
@@ -629,6 +713,10 @@ class _BookingButtonState extends State<_BookingButton> {
 
   @override
   Widget build(BuildContext context) {
+    // A disabled button used to keep white text on the light border grey,
+    // which left "เต็มแล้ว" barely readable. Muted ink on a soft fill instead.
+    final ink = widget.enabled ? Colors.white : AppTheme.mutedText(context);
+    final caption = widget.caption;
     return GestureDetector(
       onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
       onTapCancel: () => setState(() => _pressed = false),
@@ -646,22 +734,45 @@ class _BookingButtonState extends State<_BookingButton> {
           decoration: BoxDecoration(
             color: widget.enabled
                 ? AppTheme.primaryColor
-                : AppTheme.border(context),
+                : AppTheme.fieldSurface(context),
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            border: widget.enabled
+                ? null
+                : Border.all(color: AppTheme.border(context)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(widget.icon, size: 19, color: Colors.white),
+              Icon(widget.icon, size: 19, color: ink),
               const SizedBox(width: 6),
-              Text(
-                widget.label,
-                style: appFont(
-                  fontSize: AppText.sizeSubtitle,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.2,
-                ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.label,
+                    style: appFont(
+                      fontSize: caption == null
+                          ? AppText.sizeSubtitle
+                          : AppText.sizeBody,
+                      fontWeight: FontWeight.w800,
+                      color: ink,
+                      letterSpacing: -0.2,
+                      height: caption == null ? null : 1.2,
+                    ),
+                  ),
+                  if (caption != null)
+                    Text(
+                      caption,
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        fontWeight: FontWeight.w700,
+                        color: ink,
+                        height: 1.2,
+                      ),
+                    ),
+                ],
               ),
             ],
           ),

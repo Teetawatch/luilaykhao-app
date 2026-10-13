@@ -635,7 +635,7 @@ class _RatingPill extends StatelessWidget {
 class _RevealOnScroll extends StatefulWidget {
   final Widget child;
 
-  const _RevealOnScroll({required this.child});
+  const _RevealOnScroll({super.key, required this.child});
 
   @override
   State<_RevealOnScroll> createState() => _RevealOnScrollState();

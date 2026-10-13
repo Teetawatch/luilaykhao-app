@@ -357,8 +357,8 @@ class ExcludedSection extends StatelessWidget {
             (item) => _FeatureRow(
               icon: Icons.close_rounded,
               title: item,
-              iconColor: const Color(0xFFE11D48),
-              iconBackground: const Color(0xFFFEF2F2),
+              iconColor: AppTheme.onTintOf(context, AppTheme.dangerColor),
+              iconBackground: AppTheme.dangerTint(context),
             ),
           ),
         ],

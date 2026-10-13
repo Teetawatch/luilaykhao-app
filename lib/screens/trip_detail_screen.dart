@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -105,17 +106,20 @@ class TripDetailScreen extends StatefulWidget {
   State<TripDetailScreen> createState() => _TripDetailScreenState();
 }
 
-class _TripDetailScreenState extends State<TripDetailScreen> {
+class _TripDetailScreenState extends State<TripDetailScreen>
+    with WidgetsBindingObserver {
   Future<Map<String, dynamic>>? _future;
   Map<String, dynamic>? _trip;
   bool _isDescriptionExpanded = false;
   // Silent ~25s refresh so seat counts stay current while the page is open.
   List<dynamic>? _liveSchedules;
   Timer? _seatPoll;
+  bool _appActive = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _future = _loadData();
     // ไกด์ประเภทรถรับ-ส่ง — ใช้เมื่อผู้ใช้เลือกจุดรับที่มีค่าใช้จ่ายเพิ่ม
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -130,18 +134,50 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _seatPoll?.cancel();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final active = state == AppLifecycleState.resumed;
+    if (active == _appActive) return;
+    _appActive = active;
+    // Back from the background: seats may have moved a lot, catch up now
+    // instead of waiting out the rest of the 25s tick.
+    if (active) _refreshSchedules();
+  }
+
+  /// The silent seat refresh only runs while someone can actually see this
+  /// page — not behind the booking flow pushed on top of it, not while the app
+  /// sits in the background, and not on the error screen (no trip to update).
+  bool get _shouldPoll =>
+      mounted &&
+      _appActive &&
+      _trip != null &&
+      (ModalRoute.of(context)?.isCurrent ?? true);
+
   Future<void> _refreshSchedules() async {
-    if (!mounted) return;
+    if (!_shouldPoll) return;
     try {
       final app = Provider.of<AppProvider>(context, listen: false);
       final schedules = await app.schedules(widget.slug ?? '');
-      if (mounted) setState(() => _liveSchedules = schedules);
+      if (!mounted || _sameSchedules(_liveSchedules, schedules)) return;
+      setState(() => _liveSchedules = schedules);
     } catch (_) {
       // transient — keep current data
+    }
+  }
+
+  /// Most ticks bring back exactly what is on screen. Skipping those keeps the
+  /// whole page from rebuilding (and re-running selection sync) every 25s.
+  static bool _sameSchedules(List<dynamic>? a, List<dynamic> b) {
+    if (a == null) return false;
+    try {
+      return jsonEncode(a) == jsonEncode(b);
+    } catch (_) {
+      return false;
     }
   }
 
@@ -199,14 +235,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             snapshot.connectionState == ConnectionState.waiting &&
             _trip == null;
 
-        // A silent-refresh poll may have populated schedules even when the
-        // initial load errored; only fall back to the error screen when we have
-        // nothing usable to show. Previously this was gated on `_trip == null`
-        // alone, so a schedules/reviews failure after the trip header loaded
-        // rendered a half-empty page with no way to retry.
-        final hasUsableSchedules = _liveSchedules?.isNotEmpty ?? false;
-
-        if (snapshot.hasError && !hasUsableSchedules) {
+        // _loadData swallows schedule/review failures (falling back to the
+        // schedules embedded in the trip payload), so an error here means the
+        // trip itself never loaded. Schedules alone are not enough to render:
+        // the page would show no title or details yet a live "จองเลย" that
+        // opens the booking flow with an empty trip.
+        if (snapshot.hasError && _trip == null) {
           return Scaffold(
             backgroundColor: AppTheme.background(context),
             appBar: AppBar(
@@ -228,23 +262,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       width: 72,
                       height: 72,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
+                        color: AppTheme.dangerTint(context),
                         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.wifi_off_rounded,
                         size: 36,
-                        color: Color(0xFFE11D48),
+                        color: AppTheme.onTintOf(context, AppTheme.dangerColor),
                       ),
                     ),
                     const SizedBox(height: 20),
                     Text(
                       'โหลดข้อมูลไม่สำเร็จ',
-                      style: appFont(
-                        fontSize: AppText.sizeTitle,
-                        fontWeight: FontWeight.w900,
-                        color: _premiumText,
-                      ),
+                      style: AppText.title(color: AppTheme.onSurface(context)),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -252,7 +282,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       textAlign: TextAlign.center,
                       style: appFont(
                         fontSize: AppText.sizeBody,
-                        color: _mutedText,
+                        color: AppTheme.mutedText(context),
                         height: 1.6,
                       ),
                     ),
@@ -445,6 +475,14 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       // เผื่อไว้เล็กน้อย เพื่อให้กลุ่มที่เพิ่งโผล่มาแค่หัวยังไม่ถูกนับ
       if (target != null && current >= target - 12) active = i;
     }
+    // เลื่อนจนสุดหน้าแล้ว = กำลังดูกลุ่มสุดท้าย กลุ่มรีวิวที่สั้นกว่าจอเลื่อน
+    // ขึ้นไปถึงใต้แถบแท็บไม่ได้ จึงไม่เคยข้ามเส้นด้านบน แท็บเลยค้างที่ "เตรียมตัว"
+    // ทั้งที่คนกำลังอ่านรีวิวอยู่
+    final position = _scrollController.position;
+    if (position.maxScrollExtent > 0 &&
+        current >= position.maxScrollExtent - 4) {
+      active = _tabHasContent.lastIndexWhere((has) => has);
+    }
 
     if (active != _activeTab) setState(() => _activeTab = active);
   }
@@ -524,7 +562,12 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       return;
     }
 
-    final regionKey = _initialPickupRegionKey;
+    // ภูมิภาคที่ส่งมาตอนเปิดหน้าใช้แค่ครั้งแรก — หลังจากนั้นลูกค้าเลือกเองแล้ว
+    // เดิมใช้ค่าเริ่มต้นนี้ทุกครั้งที่รายการรอบรีเฟรช (ทุก 25 วินาที) จึงดึงทั้ง
+    // รอบและจุดขึ้นรถกลับไปภูมิภาคเดิมทับสิ่งที่ลูกค้าเพิ่งเลือก
+    final regionKey = _hasAppliedInitialSelection
+        ? null
+        : _initialPickupRegionKey;
     final preferredScheduleId = !_hasAppliedInitialSelection
         ? widget.initialScheduleId
         : _selectedScheduleId;
@@ -801,17 +844,17 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
     final alertSlug = textOf(widget.trip['slug']).trim();
     final isAlertOn = alertSlug.isNotEmpty &&
         context.watch<TripAlertProvider>().isSubscribed(alertSlug);
-    final selectedSchedule = _selectedSchedule;
-    final joinTripEnabled = selectedSchedule != null &&
-        _asBool(selectedSchedule['join_trip_enabled']);
-    final bottomBarHeight = widget.isLoading ? 0.0 : (joinTripEnabled ? 172.0 : 112.0);
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: _isCollapsed
           ? SystemUiOverlayStyle.dark
           : SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: AppTheme.background(context),
+        // The booking bar is a floating blurred pill: let the page scroll on
+        // under it. With extendBody the Scaffold reports the bar's real height
+        // as the body's bottom padding, so the last section clears it exactly
+        // however tall the bar grows (join trip, sale countdown, waitlist).
+        extendBody: true,
         body: CustomScrollView(
           controller: _scrollController,
           physics: const BouncingScrollPhysics(),
@@ -838,23 +881,37 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
             // _ContentTopCap) ไม่ใช่ตรงนี้ — sliver แรกถูกวาดทับ sliver ที่ตาม
             // มา ถ้าโค้งอยู่ฝั่งเนื้อหาจะโดนรูปปกบังจนดูเป็นสี่เหลี่ยม
             SliverToBoxAdapter(
-              child: Container(
-                color: AppTheme.background(context),
-                // 16 บน ไม่ใช่ 24 เพราะหัวการ์ด (_contentOverlap) กินที่เหนือ
-                // ขึ้นไปอีก 40 — รวมแล้วช่องว่างเหนือการ์ดใบแรกยังเท่าเดิม
-                padding: EdgeInsets.fromLTRB(16, 16, 16, bottomBarHeight + 24),
-                child: _buildSections(context),
+              // Builder: the bar's height only shows up in MediaQuery *below*
+              // the Scaffold, not in this State's own context.
+              child: Builder(
+                builder: (context) => Container(
+                  color: AppTheme.background(context),
+                  // 16 บน ไม่ใช่ 24 เพราะหัวการ์ด (_contentOverlap) กินที่เหนือ
+                  // ขึ้นไปอีก 40 — รวมแล้วช่องว่างเหนือการ์ดใบแรกยังเท่าเดิม
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    MediaQuery.paddingOf(context).bottom + 24,
+                  ),
+                  child: _buildSections(context),
+                ),
               ),
             ),
           ],
         ),
         bottomNavigationBar: widget.isLoading
             ? null
-            : StickyBookingBar(
-                trip: widget.trip,
-                schedules: widget.schedules,
-                selectedScheduleId: _selectedScheduleId,
-                selectedPickupPointId: _selectedPickupPointId,
+            : _RebuildAt(
+                at: _selectedSchedule == null
+                    ? null
+                    : _scheduleOpensAt(_selectedSchedule!),
+                builder: (_) => StickyBookingBar(
+                  trip: widget.trip,
+                  schedules: widget.schedules,
+                  selectedScheduleId: _selectedScheduleId,
+                  selectedPickupPointId: _selectedPickupPointId,
+                ),
               ),
       ),
     );
@@ -992,7 +1049,15 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
             sections[i]
           else ...[
             if (i > 0) const SizedBox(height: 16),
-            _RevealOnScroll(child: sections[i]),
+            // Keyed by section type (each appears at most once) so a section
+            // appearing or vanishing above — the itinerary when the pickup
+            // region changes, the charter entry once loading ends — doesn't
+            // hand every later section's State to a different widget, which
+            // threw away loaded review pages and refetched photos/feed/videos.
+            _RevealOnScroll(
+              key: ValueKey(sections[i].runtimeType),
+              child: sections[i],
+            ),
           ],
       ],
     );
@@ -1068,20 +1133,23 @@ class _CharterEntry extends StatelessWidget {
                       style: appFont(
                         fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
-                        color: _premiumText,
+                        color: AppTheme.onSurface(context),
                       ),
                     ),
                     Text(
                       'ตั้งแต่ 4 คน เลือกวันเอง ทีมงานส่งใบเสนอราคาให้ในแอป',
                       style: appFont(
                         fontSize: AppText.sizeLabel,
-                        color: _mutedText,
+                        color: AppTheme.mutedText(context),
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: _mutedText),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.mutedText(context),
+              ),
             ],
           ),
         ),
@@ -1124,20 +1192,23 @@ class _GroupInviteEntry extends StatelessWidget {
                       style: appFont(
                         fontSize: AppText.sizeSubtitle,
                         fontWeight: FontWeight.w800,
-                        color: _premiumText,
+                        color: AppTheme.onSurface(context),
                       ),
                     ),
                     Text(
                       'จองที่นั่งติดกัน เพื่อนเลือกที่นั่งเอง คุณจ่ายทีเดียว',
                       style: appFont(
                         fontSize: AppText.sizeLabel,
-                        color: _mutedText,
+                        color: AppTheme.mutedText(context),
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: _mutedText),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.mutedText(context),
+              ),
             ],
           ),
         ),

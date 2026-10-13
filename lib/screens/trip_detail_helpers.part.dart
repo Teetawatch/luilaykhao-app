@@ -181,7 +181,10 @@ List<_QuickInfoItem> _quickInfoItems(Map<String, dynamic> trip) {
 
   if (difficulty.isNotEmpty) {
     items.add(
-      _QuickInfoItem(icon: Icons.family_restroom_rounded, label: difficulty),
+      _QuickInfoItem(
+        icon: Icons.signal_cellular_alt_rounded,
+        label: difficulty,
+      ),
     );
   }
 
@@ -194,9 +197,11 @@ List<_QuickInfoItem> _quickInfoItems(Map<String, dynamic> trip) {
     );
   }
 
+  // "ยอดนิยม" ต้องแยกทริปออกจากกันได้ — เดิมขึ้นกับทุกทริปที่คะแนน ≥ 4.5 ซึ่งเกือบ
+  // ทุกทริป ป้ายเลยไม่บอกอะไร ตอนนี้ต้องมีคนไปจริงเยอะ *และ* ชอบด้วย
   final rating = _ratingValue(trip);
   final reviewCount = _reviewCount(trip, const []);
-  if (rating >= 4.5 || reviewCount >= 10 || trip['is_popular'] == true) {
+  if (trip['is_popular'] == true || (reviewCount >= 20 && rating >= 4.5)) {
     items.add(
       const _QuickInfoItem(
         icon: Icons.local_fire_department_outlined,
@@ -654,12 +659,45 @@ int _scheduleAvailableSeats(Map<String, dynamic> schedule) =>
     ) ??
     0;
 
-/// รอบที่ "จองได้จริง": ไม่ใช่รอบเหมา ยังไม่ผ่านวันเดินทาง และยังมีที่นั่งว่าง
+/// รอบที่ "จองได้จริง": ไม่ใช่รอบเหมา เปิดจองแล้ว ยังไม่ผ่านวันเดินทาง และยังมีที่นั่งว่าง
 bool _scheduleIsBookable(Map<String, dynamic> schedule) {
   if (schedule.isEmpty) return false;
   if (_asBool(schedule['is_charter'])) return false;
+  if (_scheduleOpensAt(schedule) != null) return false;
   if (_isSchedulePast(schedule)) return false;
   return _scheduleAvailableSeats(schedule) > 0;
+}
+
+/// เวลาที่ผู้ชมคนนี้เริ่มจองรอบนี้ได้ (`booking_opens_at` — เซิร์ฟเวอร์หักชั่วโมง
+/// จองก่อนของระดับสมาชิกให้แล้ว) คืน null เมื่อเปิดจองแล้วหรือไม่ได้ตั้งเวลา
+///
+/// BookingService ปฏิเสธการจองก่อนเวลานี้ แอปจึงต้องปิดปุ่มไว้ ไม่งั้นลูกค้า
+/// กรอกฟอร์มจนจบแล้วค่อยรู้ตอนกดยืนยัน
+DateTime? _scheduleOpensAt(Map<String, dynamic> schedule, {DateTime? now}) {
+  final at = DateTime.tryParse(textOf(schedule['booking_opens_at']))?.toLocal();
+  if (at == null || !at.isAfter(now ?? DateTime.now())) return null;
+  return at;
+}
+
+/// ป้ายสั้นบนชิปวันที่: "เปิด 10:00" (วันนี้) หรือ "เปิด 20 ต.ค."
+String _opensAtShortLabel(DateTime at, {DateTime? now}) {
+  final today = now ?? DateTime.now();
+  final sameDay =
+      at.year == today.year && at.month == today.month && at.day == today.day;
+  return sameDay
+      ? 'เปิด ${DateFormat('HH:mm').format(at)}'
+      : 'เปิด ${DateFormat('d MMM', 'th_TH').format(at)}';
+}
+
+/// "วันนี้ 10:00 น." / "พรุ่งนี้ 10:00 น." / "20 ต.ค. 10:00 น."
+String _opensAtLabel(DateTime at, {DateTime? now, bool unit = true}) {
+  final today = now ?? DateTime.now();
+  final day = DateTime(at.year, at.month, at.day);
+  final diff = day.difference(DateTime(today.year, today.month, today.day)).inDays;
+  final time = '${DateFormat('HH:mm').format(at)}${unit ? ' น.' : ''}';
+  if (diff == 0) return 'วันนี้ $time';
+  if (diff == 1) return 'พรุ่งนี้ $time';
+  return '${DateFormat('d MMM', 'th_TH').format(at)} $time';
 }
 
 // ── จอยทริป: โควตาแยกจากที่นั่งบนรถ ────────────────────────────────

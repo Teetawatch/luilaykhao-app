@@ -1098,10 +1098,13 @@ class AppProvider extends ChangeNotifier {
     return (items: items, hasMore: currentPage < lastPage, total: total);
   }
 
-  /// ภาพรวมรีวิวทั้งหมด (ค่าเฉลี่ย, จำนวนต่อดาว, ค่าเฉลี่ยรายหมวด, จำนวนที่มีรูป)
-  /// สำหรับหัวหน้า "รีวิวจากลูกทริป"
-  Future<Map<String, dynamic>> reviewStats() async {
-    final response = await api.get(ApiEndpoints.reviewsStats);
+  /// ภาพรวมรีวิว (ค่าเฉลี่ย, จำนวนต่อดาว, ค่าเฉลี่ยรายหมวด, จำนวนที่มีรูป)
+  /// ของทุกทริป หรือเฉพาะทริปเดียวเมื่อส่ง [tripId]
+  Future<Map<String, dynamic>> reviewStats({int? tripId}) async {
+    final response = await api.get(
+      ApiEndpoints.reviewsStats,
+      query: {'trip_id': ?tripId},
+    );
     return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 

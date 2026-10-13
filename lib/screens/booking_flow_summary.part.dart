@@ -593,6 +593,22 @@ class _ScheduleDateStripState extends State<_ScheduleDateStrip> {
   }
 }
 
+/// เวลาที่ผู้ชมคนนี้เริ่มจองรอบนี้ได้ (`booking_opens_at`) — null เมื่อเปิดแล้ว
+DateTime? _bookingOpensAt(Map<String, dynamic> schedule) {
+  final at = DateTime.tryParse(textOf(schedule['booking_opens_at']))?.toLocal();
+  if (at == null || !at.isAfter(DateTime.now())) return null;
+  return at;
+}
+
+/// "เปิด 10:00" (วันนี้) หรือ "เปิด 20 ต.ค."
+String _bookingOpensShortLabel(DateTime at) {
+  final now = DateTime.now();
+  final sameDay = at.year == now.year && at.month == now.month && at.day == now.day;
+  return sameDay
+      ? 'เปิด ${DateFormat('HH:mm').format(at)}'
+      : 'เปิด ${DateFormat('d MMM', 'th_TH').format(at)}';
+}
+
 class _ScheduleDateCard extends StatelessWidget {
   final Map<String, dynamic> schedule;
   final double width;
@@ -612,9 +628,14 @@ class _ScheduleDateCard extends StatelessWidget {
     final date = DateTime.tryParse(textOf(schedule['departure_date']));
     final departsAt = scheduleDepartsAt(schedule);
     final seats = int.tryParse(textOf(schedule['available_seats'], '0')) ?? 0;
+    // รอบที่ยังไม่ถึงเวลาเปิดจอง — BookingService จะปฏิเสธตอนกดยืนยัน จึงเลือกไม่ได้
+    final opensAt = isCharter ? null : _bookingOpensAt(schedule);
+    final disabled = isCharter || opensAt != null;
 
     final (String seatText, Color seatColor) = isCharter
         ? ('รอบเหมา', const Color(0xFF7C3AED))
+        : opensAt != null
+        ? (_bookingOpensShortLabel(opensAt), AppTheme.infoColor)
         : seats <= 0
         ? ('เต็มแล้ว', AppTheme.dangerColor)
         : seats <= 3
@@ -626,13 +647,13 @@ class _ScheduleDateCard extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      enabled: !isCharter,
+      enabled: !disabled,
       child: Opacity(
-        opacity: isCharter ? 0.5 : 1,
+        opacity: disabled ? 0.5 : 1,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: isCharter ? null : onTap,
+            onTap: disabled ? null : onTap,
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),

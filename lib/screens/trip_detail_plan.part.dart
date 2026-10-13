@@ -1348,6 +1348,7 @@ class _ScheduleChip extends StatelessWidget {
     final isPast = departureDate != null && departureDate.isBefore(today);
     final isLowSeats = !isCharter && !isPast && seats > 0 && seats <= 5;
     final isUnavailable = isCharter || seats == 0 || isPast;
+    final opensAt = isCharter || isPast ? null : _scheduleOpensAt(schedule);
 
     final Color bg;
     final Color border;
@@ -1486,6 +1487,19 @@ class _ScheduleChip extends StatelessWidget {
                     fontSize: AppText.sizeMicro,
                     fontWeight: FontWeight.w700,
                     color: sub,
+                  ),
+                )
+              else if (opensAt != null)
+                Text(
+                  _opensAtShortLabel(opensAt),
+                  maxLines: 1,
+                  softWrap: false,
+                  style: appFont(
+                    fontSize: AppText.sizeMicro,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected
+                        ? Colors.white.withValues(alpha: 0.88)
+                        : AppTheme.onTintOf(context, AppTheme.infoColor),
                   ),
                 )
               else if (seats == 0)
@@ -1807,12 +1821,16 @@ class _SheetDateRow extends StatelessWidget {
     // Right-hand status line
     final String statusText;
     final Color statusColor;
+    final opensAt = isCharter || isPast ? null : _scheduleOpensAt(schedule);
     if (isCharter) {
       statusText = 'รอบเหมา';
       statusColor = AppTheme.mutedText(context);
     } else if (isPast) {
       statusText = 'ผ่านแล้ว';
       statusColor = AppTheme.mutedText(context);
+    } else if (opensAt != null) {
+      statusText = 'เปิดจอง ${_opensAtLabel(opensAt)}';
+      statusColor = AppTheme.onTintOf(context, AppTheme.infoColor);
     } else if (isFull && joinTripOpen) {
       final left = _joinTripAvailableSeats(schedule);
       statusText = left == null ? 'จอยทริปได้' : 'จอยได้ $left ที่';

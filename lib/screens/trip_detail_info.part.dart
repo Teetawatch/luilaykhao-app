@@ -568,7 +568,7 @@ class _VideoThumbCardState extends State<_VideoThumbCard> {
                 ),
                 child: Icon(
                   Icons.play_arrow_rounded,
-                  color: _premiumText,
+                  color: AppTheme.onSurface(context),
                   size: playSize * 0.63,
                 ),
               ),

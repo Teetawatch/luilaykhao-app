@@ -22,10 +22,30 @@ class _ReviewSectionState extends State<ReviewSection> {
   int _page = 1;
   int? _totalCount;
 
+  /// สรุปรีวิวของทริปนี้จากเซิร์ฟเวอร์ (`reviews/stats?trip_id=`) — แถบจำนวนต่อดาว
+  /// ต้องนับจากรีวิวทั้งหมด ไม่ใช่เฉพาะหน้าแรกที่โหลดมา (null = ยังไม่ได้/โหลดไม่สำเร็จ)
+  Map<String, dynamic>? _stats;
+  int? _statsTripId;
+
   @override
   void initState() {
     super.initState();
     _syncFromWidget();
+  }
+
+  Future<void> _loadStats(int tripId) async {
+    if (tripId <= 0 || _statsTripId == tripId) return;
+    _statsTripId = tripId;
+    try {
+      final stats = await Provider.of<AppProvider>(
+        context,
+        listen: false,
+      ).reviewStats(tripId: tripId);
+      if (!mounted || _statsTripId != tripId) return;
+      setState(() => _stats = stats);
+    } catch (_) {
+      // Bars fall back to the loaded reviews when that's the full set.
+    }
   }
 
   @override
@@ -46,6 +66,12 @@ class _ReviewSectionState extends State<ReviewSection> {
     final total = int.tryParse(textOf(widget.trip['review_count']));
     _totalCount = total;
     _hasMore = total != null && total > _reviews.length;
+    final tripId = int.tryParse(textOf(widget.trip['id'])) ?? 0;
+    if ((total ?? 0) > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadStats(tripId);
+      });
+    }
     // The parent bundles the first page of reviews with the trip load; if that
     // sub-request failed transiently the list arrives empty even though the
     // trip advertises reviews (review_count > 0). Recover by fetching page 1
@@ -165,7 +191,7 @@ class _ReviewSectionState extends State<ReviewSection> {
                     style: appFont(
                       fontSize: AppText.sizeSubtitle,
                       fontWeight: FontWeight.w800,
-                      color: _premiumText,
+                      color: AppTheme.onSurface(context),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -173,7 +199,7 @@ class _ReviewSectionState extends State<ReviewSection> {
                     'เป็นคนแรกที่มาสัมผัสและแชร์ประสบการณ์',
                     style: appFont(
                       fontSize: AppText.sizeLabel,
-                      color: _mutedText,
+                      color: AppTheme.mutedText(context),
                       height: 1.5,
                     ),
                   ),
@@ -183,7 +209,7 @@ class _ReviewSectionState extends State<ReviewSection> {
           ] else ...[
             const SizedBox(height: 20),
             // ── rating summary bar ───────────────────────────────
-            _ReviewRatingSummary(trip: trip, reviews: reviews),
+            _ReviewRatingSummary(trip: trip, reviews: reviews, stats: _stats),
             const SizedBox(height: 20),
             Divider(height: 1, color: AppTheme.subtleSurface(context)),
             const SizedBox(height: 16),
@@ -238,6 +264,7 @@ class _ShowMoreReviewsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ink = AppTheme.onSurface(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -249,18 +276,18 @@ class _ShowMoreReviewsButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.subtleSurface(context),
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            border: Border.all(color: const Color(0xFFEEF2F7)),
+            border: Border.all(color: AppTheme.border(context)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: loading
                 ? [
-                    const SizedBox(
+                    SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: _premiumText,
+                        color: ink,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -269,7 +296,7 @@ class _ShowMoreReviewsButton extends StatelessWidget {
                       style: appFont(
                         fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
-                        color: _premiumText,
+                        color: ink,
                       ),
                     ),
                   ]
@@ -279,11 +306,11 @@ class _ShowMoreReviewsButton extends StatelessWidget {
                       style: appFont(
                         fontSize: AppText.sizeBody,
                         fontWeight: FontWeight.w800,
-                        color: _premiumText,
+                        color: ink,
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Icon(icon, size: 20, color: _premiumText),
+                    Icon(icon, size: 20, color: ink),
                   ],
           ),
         ),
@@ -296,128 +323,162 @@ class _ReviewRatingSummary extends StatelessWidget {
   final Map<String, dynamic> trip;
   final List<dynamic> reviews;
 
-  const _ReviewRatingSummary({required this.trip, required this.reviews});
+  /// `reviews/stats?trip_id=` for this trip — the only source that knows how
+  /// many reviews sit at each star across *every* page.
+  final Map<String, dynamic>? stats;
+
+  const _ReviewRatingSummary({
+    required this.trip,
+    required this.reviews,
+    this.stats,
+  });
+
+  /// Count per star (index 0 = 1★) and the total they add up to, or null when
+  /// there is no trustworthy source: the stats call hasn't answered and the
+  /// loaded reviews are only part of the set. Showing bars built from the first
+  /// page under a header that says "120 รีวิว" is how they used to mislead.
+  ({List<int> counts, int total})? _distribution() {
+    final s = stats;
+    if (s != null) {
+      final raw = asMap(s['distribution']);
+      final counts = [
+        for (var star = 1; star <= 5; star++)
+          int.tryParse(textOf(raw['$star'])) ?? 0,
+      ];
+      final total = counts.fold<int>(0, (a, b) => a + b);
+      if (total > 0) return (counts: counts, total: total);
+    }
+    final count = _reviewCount(trip, reviews);
+    if (reviews.isEmpty || reviews.length < count) return null;
+    final counts = List.filled(5, 0);
+    for (final r in reviews) {
+      final v = _ratingValue(asMap(r)).round().clamp(1, 5);
+      counts[v - 1]++;
+    }
+    return (counts: counts, total: reviews.length);
+  }
 
   @override
   Widget build(BuildContext context) {
     final rating = _ratingValue(trip);
     final count = _reviewCount(trip, reviews);
-
-    // count per star from review list
-    final starCounts = List.filled(5, 0);
-    for (final r in reviews) {
-      final v = _ratingValue(asMap(r)).round().clamp(1, 5);
-      starCounts[v - 1]++;
-    }
-
+    final distribution = _distribution();
     final breakdown = _tripBreakdownAverages(trip);
+    final muted = AppTheme.mutedText(context);
+
+    final score = Column(
+      children: [
+        Text(
+          numberText(rating, fallback: '0'),
+          style: appFont(
+            fontSize: 44,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.onSurface(context),
+            height: 1,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(5, (i) {
+            final full = i < rating.floor();
+            final half = !full && i < rating;
+            return Icon(
+              full
+                  ? Icons.star_rounded
+                  : half
+                  ? Icons.star_half_rounded
+                  : Icons.star_outline_rounded,
+              size: 16,
+              color: const Color(0xFFE8A117),
+            );
+          }),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$count รีวิว',
+          style: appFont(
+            fontSize: AppText.sizeCaption,
+            color: muted,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // big score
-            Column(
-              children: [
-                Text(
-                  numberText(rating, fallback: '0'),
-                  style: appFont(
-                    fontSize: 44,
-                    fontWeight: FontWeight.w800,
-                    color: _premiumText,
-                    height: 1,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+        if (distribution == null)
+          Center(child: score)
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              score,
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
                   children: List.generate(5, (i) {
-                    final full = i < rating.floor();
-                    final half = !full && i < rating;
-                    return Icon(
-                      full
-                          ? Icons.star_rounded
-                          : half
-                          ? Icons.star_half_rounded
-                          : Icons.star_outline_rounded,
-                      size: 16,
-                      color: const Color(0xFFE8A117),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$count รีวิว',
-                  style: appFont(
-                    fontSize: AppText.sizeCaption,
-                    color: _mutedText,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 20),
-            // star bars
-            Expanded(
-              child: Column(
-                children: List.generate(5, (i) {
-                  final star = 5 - i;
-                  final c = reviews.isEmpty ? 0 : starCounts[star - 1];
-                  final pct = reviews.isEmpty ? 0.0 : c / reviews.length;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
-                      children: [
-                        Text(
-                          '$star',
-                          style: appFont(
-                            fontSize: AppText.sizeCaption,
-                            fontWeight: FontWeight.w700,
-                            color: _mutedText,
+                    final star = 5 - i;
+                    final c = distribution.counts[star - 1];
+                    final pct = c / distribution.total;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Text(
+                            '$star',
+                            style: appFont(
+                              fontSize: AppText.sizeCaption,
+                              fontWeight: FontWeight.w700,
+                              color: muted,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 11,
-                          color: Color(0xFFE8A117),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                            child: LinearProgressIndicator(
-                              value: pct,
-                              minHeight: 6,
-                              backgroundColor: AppTheme.subtleSurface(context),
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFFE8A117),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 11,
+                            color: Color(0xFFE8A117),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusPill,
+                              ),
+                              child: LinearProgressIndicator(
+                                value: pct,
+                                minHeight: 6,
+                                backgroundColor: AppTheme.fieldSurface(context),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Color(0xFFE8A117),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        SizedBox(
-                          width: 20,
-                          child: Text(
-                            '$c',
-                            style: appFont(
-                              fontSize: AppText.sizeCaption,
-                              color: _mutedText,
-                              fontWeight: FontWeight.w700,
+                          const SizedBox(width: 6),
+                          SizedBox(
+                            width: 28,
+                            child: Text(
+                              '$c',
+                              textAlign: TextAlign.right,
+                              maxLines: 1,
+                              style: appFont(
+                                fontSize: AppText.sizeCaption,
+                                color: muted,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         if (breakdown.isNotEmpty) ...[
           const SizedBox(height: 16),
           Wrap(
@@ -465,7 +526,7 @@ class _CategoryAverageTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.subtleSurface(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: const Color(0xFFEEF2F7)),
+        border: Border.all(color: AppTheme.border(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -475,7 +536,7 @@ class _CategoryAverageTile extends StatelessWidget {
             style: appFont(
               fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w700,
-              color: _mutedText,
+              color: AppTheme.mutedText(context),
             ),
           ),
           const SizedBox(width: 6),
@@ -486,7 +547,7 @@ class _CategoryAverageTile extends StatelessWidget {
             style: appFont(
               fontSize: AppText.sizeLabel,
               fontWeight: FontWeight.w800,
-              color: _premiumText,
+              color: AppTheme.onSurface(context),
             ),
           ),
         ],
