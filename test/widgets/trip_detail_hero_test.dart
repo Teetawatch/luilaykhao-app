@@ -65,24 +65,27 @@ void main() {
     expect(capRect.bottom, moreOrLessEquals(_expandedHeight, epsilon: 0.5));
     expect(capRect.height, moreOrLessEquals(_capHeight, epsilon: 0.5));
     // เต็มความกว้าง — ขอบล่างของหัวการ์ดต้องต่อกับการ์ดเนื้อหาได้สนิท
-    expect(capRect.width, tester.view.physicalSize.width / tester.view.devicePixelRatio);
+    expect(
+      capRect.width,
+      tester.view.physicalSize.width / tester.view.devicePixelRatio,
+    );
   });
 
-  testWidgets('ขีดจับอยู่กลางหัวการ์ด ไม่ล้นออกนอกขอบโค้ง', (tester) async {
+  testWidgets('หัวการ์ดไม่มีขีดจับ — หน้านี้ไม่ใช่แผงที่ลากได้', (
+    tester,
+  ) async {
     final controller = ScrollController();
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_wrap(controller));
     await tester.pump();
 
-    final handle = find.descendant(of: _cap, matching: find.byType(Container));
-    expect(handle, findsOneWidget);
-
-    final capRect = tester.getRect(_cap);
-    final handleRect = tester.getRect(handle);
-    expect(handleRect.center.dx, moreOrLessEquals(capRect.center.dx, epsilon: 0.5));
-    expect(capRect.contains(handleRect.topLeft), isTrue);
-    expect(capRect.contains(handleRect.bottomRight), isTrue);
+    // ขีดจับแบบ bottom sheet บอกว่าแผงลากขึ้นลงได้ ซึ่งทำไม่ได้ และทิ้งแถบว่าง
+    // ไว้เหนือชื่อทริป หัวการ์ดจึงเป็นแค่ขอบโค้งเปล่า
+    expect(
+      find.descendant(of: _cap, matching: find.byType(Container)),
+      findsNothing,
+    );
   });
 
   testWidgets('ไม่มีฝ้าสีการ์ดไล่ขึ้นไปในรูปปก — รูปจบคมที่ขอบการ์ด', (
@@ -187,6 +190,39 @@ void main() {
 
     await tester.tap(find.text('เตรียมตัว'));
     expect(tapped, 2);
+  });
+
+  testWidgets('ระหว่างหุบ ขอบโค้งย่อลงแต่ยังทึบ — ไม่เกิดรอยต่อเหนือชื่อทริป', (
+    tester,
+  ) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_wrap(controller));
+    await tester.pump();
+
+    // ครึ่งทางของช่วง 40 สุดท้ายก่อนหุบ (toolbar 56, ไม่มีแท็บ, ไม่มี notch)
+    controller.jumpTo(_expandedHeight - kToolbarHeight - _capHeight / 2);
+    await tester.pump();
+
+    expect(_cap, findsOneWidget);
+    expect(
+      tester.getSize(_cap).height,
+      moreOrLessEquals(_capHeight / 2, epsilon: 0.5),
+    );
+    // เดิมหัวการ์ดจางลงด้วย Opacity — รูปปกทะลุออกมาแต่เนื้อหาข้างใต้ทึบ
+    // จึงเห็นเป็นขีดยาวเต็มความกว้างเหนือชื่อทริป
+    final faded = tester
+        .widgetList<Opacity>(
+          find.ancestor(of: _cap, matching: find.byType(Opacity)),
+        )
+        .where((o) => o.opacity < 1);
+    expect(faded, isEmpty);
+    // ขอบล่างยังเกาะขอบล่างแถบรูป ต่อกับการ์ดเนื้อหาได้สนิท
+    expect(
+      tester.getRect(_cap).bottom,
+      moreOrLessEquals(kToolbarHeight + _capHeight / 2, epsilon: 0.5),
+    );
   });
 
   testWidgets('ความสูงของแท็บถูกนับรวมในจุดที่ขอบโค้งต้องจางหมด', (

@@ -5,17 +5,20 @@ class DestinationInfoSection extends StatelessWidget {
   final List<dynamic> reviews;
   final bool isLoading;
 
+  /// Jumps to the reviews tab — the rating in the meta line is the natural
+  /// place people tap to read what others said.
+  final VoidCallback? onReviewsTap;
+
   const DestinationInfoSection({
     super.key,
     required this.trip,
     required this.reviews,
     required this.isLoading,
+    this.onReviewsTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = AppTheme.isDark(context);
-
     if (isLoading) {
       // โครงร่างต้องไม่มีกรอบเหมือนกัน ไม่งั้นพอโหลดเสร็จการ์ดจะหายวับ
       return const Padding(
@@ -23,18 +26,12 @@ class DestinationInfoSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Skeleton(width: 110, height: 28, radius: 14),
-              Spacer(),
-              Skeleton(width: 80, height: 28, radius: 14),
-            ]),
-            SizedBox(height: 18),
-            Skeleton(width: double.infinity, height: 36, radius: 12),
+            Skeleton(width: double.infinity, height: 30, radius: 10),
             SizedBox(height: 8),
-            Skeleton(width: 220, height: 36, radius: 12),
-            SizedBox(height: 14),
-            Skeleton(width: 180, height: 18, radius: 9),
-            SizedBox(height: 24),
+            Skeleton(width: 200, height: 30, radius: 10),
+            SizedBox(height: 12),
+            Skeleton(width: 240, height: 18, radius: 9),
+            SizedBox(height: 20),
             Skeleton(width: double.infinity, height: 88, radius: 20),
           ],
         ),
@@ -46,95 +43,187 @@ class DestinationInfoSection extends StatelessWidget {
     final travelers =
         (num.tryParse('${trip['confirmed_passengers_count'] ?? 0}') ?? 0)
             .toInt();
+    final rating = _ratingValue(trip);
+    final reviewCount = _reviewCount(trip, reviews);
+    final muted = AppTheme.mutedText(context);
 
     // ไม่มีกรอบการ์ด — นี่คือหัวเรื่องของหน้า ไม่ใช่ section หนึ่งในหลายๆ อัน
-    // ถ้าใส่กรอบเหมือนกันหมด ชื่อทริปจะกลายเป็นแค่รายการหนึ่งในลิสต์
+    // ชื่อทริปขึ้นก่อนเสมอ ส่วนคะแนน/จังหวัด/จำนวนคนไปเป็นบรรทัดข้อมูลเบาๆ
+    // ใต้ชื่อ — เดิมป้ายคะแนนสีส้มลอยอยู่เหนือชื่อ แย่งสายตาจากหัวเรื่อง
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-          // ── top badge row ──────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
-            child: Row(
-              children: [
-                _RatingSummary(trip: trip, reviews: reviews),
-                const Spacer(),
-                if (travelers > 0)
-                  _InfoChip(
-                    icon: Icons.groups_rounded,
-                    label: '$travelers คนร่วมเดินทางแล้ว',
-                  ),
-              ],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            _tripTitle(trip),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: appFont(
+              fontSize: AppText.sizeH1,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.onSurface(context),
+              height: 1.25,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 14),
-          // ── title ──────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              _tripTitle(trip),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: appFont(
-                fontSize: AppText.sizeH1,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : _premiumText,
-                height: 1.2,
-                letterSpacing: -0.5,
-              ),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Wrap(
+            spacing: 14,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (rating > 0 && reviewCount > 0)
+                _HeaderRating(
+                  rating: rating,
+                  count: reviewCount,
+                  onTap: onReviewsTap,
+                )
+              else
+                _HeaderMeta(
+                  icon: Icons.star_outline_rounded,
+                  label: 'ยังไม่มีรีวิว',
+                  color: muted,
+                ),
+              if (location.isNotEmpty)
+                _HeaderMeta(
+                  icon: Icons.place_outlined,
+                  label: location,
+                  color: muted,
+                ),
+              if (travelers > 0)
+                _HeaderMeta(
+                  icon: Icons.groups_outlined,
+                  label:
+                      '${NumberFormat.decimalPattern().format(travelers)} คนร่วมเดินทางแล้ว',
+                  color: muted,
+                ),
+            ],
+          ),
+        ),
+        // ── stats grid ─────────────────────────────────────────────
+        if (chips.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          // การ์ดขาวใบเดียวกับ section ข้างล่าง — พื้นเดิมเป็น subtleSurface
+          // ซึ่งโหมดสว่างเป็นสีเดียวกับพื้นหน้าเป๊ะ กล่องนี้เลยเหลือแต่เส้น
+          // ขอบ ดูเป็นกรอบเปล่าแทนที่จะเป็นก้อนข้อมูล
+          // (ขอบในของ QuickInfoChips เป็น padding 4 อยู่แล้ว)
+          _PremiumCard(
+            padding: EdgeInsets.zero,
+            child: QuickInfoChips(trip: trip),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// "★ 5.0 · 139 รีวิว" — the review count is underlined because it's a link
+/// to the reviews tab.
+///
+/// The underline is a border we draw, not [TextDecoration.underline]: "139"
+/// renders in Inter and "รีวิว" in the Thai fallback font, and each font puts
+/// its own underline at its own height and thickness, so the text decoration
+/// came out as two mismatched pieces.
+class _HeaderRating extends StatelessWidget {
+  final double rating;
+  final int count;
+  final VoidCallback? onTap;
+
+  const _HeaderRating({required this.rating, required this.count, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = AppTheme.mutedText(context);
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 17, color: Color(0xFFE8A117)),
+        const SizedBox(width: 4),
+        Text(
+          rating.toStringAsFixed(1),
+          style: appFont(
+            fontSize: AppText.sizeBody,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.onSurface(context),
+          ),
+        ),
+        Text(
+          ' · ',
+          style: appFont(fontSize: AppText.sizeBody, color: muted),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: onTap == null
+                ? null
+                : Border(bottom: BorderSide(color: muted, width: 1)),
+          ),
+          child: Text(
+            '${NumberFormat.decimalPattern().format(count)} รีวิว',
+            style: appFont(
+              fontSize: AppText.sizeBody,
+              fontWeight: FontWeight.w600,
+              color: muted,
+              height: 1.25,
             ),
           ),
-          // ── location ───────────────────────────────────────────────
-          if (location.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: _softAccent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusXs),
-                    ),
-                    child: const Icon(
-                      Icons.location_on_rounded,
-                      size: 13,
-                      color: _softAccent,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      location,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: appFont(
-                        fontSize: AppText.sizeLabel,
-                        color: _mutedText,
-                        height: 1.4,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+        ),
+      ],
+    );
+    if (onTap == null) return row;
+    return Semantics(
+      button: true,
+      label: 'ดูรีวิวทั้ง $count รายการ',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap!();
+        },
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: row,
+        ),
+      ),
+    );
+  }
+}
+
+/// One plain icon + text item in the header's meta line.
+class _HeaderMeta extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _HeaderMeta({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 17, color: color),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: appFont(
+              fontSize: AppText.sizeBody,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
-          ],
-          // ── stats grid ─────────────────────────────────────────────
-          if (chips.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            // การ์ดขาวใบเดียวกับ section ข้างล่าง — พื้นเดิมเป็น subtleSurface
-            // ซึ่งโหมดสว่างเป็นสีเดียวกับพื้นหน้าเป๊ะ กล่องนี้เลยเหลือแต่เส้น
-            // ขอบ ดูเป็นกรอบเปล่าแทนที่จะเป็นก้อนข้อมูล
-            // (ขอบในของ QuickInfoChips เป็น padding 4 อยู่แล้ว)
-            _PremiumCard(
-              padding: EdgeInsets.zero,
-              child: QuickInfoChips(trip: trip),
-            ),
-          ],
+          ),
+        ),
       ],
     );
   }
@@ -299,7 +388,7 @@ class AboutSection extends StatelessWidget {
               style: appFont(
                 fontSize: AppText.sizeSubtitle,
                 height: 1.75,
-                color: const Color(0xFF334155),
+                color: AppTheme.onSurface(context).withValues(alpha: 0.85),
                 fontWeight: FontWeight.w400,
               ),
             ),

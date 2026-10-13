@@ -886,11 +886,11 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
               child: Builder(
                 builder: (context) => Container(
                   color: AppTheme.background(context),
-                  // 16 บน ไม่ใช่ 24 เพราะหัวการ์ด (_contentOverlap) กินที่เหนือ
-                  // ขึ้นไปอีก 40 — รวมแล้วช่องว่างเหนือการ์ดใบแรกยังเท่าเดิม
+                  // 0 บน เพราะหัวการ์ด (_contentOverlap) กินที่เหนือขึ้นไปอีก 40
+                  // อยู่แล้ว — ชื่อทริปจึงห่างขอบโค้ง 40 พอดี ไม่มีแถบว่างคั่น
                   padding: EdgeInsets.fromLTRB(
                     16,
-                    16,
+                    0,
                     16,
                     MediaQuery.paddingOf(context).bottom + 24,
                   ),
@@ -949,6 +949,7 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
         trip: trip,
         reviews: widget.reviews,
         isLoading: widget.isLoading,
+        onReviewsTap: () => _handleTabSelected(_tabLabels.length - 1),
       ),
 
       // ── แท็บ 1: วันเดินทาง ───────────────────────────────────────────

@@ -348,50 +348,6 @@ class _FeatureRow extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _InfoChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = AppTheme.isDark(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: isDark
-            ? _softAccent.withValues(alpha: 0.15)
-            : const Color(0xFFECFDF5),
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        border: Border.all(
-          color: _softAccent.withValues(alpha: isDark ? 0.25 : 0.2),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: _softAccent),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: appFont(
-                fontSize: AppText.sizeCaption,
-                color: isDark ? _softAccent : const Color(0xFF047857),
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.1,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _EmptySelectionNotice extends StatelessWidget {
   final IconData icon;
   final String text;
@@ -549,32 +505,6 @@ class _FlightMeetingNotice extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _RatingSummary extends StatelessWidget {
-  final Map<String, dynamic> trip;
-  final List<dynamic> reviews;
-
-  const _RatingSummary({required this.trip, required this.reviews});
-
-  @override
-  Widget build(BuildContext context) {
-    final rating = _ratingValue(trip);
-    final count = _reviewCount(trip, reviews);
-
-    if (rating <= 0 || count <= 0) {
-      return Text(
-        'ยังไม่มีรีวิว',
-        style: appFont(
-          color: _mutedText,
-          fontSize: AppText.sizeLabel,
-          fontWeight: FontWeight.w700,
-        ),
-      );
-    }
-
-    return _RatingPill(trip: trip, reviews: reviews);
   }
 }
 

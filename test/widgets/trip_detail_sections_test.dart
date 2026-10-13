@@ -143,4 +143,54 @@ void main() {
       findsNothing,
     );
   });
+
+  testWidgets('ชื่อทริปขึ้นก่อน ตามด้วยบรรทัดคะแนน · จังหวัด · คนร่วมเดินทาง', (
+    tester,
+  ) async {
+    var tapped = 0;
+    await tester.pumpWidget(
+      _wrap(
+        DestinationInfoSection(
+          trip: const {
+            'title': 'น้ำตกโกรกอีดก',
+            'location': 'สระบุรี',
+            'rating': 5,
+            'review_count': 139,
+            'confirmed_passengers_count': 1240,
+          },
+          reviews: const [],
+          isLoading: false,
+          onReviewsTap: () => tapped++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final titleBottom = tester.getRect(find.text('น้ำตกโกรกอีดก')).bottom;
+    // คะแนนเคยเป็นป้ายลอยอยู่เหนือชื่อ แย่งสายตาจากหัวเรื่อง
+    expect(tester.getRect(find.text('5.0')).top, greaterThan(titleBottom));
+    expect(tester.getRect(find.text('สระบุรี')).top, greaterThan(titleBottom));
+    expect(find.text('139 รีวิว'), findsOneWidget);
+    expect(find.text('1,240 คนร่วมเดินทางแล้ว'), findsOneWidget);
+
+    await tester.tap(find.text('139 รีวิว'));
+    expect(tapped, 1);
+  });
+
+  testWidgets('ทริปที่ยังไม่มีรีวิวบอกตรงๆ ไม่โชว์ดาว 0', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        const DestinationInfoSection(
+          trip: {'title': 'ทริปใหม่', 'location': 'น่าน'},
+          reviews: [],
+          isLoading: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('ยังไม่มีรีวิว'), findsOneWidget);
+    expect(find.text('0.0'), findsNothing);
+    expect(find.text('น่าน'), findsOneWidget);
+  });
 }

@@ -276,10 +276,7 @@ void main() {
       of: find.byType(TripSectionTabs),
       matching: find.text('รีวิว'),
     );
-    expect(
-      tester.getSemantics(reviewsTab),
-      isSemantics(isSelected: true),
-    );
+    expect(tester.getSemantics(reviewsTab), isSemantics(isSelected: true));
     handle.dispose();
 
     await unmount(tester);
@@ -423,6 +420,26 @@ void main() {
       find.descendant(of: bar, matching: find.text('ราคาสำหรับ กรุงเทพฯ')),
       findsOneWidget,
     );
+
+    await unmount(tester);
+  });
+
+  testWidgets('tapping the rating under the title jumps to the reviews', (
+    tester,
+  ) async {
+    await pump(tester);
+
+    final handle = tester.ensureSemantics();
+    await tester.tap(find.bySemanticsLabel('ดูรีวิวทั้ง 50 รายการ'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    final reviewsTab = find.descendant(
+      of: find.byType(TripSectionTabs),
+      matching: find.text('รีวิว'),
+    );
+    expect(tester.getSemantics(reviewsTab), isSemantics(isSelected: true));
+    expect(find.byType(ReviewSection).hitTestable(), findsOneWidget);
+    handle.dispose();
 
     await unmount(tester);
   });

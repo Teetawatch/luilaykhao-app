@@ -249,7 +249,7 @@ class _SectionTab extends StatelessWidget {
   }
 }
 
-/// รอยต่อระหว่างรูปปกกับการ์ดเนื้อหา — ขอบโค้งและขีดจับ
+/// รอยต่อระหว่างรูปปกกับการ์ดเนื้อหา — ขอบโค้ง
 ///
 /// รูปจบคมที่ขอบการ์ด ไม่มีเฉดสีการ์ดไล่ขึ้นไปในรูป — ฝ้าแบบนั้นอ่านเป็นแสง
 /// เรืองที่หัวการ์ด ไม่ใช่รอยต่อ
@@ -276,50 +276,32 @@ class _ContentTopCap extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final opacity =
-            ((constraints.maxHeight - collapsedHeight) / _contentOverlap)
-                .clamp(0.0, 1.0);
-        if (opacity == 0) return const SizedBox.shrink();
+        // 1 = กางเต็ม, 0 = หุบจนเหลือ toolbar
+        final t = ((constraints.maxHeight - collapsedHeight) / _contentOverlap)
+            .clamp(0.0, 1.0);
+        if (t == 0) return const SizedBox.shrink();
 
+        // หุบลงด้วยการ "ย่อโค้ง" ไม่ใช่ทำให้จาง — หัวการ์ดทึบเสมอ ส่วนที่เหลือ
+        // ของมันคือแถบระหว่างขอบล่าง toolbar กับขอบล่างแถบรูปพอดี เดิมใช้ Opacity
+        // ระหว่างที่จางครึ่งๆ รูปปกทะลุหัวการ์ดออกมา แต่เนื้อหาข้างใต้ทึบ จึงเห็น
+        // รอยต่อเป็นขีดยาวเต็มความกว้างเหนือชื่อทริปตอนเลื่อนขึ้น
+        //
+        // ไม่มีขีดจับ — หน้านี้เลื่อนเป็นหน้าเดียว ไม่ได้เป็นแผงที่ลากขึ้นลงได้
         return Align(
           alignment: Alignment.bottomCenter,
-          child: Opacity(
-            opacity: opacity,
-            child: SizedBox(
-              key: const Key('tripDetailContentCap'),
-              width: double.infinity,
-              height: _contentOverlap,
-              child: CustomPaint(
-                painter: _SquircleCapPainter(background),
-                child: const _CardGrabHandle(),
+          child: SizedBox(
+            key: const Key('tripDetailContentCap'),
+            width: double.infinity,
+            height: _contentOverlap * t,
+            child: CustomPaint(
+              painter: _SquircleCapPainter(
+                background,
+                spread: _contentCornerSpread * t,
               ),
             ),
           ),
         );
       },
-    );
-  }
-}
-
-/// ขีดจับบนหัวการ์ด บอกว่าแผงนี้เลื่อนขึ้นได้ — ภาษาเดียวกับ bottom sheet
-class _CardGrabHandle extends StatelessWidget {
-  const _CardGrabHandle();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Container(
-          width: 36,
-          height: 4,
-          decoration: BoxDecoration(
-            color: AppTheme.onSurface(context).withValues(alpha: 0.16),
-            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -338,7 +320,11 @@ class _CardGrabHandle extends StatelessWidget {
 class _SquircleCapPainter extends CustomPainter {
   final Color color;
 
-  const _SquircleCapPainter(this.color);
+  /// ระยะที่มุมโค้งคลี่ออกในแนวนอน — ย่อตามความสูงตอนแถบหุบ ให้โค้งเล็กลง
+  /// ทั้งรูปทรงแทนที่จะแบนลงอย่างเดียว
+  final double spread;
+
+  const _SquircleCapPainter(this.color, {this.spread = _contentCornerSpread});
 
   /// 2 = วงรีพอดี ยิ่งมากยิ่งเหลี่ยม
   static const double _exponent = 2.6;
@@ -349,7 +335,7 @@ class _SquircleCapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final spread = math.min(_contentCornerSpread, size.width / 2);
+    final spread = math.min(this.spread, size.width / 2);
     final path = Path()..moveTo(0, size.height);
 
     // มุมซ้ายบน ไล่จากขอบซ้ายขึ้นไปบรรจบขอบบน
@@ -380,7 +366,7 @@ class _SquircleCapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SquircleCapPainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.color != color || oldDelegate.spread != spread;
 }
 
 /// A single, static cover image for the trip — no swiping, no counters.
