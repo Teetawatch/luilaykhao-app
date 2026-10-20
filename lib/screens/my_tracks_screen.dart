@@ -3,9 +3,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
-import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_tile_layer.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
 
@@ -343,13 +343,7 @@ class _TrackDetailScreenState extends State<TrackDetailScreen> {
                           ),
                         ),
                         children: [
-                          TileLayer(
-                            urlTemplate: ApiConfig.mapTileUrl,
-                            tileProvider: NetworkTileProvider(
-                              headers: ApiConfig.mapTileHeaders,
-                            ),
-                            userAgentPackageName: 'com.luilaykhao.app',
-                          ),
+                          appTileLayer(),
                           PolylineLayer(
                             polylines: [
                               Polyline(

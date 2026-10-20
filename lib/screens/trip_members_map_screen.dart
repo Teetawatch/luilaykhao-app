@@ -7,11 +7,11 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
-import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../services/trip_live_location_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/app_tile_layer.dart';
 
 /// "เพื่อนร่วมทริปอยู่ตรงไหน"
 ///
@@ -166,13 +166,7 @@ class _TripMembersMapScreenState extends State<TripMembersMapScreen> {
                           maxZoom: 17,
                         ),
                         children: [
-                          TileLayer(
-                            urlTemplate: ApiConfig.mapTileUrl,
-                            tileProvider: NetworkTileProvider(
-                              headers: ApiConfig.mapTileHeaders,
-                            ),
-                            userAgentPackageName: 'com.luilaykhao.app',
-                          ),
+                          appTileLayer(),
                           MarkerLayer(
                             markers: [
                               for (final member in members)

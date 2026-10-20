@@ -3,8 +3,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../config/api_config.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_tile_layer.dart';
 
 /// แผนที่ให้ลูกค้าปักหมุดจุดรับเอง (อยู่ในเส้นทางผ่านที่รับได้)
 /// คืนค่า { label, lat, lng, note } เมื่อยืนยัน
@@ -130,13 +130,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
                     onPositionChanged: (camera, _) => _center = camera.center,
                   ),
                   children: [
-                    TileLayer(
-                      urlTemplate: ApiConfig.mapTileUrl,
-                      tileProvider: NetworkTileProvider(
-                        headers: ApiConfig.mapTileHeaders,
-                      ),
-                      userAgentPackageName: 'com.luilaykhao.app',
-                    ),
+                    appTileLayer(),
                   ],
                 ),
                 // หมุดคงที่กลางจอ (ปลายหมุดชี้จุดกึ่งกลางพอดี)

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_tile_layer.dart';
 import '../widgets/empty_state_view.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
 
@@ -161,13 +162,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
                           onTap: (_, _) => setState(() => _selected = null),
                         ),
                         children: [
-                          TileLayer(
-                            urlTemplate: ApiConfig.mapTileUrl,
-                            tileProvider: NetworkTileProvider(
-                              headers: ApiConfig.mapTileHeaders,
-                            ),
-                            userAgentPackageName: 'com.luilaykhao.app',
-                          ),
+                          appTileLayer(),
                           MarkerLayer(
                             markers: [
                               for (final trip in visible)

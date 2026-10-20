@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../config/api_config.dart';
 import '../providers/app_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_tile_layer.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
 
@@ -190,13 +191,7 @@ class _ConquestMapScreenState extends State<ConquestMapScreen> {
           ),
         ),
         children: [
-          TileLayer(
-            urlTemplate: ApiConfig.mapTileUrl,
-            tileProvider: NetworkTileProvider(
-              headers: ApiConfig.mapTileHeaders,
-            ),
-            userAgentPackageName: 'com.luilaykhao.app',
-          ),
+          appTileLayer(),
           // Faint line through the trips in the order they were walked — the
           // shape of one person's travelling, not a suggested route.
           if (_pins.length > 1)

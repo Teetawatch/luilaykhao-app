@@ -14,6 +14,7 @@ import '../models/schedule_route.dart';
 import '../models/tracking_model.dart';
 import '../providers/tracking_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_tile_layer.dart';
 import '../widgets/find_my_van_card.dart';
 import '../widgets/google_vehicle_map.dart';
 import '../widgets/route_map_card.dart';
@@ -311,21 +312,56 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
 
   @override
   Widget build(BuildContext context) {
+    // เลื่อนหมุดรถแบบนุ่มๆ เฉพาะชั้นที่ขึ้นกับตำแหน่งรถ — เดิมห่อทั้ง FlutterMap ไว้ใน
+    // tween เลย build แผนที่ทั้งก้อน (tile + เส้นทางทั้งรอบ) ใหม่ทุกเฟรม ~50 รอบต่อ
+    // พิกัดเดียว ตอนรถใกล้ถึงที่ถามทุก 4 วิ จอจึงค้างแล้วเด้งหลังเปิดไว้สักพัก
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: _initialCenter(
+          _validPoint(widget.tracking?.driverLocation),
+        ),
+        initialZoom: 14.5,
+        minZoom: 5,
+        maxZoom: 18,
+        onMapReady: () {
+          setState(() => _isMapReady = true);
+          WidgetsBinding.instance.addPostFrameCallback((_) => _recenter());
+        },
+        onPositionChanged: (_, hasGesture) {
+          if (hasGesture) widget.onUserGesture();
+        },
+      ),
+      children: [
+        appTileLayer(),
+        PolylineLayer(polylines: _routeLines()),
+        if (widget.routePoints.length < 2)
+          _followVehicle(
+            (vehicle) => PolylineLayer(polylines: _straightLine(vehicle)),
+          ),
+        MarkerLayer(markers: _markers()),
+        _followVehicle(
+          (vehicle) => MarkerLayer(
+            markers: [?_vehicleMarker(vehicle)],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// ชั้นที่ตามตำแหน่งรถแบบ animate — ยังไม่มีพิกัดก็วาดตรงๆ ไม่ผ่าน tween
+  /// (TweenAnimationBuilder ที่ end เป็น null พังใน tween_animation_builder.dart)
+  Widget _followVehicle(Widget Function(LatLng? vehicle) builder) {
     final target = widget.tracking?.driverLocation;
+    if (target == null) return builder(null);
 
-    // No vehicle location yet — render map directly without TweenAnimationBuilder
-    // to avoid null-check crash inside tween_animation_builder.dart (tween.end!)
-    if (target == null) {
-      return _buildMap(null);
-    }
-
-    final begin = _lastVehicleLocation ?? target;
     return TweenAnimationBuilder<LatLng>(
-      tween: _LatLngTween(begin: begin, end: target),
+      tween: _LatLngTween(begin: _lastVehicleLocation ?? target, end: target),
       duration: const Duration(milliseconds: 850),
       curve: Curves.easeOutCubic,
       onEnd: () => _lastVehicleLocation = target,
-      builder: (context, animatedVehicle, _) => _buildMap(animatedVehicle),
+      builder: (context, animatedVehicle, _) =>
+          builder(_validPoint(animatedVehicle)),
     );
   }
 
@@ -380,36 +416,6 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
         (a.longitude - b.longitude).abs() > 0.0002;
   }
 
-  Widget _buildMap(LatLng? vehicleLocation) {
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: _initialCenter(vehicleLocation),
-        initialZoom: 14.5,
-        minZoom: 5,
-        maxZoom: 18,
-        onMapReady: () {
-          setState(() => _isMapReady = true);
-          WidgetsBinding.instance.addPostFrameCallback((_) => _recenter());
-        },
-        onPositionChanged: (_, hasGesture) {
-          if (hasGesture) widget.onUserGesture();
-        },
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: ApiConfig.mapTileUrl,
-          tileProvider: NetworkTileProvider(
-            headers: ApiConfig.mapTileHeaders,
-          ),
-          userAgentPackageName: 'com.luilaykhao.app',
-        ),
-        PolylineLayer(polylines: _routeLines(vehicleLocation)),
-        MarkerLayer(markers: _markers(vehicleLocation)),
-      ],
-    );
-  }
-
   LatLng _initialCenter(LatLng? animatedVehicle) {
     // เริ่มที่ตำแหน่งของฉันก่อน (fallback ไปรถ/จุดรับเมื่อยังไม่มีพิกัดผู้ใช้)
     return _validPoint(widget.customerLocation) ??
@@ -419,7 +425,7 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
         const LatLng(13.7563, 100.5018);
   }
 
-  List<Polyline> _routeLines(LatLng? vehicle) {
+  List<Polyline> _routeLines() {
     final lines = <Polyline>[];
 
     // เส้นพื้นหลัง: เส้นทางเดินรถทั้งรอบ (จุดรับทุกจุด → ปลายทาง) สีจางกว่า
@@ -448,10 +454,13 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
           color: AppTheme.primaryColor.withValues(alpha: 0.86),
         ),
       );
-      return lines;
     }
+    return lines;
+  }
 
-    // Fallback: เส้นตรงเมื่อยังไม่มีเส้นทางถนน (ไม่มีคีย์/ยังโหลดไม่เสร็จ)
+  /// Fallback: เส้นตรงเมื่อยังไม่มีเส้นทางถนน (ไม่มีคีย์/ยังโหลดไม่เสร็จ)
+  /// — ปลายด้านรถตามหมุดที่กำลังเลื่อน
+  List<Polyline> _straightLine(LatLng? vehicle) {
     final pickup = _validPoint(widget.booking?.pickupPoint);
     final destination =
         widget.tracking?.destinationPoint ?? widget.booking?.destinationPoint;
@@ -460,16 +469,14 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
       ?pickup,
       if (destination != null && !_samePoint(destination, pickup)) destination,
     ];
-    if (route.length >= 2) {
-      lines.add(
-        Polyline(
-          points: route,
-          strokeWidth: 5,
-          color: AppTheme.primaryColor.withValues(alpha: 0.5),
-        ),
-      );
-    }
-    return lines;
+    if (route.length < 2) return const [];
+    return [
+      Polyline(
+        points: route,
+        strokeWidth: 5,
+        color: AppTheme.primaryColor.withValues(alpha: 0.5),
+      ),
+    ];
   }
 
   /// หมุดจุดรับอื่นๆ ตามเส้นทาง (ไม่รวมจุดของลูกค้าเองที่มีหมุด "จุดรับ" อยู่แล้ว)
@@ -514,7 +521,7 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
     return markers;
   }
 
-  List<Marker> _markers(LatLng? vehicle) {
+  List<Marker> _markers() {
     final pickup = _validPoint(widget.booking?.pickupPoint);
     final destination = widget.tracking?.destinationPoint ??
         widget.booking?.destinationPoint ??
@@ -553,18 +560,21 @@ class _OsmVehicleMapState extends State<_OsmVehicleMap> {
           height: 68,
           child: _UserMarker(pulse: widget.pulse),
         ),
-      if (vehicle != null)
-        Marker(
-          point: vehicle,
-          width: 88,
-          height: 88,
-          child: _VehicleMarker(
-            phase: widget.phase,
-            pulse: widget.pulse,
-            heading: widget.tracking?.heading,
-          ),
-        ),
     ];
+  }
+
+  Marker? _vehicleMarker(LatLng? vehicle) {
+    if (vehicle == null) return null;
+    return Marker(
+      point: vehicle,
+      width: 88,
+      height: 88,
+      child: _VehicleMarker(
+        phase: widget.phase,
+        pulse: widget.pulse,
+        heading: widget.tracking?.heading,
+      ),
+    );
   }
 
   LatLng? _validPoint(LatLng? point) {

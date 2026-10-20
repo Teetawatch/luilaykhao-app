@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import '../config/api_config.dart';
 import '../models/schedule_route.dart';
 import '../theme/app_theme.dart';
+import 'app_tile_layer.dart';
 import 'skeleton.dart';
 
 /// การ์ด "เส้นทางเดินรถ" — แผนที่พรีวิว (เส้นทางถนนจริง + หมุดจุดจอดเรียงเลข)
@@ -355,13 +356,7 @@ class _RouteMap extends StatelessWidget {
         ),
       ),
       children: [
-        TileLayer(
-          urlTemplate: ApiConfig.mapTileUrl,
-          tileProvider: NetworkTileProvider(
-            headers: ApiConfig.mapTileHeaders,
-          ),
-          userAgentPackageName: 'com.luilaykhao.app',
-        ),
+        appTileLayer(),
         if (line.length >= 2)
           PolylineLayer(
             polylines: [

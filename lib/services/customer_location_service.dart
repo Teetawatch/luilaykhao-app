@@ -19,6 +19,10 @@ class CustomerLocationService {
   );
 
   LocationLease? _lease;
+
+  /// เปลี่ยนทุกครั้งที่เริ่ม/หยุด — [startTracking] ที่ยังรอสิทธิ์/พิกัดแรกอยู่ตอนถูก
+  /// [stop] ต้องไม่ไปเกาะสตรีมทีหลัง ไม่งั้น GPS ค้างเปิดป้อนพิกัดให้จอที่ปิดไปแล้ว
+  int _session = 0;
   final StreamController<LatLng> _locationController =
       StreamController<LatLng>.broadcast();
 
@@ -28,7 +32,9 @@ class CustomerLocationService {
     required void Function(LatLng) onLocation,
     void Function(String)? onError,
   }) async {
+    final session = ++_session;
     final permission = await _requestPermission();
+    if (session != _session) return null;
     if (permission == null) {
       onError?.call(
         'ไม่ได้รับอนุญาตให้ใช้ GPS กรุณาเปิดสิทธิ์ตำแหน่งในการตั้งค่า',
@@ -43,6 +49,7 @@ class CustomerLocationService {
           accuracy: LocationAccuracy.high,
         ),
       );
+      if (session != _session) return null;
       initial = LatLng(pos.latitude, pos.longitude);
       onLocation(initial);
     } catch (e) {
@@ -50,9 +57,10 @@ class CustomerLocationService {
     }
 
     try {
-      _lease = await LocationStreamHub.instance.attach(
+      final lease = await LocationStreamHub.instance.attach(
         need: _need,
         onPosition: (pos) {
+          if (session != _session) return;
           final loc = LatLng(pos.latitude, pos.longitude);
           if (_locationController.isClosed) return;
           _locationController.add(loc);
@@ -63,6 +71,11 @@ class CustomerLocationService {
           onError?.call('เกิดข้อผิดพลาดในการรับตำแหน่ง');
         },
       );
+      if (session != _session) {
+        unawaited(lease.cancel());
+        return null;
+      }
+      _lease = lease;
     } catch (e) {
       debugPrint('[CustomerLocationService] could not attach: $e');
       onError?.call('เกิดข้อผิดพลาดในการรับตำแหน่ง');
@@ -86,6 +99,7 @@ class CustomerLocationService {
   }
 
   void stop() {
+    _session++;
     final lease = _lease;
     _lease = null;
     unawaited(lease?.cancel() ?? Future<void>.value());
