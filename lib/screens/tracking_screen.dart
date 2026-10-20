@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1004,21 +1005,35 @@ class _VehicleMarker extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            Transform.rotate(
-              angle: ((heading ?? 0) * math.pi) / 180,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.surface(context), width: 4),
+            // ทิศที่รถมุ่งหน้า — สามเหลี่ยมเล็กที่ขอบวงหมุนตาม heading ส่วนรูปรถ
+            // ตั้งตรงเสมอ (หมุนทั้งคันแล้วรถวิ่งลงใต้จะกลายเป็นรถคว่ำ)
+            if (heading != null)
+              Transform.rotate(
+                angle: (heading! * math.pi) / 180,
+                child: const SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: CustomPaint(
+                      size: Size(14, 9),
+                      painter: _HeadingTickPainter(),
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.navigation_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
+              ),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.surface(context), width: 4),
+              ),
+              child: const Icon(
+                Icons.directions_bus_filled_rounded,
+                color: Colors.white,
+                size: 22,
               ),
             ),
           ],
@@ -1026,6 +1041,23 @@ class _VehicleMarker extends StatelessWidget {
       },
     );
   }
+}
+
+class _HeadingTickPainter extends CustomPainter {
+  const _HeadingTickPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = ui.Path()
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(path, Paint()..color = AppTheme.primaryColor);
+  }
+
+  @override
+  bool shouldRepaint(covariant _HeadingTickPainter oldDelegate) => false;
 }
 
 class _MapPin extends StatelessWidget {

@@ -313,17 +313,32 @@ class _GoogleVehicleMapState extends State<GoogleVehicleMap> {
     final vehiclePin = _pins[
         widget.phase == TrackingPhase.imminent ? 'vehicle-near' : 'vehicle'];
     if (vehicle != null && vehiclePin != null) {
+      // รูปรถตั้งตรงเสมอ — ทิศที่รถมุ่งหน้าเป็นหมุดแยก (สามเหลี่ยมที่ขอบวง)
+      // หมุนตาม heading แบบ flat ให้ชี้ทิศจริงบนแผนที่
       markers.add(
         gmaps.Marker(
           markerId: const gmaps.MarkerId('vehicle'),
           position: _toGoogle(vehicle),
           icon: vehiclePin,
           anchor: const Offset(0.5, 0.5),
-          rotation: widget.tracking?.heading ?? 0,
-          flat: true,
           zIndexInt: 3,
         ),
       );
+      final heading = widget.tracking?.heading;
+      final headingPin = _pins['vehicle-heading'];
+      if (heading != null && headingPin != null) {
+        markers.add(
+          gmaps.Marker(
+            markerId: const gmaps.MarkerId('vehicle-heading'),
+            position: _toGoogle(vehicle),
+            icon: headingPin,
+            anchor: const Offset(0.5, 0.5),
+            rotation: heading,
+            flat: true,
+            zIndexInt: 4,
+          ),
+        );
+      }
     }
     return markers;
   }
@@ -348,6 +363,7 @@ class _GoogleVehicleMapState extends State<GoogleVehicleMap> {
       ),
       'vehicle': await _vehicleBitmap(dpr: dpr, glowAlpha: 0.10),
       'vehicle-near': await _vehicleBitmap(dpr: dpr, glowAlpha: 0.24),
+      'vehicle-heading': await _headingBitmap(dpr: dpr),
       'stop-done': await _dotBitmap(
         dpr: dpr,
         color: const Color(0xFF10B981),
@@ -425,7 +441,7 @@ class _GoogleVehicleMapState extends State<GoogleVehicleMap> {
     });
   }
 
-  /// หมุดรถ: วงเรืองแสงรอบนอก + วงกลมสีแบรนด์ + ลูกศรบอกทิศ (หมุนตาม heading)
+  /// หมุดรถ: วงเรืองแสงรอบนอก + วงกลมสีแบรนด์ + รูปรถตั้งตรง
   Future<gmaps.BitmapDescriptor> _vehicleBitmap({
     required double dpr,
     required double glowAlpha,
@@ -439,7 +455,25 @@ class _GoogleVehicleMapState extends State<GoogleVehicleMap> {
       );
       canvas.drawCircle(centre, 24, Paint()..color = Colors.white);
       canvas.drawCircle(centre, 20, Paint()..color = AppTheme.primaryColor);
-      _drawIcon(canvas, Icons.navigation_rounded, centre, 22, Colors.white);
+      _drawIcon(
+        canvas,
+        Icons.directions_bus_filled_rounded,
+        centre,
+        22,
+        Colors.white,
+      );
+    });
+  }
+
+  /// สามเหลี่ยมบอกทิศเหนือวงหมุดรถ — ขนาดเท่าหมุดรถ จุดหมุนจึงตรงกลางรถพอดี
+  Future<gmaps.BitmapDescriptor> _headingBitmap({required double dpr}) {
+    return _record(dpr: dpr, size: const Size(64, 64), paint: (canvas) {
+      final path = ui.Path()
+        ..moveTo(32, 0)
+        ..lineTo(39, 9)
+        ..lineTo(25, 9)
+        ..close();
+      canvas.drawPath(path, Paint()..color = AppTheme.primaryColor);
     });
   }
 
