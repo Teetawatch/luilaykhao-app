@@ -4311,28 +4311,56 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
-  /// ลูกทริปแจ้งว่าโอนแล้ว (claimed=false = ถอน)
+  /// ลูกทริปแจ้งโอนพร้อมสลิป [slipPath] (บังคับ) — ถอนการแจ้งด้วย
+  /// [withdrawChatCollectionClaim]
   Future<Map<String, dynamic>> claimChatCollection(
     int scheduleId,
     int collectionId, {
-    bool claimed = true,
+    required String slipPath,
   }) async {
-    final response = await api.post(
+    final response = await api.postMultipart(
       '${ApiEndpoints.chatCollections(scheduleId)}/$collectionId/claim',
-      body: {'claimed': claimed},
+      fields: {'claimed': '1'},
+      files: {'slip': slipPath},
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  Future<Map<String, dynamic>> withdrawChatCollectionClaim(
+    int scheduleId,
+    int collectionId,
+  ) async {
+    final response = await api.post(
+      '${ApiEndpoints.chatCollections(scheduleId)}/$collectionId/claim',
+      body: {'claimed': false},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  /// ลิงก์ชั่วคราว (30 นาที) ดูสลิปของผู้โดยสารคนนี้ — ทีมงาน/คนจ่ายเท่านั้น
+  Future<String?> loadChatCollectionSlipUrl(
+    int scheduleId,
+    int collectionId,
+    int passengerId,
+  ) async {
+    final response = await api.get(
+      '${ApiEndpoints.chatCollections(scheduleId)}/$collectionId/slip?passenger_id=$passengerId',
+    );
+    final data = api.data(response);
+    return data is Map ? data['url']?.toString() : null;
+  }
+
+  /// สตาฟยืนยัน/ยกเลิก — [method] `transfer` ต้องมีสลิป, `cash` = รับเงินสดเอง
   Future<Map<String, dynamic>> setChatCollectionPaid(
     int scheduleId,
     int collectionId, {
     required List<int> passengerIds,
     required bool paid,
+    String? method,
   }) async {
     final response = await api.post(
       '${ApiEndpoints.chatCollections(scheduleId)}/$collectionId/paid',
-      body: {'passenger_ids': passengerIds, 'paid': paid},
+      body: {'passenger_ids': passengerIds, 'paid': paid, 'method': ?method},
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }

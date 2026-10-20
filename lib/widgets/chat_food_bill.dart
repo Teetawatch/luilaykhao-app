@@ -128,16 +128,19 @@ class MyFoodBillRow extends StatelessWidget {
 /// QR พร้อมเพย์ของยอดที่ค้าง + ปุ่ม "โอนแล้ว" — คืน true/false เมื่อกดแจ้ง/ถอน
 ///
 /// ใช้ร่วมกับ "เก็บเงินหน้างาน" ด้วย — ส่ง [what] เป็นชื่อรายการแทนคำว่าค่าอาหาร
+/// และ [slipRequired] เมื่อการแจ้งโอนต้องแนบสลิป (ผู้เรียกเปิดคลังรูปหลังได้ true)
 class FoodPaySheet extends StatelessWidget {
   final Map<String, dynamic> order;
   final Map<String, dynamic> billing;
   final String what;
+  final bool slipRequired;
 
   const FoodPaySheet({
     super.key,
     required this.order,
     required this.billing,
     this.what = 'ค่าอาหาร',
+    this.slipRequired = false,
   });
 
   @override
@@ -169,8 +172,10 @@ class FoodPaySheet extends StatelessWidget {
               ),
             )
           : PrimaryCTAButton(
-              label: 'โอนแล้ว แจ้งทีมงาน',
-              icon: Icons.check_rounded,
+              label: slipRequired ? 'แนบสลิปแจ้งโอน' : 'โอนแล้ว แจ้งทีมงาน',
+              icon: slipRequired
+                  ? Icons.receipt_long_rounded
+                  : Icons.check_rounded,
               onPressed: () {
                 HapticFeedback.mediumImpact();
                 Navigator.pop(context, true);
@@ -227,11 +232,26 @@ class FoodPaySheet extends StatelessWidget {
               ),
             ),
           ),
+        if (slipRequired && !claimed)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'โอนเสร็จแล้วแนบรูปสลิปจากแอปธนาคาร ทีมงานจะยืนยันให้หลังเห็นสลิป',
+              textAlign: TextAlign.center,
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                color: AppTheme.mutedText(context),
+                height: 1.4,
+              ),
+            ),
+          ),
         if (claimed)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              'แจ้งโอนแล้ว รอทีมงานเช็กยอดเข้า',
+              slipRequired
+                  ? 'ส่งสลิปแล้ว รอทีมงานเช็กยอดเข้า'
+                  : 'แจ้งโอนแล้ว รอทีมงานเช็กยอดเข้า',
               textAlign: TextAlign.center,
               style: appFont(
                 fontSize: AppText.sizeLabel,

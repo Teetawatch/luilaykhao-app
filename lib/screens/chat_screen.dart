@@ -2456,15 +2456,40 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (id == 0) return;
     final claimed = await showCollectionPaySheet(context, c, _myUserId);
     if (claimed == null || !mounted) return;
+    final app = context.read<AppProvider>();
+
+    // แจ้งโอนต้องมีสลิป — ทีมงานยืนยันยอดโอนได้เฉพาะคนที่แนบ (กันกดโอนแล้วลอยๆ)
+    String? slipPath;
+    if (claimed) {
+      final XFile? picked;
+      try {
+        picked = await _picker.pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 2000,
+          imageQuality: 90,
+        );
+      } catch (_) {
+        _snack('เปิดคลังรูปไม่ได้ ลองใหม่อีกครั้งครับ');
+        return;
+      }
+      if (picked == null || !mounted) return;
+      slipPath = picked.path;
+      _snack('กำลังส่งสลิป…');
+    }
+
     try {
-      final result = await context.read<AppProvider>().claimChatCollection(
-            widget.scheduleId,
-            id,
-            claimed: claimed,
-          );
+      final result = slipPath != null
+          ? await app.claimChatCollection(
+              widget.scheduleId,
+              id,
+              slipPath: slipPath,
+            )
+          : await app.withdrawChatCollectionClaim(widget.scheduleId, id);
       if (!mounted) return;
       _applyCollection(messageId, result['collection']);
-      _snack(claimed ? 'แจ้งทีมงานแล้ว รอเช็กยอดเข้า' : 'ถอนการแจ้งแล้ว');
+      _snack(
+        claimed ? 'ส่งสลิปแล้ว รอทีมงานเช็กยอดเข้า' : 'ถอนการแจ้งแล้ว',
+      );
     } catch (e) {
       _snack(e.toString());
     }
@@ -2490,14 +2515,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       CollectionListSheet(
         collection: _collectionSheet,
         canManage: _canModerate,
-        onSetPaid: (ids, paid) => run(
+        onSetPaid: (ids, paid, method) => run(
           () => app.setChatCollectionPaid(
             widget.scheduleId,
             id,
             passengerIds: ids,
             paid: paid,
+            method: method,
           ),
         ),
+        onLoadSlip: (passengerId) =>
+            app.loadChatCollectionSlipUrl(widget.scheduleId, id, passengerId),
         onSetClosed: (close) => run(
           () => app.setChatCollectionClosed(widget.scheduleId, id, closed: close),
         ),
