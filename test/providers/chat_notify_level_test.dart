@@ -30,13 +30,14 @@ void main() {
     test('ค่าตรงกับ ChatRoomPreference::LEVELS ฝั่ง Laravel', () {
       expect(
         ChatNotifyLevel.values.map((l) => l.value).toList(),
-        ['all', 'important', 'off'],
+        ['all', 'until_trip', 'important', 'off'],
       );
     });
 
     test('ค่าที่ไม่รู้จักหรือไม่มีเลย = ทุกข้อความ', () {
       expect(ChatNotifyLevel.fromValue('off'), ChatNotifyLevel.off);
       expect(ChatNotifyLevel.fromValue('important'), ChatNotifyLevel.important);
+      expect(ChatNotifyLevel.fromValue('until_trip'), ChatNotifyLevel.untilTrip);
       expect(ChatNotifyLevel.fromValue(null), ChatNotifyLevel.all);
       expect(ChatNotifyLevel.fromValue('loud'), ChatNotifyLevel.all);
     });

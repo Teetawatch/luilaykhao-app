@@ -3492,16 +3492,118 @@ class AppProvider extends ChangeNotifier {
 
   // ─── Group chat ─────────────────────────────────────────────────────────
 
+  /// [sinceId] + [beforeId] = ทุกข้อความในช่วงนั้นต่อเนื่อง (ย้อนไปหาข้อความเก่า
+  /// จากผลค้นหา/แถบ "รอคุณอยู่") — ได้ `complete: false` เมื่อยาวเกินเพดาน
   Future<Map<String, dynamic>> chatMessages(
     int scheduleId, {
     int? beforeId,
     int? afterId,
+    int? sinceId,
   }) async {
     final response = await api.get(
       ApiEndpoints.chatMessages(scheduleId),
-      query: {'per_page': 30, 'before_id': ?beforeId, 'after_id': ?afterId},
+      query: {
+        'per_page': 30,
+        'before_id': ?beforeId,
+        'after_id': ?afterId,
+        'since_id': ?sinceId,
+      },
     );
     return Map<String, dynamic>.from(api.data(response) ?? {});
+  }
+
+  /// ค้นหาข้อความในห้อง (ใหม่สุดก่อน) — [{message_id, excerpt, sender_name, created_at}]
+  Future<List<Map<String, dynamic>>> searchChat(int scheduleId, String query) async {
+    final response = await api.get(
+      ApiEndpoints.chatSearch(scheduleId),
+      query: {'q': query},
+    );
+    final data = Map<String, dynamic>.from(api.data(response) ?? const {});
+    return (data['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  /// คลังของห้อง: type = images | links — {items, next_before_id}
+  Future<Map<String, dynamic>> chatMedia(
+    int scheduleId,
+    String type, {
+    int? beforeId,
+  }) async {
+    final response = await api.get(
+      ApiEndpoints.chatMedia(scheduleId),
+      query: {'type': type, 'before_id': ?beforeId},
+    );
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  // ── แนะนำตัว / วันเกิด / แลกคอนแทค ────────────────────────────────────
+
+  /// การ์ดแนะนำตัวของฉันในห้องนี้ — {intro, experiences}
+  Future<Map<String, dynamic>> chatMyIntro(int scheduleId) async =>
+      _map(await api.get(ApiEndpoints.chatIntro(scheduleId)));
+
+  /// ส่ง/แก้การ์ดแนะนำตัว — {intro, message_id}
+  Future<Map<String, dynamic>> saveChatIntro(
+    int scheduleId, {
+    String? hometown,
+    String? experience,
+    String? note,
+  }) async =>
+      _map(await api.put(
+        ApiEndpoints.chatIntro(scheduleId),
+        body: {'hometown': hometown, 'experience': experience, 'note': note},
+      ));
+
+  /// ทีมงาน: วันเกิดในทริป [{passenger_id, name, date, greeted}]
+  Future<List<Map<String, dynamic>>> chatBirthdays(int scheduleId) async =>
+      _list(_map(await api.get(ApiEndpoints.chatBirthdays(scheduleId)))['items']);
+
+  /// ทีมงานส่งคำอวยพรเข้าห้อง — คืนรายการใหม่
+  Future<List<Map<String, dynamic>>> greetChatBirthday(int scheduleId, int passengerId) async =>
+      _list(_map(await api.post(
+        '${ApiEndpoints.chatBirthdays(scheduleId)}/$passengerId/greet',
+      ))['items']);
+
+  /// แลกคอนแทคในทริป — {window_open, my_handles, people}
+  Future<Map<String, dynamic>> tripContacts(int scheduleId) async =>
+      _map(await api.get(ApiEndpoints.tripContacts(scheduleId)));
+
+  Future<Map<String, dynamic>> requestTripContact(int scheduleId, int userId) async =>
+      _map(await api.post('${ApiEndpoints.tripContacts(scheduleId)}/$userId/request'));
+
+  Future<Map<String, dynamic>> respondTripContact(int scheduleId, int userId, bool accept) async =>
+      _map(await api.post(
+        '${ApiEndpoints.tripContacts(scheduleId)}/$userId/respond',
+        body: {'accept': accept},
+      ));
+
+  Future<Map<String, dynamic>> mySocialHandles() async {
+    final handles = _map(await api.get(ApiEndpoints.mySocialHandles))['handles'];
+    return handles is Map ? Map<String, dynamic>.from(handles) : <String, dynamic>{};
+  }
+
+  /// บันทึกคอนแทคของฉัน — คืนค่าที่เซิร์ฟเวอร์จัดรูปแล้ว
+  Future<Map<String, dynamic>> saveSocialHandles(Map<String, String> handles) async {
+    final saved = _map(await api.put(ApiEndpoints.mySocialHandles, body: handles))['handles'];
+    return saved is Map ? Map<String, dynamic>.from(saved) : <String, dynamic>{};
+  }
+
+  /// คอนแทคที่แลกกันแล้วทุกทริป
+  Future<List<Map<String, dynamic>>> myTripContacts() async =>
+      _list(_map(await api.get(ApiEndpoints.myTripContacts))['items']);
+
+  List<Map<String, dynamic>> _list(dynamic raw) => (raw as List? ?? const [])
+      .whereType<Map>()
+      .map((e) => Map<String, dynamic>.from(e))
+      .toList();
+
+  /// "รอคุณอยู่" — งานที่ฉันยังต้องกดในห้องนี้ (ข้อมูลดิบ แปลงด้วย ChatTodo.parseList)
+  Future<List<dynamic>> chatTodos(int scheduleId) async {
+    final response = await api.get(ApiEndpoints.chatTodos(scheduleId));
+    final data = Map<String, dynamic>.from(api.data(response) ?? const {});
+    return List<dynamic>.from(data['items'] as List? ?? const []);
   }
 
   Future<Map<String, dynamic>> sendChatMessage(
@@ -3509,6 +3611,7 @@ class AppProvider extends ChangeNotifier {
     String body, {
     int? replyToId,
     List<int>? mentions,
+    bool requestAck = false,
   }) async {
     final response = await api.post(
       ApiEndpoints.chatMessages(scheduleId),
@@ -3516,6 +3619,8 @@ class AppProvider extends ChangeNotifier {
         'body': body,
         'reply_to_id': ?replyToId,
         if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
+        // ทีมงานส่งเป็นประกาศที่ทุกคนต้องกดรับทราบ
+        if (requestAck) 'request_ack': true,
       },
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
@@ -3585,6 +3690,65 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  // ── "รับทราบ" ใต้ประกาศ ──────────────────────────────────────────────
+  // ทุกตัวคืน {message_id, ack} (ack = null เมื่อยกเลิกการขอ)
+
+  /// ทีมงานขอให้ทุกคนกดรับทราบข้อความนี้ (ใช้กับข้อความระบบได้ด้วย)
+  Future<Map<String, dynamic>> requestChatAck(int scheduleId, int messageId) async =>
+      _map(await api.post(ApiEndpoints.chatAckRequest(scheduleId, messageId)));
+
+  Future<Map<String, dynamic>> cancelChatAckRequest(int scheduleId, int messageId) async =>
+      _map(await api.delete(ApiEndpoints.chatAckRequest(scheduleId, messageId)));
+
+  /// ลูกทริปกดรับทราบ
+  Future<Map<String, dynamic>> ackChatMessage(int scheduleId, int messageId) async =>
+      _map(await api.post(ApiEndpoints.chatAck(scheduleId, messageId)));
+
+  /// ทีมงาน: ใครกดแล้ว/ใครยังไม่กด — {ack, acked, pending}
+  Future<Map<String, dynamic>> chatAckDetail(int scheduleId, int messageId) async =>
+      _map(await api.get(ApiEndpoints.chatAcks(scheduleId, messageId)));
+
+  /// ทีมงานสะกิดคนที่ยังไม่กด — {nudged, ack}
+  Future<Map<String, dynamic>> nudgeChatAck(int scheduleId, int messageId) async =>
+      _map(await api.post('${ApiEndpoints.chatAcks(scheduleId, messageId)}/nudge'));
+
+  /// ส่งสติกเกอร์ — เซิร์ฟเวอร์เติม body สำรอง "[สติกเกอร์] ป้าย" ให้เอง
+  Future<Map<String, dynamic>> sendChatSticker(
+    int scheduleId,
+    int stickerId, {
+    int? replyToId,
+  }) async {
+    final response = await api.post(
+      ApiEndpoints.chatMessages(scheduleId),
+      body: {'sticker_id': stickerId, 'reply_to_id': ?replyToId},
+    );
+    return Map<String, dynamic>.from(api.data(response) as Map);
+  }
+
+  // ชุดสติกเกอร์เปลี่ยนไม่บ่อย (แอดมินอัปเพิ่มเป็นครั้งคราว) — จำไว้ทั้งแอป
+  // ไม่ต้องดึงใหม่ทุกครั้งที่เปิดห้อง
+  List<dynamic>? _stickerPacks;
+  DateTime? _stickerPacksAt;
+  static const _stickerPacksTtl = Duration(minutes: 30);
+
+  /// ชุดสติกเกอร์ที่เปิดให้ใช้ (ข้อมูลดิบ — แปลงด้วย ChatStickerPack.parseList)
+  Future<List<dynamic>> chatStickerPacks({bool force = false}) async {
+    final cached = _stickerPacks;
+    final at = _stickerPacksAt;
+    if (!force &&
+        cached != null &&
+        at != null &&
+        DateTime.now().difference(at) < _stickerPacksTtl) {
+      return cached;
+    }
+    final response = await api.get(ApiEndpoints.chatStickers);
+    final data = Map<String, dynamic>.from(api.data(response) ?? const {});
+    final packs = List<dynamic>.from(data['packs'] as List? ?? const []);
+    _stickerPacks = packs;
+    _stickerPacksAt = DateTime.now();
+    return packs;
+  }
+
   /// Toggle an emoji reaction on a message. Returns the updated reaction set.
   Future<List<dynamic>> reactChatMessage(
     int scheduleId,
@@ -3599,21 +3763,22 @@ class AppProvider extends ChangeNotifier {
     return List<dynamic>.from(data['reactions'] ?? const []);
   }
 
-  /// Pin a message (staff/admin only). Returns the pinned message payload.
-  Future<Map<String, dynamic>?> pinChatMessage(
+  /// Pin a message (staff/admin only). Returns {pinned_message, pinned_messages}
+  /// — ห้องปักได้หลายอัน อันเก่าสุดหลุดเมื่อเกินเพดาน
+  Future<Map<String, dynamic>> pinChatMessage(
     int scheduleId,
     int messageId,
   ) async {
     final response = await api.post(
       ApiEndpoints.chatPin(scheduleId, messageId),
     );
-    final data = Map<String, dynamic>.from(api.data(response) ?? {});
-    final pinned = data['pinned_message'];
-    return pinned is Map ? Map<String, dynamic>.from(pinned) : null;
+    return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 
-  Future<void> unpinChatMessage(int scheduleId, int messageId) async {
-    await api.delete(ApiEndpoints.chatPin(scheduleId, messageId));
+  /// ปลดหมุดหนึ่งอัน — คืนหมุดที่เหลือ {pinned_message, pinned_messages}
+  Future<Map<String, dynamic>> unpinChatMessage(int scheduleId, int messageId) async {
+    final response = await api.delete(ApiEndpoints.chatPin(scheduleId, messageId));
+    return Map<String, dynamic>.from(api.data(response) ?? {});
   }
 
   /// Fire-and-forget "is typing" ping. Failures are swallowed — it's ephemeral.
@@ -4944,6 +5109,7 @@ class AppProvider extends ChangeNotifier {
     RealtimeEventHandler? onDropoff,
     RealtimeEventHandler? onWellness,
     RealtimeEventHandler? onPorter,
+    RealtimeEventHandler? onAck,
   }) async {
     final channel = 'private-chat.schedule.$scheduleId';
     final disposers = <VoidCallback>[];
@@ -4972,6 +5138,7 @@ class AppProvider extends ChangeNotifier {
     await bind('chat.dropoff', onDropoff);
     await bind('chat.wellness', onWellness);
     await bind('chat.porter', onPorter);
+    await bind('chat.ack', onAck);
 
     return () {
       for (final d in disposers) {

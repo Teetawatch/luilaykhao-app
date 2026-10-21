@@ -73,6 +73,13 @@ void main() {
       }
     });
 
+    test('ถามว่ารถถึงไหนแล้ว — ไม่ถูกกลืนเป็นจุดรับหรือเวลา', () {
+      expect(QuickAskMatcher.match('รถถึงไหนแล้วครับ'), QuickAskTopic.van);
+      expect(QuickAskMatcher.match('รถ อยู่ ตรงไหน คะ'), QuickAskTopic.van);
+      expect(QuickAskMatcher.match('ใกล้ถึงยังคะพี่'), QuickAskTopic.van);
+      expect(QuickAskMatcher.match('จุดรับอยู่ตรงไหนคะ'), QuickAskTopic.place);
+    });
+
     test('ถามหลายเรื่องพร้อมกัน หยิบข้อที่เฉพาะเจาะจงตามลำดับที่ตั้งไว้', () {
       // มีทั้ง "กำหนดการ" และ "กี่โมง" — กำหนดการมาก่อนตามลำดับตรวจ
       expect(
@@ -129,6 +136,16 @@ void main() {
           reason: 'ข้อ $topic ต้องอธิบายว่ายังไม่รู้เพราะอะไร',
         );
       }
+    });
+
+    test('รถถึงไหน: ใช้คำเดียวกับการ์ดหน้าจอล็อก', () {
+      const live = {
+        'live': {'headline': 'รถกำลังมา', 'detail': 'อีก 12 นาทีถึงจุดรับ'},
+      };
+      expect(
+        QuickAskAnswer.line(QuickAskTopic.van, live),
+        'รถกำลังมา · อีก 12 นาทีถึงจุดรับ',
+      );
     });
 
     test('ไม่มีเบอร์คนขับก็ยกเบอร์สตาฟมาแทน', () {

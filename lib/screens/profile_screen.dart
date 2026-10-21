@@ -43,6 +43,7 @@ import 'staff_outstanding_screen.dart' show StaffOutstandingScreen;
 import 'staff_photos_screen.dart' show StaffPhotosScreen;
 import 'staff_rentals_screen.dart' show StaffRentalsScreen;
 import 'lost_items_screen.dart';
+import 'trip_contacts_screen.dart';
 import 'packing_list_screen.dart' show PackingScheduleListScreen;
 import 'staff_shopping_screen.dart' show StaffShoppingScreen;
 import 'staff_reviews_screen.dart' show StaffReviewsScreen;
@@ -1218,6 +1219,12 @@ class TravelMenu extends StatelessWidget {
           label: 'ของที่ลืมไว้ในทริป',
           subtitle: 'ทีมงานเจอของที่ลืมไว้ — ถ้าเป็นของคุณกดแจ้งได้เลย',
           onTap: () => _pushPremium(context, const LostItemsScreen()),
+        ),
+        _MenuItem(
+          icon: Icons.handshake_outlined,
+          label: 'คอนแทคเพื่อนร่วมทริป',
+          subtitle: 'LINE/IG ของเพื่อนที่แลกกันไว้ อยู่ต่อแม้ห้องแชทถูกลบ',
+          onTap: () => _pushPremium(context, const MyTripContactsScreen()),
         ),
         _MenuItem(
           icon: Icons.favorite_border_rounded,

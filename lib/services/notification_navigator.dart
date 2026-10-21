@@ -11,6 +11,7 @@ import '../screens/gift_voucher_screen.dart';
 import '../screens/account_claim_screen.dart';
 import '../screens/charter_request_screen.dart';
 import '../screens/lost_items_screen.dart';
+import '../screens/trip_contacts_screen.dart';
 import '../screens/onsite_money_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/handover_claim_screen.dart';
@@ -170,7 +171,12 @@ class NotificationNavigator {
       case 'dropoff_soon':
       // สลิปเก็บเงินไม่ผ่าน — เปิดห้องที่การ์ดเก็บเงินอยู่ให้แนบใหม่
       case 'collection_slip_rejected':
+      // ทีมงาน: มีวันเกิดในทริป — ห้องแชทมีแถบให้กดอวยพร
+      case 'chat_birthday':
         _openChat(data);
+      // มีคนขอแลกคอนแทค / ตอบรับแล้ว — ห้องแชทอาจถูกลบไปแล้ว เปิดหน้าแลกคอนแทคตรง ๆ
+      case 'trip_contact':
+        _openTripContacts(data);
       // ยังถือเงินหน้างานของรอบที่จบแล้ว — เปิดสรุปยอด (ห้องแชทอาจถูกล้างไปแล้ว)
       case 'onsite_money':
         _openOnsiteMoney(data);
@@ -323,6 +329,19 @@ class NotificationNavigator {
     _withNav(
       (nav) => nav.push(
         MaterialPageRoute(builder: (_) => OnsiteMoneyScreen(scheduleId: id)),
+      ),
+    );
+  }
+
+  static void _openTripContacts(Map<String, dynamic> data) {
+    final id = int.tryParse('${data['schedule_id']}') ?? 0;
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(
+          builder: (_) => id == 0
+              ? const MyTripContactsScreen()
+              : TripContactsScreen(scheduleId: id),
+        ),
       ),
     );
   }

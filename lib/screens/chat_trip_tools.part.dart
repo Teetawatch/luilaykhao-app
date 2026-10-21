@@ -63,6 +63,7 @@ mixin _TripToolsMixin on State<ChatScreen> {
   void _scrollToBottom();
   void _markRead();
   void _scrollToMessage(int messageId);
+  void _refreshTodos();
 
   final Map<String, _ToolSheet> _toolSheets = {
     for (final key in _toolKeepKeys.keys) key: _ToolSheet(),
@@ -118,6 +119,7 @@ mixin _TripToolsMixin on State<ChatScreen> {
         key: _keepViewerParts(key, old, incoming),
       },
     );
+    _refreshTodos();
   }
 
   /// realtime ของการ์ด — ถ้าทีมงานเปิดชีตของใบนี้อยู่ ดึงรายละเอียดใหม่ด้วย

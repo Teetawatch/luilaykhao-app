@@ -64,9 +64,19 @@ class ApiEndpoints {
   static String chatUnreadCount(int scheduleId) =>
       'schedules/$scheduleId/chat/unread-count';
   static String chatRoom(int scheduleId) => 'schedules/$scheduleId/chat/room';
+  static String chatTodos(int scheduleId) => 'schedules/$scheduleId/chat/todos';
+  static String chatSearch(int scheduleId) => 'schedules/$scheduleId/chat/search';
+  static String chatMedia(int scheduleId) => 'schedules/$scheduleId/chat/media';
+  static String chatIntro(int scheduleId) => 'schedules/$scheduleId/chat/intro';
+  static String chatBirthdays(int scheduleId) =>
+      'schedules/$scheduleId/chat/birthdays';
+  static String tripContacts(int scheduleId) => 'schedules/$scheduleId/contacts';
+  static const mySocialHandles = 'me/social-handles';
+  static const myTripContacts = 'me/trip-contacts';
   static String chatNotifications(int scheduleId) =>
       'schedules/$scheduleId/chat/notifications';
   static const chatMyConversations = 'chat/my-conversations';
+  static const chatStickers = 'chat/stickers';
   static String chatTyping(int scheduleId) =>
       'schedules/$scheduleId/chat/typing';
   static String chatJoined(int scheduleId) =>
@@ -75,6 +85,12 @@ class ApiEndpoints {
       'schedules/$scheduleId/chat/messages/$messageId/pin';
   static String chatReact(int scheduleId, int messageId) =>
       'schedules/$scheduleId/chat/messages/$messageId/react';
+  static String chatAckRequest(int scheduleId, int messageId) =>
+      'schedules/$scheduleId/chat/messages/$messageId/ack-request';
+  static String chatAck(int scheduleId, int messageId) =>
+      'schedules/$scheduleId/chat/messages/$messageId/ack';
+  static String chatAcks(int scheduleId, int messageId) =>
+      'schedules/$scheduleId/chat/messages/$messageId/acks';
   static String chatTripInfo(int scheduleId) =>
       'schedules/$scheduleId/chat/trip-info';
   static String chatTripSummary(int scheduleId) =>

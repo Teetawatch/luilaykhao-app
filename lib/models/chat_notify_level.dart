@@ -11,6 +11,12 @@ enum ChatNotifyLevel {
     'แจ้งเตือนเมื่อมีข้อความใหม่ในห้อง',
     Icons.notifications_none_rounded,
   ),
+  untilTrip(
+    'until_trip',
+    'เงียบไว้ก่อน จนใกล้วันเดินทาง',
+    'ตอนนี้แจ้งเฉพาะทีมงานและแท็กถึงฉัน แล้วเปิดทุกข้อความให้เองตั้งแต่ 3 วันก่อนเดินทาง',
+    Icons.bedtime_rounded,
+  ),
   important(
     'important',
     'เฉพาะทีมงานและแท็กถึงฉัน',

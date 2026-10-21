@@ -12,14 +12,17 @@ import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
 import '../models/chat_notify_level.dart';
 import '../providers/app_provider.dart';
+import '../providers/tracking_provider.dart';
 import '../services/push_notification_service.dart';
 import '../services/wake_alarm_service.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/chat_ack.dart';
 import '../widgets/chat_collection.dart';
 import '../widgets/chat_dropoff.dart';
 import '../widgets/chat_food_bill.dart';
@@ -28,7 +31,10 @@ import '../widgets/chat_lost_item.dart';
 import '../widgets/chat_porter.dart';
 import '../widgets/chat_requests.dart';
 import '../widgets/chat_rest_stop.dart';
+import '../widgets/chat_social.dart';
 import '../widgets/chat_staff_intro.dart';
+import '../widgets/chat_stickers.dart';
+import '../widgets/chat_todos.dart';
 import '../widgets/chat_trail_check.dart';
 import '../widgets/chat_voice.dart';
 import '../widgets/chat_vote_sheet.dart';
@@ -37,6 +43,7 @@ import '../widgets/moderation_sheet.dart';
 import '../widgets/sheet_close_button.dart';
 import '../theme/app_theme.dart';
 import '../services/quick_ask_matcher.dart';
+import '../utils/thai_date.dart';
 import '../widgets/weather_card.dart';
 import '../widgets/tier_badge.dart';
 import 'chat_private_screen.dart';
@@ -44,10 +51,13 @@ import 'custom_pickup_picker_screen.dart';
 import 'schedule_itinerary_screen.dart';
 import 'lost_items_screen.dart';
 import 'onsite_money_screen.dart';
+import 'trip_contacts_screen.dart';
 import 'trip_rooms_screen.dart';
+import 'tracking_screen.dart' show TrackingMapPage;
 import '../widgets/confirm_dialog.dart';
 
 part 'chat_trip_tools.part.dart';
+part 'chat_browse.part.dart';
 
 /// Group chat room for a trip schedule. Members are the customers booked on
 /// the schedule, the assigned staff, and admins. Real-time via Reverb.
@@ -111,7 +121,21 @@ class _ChatScreenState extends State<ChatScreen>
   static const _joinedCooldown = Duration(minutes: 3);
 
   // Pinned announcement, kept in sync with room load + chat.pinned broadcasts.
-  Map<String, dynamic>? _pinned;
+  // ปักได้หลายอัน (ปักล่าสุดก่อน) — แถบโชว์ทีละอัน แตะแล้วไปที่ข้อความและเลื่อนไปอันถัดไป
+  List<Map<String, dynamic>> _pins = const [];
+  int _pinIndex = 0;
+
+  /// รับหมุดจาก payload — เซิร์ฟเวอร์รุ่นก่อนมีแค่ pinned_message (อันเดียว)
+  void _setPins(dynamic list, dynamic single) {
+    final next = list is List
+        ? list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+        : (single is Map ? [Map<String, dynamic>.from(single)] : <Map<String, dynamic>>[]);
+    _pins = next;
+    if (_pinIndex >= next.length) _pinIndex = 0;
+  }
+
+  bool _isPinned(int messageId) =>
+      _pins.any((p) => int.tryParse('${p['id']}') == messageId);
 
   // Reply composer target (the message being quoted), null when not replying.
   Map<String, dynamic>? _replyingTo;
@@ -189,6 +213,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   /// ข้อมูลการเดินทางของฉัน (โหลดครั้งแรกที่กดถาม แล้วแคชไว้ในหน้านี้)
   Map<String, dynamic>? _tripInfo;
+  DateTime? _tripInfoAt;
 
   /// คำถามที่แอปเดาว่ากำลังจะถาม/เพิ่งถามไป — แถบคำตอบเหนือช่องพิมพ์
   /// ขึ้นเฉพาะเครื่องคนถาม ไม่มีอะไรถูกโพสต์ลงห้อง
@@ -198,12 +223,46 @@ class _ChatScreenState extends State<ChatScreen>
   String? _suggestedFrom;
   String? _dismissedSuggestion;
 
+  // สติกเกอร์ — แผงขึ้นแทนคีย์บอร์ด และแถบเสนอสติกเกอร์ตอนพิมพ์คำที่ตรงป้าย
+  List<ChatStickerPack> _stickerPacks = const [];
+  bool _stickersLoading = false;
+  String? _stickersError;
+  bool _stickerPanelOpen = false;
+  List<int> _recentStickerIds = const [];
+  List<ChatSticker> _stickerSuggestions = const [];
+  String? _dismissedStickerText;
+
+  // ทีมงาน: ข้อความที่กำลังพิมพ์จะส่งเป็นประกาศที่ทุกคนต้องกดรับทราบ
+  bool _requestAck = false;
+  // ข้อความที่กำลังกดรับทราบอยู่ (กันกดรัว)
+  final Set<int> _ackBusy = {};
+
+  // "รอคุณอยู่" — ดึงใหม่แบบหน่วง (หลายสัญญาณมาติดกันยิงครั้งเดียว) และทุกนาที
+  // เพราะบางเรื่องเปิดให้กดตามเวลา (นัดรวมพล 3 ชม.ก่อน / ปลุก 1 ชม.ก่อน)
+  List<ChatTodo> _todos = const [];
+  Timer? _todoDebounce;
+  Timer? _todoTicker;
+  bool _todoFetching = false;
+  bool _todoAgain = false;
+  // กำลังโหลดย้อนไปหาข้อความเก่า (จากแถบรอคุณอยู่/ผลค้นหา)
+  bool _jumping = false;
+
+  // ข้อความที่พิมพ์ค้างไว้ — ออกจากห้องไปแล้วกลับมายังอยู่ (รายห้อง เก็บในเครื่อง)
+  Timer? _draftSave;
+  String get _draftKey => 'chat_draft_${widget.scheduleId}';
+
+  // ชวน "เงียบไว้ก่อน" ในห้องที่ยังอีกนานกว่าจะเดินทาง — ปัดทิ้งแล้วไม่ถามซ้ำในห้องนี้
+  bool _quietSuggestDismissed = true;
+  String get _quietSuggestKey => 'chat_quiet_suggest_dismissed_${widget.scheduleId}';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scroll.addListener(_onScroll);
     _input.addListener(_watchComposing);
+    _inputFocus.addListener(_onInputFocus);
+    unawaited(_restoreDraft());
     // ครบ 2 นาทีหยุดอัดแล้วส่งเอง — คนที่พูดยาวขนาดนั้นตั้งใจจะส่งอยู่แล้ว
     _voice.onAutoStop = (clip) {
       if (!mounted) return;
@@ -231,6 +290,151 @@ class _ChatScreenState extends State<ChatScreen>
       setState(() => _isComposing = composing);
     }
     _considerSuggestion(text);
+    _considerStickers(text);
+    _scheduleDraftSave();
+  }
+
+  /// เก็บร่างแบบหน่วง (ไม่เขียนดิสก์ทุกตัวอักษร) — กำลังแก้ข้อความเก่าไม่นับเป็นร่าง
+  void _scheduleDraftSave() {
+    if (_editing != null) return;
+    _draftSave?.cancel();
+    _draftSave = Timer(const Duration(milliseconds: 500), _saveDraftNow);
+  }
+
+  Future<void> _saveDraftNow() async {
+    if (_editing != null) return;
+    final text = _input.text;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (text.trim().isEmpty) {
+        await prefs.remove(_draftKey);
+      } else {
+        await prefs.setString(_draftKey, text);
+      }
+    } catch (_) {
+      // จำร่างไม่ได้ก็แค่ไม่มีร่าง ไม่ต้องเตือน
+    }
+  }
+
+  Future<void> _restoreDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final draft = prefs.getString(_draftKey) ?? '';
+      // ผู้ใช้เริ่มพิมพ์ไปก่อนร่างโหลดเสร็จ — ไม่ทับของที่เพิ่งพิมพ์
+      if (!mounted || draft.trim().isEmpty || _input.text.isNotEmpty) return;
+      _input.value = TextEditingValue(
+        text: draft,
+        selection: TextSelection.collapsed(offset: draft.length),
+      );
+    } catch (_) {}
+  }
+
+  /// แตะช่องพิมพ์ = ผู้ใช้อยากพิมพ์ คีย์บอร์ดขึ้นแทนแผงสติกเกอร์
+  void _onInputFocus() {
+    if (_inputFocus.hasFocus && _stickerPanelOpen && mounted) {
+      setState(() => _stickerPanelOpen = false);
+    }
+  }
+
+  /// คำที่พิมพ์ตรงกับป้ายสติกเกอร์ → เสนอให้กดส่งเป็นสติกเกอร์แทน (ไม่บังคับ)
+  void _considerStickers(String text) {
+    final next = (_editing != null ||
+            text.isEmpty ||
+            text == _dismissedStickerText ||
+            _stickerPacks.isEmpty)
+        ? const <ChatSticker>[]
+        : matchStickers(_stickerPacks, text);
+    final same = next.length == _stickerSuggestions.length &&
+        Iterable.generate(next.length)
+            .every((i) => next[i].id == _stickerSuggestions[i].id);
+    if (same || !mounted) return;
+    setState(() => _stickerSuggestions = next);
+  }
+
+  /// โหลดชุดสติกเกอร์ (AppProvider จำไว้ทั้งแอป) — เงียบเมื่อล้มเหลว เพราะผู้ใช้
+  /// ยังไม่ได้ขอ แผงจะขึ้นปุ่ม "ลองอีกครั้ง" ให้ตอนเปิดดูเอง
+  Future<void> _loadStickers({bool force = false}) async {
+    if (_stickersLoading) return;
+    final app = context.read<AppProvider>();
+    setState(() {
+      _stickersLoading = true;
+      _stickersError = null;
+    });
+    try {
+      final results = await Future.wait([
+        app.chatStickerPacks(force: force),
+        StickerRecents.load(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _stickerPacks = ChatStickerPack.parseList(results[0]);
+        _recentStickerIds = List<int>.from(results[1]);
+        _stickersLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _stickersLoading = false;
+        _stickersError = e.toString();
+      });
+    }
+  }
+
+  void _toggleStickerPanel() {
+    HapticFeedback.selectionClick();
+    if (_stickerPanelOpen) {
+      setState(() => _stickerPanelOpen = false);
+      _inputFocus.requestFocus();
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() => _stickerPanelOpen = true);
+    if (_stickerPacks.isEmpty) _loadStickers(force: _stickersError != null);
+  }
+
+  /// ส่งสติกเกอร์ — จากแผง หรือจากแถบเสนอ (ซึ่งแทนข้อความที่พิมพ์ค้างไว้)
+  void _sendSticker(ChatSticker sticker, {bool fromSuggestion = false}) {
+    if (_editing != null) return;
+    final replyId = _replyingTo == null
+        ? null
+        : int.tryParse('${_replyingTo!['id']}');
+    final replyPreview = _replyPreviewOf(_replyingTo);
+    final token = _newClientToken();
+    final optimistic = <String, dynamic>{
+      'client_token': token,
+      'is_mine': true,
+      'sender_role': 'customer',
+      'body': sticker.fallbackBody,
+      'sticker': sticker.toMessageJson(),
+      'created_at': DateTime.now().toIso8601String(),
+      'reply_to': ?replyPreview,
+      '_reply_to_id': ?replyId,
+      '_sticker_id': sticker.id,
+      '_pending': true,
+    };
+    final recents = StickerRecents.bump(_recentStickerIds, sticker.id);
+    setState(() {
+      _messages.add(optimistic);
+      _replyingTo = null;
+      _recentStickerIds = recents;
+      _stickerSuggestions = const [];
+      if (fromSuggestion) {
+        _input.clear();
+        _mentionPicks.clear();
+        _mentionQuery = null;
+      }
+    });
+    unawaited(StickerRecents.save(recents));
+    _scrollToBottom();
+    _dispatchOptimistic(token);
+  }
+
+  void _dismissStickerSuggestions() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _dismissedStickerText = _input.text.trim();
+      _stickerSuggestions = const [];
+    });
   }
 
   /// อ่านข้อความแล้วยกคำตอบขึ้นมาให้เอง ถ้าเข้าข้อที่แอปตอบได้อยู่แล้ว
@@ -268,20 +472,27 @@ class _ChatScreenState extends State<ChatScreen>
     });
 
     // ดึงคำตอบมารอไว้เงียบ ๆ ให้แถบโชว์คำตอบจริง ไม่ใช่แค่ปุ่มให้กดต่อ
-    if (ask != null) _warmTripInfo();
+    if (ask != null) {
+      final stale = _tripInfoAt == null ||
+          DateTime.now().difference(_tripInfoAt!) > const Duration(minutes: 1);
+      _warmTripInfo(fresh: ask == _QuickAsk.van && stale);
+    }
   }
 
   /// โหลดข้อมูลการเดินทางล่วงหน้าแบบไม่รบกวน — ล้มเหลวก็เงียบ แถบจะกลายเป็น
   /// คำชวนให้กดดูแทน แล้วค่อยโหลดใหม่ตอนกด
-  Future<void> _warmTripInfo() async {
-    if (_tripInfo != null) return;
+  Future<void> _warmTripInfo({bool fresh = false}) async {
+    if (_tripInfo != null && !fresh) return;
 
     try {
       final info = await context.read<AppProvider>().chatTripInfo(
         widget.scheduleId,
       );
       if (!mounted) return;
-      setState(() => _tripInfo = info);
+      setState(() {
+        _tripInfo = info;
+        _tripInfoAt = DateTime.now();
+      });
     } catch (_) {
       // ผู้ใช้ไม่ได้เป็นคนสั่งโหลด จึงไม่ควรมี error เด้งใส่
     }
@@ -306,6 +517,13 @@ class _ChatScreenState extends State<ChatScreen>
     _disposer?.call();
     _signalsDisposer?.call();
     _foodSheetRefresh?.cancel();
+    _todoDebounce?.cancel();
+    _todoTicker?.cancel();
+    // ออกจากห้องระหว่างที่ยังไม่ถึงรอบเก็บ — เก็บทันทีให้ร่างล่าสุดไม่หาย
+    if (_draftSave?.isActive ?? false) {
+      _draftSave!.cancel();
+      unawaited(_saveDraftNow());
+    }
     _foodSheetRound.dispose();
     _foodSheetDietary.dispose();
     _restSheetStop.dispose();
@@ -317,6 +535,7 @@ class _ChatScreenState extends State<ChatScreen>
     unawaited(ChatVoicePlayback.instance.stop());
     _input.removeListener(_watchComposing);
     _input.dispose();
+    _inputFocus.removeListener(_onInputFocus);
     _inputFocus.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
@@ -372,11 +591,44 @@ class _ChatScreenState extends State<ChatScreen>
       onDropoff: (d) => _onToolSignal('dropoff', d),
       onWellness: (d) => _onToolSignal('wellness', d),
       onPorter: (d) => _onToolSignal('porter', d),
+      onAck: _onAckSignal,
     );
     // Let the rest of the room know we've entered, so they see a brief notice.
     app.sendChatJoin(widget.scheduleId);
     _startPolling();
+    // โหลดสติกเกอร์รอไว้ — แถบเสนอสติกเกอร์ตอนพิมพ์ต้องมีรายการก่อนผู้ใช้เปิดแผง
+    if (mounted) unawaited(_loadStickers());
+    unawaited(_loadQuietSuggestState());
   }
+
+  Future<void> _loadQuietSuggestState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dismissed = prefs.getBool(_quietSuggestKey) ?? false;
+      if (mounted) setState(() => _quietSuggestDismissed = dismissed);
+    } catch (_) {
+      // อ่านค่าไม่ได้ = ไม่ชวน (ดีกว่าชวนซ้ำทุกครั้งที่เปิดห้อง)
+    }
+  }
+
+  Future<void> _dismissQuietSuggest() async {
+    setState(() => _quietSuggestDismissed = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_quietSuggestKey, true);
+    } catch (_) {}
+  }
+
+  Future<void> _acceptQuietSuggest() async {
+    HapticFeedback.selectionClick();
+    unawaited(_dismissQuietSuggest());
+    await _saveNotifyLevel(ChatNotifyLevel.untilTrip);
+  }
+
+  bool get _showQuietSuggest =>
+      !_quietSuggestDismissed &&
+      _room?['suggest_quiet'] == true &&
+      _notifyLevel == ChatNotifyLevel.all;
 
   Future<void> _load() async {
     final app = context.read<AppProvider>();
@@ -398,6 +650,10 @@ class _ChatScreenState extends State<ChatScreen>
       _scrollToBottom();
       _markRead();
       _refreshRoom(force: true);
+      _refreshTodos(immediate: true);
+      _todoTicker ??= Timer.periodic(const Duration(minutes: 1), (_) {
+        if (_isForeground) _refreshTodos();
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -426,9 +682,7 @@ class _ChatScreenState extends State<ChatScreen>
         if (notifyEpoch == _notifyEpoch && !_savingNotify) {
           _notifyLevel = ChatNotifyLevel.fromValue(room['notify_level']);
         }
-        _pinned = room['pinned_message'] is Map
-            ? Map<String, dynamic>.from(room['pinned_message'] as Map)
-            : null;
+        _setPins(room['pinned_messages'], room['pinned_message']);
         _canModerate = room['can_moderate'] == true;
         final emojis = (room['reaction_emojis'] as List? ?? [])
             .map((e) => e.toString())
@@ -485,6 +739,8 @@ class _ChatScreenState extends State<ChatScreen>
       {...data, 'is_mine': false},
     ]);
     _refreshRoom();
+    // ข้อความใหม่อาจเป็นการ์ดที่ต้องตอบ (โหวต/สั่งอาหาร/ประกาศรอรับทราบ)
+    _refreshTodos();
   }
 
   void _startPolling() {
@@ -514,6 +770,7 @@ class _ChatScreenState extends State<ChatScreen>
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
       _ingest(fresh);
+      if (fresh.isNotEmpty) _refreshTodos();
       // Keep the roster / read receipts current (throttled internally).
       _refreshRoom();
     } catch (_) {
@@ -581,7 +838,10 @@ class _ChatScreenState extends State<ChatScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
       ),
-      builder: (_) => _NotifyLevelSheet(current: _notifyLevel),
+      builder: (_) => _NotifyLevelSheet(
+        current: _notifyLevel,
+        wakesOn: DateTime.tryParse(_room?['notify_wakes_on']?.toString() ?? ''),
+      ),
     );
     if (picked == null || picked == _notifyLevel || !mounted) return;
     await _saveNotifyLevel(picked);
@@ -606,6 +866,8 @@ class _ChatScreenState extends State<ChatScreen>
         switch (saved) {
           ChatNotifyLevel.all => 'เปิดแจ้งเตือนทุกข้อความแล้ว',
           ChatNotifyLevel.important => 'แจ้งเตือนเฉพาะทีมงานและแท็กถึงคุณ',
+          ChatNotifyLevel.untilTrip =>
+            'เงียบไว้ก่อน — เปิดทุกข้อความให้เอง 3 วันก่อนเดินทาง',
           ChatNotifyLevel.off => 'ปิดการแจ้งเตือนห้องนี้แล้ว',
         },
       );
@@ -654,12 +916,13 @@ class _ChatScreenState extends State<ChatScreen>
         final idx = _messages.indexWhere((m) => m['id'] == updated['id']);
         setState(() {
           if (idx >= 0) _messages[idx] = {..._messages[idx], ...updated};
-          _editing = null;
           _input.clear();
+          _editing = null;
           _mentionPicks.clear();
           _mentionQuery = null;
           _sending = false;
         });
+        unawaited(_restoreDraft());
       } catch (e) {
         if (!mounted) return;
         setState(() => _sending = false);
@@ -672,6 +935,7 @@ class _ChatScreenState extends State<ChatScreen>
         ? null
         : int.tryParse('${_replyingTo!['id']}');
     final replyPreview = _replyPreviewOf(_replyingTo);
+    final requestAck = _canModerate && _requestAck;
     // Optimistically render the message right away, then dispatch. On failure it
     // stays put with a "tap to retry" affordance instead of vanishing — key for
     // flaky connections on the bus/mountain.
@@ -681,12 +945,14 @@ class _ChatScreenState extends State<ChatScreen>
       _replyingTo = null;
       _mentionPicks.clear();
       _mentionQuery = null;
+      _requestAck = false;
     });
     _enqueueText(
       text,
       replyId: replyId,
       mentions: mentions,
       replyPreview: replyPreview,
+      requestAck: requestAck,
     );
     // ช่องพิมพ์ถูกล้างแล้ว listener จึงล้างคำเดาทิ้ง — ยกกลับมาจากข้อความที่
     // เพิ่งส่ง เพื่อให้คนที่พิมพ์รวดเดียวแล้วกดส่งยังได้คำตอบอยู่ดี
@@ -727,6 +993,7 @@ class _ChatScreenState extends State<ChatScreen>
     int? replyId,
     List<int> mentions = const [],
     Map<String, dynamic>? replyPreview,
+    bool requestAck = false,
   }) {
     final token = _newClientToken();
     final optimistic = <String, dynamic>{
@@ -739,6 +1006,7 @@ class _ChatScreenState extends State<ChatScreen>
       '_pending': true,
       '_mentions': mentions,
       '_reply_to_id': ?replyId,
+      if (requestAck) '_request_ack': true,
     };
     setState(() => _messages.add(optimistic));
     _scrollToBottom();
@@ -762,7 +1030,14 @@ class _ChatScreenState extends State<ChatScreen>
       final imagePath = opt['_local_image_path']?.toString();
       final audioPath = opt['_local_audio_path']?.toString();
       final replyId = int.tryParse('${opt['_reply_to_id']}');
-      if (audioPath != null && audioPath.isNotEmpty) {
+      final stickerId = int.tryParse('${opt['_sticker_id']}');
+      if (stickerId != null) {
+        server = await app.sendChatSticker(
+          widget.scheduleId,
+          stickerId,
+          replyToId: replyId,
+        );
+      } else if (audioPath != null && audioPath.isNotEmpty) {
         server = await app.sendChatVoice(
           widget.scheduleId,
           audioPath,
@@ -782,6 +1057,7 @@ class _ChatScreenState extends State<ChatScreen>
           opt['body']?.toString() ?? '',
           replyToId: replyId,
           mentions: List<int>.from(opt['_mentions'] ?? const []),
+          requestAck: opt['_request_ack'] == true,
         );
       }
       if (!mounted) return;
@@ -1351,6 +1627,56 @@ class _ChatScreenState extends State<ChatScreen>
                       );
                     },
                   ),
+                if (!_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.waving_hand_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'แนะนำตัวกับเพื่อนร่วมทริป',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'มาจากไหน เคยไปทริปแบบนี้ไหม — ขึ้นเป็นการ์ดของคุณ',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openIntro();
+                    },
+                  ),
+                if (_contactsInfo['window_open'] == true ||
+                    (int.tryParse('${_contactsInfo['incoming']}') ?? 0) > 0)
+                  ListTile(
+                    leading: Badge(
+                      isLabelVisible:
+                          (int.tryParse('${_contactsInfo['incoming']}') ?? 0) > 0,
+                      label: Text('${_contactsInfo['incoming']}'),
+                      child: const Icon(
+                        Icons.handshake_rounded,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    title: Text(
+                      'แลกคอนแทคกับเพื่อนร่วมทริป',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ขอ LINE/IG กัน — ต้องตกลงทั้งสองฝ่ายถึงจะเห็น',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openContacts();
+                    },
+                  ),
                 ListTile(
                   leading: const Icon(
                     Icons.inventory_2_rounded,
@@ -1696,10 +2022,7 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _onPinnedSignal(Map<String, dynamic> data) {
-    final msg = data['message'];
-    setState(() {
-      _pinned = msg is Map ? Map<String, dynamic>.from(msg) : null;
-    });
+    setState(() => _setPins(data['pinned'], data['message']));
   }
 
   // ── Composer / message actions ────────────────────────────────────────────
@@ -1843,13 +2166,19 @@ class _ChatScreenState extends State<ChatScreen>
   Future<void> _openTripInfo(_QuickAsk ask) async {
     HapticFeedback.selectionClick();
 
-    if (_tripInfo == null) {
+    // ตำแหน่งรถเปลี่ยนทุกนาที — ถามเรื่องรถหรือข้อมูลเก่าเกินนาทีให้ดึงใหม่เสมอ
+    final stale = _tripInfoAt == null ||
+        DateTime.now().difference(_tripInfoAt!) > const Duration(minutes: 1);
+    if (_tripInfo == null || (ask == _QuickAsk.van && stale)) {
       try {
         final info = await context.read<AppProvider>().chatTripInfo(
           widget.scheduleId,
         );
         if (!mounted) return;
-        setState(() => _tripInfo = info);
+        setState(() {
+          _tripInfo = info;
+          _tripInfoAt = DateTime.now();
+        });
       } catch (e) {
         _snack(e.toString());
         return;
@@ -1869,8 +2198,33 @@ class _ChatScreenState extends State<ChatScreen>
         focus: ask,
         scheduleId: widget.scheduleId,
         tripTitle: _tripTitle,
+        onTrack: _openTracking,
       ),
     );
+  }
+
+  /// แผนที่ติดตามรถของใบจองฉัน — ตัวเดียวกับหน้า "วันเดินทาง"
+  Future<void> _openTracking() async {
+    final ref = _tripInfo?['booking_ref']?.toString() ?? '';
+    if (ref.isEmpty) {
+      _snack('ยังไม่มีข้อมูลติดตามรถสำหรับรอบนี้');
+      return;
+    }
+    final provider = context.read<TrackingProvider>();
+    final token = context.read<AppProvider>().api.token;
+    final navigator = Navigator.of(context);
+    provider.stopTracking();
+    await provider.startTracking(ref, authToken: token);
+    if (!mounted) return;
+    if (provider.errorMessage.isNotEmpty || provider.booking == null) {
+      _snack(
+        provider.errorMessage.isNotEmpty
+            ? provider.errorMessage
+            : 'ยังไม่มีข้อมูลติดตามรถสำหรับรอบนี้',
+      );
+      return;
+    }
+    navigator.push(MaterialPageRoute(builder: (_) => const TrackingMapPage()));
   }
 
   /// สตาฟกดส่งสรุปการเดินทางเข้าห้อง — ตอบทุกคนพร้อมกันด้วยปุ่มเดียว
@@ -1977,6 +2331,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _applyPoll(int messageId, dynamic poll, {bool fromBroadcast = false}) {
     if (poll is! Map || !mounted) return;
+    _refreshTodos();
     final idx = _messages.indexWhere(
       (m) => int.tryParse('${m['id']}') == messageId,
     );
@@ -2263,6 +2618,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _applyFood(int messageId, dynamic round) {
     if (round is! Map || !mounted) return;
+    _refreshTodos();
     final next = Map<String, dynamic>.from(round);
     if (_foodSheetMessageId == messageId) _foodSheetRound.value = next;
 
@@ -2733,6 +3089,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _applyCollection(int messageId, dynamic c) {
     if (c is! Map || !mounted) return;
+    _refreshTodos();
     final next = Map<String, dynamic>.from(c);
     if (_collectionSheetMessageId == messageId) _collectionSheet.value = next;
 
@@ -2901,6 +3258,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _applyRestStop(int messageId, dynamic stop) {
     if (stop is! Map || !mounted) return;
+    _refreshTodos();
     final next = Map<String, dynamic>.from(stop);
     if (_restSheetMessageId == messageId) _restSheetStop.value = next;
     // ปลุกรวม: ตื่นครบ/เลื่อนเวลา/ปิดการ์ด = ย้ายหรือยกเลิกปลุกในเครื่อง
@@ -2947,6 +3305,11 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _startEdit(Map<String, dynamic> message) {
+    // เก็บร่างที่พิมพ์ค้างไว้ก่อนช่องพิมพ์ถูกแทนด้วยข้อความที่จะแก้
+    if (_draftSave?.isActive ?? false) {
+      _draftSave!.cancel();
+      unawaited(_saveDraftNow());
+    }
     setState(() {
       _editing = message;
       _replyingTo = null;
@@ -2961,11 +3324,13 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _cancelEdit() {
     setState(() {
-      _editing = null;
+      // ล้างช่องก่อนออกจากโหมดแก้ไข — ไม่งั้นการล้างถูกนับเป็น "ร่างว่าง" แล้วร่างเดิมหาย
       _input.clear();
+      _editing = null;
       _mentionPicks.clear();
       _mentionQuery = null;
     });
+    unawaited(_restoreDraft());
   }
 
   Future<void> _deleteMessage(Map<String, dynamic> message) async {
@@ -2991,28 +3356,317 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
+  // ── แนะนำตัว / วันเกิด / แลกคอนแทค ──────────────────────────────────────
+
+  void _onSystemCta(String cta) {
+    switch (cta) {
+      case 'intro':
+        _openIntro();
+      case 'contacts':
+        _openContacts();
+    }
+  }
+
+  Map<String, dynamic> get _contactsInfo => _room?['contacts'] is Map
+      ? Map<String, dynamic>.from(_room!['contacts'] as Map)
+      : const {};
+
+  /// ดึงข้อความหนึ่งใบใหม่จากเซิร์ฟเวอร์ (ของที่ฉันเพิ่งโพสต์/แก้ผ่าน endpoint อื่น)
+  Future<void> _reloadMessage(int messageId) async {
+    try {
+      final data = await context.read<AppProvider>().chatMessages(
+        widget.scheduleId,
+        afterId: messageId - 1,
+      );
+      final fresh = (data['messages'] as List? ?? const [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((m) => int.tryParse('${m['id']}') == messageId)
+          .toList();
+      if (!mounted || fresh.isEmpty) return;
+      final idx = _messages.indexWhere((m) => int.tryParse('${m['id']}') == messageId);
+      if (idx >= 0) {
+        setState(() => _messages[idx] = fresh.first);
+      } else {
+        _ingest(fresh);
+        _scrollToBottom();
+      }
+    } catch (_) {
+      // รอบโพลถัดไปเก็บให้เอง
+    }
+  }
+
+  Future<void> _openIntro() async {
+    final app = context.read<AppProvider>();
+    Map<String, dynamic>? current;
+    try {
+      final mine = await app.chatMyIntro(widget.scheduleId);
+      if (mine['intro'] is Map) current = Map<String, dynamic>.from(mine['intro'] as Map);
+    } catch (_) {
+      // โหลดของเดิมไม่ได้ก็เริ่มฟอร์มว่าง
+    }
+    if (!mounted) return;
+    final draft = await _showSheet<IntroDraft>(ChatIntroSheet(initial: current));
+    if (draft == null || !mounted) return;
+    try {
+      final res = await app.saveChatIntro(
+        widget.scheduleId,
+        hometown: draft.hometown,
+        experience: draft.experience,
+        note: draft.note,
+      );
+      final id = int.tryParse('${res['message_id']}');
+      if (id != null) await _reloadMessage(id);
+      _snack(current == null ? 'แนะนำตัวแล้ว 👋' : 'แก้การ์ดแนะนำตัวแล้ว');
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  Future<void> _openContacts() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => TripContactsScreen(scheduleId: widget.scheduleId)),
+    );
+    if (mounted) _refreshRoom(force: true);
+  }
+
+  Future<void> _openBirthdays() async {
+    final app = context.read<AppProvider>();
+    await _showSheet<void>(
+      BirthdaySheet(
+        load: () => app.chatBirthdays(widget.scheduleId),
+        onGreet: (pid) async {
+          final items = await app.greetChatBirthday(widget.scheduleId, pid);
+          unawaited(_poll());
+          return items;
+        },
+      ),
+    );
+    if (mounted) _refreshRoom(force: true);
+  }
+
+  // ── "รอคุณอยู่" ─────────────────────────────────────────────────────────
+
+  @override
+  void _refreshTodos({bool immediate = false}) {
+    _todoDebounce?.cancel();
+    if (immediate) {
+      _fetchTodos();
+      return;
+    }
+    _todoDebounce = Timer(const Duration(milliseconds: 1200), _fetchTodos);
+  }
+
+  Future<void> _fetchTodos() async {
+    if (!mounted) return;
+    if (_todoFetching) {
+      // มีการเปลี่ยนระหว่างดึง — ดึงซ้ำอีกรอบหลังเสร็จ จะได้ไม่ค้างค่าเก่า
+      _todoAgain = true;
+      return;
+    }
+    _todoFetching = true;
+    try {
+      final raw = await context.read<AppProvider>().chatTodos(widget.scheduleId);
+      if (!mounted) return;
+      setState(() => _todos = ChatTodo.parseList(raw));
+    } catch (_) {
+      // แถบนี้เป็นทางลัด — ดึงไม่ได้ก็ใช้ค่าเดิมไป รอบหน้าลองใหม่
+    } finally {
+      _todoFetching = false;
+      if (_todoAgain && mounted) {
+        _todoAgain = false;
+        _refreshTodos();
+      }
+    }
+  }
+
+  Future<void> _openSearch() async {
+    HapticFeedback.selectionClick();
+    final id = await Navigator.of(context).push<int>(
+      MaterialPageRoute(builder: (_) => _ChatSearchScreen(scheduleId: widget.scheduleId)),
+    );
+    if (id != null && mounted) _jumpToMessage(id);
+  }
+
+  Future<void> _openTodos() async {
+    final picked = await showModalBottomSheet<ChatTodo>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
+      ),
+      builder: (_) => ChatTodoSheet(todos: _todos),
+    );
+    if (picked != null && mounted) _jumpToMessage(picked.messageId);
+  }
+
+  /// ไปที่ข้อความ — ถ้ายังไม่ได้โหลด (เก่ากว่าที่เลื่อนถึง) โหลดย้อนไปถึงมันก่อน
+  /// แบบต่อเนื่องไม่มีรู แล้วค่อยเลื่อนไปไฮไลต์
+  Future<void> _jumpToMessage(int messageId) async {
+    bool loaded() =>
+        _messages.any((m) => int.tryParse('${m['id']}') == messageId);
+
+    if (loaded()) {
+      _scrollToMessage(messageId);
+      return;
+    }
+    if (_jumping || _messages.isEmpty) return;
+
+    final oldest = _messages
+        .map((m) => int.tryParse('${m['id']}') ?? 0)
+        .where((id) => id > 0)
+        .fold<int>(0, (min, id) => min == 0 || id < min ? id : min);
+    if (oldest == 0 || messageId >= oldest) {
+      _toast('ข้อความนี้ถูกลบไปแล้ว');
+      return;
+    }
+
+    setState(() => _jumping = true);
+    final app = context.read<AppProvider>();
+    try {
+      final data = await app.chatMessages(
+        widget.scheduleId,
+        beforeId: oldest,
+        sinceId: messageId,
+      );
+      final older = (data['messages'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((m) => !_messages.any((e) => e['id'] == m['id']))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _messages.insertAll(0, older);
+        _hasMore = data['has_more'] == true;
+      });
+      _hydrateTools(older);
+      // ข้อความถูกซ่อน/ลบ หรือช่วงยาวเกินเพดาน — บอกตรง ๆ ดีกว่าเลื่อนไปผิดที่
+      if (!loaded()) {
+        _toast('หาข้อความนี้ไม่เจอแล้ว อาจถูกลบไป');
+        return;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollToMessage(messageId);
+      });
+    } catch (_) {
+      if (mounted) _toast('โหลดข้อความไม่สำเร็จ ลองอีกครั้ง');
+    } finally {
+      if (mounted) setState(() => _jumping = false);
+    }
+  }
+
+  // ── "รับทราบ" ใต้ประกาศ ───────────────────────────────────────────────
+
+  void _applyAck(int messageId, dynamic ack) {
+    final idx = _messages.indexWhere((m) => int.tryParse('${m['id']}') == messageId);
+    if (idx < 0 || !mounted) return;
+    setState(() {
+      _messages[idx] = {
+        ..._messages[idx],
+        'ack': mergeAck(_messages[idx]['ack'], ack),
+      };
+    });
+  }
+
+  void _onAckSignal(Map<String, dynamic> data) {
+    final id = int.tryParse('${data['message_id']}');
+    if (id == null) return;
+    _applyAck(id, data['ack']);
+    _refreshTodos();
+  }
+
+  Future<void> _ackMessage(int messageId) async {
+    if (!_ackBusy.add(messageId)) return;
+    setState(() {});
+    try {
+      final res = await context.read<AppProvider>().ackChatMessage(
+        widget.scheduleId,
+        messageId,
+      );
+      _applyAck(messageId, res['ack']);
+      _refreshTodos();
+    } catch (e) {
+      if (mounted) _toast(e.toString());
+    } finally {
+      _ackBusy.remove(messageId);
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _requestAckFor(Map<String, dynamic> message) async {
+    final id = int.tryParse('${message['id']}');
+    if (id == null) return;
+    final ok = await showConfirmDialog(
+      context,
+      title: 'ขอให้ทุกคนกดรับทราบ?',
+      message: 'ลูกทริปจะได้แจ้งเตือนและเห็นปุ่ม "รับทราบ" ใต้ข้อความนี้ '
+          'คุณดูได้ว่าใครยังไม่กด แล้วสะกิดเฉพาะคนนั้น',
+      confirmLabel: 'ขอให้กดรับทราบ',
+      icon: Icons.task_alt_rounded,
+    );
+    if (!ok || !mounted) return;
+    try {
+      final res = await context.read<AppProvider>().requestChatAck(
+        widget.scheduleId,
+        id,
+      );
+      _applyAck(id, res['ack']);
+      _toast('ขอให้ทุกคนกดรับทราบแล้ว');
+    } catch (e) {
+      if (mounted) _toast(e.toString());
+    }
+  }
+
+  Future<void> _openAckDetail(int messageId) async {
+    final app = context.read<AppProvider>();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLg)),
+      ),
+      builder: (_) => ChatAckDetailSheet(
+        load: () async {
+          final res = await app.chatAckDetail(widget.scheduleId, messageId);
+          _applyAck(messageId, res['ack']);
+          return res;
+        },
+        onNudge: () async {
+          final res = await app.nudgeChatAck(widget.scheduleId, messageId);
+          _applyAck(messageId, res['ack']);
+          return res;
+        },
+        onCancel: () async {
+          await app.cancelChatAckRequest(widget.scheduleId, messageId);
+          _applyAck(messageId, null);
+        },
+      ),
+    );
+  }
+
   Future<void> _pinMessage(Map<String, dynamic> message) async {
     final id = int.tryParse('${message['id']}');
     if (id == null) return;
     try {
-      final pinned = await context
+      final res = await context
           .read<AppProvider>()
           .pinChatMessage(widget.scheduleId, id);
       if (!mounted) return;
-      setState(() => _pinned = pinned);
+      setState(() {
+        _setPins(res['pinned_messages'], res['pinned_message']);
+        _pinIndex = 0;
+      });
       _toast('ปักหมุดข้อความแล้ว');
     } catch (e) {
       if (mounted) _toast(e.toString());
     }
   }
 
-  Future<void> _unpinMessage() async {
-    final id = int.tryParse('${_pinned?['id']}');
-    if (id == null) return;
+  Future<void> _unpinMessage(int id) async {
     try {
-      await context.read<AppProvider>().unpinChatMessage(widget.scheduleId, id);
+      final res = await context.read<AppProvider>().unpinChatMessage(widget.scheduleId, id);
       if (!mounted) return;
-      setState(() => _pinned = null);
+      setState(() => _setPins(res['pinned_messages'], res['pinned_message']));
       _toast('ปลดหมุดข้อความแล้ว');
     } catch (e) {
       if (mounted) _toast(e.toString());
@@ -3079,7 +3733,9 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _openMessageMenu(Map<String, dynamic> message) {
     final role = message['sender_role']?.toString() ?? 'customer';
-    if (role == 'system' || message['is_deleted'] == true) return;
+    // ข้อความระบบ: ทีมงานกดค้างได้เพื่อขอให้กดรับทราบ/ปักหมุด — ลูกทริปไม่มีเมนู
+    final isSystem = role == 'system';
+    if ((isSystem && !_canModerate) || message['is_deleted'] == true) return;
     // Optimistic messages (still sending / failed) aren't actionable yet.
     if (message['_pending'] == true || message['_failed'] == true) return;
     HapticFeedback.mediumImpact();
@@ -3087,8 +3743,11 @@ class _ChatScreenState extends State<ChatScreen>
     final messageId = int.tryParse('${message['id']}') ?? 0;
     final isMine = message['is_mine'] == true;
     final hasImage = (message['image_url']?.toString() ?? '').isNotEmpty;
-    final canEdit = isMine && body.isNotEmpty && !hasImage;
-    final canDelete = isMine || _canModerate;
+    // body ของสติกเกอร์เป็นแค่ข้อความสำรอง — คัดลอก/แก้ไขไม่มีความหมาย
+    final isSticker = message['sticker'] is Map;
+    final canEdit = !isSystem && isMine && body.isNotEmpty && !hasImage && !isSticker;
+    final canDelete = !isSystem && (isMine || _canModerate);
+    final hasAck = message['ack'] is Map;
 
     showModalBottomSheet<void>(
       context: context,
@@ -3102,6 +3761,7 @@ class _ChatScreenState extends State<ChatScreen>
           children: [
             const SizedBox(height: 10),
             // Quick emoji reaction row
+            if (!isSystem)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
@@ -3121,7 +3781,9 @@ class _ChatScreenState extends State<ChatScreen>
                 ],
               ),
             ),
-            Divider(color: AppTheme.border(context).withValues(alpha: 0.5)),
+            if (!isSystem)
+              Divider(color: AppTheme.border(context).withValues(alpha: 0.5)),
+            if (!isSystem)
             ListTile(
               leading: const Icon(Icons.reply_rounded),
               title: Text('ตอบกลับ',
@@ -3131,7 +3793,7 @@ class _ChatScreenState extends State<ChatScreen>
                 _startReply(message);
               },
             ),
-            if (body.isNotEmpty)
+            if (body.isNotEmpty && !isSticker)
               ListTile(
                 leading: const Icon(Icons.copy_rounded),
                 title: Text('คัดลอก',
@@ -3141,15 +3803,42 @@ class _ChatScreenState extends State<ChatScreen>
                   _copyMessage(body);
                 },
               ),
+            if (_canModerate && hasAck)
+              ListTile(
+                leading: const Icon(Icons.task_alt_rounded),
+                title: Text('ดูว่าใครยังไม่กดรับทราบ',
+                    style: appFont(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _openAckDetail(messageId);
+                },
+              )
+            else if (_canModerate && messageId > 0)
+              ListTile(
+                leading: const Icon(Icons.task_alt_rounded),
+                title: Text('ขอให้ทุกคนกดรับทราบ',
+                    style: appFont(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  'ลูกทริปได้แจ้งเตือน คุณเห็นว่าใครยังไม่กด',
+                  style: appFont(
+                    fontSize: AppText.sizeCaption,
+                    color: AppTheme.mutedText(context),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _requestAckFor(message);
+                },
+              ),
             if (_canModerate) ...[
-              if (int.tryParse('${_pinned?['id']}') == messageId)
+              if (_isPinned(messageId))
                 ListTile(
                   leading: const Icon(Icons.push_pin_outlined),
                   title: Text('ปลดหมุด',
                       style: appFont(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _unpinMessage();
+                    _unpinMessage(messageId);
                   },
                 )
               else
@@ -3186,7 +3875,7 @@ class _ChatScreenState extends State<ChatScreen>
                 },
               ),
             // รายงาน/บล็อก มีเฉพาะข้อความของคนอื่น — รายงานตัวเองไม่มีความหมาย
-            if (!isMine)
+            if (!isMine && !isSystem)
               ListTile(
                 leading: const Icon(Icons.flag_outlined),
                 title: Text('รายงาน หรือบล็อกผู้ส่ง',
@@ -3363,6 +4052,19 @@ class _ChatScreenState extends State<ChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    // ปุ่มย้อนกลับขณะแผงสติกเกอร์เปิด = ปิดแผง (แบบคีย์บอร์ด) ไม่ใช่ออกจากห้อง
+    return PopScope(
+      canPop: !_stickerPanelOpen,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _stickerPanelOpen) {
+          setState(() => _stickerPanelOpen = false);
+        }
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.chatCanvas(context),
       appBar: AppBar(
@@ -3411,6 +4113,11 @@ class _ChatScreenState extends State<ChatScreen>
               ),
             ),
           IconButton(
+            tooltip: 'ค้นหาในห้อง',
+            onPressed: _loading ? null : _openSearch,
+            icon: const Icon(Icons.search_rounded),
+          ),
+          IconButton(
             tooltip: 'การแจ้งเตือน: ${_notifyLevel.label}',
             onPressed: _room == null || _savingNotify ? null : _openNotifySettings,
             icon: Icon(_notifyLevel.icon),
@@ -3442,15 +4149,44 @@ class _ChatScreenState extends State<ChatScreen>
               onKind: _acknowledgeStops,
               onSupplies: _openSupplyQueue,
             ),
-          if (_pinned != null)
+          if (_canModerate &&
+              (int.tryParse('${_room?['birthdays_pending']}') ?? 0) > 0)
+            BirthdayStaffBanner(
+              count: int.tryParse('${_room?['birthdays_pending']}') ?? 0,
+              onOpen: _openBirthdays,
+            ),
+          if (_pins.isNotEmpty)
             _PinnedBanner(
-              pinned: _pinned!,
+              pinned: _pins[_pinIndex.clamp(0, _pins.length - 1)],
+              index: _pinIndex.clamp(0, _pins.length - 1),
+              count: _pins.length,
               canModerate: _canModerate,
               onTap: () {
-                final id = int.tryParse('${_pinned?['id']}');
-                if (id != null) _scrollToMessage(id);
+                final shown = _pins[_pinIndex.clamp(0, _pins.length - 1)];
+                final id = int.tryParse('${shown['id']}');
+                // แตะครั้งต่อไปพาไปหมุดถัดไป (แบบ Telegram) — วนกลับอันแรก
+                setState(() => _pinIndex = (_pinIndex + 1) % _pins.length);
+                if (id != null) _jumpToMessage(id);
               },
-              onUnpin: _canModerate ? _unpinMessage : null,
+              onUnpin: _canModerate
+                  ? () {
+                      final id = int.tryParse(
+                        '${_pins[_pinIndex.clamp(0, _pins.length - 1)]['id']}',
+                      );
+                      if (id != null) _unpinMessage(id);
+                    }
+                  : null,
+            ),
+          if (!_loading && _showQuietSuggest)
+            _QuietSuggestBanner(
+              onAccept: _acceptQuietSuggest,
+              onDismiss: _dismissQuietSuggest,
+            ),
+          if (!_loading && _todos.isNotEmpty)
+            ChatTodoBar(
+              todos: _todos,
+              onOpen: (t) => _jumpToMessage(t.messageId),
+              onOpenAll: _openTodos,
             ),
           Expanded(
             child: Stack(
@@ -3505,6 +4241,7 @@ class _ChatScreenState extends State<ChatScreen>
             _QuickAskBar(
               canModerate: _canModerate,
               hasItinerary: _hasItinerary,
+              tripLive: _room?['trip_live'] == true,
               onAsk: _openTripInfo,
               onSendSummary: _sendTripSummary,
               onSendItinerary: _sendTripItinerary,
@@ -3676,13 +4413,20 @@ class _ChatScreenState extends State<ChatScreen>
       // System messages render as a centered pill, never as a chat bubble —
       // they're notices (e.g. "เจ้าหน้าที่เข้าร่วมแชท"), not conversation.
       if (role == 'system') {
-        items.add(
-          _SystemMessage(
-            message: m,
-            myUserId: _myUserId,
-            onGreet: _greet,
-          ),
+        final system = _SystemMessage(
+          message: m,
+          myUserId: _myUserId,
+          onGreet: _greet,
+          canModerate: _canModerate,
+          highlight: mId > 0 && mId == _highlightId,
+          ackBusy: _ackBusy.contains(mId),
+          onAck: () => _ackMessage(mId),
+          onOpenAck: () => _openAckDetail(mId),
+          onLongPress: _canModerate ? () => _openMessageMenu(m) : null,
+          onCta: _onSystemCta,
         );
+        // คีย์ไว้เหมือนบับเบิล — แถบ "รอคุณอยู่" กระโดดมาที่ประกาศระบบได้
+        items.add(mId > 0 ? KeyedSubtree(key: _keyFor(mId), child: system) : system);
         continue;
       }
 
@@ -3736,6 +4480,10 @@ class _ChatScreenState extends State<ChatScreen>
         onPayCollection: (c) => _payCollection(mId, c),
         onOpenCollection: (c) => _openCollectionList(mId, c),
         onOpenLostItems: () => _openLostItems(),
+        ackBusy: _ackBusy.contains(mId),
+        onAck: () => _ackMessage(mId),
+        onOpenAck: () => _openAckDetail(mId),
+        onEditIntro: _openIntro,
         tools: _BubbleTools(
           onTrailReach: (t, ids, index) => _reachTrail(mId, t, ids, index),
           onTrailHelp: (t) => _askTrailHelp(mId, t),
@@ -3953,6 +4701,23 @@ class _ChatScreenState extends State<ChatScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_mentionQuery != null) _buildMentionBar(),
+            if (_mentionQuery == null &&
+                _editing == null &&
+                !_voice.isRecording &&
+                _stickerSuggestions.isNotEmpty)
+              StickerSuggestionBar(
+                stickers: _stickerSuggestions,
+                onPick: (s) => _sendSticker(s, fromSuggestion: true),
+                onDismiss: _dismissStickerSuggestions,
+              ),
+            if (_canModerate &&
+                _isComposing &&
+                _editing == null &&
+                !_voice.isRecording)
+              AckRequestToggle(
+                value: _requestAck,
+                onChanged: (v) => setState(() => _requestAck = v),
+              ),
             if (_editing != null)
               _EditPreviewBar(
                 message: _editing!,
@@ -4005,6 +4770,26 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
                 decoration: InputDecoration(
                   hintText: 'พิมพ์ข้อความ...',
+                  // ปุ่มสติกเกอร์ในช่องพิมพ์ (แบบ LINE) — แก้ข้อความอยู่ไม่ต้องมี
+                  suffixIcon: _editing != null
+                      ? null
+                      : IconButton(
+                          onPressed: _sending ? null : _toggleStickerPanel,
+                          tooltip: _stickerPanelOpen ? 'เปิดคีย์บอร์ด' : 'สติกเกอร์',
+                          icon: Icon(
+                            _stickerPanelOpen
+                                ? Icons.keyboard_rounded
+                                : Icons.emoji_emotions_outlined,
+                            size: 22,
+                            color: _stickerPanelOpen
+                                ? AppTheme.primaryColor
+                                : AppTheme.mutedText(context),
+                          ),
+                        ),
+                  suffixIconConstraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
                   hintStyle: appFont(
                     color: AppTheme.mutedText(context),
                     fontSize: AppText.sizeSubtitle,
@@ -4058,6 +4843,15 @@ class _ChatScreenState extends State<ChatScreen>
                 ],
               ),
             ),
+            if (_stickerPanelOpen && !_voice.isRecording && _editing == null)
+              ChatStickerPanel(
+                packs: _stickerPacks,
+                recentIds: _recentStickerIds,
+                loading: _stickersLoading,
+                error: _stickersError,
+                onRetry: () => _loadStickers(force: true),
+                onSend: _sendSticker,
+              ),
           ],
         ),
       ),
@@ -4150,13 +4944,48 @@ class _SystemMessage extends StatelessWidget {
   final Map<String, dynamic> message;
   final int? myUserId;
   final ValueChanged<String>? onGreet;
+  final bool canModerate;
+  final bool highlight;
+  final bool ackBusy;
+  final VoidCallback? onAck;
+  final VoidCallback? onOpenAck;
 
-  const _SystemMessage({required this.message, this.myUserId, this.onGreet});
+  /// ทีมงานกดค้าง → เมนู (ขอให้กดรับทราบ / ปักหมุด) — ลูกทริปไม่มีเมนู
+  final VoidCallback? onLongPress;
+
+  /// ปุ่มชวนบนข้อความระบบ (cta = intro | contacts)
+  final ValueChanged<String>? onCta;
+
+  const _SystemMessage({
+    required this.message,
+    this.myUserId,
+    this.onGreet,
+    this.canModerate = false,
+    this.highlight = false,
+    this.ackBusy = false,
+    this.onAck,
+    this.onOpenAck,
+    this.onLongPress,
+    this.onCta,
+  });
 
   @override
   Widget build(BuildContext context) {
     final body = message['body']?.toString() ?? '';
     if (body.isEmpty) return const SizedBox.shrink();
+    final child = _content(context, body);
+    if (onLongPress == null) return child;
+
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: child,
+    );
+  }
+
+  Widget _content(BuildContext context, String body) {
+    final ack = message['ack'] is Map
+        ? Map<String, dynamic>.from(message['ack'] as Map)
+        : null;
 
     // แนะนำทีมงานประจำรอบ — การ์ดรูป/ชื่อเล่น/ป่าที่เคยเดิน แทนข้อความล้วน
     final intro = message['staff_intro'];
@@ -4172,7 +5001,17 @@ class _SystemMessage extends StatelessWidget {
       );
     }
 
-    final isNotice = !body.contains('\n') && body.characters.length <= 90;
+    final cta = message['cta']?.toString();
+    final ctaLabel = switch (cta) {
+      'intro' => 'แนะนำตัว',
+      'contacts' => 'แลกคอนแทค',
+      _ => null,
+    };
+    // ประกาศที่ต้องกดรับทราบ/มีปุ่มชวนเป็นการ์ดเสมอ — ป้ายเม็ดยาไม่มีที่ให้วางปุ่ม
+    final isNotice = ack == null &&
+        ctaLabel == null &&
+        !body.contains('\n') &&
+        body.characters.length <= 90;
 
     if (isNotice) {
       return Padding(
@@ -4215,7 +5054,8 @@ class _SystemMessage extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
-            color: AppTheme.primaryColor.withValues(alpha: 0.18),
+            color: AppTheme.primaryColor.withValues(alpha: highlight ? 0.9 : 0.18),
+            width: highlight ? 1.5 : 1,
           ),
         ),
         child: Column(
@@ -4265,6 +5105,37 @@ class _SystemMessage extends StatelessWidget {
                   color: AppTheme.onSurface(context).withValues(alpha: 0.86),
                   height: 1.55,
                 ),
+              ),
+            ],
+            if (ctaLabel != null && onCta != null) ...[
+              const SizedBox(height: 10),
+              FilledButton.icon(
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  onCta!(cta!);
+                },
+                icon: Icon(
+                  cta == 'intro' ? Icons.waving_hand_rounded : Icons.handshake_rounded,
+                  size: 16,
+                ),
+                label: Text(ctaLabel, style: appFont(fontWeight: FontWeight.w800)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  minimumSize: const Size(0, 36),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  ),
+                ),
+              ),
+            ],
+            if (ack != null && onAck != null && onOpenAck != null) ...[
+              const SizedBox(height: 10),
+              ChatAckBar(
+                ack: ack,
+                canManage: canModerate,
+                busy: ackBusy,
+                onAck: onAck!,
+                onOpenDetail: onOpenAck!,
               ),
             ],
           ],
@@ -4387,6 +5258,12 @@ class _SystemBodyTextState extends State<_SystemBodyText> {
 /// คำถามที่ลูกค้าถามซ้ำที่สุดในห้องแชท — ใช้เป็นทั้งป้ายปุ่มและหัวข้อคำตอบ
 enum _QuickAsk {
   itinerary(QuickAskTopic.itinerary, 'กำหนดการ', 'กำหนดการ', Icons.route_rounded),
+  van(
+    QuickAskTopic.van,
+    'รถถึงไหนแล้ว',
+    'ตำแหน่งรถ',
+    Icons.directions_bus_rounded,
+  ),
   time(QuickAskTopic.time, 'ขึ้นรถกี่โมง', 'เวลาขึ้นรถ', Icons.schedule_rounded),
   place(QuickAskTopic.place, 'จุดรับที่ไหน', 'จุดรับ', Icons.pin_drop_rounded),
   vehicle(
@@ -4501,6 +5378,7 @@ class _QuickAskSuggestion extends StatelessWidget {
 class _QuickAskBar extends StatelessWidget {
   final bool canModerate;
   final bool hasItinerary;
+  final bool tripLive;
   final ValueChanged<_QuickAsk> onAsk;
   final Future<void> Function() onSendSummary;
   final Future<void> Function() onSendItinerary;
@@ -4508,6 +5386,7 @@ class _QuickAskBar extends StatelessWidget {
   const _QuickAskBar({
     required this.canModerate,
     required this.hasItinerary,
+    required this.tripLive,
     required this.onAsk,
     required this.onSendSummary,
     required this.onSendItinerary,
@@ -4527,7 +5406,9 @@ class _QuickAskBar extends StatelessWidget {
         children: [
           for (final ask in _QuickAsk.values) ...[
             // รอบที่ยังไม่มีกำหนดการ (ทั้งของรอบและของทริป) ไม่ต้องมีปุ่มให้กดค้าง
-            if (ask != _QuickAsk.itinerary || hasItinerary) ...[
+            // "รถถึงไหนแล้ว" มีความหมายเฉพาะวันเดินทาง (ช่วงเดียวกับการ์ดหน้าจอล็อก)
+            if ((ask != _QuickAsk.itinerary || hasItinerary) &&
+                (ask != _QuickAsk.van || tripLive)) ...[
               _QuickAskChip(
                 icon: ask.icon,
                 label: ask.label,
@@ -4623,12 +5504,14 @@ class _TripInfoSheet extends StatelessWidget {
   final _QuickAsk focus;
   final int scheduleId;
   final String tripTitle;
+  final Future<void> Function() onTrack;
 
   const _TripInfoSheet({
     required this.info,
     required this.focus,
     required this.scheduleId,
     required this.tripTitle,
+    required this.onTrack,
   });
 
   Map<String, dynamic>? _map(dynamic value) =>
@@ -4686,6 +5569,8 @@ class _TripInfoSheet extends StatelessWidget {
     final plate = _text(vehicle?['license_plate']);
     final vehicleName = _text(vehicle?['name']);
     final vehicleColor = _text(vehicle?['color']);
+    final live = _map(info['live']);
+    final canTrack = live?['can_track'] == true;
 
     return SafeArea(
       top: false,
@@ -4745,6 +5630,25 @@ class _TripInfoSheet extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 children: [
+                  // ตำแหน่งรถ — ขึ้นเฉพาะวันเดินทาง (หรือเมื่อถามเรื่องนี้ตรง ๆ)
+                  if (live != null || focus == _QuickAsk.van)
+                    _TripInfoBlock(
+                      ask: _QuickAsk.van,
+                      highlight: focus == _QuickAsk.van,
+                      answer: _text(live?['headline']),
+                      pending:
+                          'ดูตำแหน่งรถได้ในวันเดินทาง ทีมงานจะแจ้งเมื่อรถออกครับ',
+                      detail: _text(live?['detail']),
+                      actionIcon: Icons.map_rounded,
+                      actionLabel: canTrack ? 'ดูรถบนแผนที่' : null,
+                      onAction: canTrack
+                          ? () {
+                              HapticFeedback.selectionClick();
+                              Navigator.of(context).pop();
+                              onTrack();
+                            }
+                          : null,
+                    ),
                   _TripInfoBlock(
                     ask: _QuickAsk.itinerary,
                     highlight: focus == _QuickAsk.itinerary,
@@ -6012,6 +6916,10 @@ class _MessageBubble extends StatelessWidget {
   final ValueChanged<Map<String, dynamic>> onPayCollection;
   final ValueChanged<Map<String, dynamic>> onOpenCollection;
   final VoidCallback onOpenLostItems;
+  final bool ackBusy;
+  final VoidCallback onAck;
+  final VoidCallback onOpenAck;
+  final VoidCallback onEditIntro;
   final _BubbleTools tools;
 
   const _MessageBubble({
@@ -6045,6 +6953,10 @@ class _MessageBubble extends StatelessWidget {
     required this.onPayCollection,
     required this.onOpenCollection,
     required this.onOpenLostItems,
+    required this.ackBusy,
+    required this.onAck,
+    required this.onOpenAck,
+    required this.onEditIntro,
     required this.tools,
   });
 
@@ -6104,7 +7016,12 @@ class _MessageBubble extends StatelessWidget {
     final wellness = card('wellness');
     final dropoff = card('dropoff');
     final porter = card('porter');
-    final isCard = poll != null ||
+    // สติกเกอร์ลอยบนพื้นห้องแบบ LINE — ไม่มีกรอบบับเบิล
+    final sticker = card('sticker');
+    // การ์ดแนะนำตัว — วาดแทนข้อความสำรองใน body
+    final intro = card('intro');
+    final isCard = intro != null ||
+        poll != null ||
         foodRound != null ||
         restStop != null ||
         collection != null ||
@@ -6119,7 +7036,7 @@ class _MessageBubble extends StatelessWidget {
     // the server returns its hosted URL).
     final localImagePath =
         isDeleted ? '' : (message['_local_image_path']?.toString() ?? '');
-    final hasText = !isDeleted && !isCard && body.isNotEmpty;
+    final hasText = !isDeleted && !isCard && sticker == null && body.isNotEmpty;
     final hasImage = imageUrl.isNotEmpty;
     final hasLocalImage = imageUrl.isEmpty && localImagePath.isNotEmpty;
     // ข้อความเสียง — ระหว่างอัปโหลดเล่นจากไฟล์ในเครื่อง ส่งถึงแล้วเล่นจากเซิร์ฟเวอร์
@@ -6136,12 +7053,17 @@ class _MessageBubble extends StatelessWidget {
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
+    final ack = card('ack');
 
     final isDark = AppTheme.isDark(context);
     // บับเบิลฝั่งคนอื่นเป็นเทาอ่อนบนพื้นห้องสีขาว (โหมดมืดกลับกัน) — คู่สีนี้
     // อยู่ใน AppTheme เพราะพื้นห้องกับบับเบิลต้องขยับไปด้วยกันเสมอ
     final neutralBg = AppTheme.chatIncomingBubble(context);
-    final bg = (isMine && !isCard) ? AppTheme.primaryColor : neutralBg;
+    final bg = sticker != null
+        ? Colors.transparent
+        : (isMine && !isCard)
+            ? AppTheme.primaryColor
+            : neutralBg;
     final fg = (isMine && !isCard)
         ? Colors.white
         : AppTheme.onSurface(context);
@@ -6223,7 +7145,9 @@ class _MessageBubble extends StatelessWidget {
                 GestureDetector(
                   onLongPress: onLongPress,
                   child: Container(
-                    padding: (hasImage || hasLocalImage) && !hasText
+                    padding: sticker != null
+                        ? EdgeInsets.zero
+                        : (hasImage || hasLocalImage) && !hasText
                         ? const EdgeInsets.all(4)
                         : const EdgeInsets.fromLTRB(14, 11, 14, 12),
                     decoration: BoxDecoration(
@@ -6238,7 +7162,7 @@ class _MessageBubble extends StatelessWidget {
                               color: AppTheme.primaryColor.withValues(alpha: 0.9),
                               width: 1.5,
                             )
-                          : (isMine && !isCard)
+                          : (isMine && !isCard) || sticker != null
                           ? null
                           : Border.all(
                               color: isDark
@@ -6254,7 +7178,8 @@ class _MessageBubble extends StatelessWidget {
                         if (replyTo != null) ...[
                           _QuotedReply(
                             reply: replyTo,
-                            isMine: isMine,
+                            // สติกเกอร์ไม่มีพื้นสีของเรา — ใช้แบบพื้นกลางให้อ่านออก
+                            isMine: isMine && sticker == null,
                             onTap: () {
                               final rid = int.tryParse('${replyTo['id']}');
                               if (rid != null) onReplyTap(rid);
@@ -6288,6 +7213,19 @@ class _MessageBubble extends StatelessWidget {
                                 ),
                               ),
                             ],
+                          )
+                        else if (intro != null)
+                          ChatIntroCard(
+                            intro: intro,
+                            name: author,
+                            isMine: isMine,
+                            onEdit: isMine ? onEditIntro : null,
+                          )
+                        else if (sticker != null)
+                          ChatStickerImage(
+                            url: sticker['url']?.toString() ?? '',
+                            size: 132,
+                            label: sticker['label']?.toString(),
                           )
                         else if (poll != null)
                           _PollCard(
@@ -6389,6 +7327,19 @@ class _MessageBubble extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (ack != null) ...[
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: EdgeInsets.only(left: isMine ? 0 : 4, right: isMine ? 4 : 0),
+                    child: ChatAckBar(
+                      ack: ack,
+                      canManage: canModerate,
+                      busy: ackBusy,
+                      onAck: onAck,
+                      onOpenDetail: onOpenAck,
+                    ),
+                  ),
+                ],
                 if (reactions.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   _ReactionChips(
@@ -6667,7 +7618,10 @@ class _ImageViewer extends StatelessWidget {
   final String url;
   final String? title;
 
-  const _ImageViewer({required this.url, this.title});
+  /// เปิดจากคลังรูปของห้อง — มีปุ่ม "ไปที่ข้อความ" (ปิดแล้วคืน true)
+  final bool onGoToMessage;
+
+  const _ImageViewer({required this.url, this.title, this.onGoToMessage = false});
 
   /// Downloads the photo to a temp file and opens the OS share sheet, where
   /// "Save Image" / "บันทึกรูปภาพ" writes it to the device gallery.
@@ -6709,6 +7663,12 @@ class _ImageViewer extends StatelessWidget {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         actions: [
+          if (onGoToMessage)
+            IconButton(
+              icon: const Icon(Icons.forum_outlined),
+              tooltip: 'ไปที่ข้อความ',
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
           IconButton(
             icon: const Icon(Icons.ios_share_rounded),
             tooltip: 'บันทึก / แชร์',
@@ -6987,7 +7947,10 @@ class _RoomInfoSheet extends StatelessWidget {
 class _NotifyLevelSheet extends StatelessWidget {
   final ChatNotifyLevel current;
 
-  const _NotifyLevelSheet({required this.current});
+  /// วันที่ "เงียบไว้ก่อน" จะกลับมาแจ้งทุกข้อความ (เมื่อเลือกไว้และยังไม่ถึง)
+  final DateTime? wakesOn;
+
+  const _NotifyLevelSheet({required this.current, this.wakesOn});
 
   @override
   Widget build(BuildContext context) {
@@ -7037,6 +8000,11 @@ class _NotifyLevelSheet extends StatelessWidget {
               _NotifyLevelOption(
                 level: level,
                 selected: level == current,
+                note: level == ChatNotifyLevel.untilTrip &&
+                        level == current &&
+                        wakesOn != null
+                    ? 'กลับมาแจ้งทุกข้อความวันที่ ${thaiDateShort(wakesOn!)}'
+                    : null,
                 onTap: () => Navigator.of(context).pop(level),
               ),
           ],
@@ -7049,12 +8017,14 @@ class _NotifyLevelSheet extends StatelessWidget {
 class _NotifyLevelOption extends StatelessWidget {
   final ChatNotifyLevel level;
   final bool selected;
+  final String? note;
   final VoidCallback onTap;
 
   const _NotifyLevelOption({
     required this.level,
     required this.selected,
     required this.onTap,
+    this.note,
   });
 
   @override
@@ -7110,6 +8080,17 @@ class _NotifyLevelOption extends StatelessWidget {
                           color: AppTheme.mutedText(context),
                         ),
                       ),
+                      if (note != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          note!,
+                          style: appFont(
+                            fontSize: AppText.sizeCaption,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -7637,6 +8618,8 @@ class _RoleTag extends StatelessWidget {
 
 class _PinnedBanner extends StatelessWidget {
   final Map<String, dynamic> pinned;
+  final int index;
+  final int count;
   final bool canModerate;
   final VoidCallback onTap;
   final VoidCallback? onUnpin;
@@ -7645,6 +8628,8 @@ class _PinnedBanner extends StatelessWidget {
     required this.pinned,
     required this.canModerate,
     required this.onTap,
+    this.index = 0,
+    this.count = 1,
     this.onUnpin,
   });
 
@@ -7681,7 +8666,10 @@ class _PinnedBanner extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      senderName.isEmpty ? 'ปักหมุด' : 'ปักหมุด · $senderName',
+                      [
+                        count > 1 ? 'ปักหมุด ${index + 1}/$count' : 'ปักหมุด',
+                        if (senderName.isNotEmpty) senderName,
+                      ].join(' · '),
                       style: appFont(
                         fontSize: AppText.sizeCaption,
                         fontWeight: FontWeight.w800,
@@ -8056,6 +9044,59 @@ class _TypingIndicator extends StatelessWidget {
                 color: AppTheme.mutedText(context),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ชวนให้เงียบห้องไว้ก่อน — ห้องของรอบที่อีกนานกว่าจะเดินทาง (เกิน 14 วัน)
+class _QuietSuggestBanner extends StatelessWidget {
+  final VoidCallback onAccept;
+  final VoidCallback onDismiss;
+
+  const _QuietSuggestBanner({required this.onAccept, required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: AppTheme.subtleSurface(context),
+        border: Border(bottom: BorderSide(color: AppTheme.border(context))),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.bedtime_rounded, size: 18, color: AppTheme.mutedText(context)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'ทริปนี้อีกนาน เงียบห้องไว้ก่อนไหม? แจ้งเฉพาะทีมงาน แล้วเปิดเองตอน 3 วันก่อนเดินทาง',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+                color: AppTheme.onSurface(context),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onAccept,
+            child: Text(
+              'เงียบไว้ก่อน',
+              style: appFont(
+                fontSize: AppText.sizeLabel,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onDismiss,
+            visualDensity: VisualDensity.compact,
+            tooltip: 'ไม่ต้อง',
+            icon: Icon(Icons.close_rounded, size: 18, color: AppTheme.mutedText(context)),
           ),
         ],
       ),

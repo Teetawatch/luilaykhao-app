@@ -8,7 +8,10 @@
 /// **จับพลาดแล้วไม่เสียหาย** เพราะปลายทางคือชีตที่ตอบครบทั้งห้าข้ออยู่แล้ว
 /// เพียงแต่ไฮไลต์ข้อที่เดาไว้ — เดาผิดคือผู้ใช้เห็นคำตอบข้ออื่นด้วย ไม่ใช่เห็นผิด
 /// และคำตอบนี้ขึ้นเฉพาะบนเครื่องคนถาม ไม่ได้โพสต์ลงห้อง เดาผิดจึงไม่กวนใคร
-enum QuickAskTopic { itinerary, time, place, vehicle, contact }
+///
+/// ข้อ [QuickAskTopic.van] ("รถถึงไหนแล้ว") มีแต่ในแอป ไม่มีในบอทของห้อง
+/// (ChatAutoAnswerService) โดยตั้งใจ — ระยะรถต่างกันตามจุดรับของแต่ละคน
+enum QuickAskTopic { itinerary, van, time, place, vehicle, contact }
 
 class QuickAskMatcher {
   /// คำที่พบแล้วมั่นใจได้เลยว่าถามข้อนั้น
@@ -22,6 +25,21 @@ class QuickAskMatcher {
       'โปรแกรมทริป',
       'โปรแกรมเดินทาง',
       'itinerary',
+    ],
+    QuickAskTopic.van: [
+      'รถถึงไหน',
+      'ถึงไหนแล้ว',
+      'รถอยู่ไหน',
+      'รถอยู่ตรงไหน',
+      'รถมายัง',
+      'รถมาถึงยัง',
+      'รถมาถึงหรือยัง',
+      'รถใกล้ถึง',
+      'ใกล้ถึงยัง',
+      'ใกล้ถึงหรือยัง',
+      'อีกกี่นาทีถึง',
+      'รถออกยัง',
+      'รถออกหรือยัง',
     ],
     QuickAskTopic.place: [
       'จุดรับ',
@@ -106,6 +124,7 @@ class QuickAskMatcher {
   /// ไม่ถูกกลืนโดยคำกว้างของข้ออื่น
   static const List<QuickAskTopic> _order = [
     QuickAskTopic.itinerary,
+    QuickAskTopic.van,
     QuickAskTopic.place,
     QuickAskTopic.time,
     QuickAskTopic.vehicle,
@@ -162,6 +181,18 @@ class QuickAskAnswer {
         final total = int.tryParse('${itinerary['total']}') ?? 0;
 
         return 'กำหนดการของรอบนี้ $total รายการ';
+      case QuickAskTopic.van:
+        final live = _map(info['live']);
+        if (live == null) {
+          return 'ดูตำแหน่งรถได้ในวันเดินทาง ทีมงานจะแจ้งเมื่อรถออกครับ';
+        }
+
+        final headline = _text(live['headline']);
+        final detail = _text(live['detail']);
+
+        return [?headline, ?detail].join(' · ').isEmpty
+            ? 'ดูรถบนแผนที่'
+            : [?headline, ?detail].join(' · ');
       case QuickAskTopic.time:
         final time = _text(pickup?['time']);
 
