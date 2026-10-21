@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../services/wake_alarm_service.dart';
 import '../theme/app_theme.dart';
 import 'sheet_close_button.dart';
 import 'travel_widgets.dart';
@@ -43,41 +44,70 @@ class _Words {
   /// เช็คถึงบ้าน — ไม่มีเวลานัด ไม่มีนับถอยหลัง ไม่มีขยายเวลา
   bool get home => kind == 'home';
 
-  String _pick(String rest, String meetup, String home) =>
-      this.home ? home : (this.meetup ? meetup : rest);
+  /// ปลุกรวม — return_at คือเวลาปลุก, place คือสิ่งที่ตามมาหลังตื่น
+  bool get wakeup => kind == 'wakeup';
 
-  IconData get icon => home
-      ? Icons.home_rounded
-      : (meetup ? Icons.place_rounded : Icons.local_parking_rounded);
-  String get fallbackTitle => _pick('จุดพัก', 'นัดรวมพล', 'เช็คถึงบ้าน');
-  String get done => _pick('ออกรถแล้ว', 'เริ่มแล้ว', 'ปิดแล้ว');
-  String get deadline => _pick('กลับขึ้นรถ', 'นัดรวมพล', 'ถึงบ้าน');
-  String get arrived => _pick('ขึ้นรถแล้ว', 'มาถึงแล้ว', 'ถึงบ้านแล้ว');
-  String get meArrived =>
-      _pick('ฉันขึ้นรถแล้ว', 'ฉันมาถึงแล้ว', 'ฉันถึงบ้านแล้ว');
-  String get waiting => _pick('ยังไม่ขึ้น', 'ยังไม่มา', 'ยังไม่ได้บอก');
-  String get allIn => _pick('ขึ้นรถครบ', 'มาครบ', 'ถึงบ้านครบ');
-  String get go => _pick('ออกรถ', 'เริ่มเลย', 'ปิดการ์ด');
-  String get pickTitle =>
-      _pick('ใครขึ้นรถแล้วบ้าง', 'ใครมาถึงแล้วบ้าง', 'ใครถึงบ้านแล้วบ้าง');
+  String _pick(String rest, String meetup, String home, String wakeup) =>
+      this.wakeup
+      ? wakeup
+      : (this.home ? home : (this.meetup ? meetup : rest));
+
+  IconData get icon => wakeup
+      ? Icons.alarm_rounded
+      : (home
+            ? Icons.home_rounded
+            : (meetup ? Icons.place_rounded : Icons.local_parking_rounded));
+  String get fallbackTitle =>
+      _pick('จุดพัก', 'นัดรวมพล', 'เช็คถึงบ้าน', 'ปลุกรวม');
+  String get done => _pick('ออกรถแล้ว', 'เริ่มแล้ว', 'ปิดแล้ว', 'ปิดแล้ว');
+  String get deadline => _pick('กลับขึ้นรถ', 'นัดรวมพล', 'ถึงบ้าน', 'ปลุก');
+  String get arrived =>
+      _pick('ขึ้นรถแล้ว', 'มาถึงแล้ว', 'ถึงบ้านแล้ว', 'ตื่นแล้ว');
+  String get meArrived => _pick(
+    'ฉันขึ้นรถแล้ว',
+    'ฉันมาถึงแล้ว',
+    'ฉันถึงบ้านแล้ว',
+    'ฉันตื่นแล้ว',
+  );
+  String get waiting =>
+      _pick('ยังไม่ขึ้น', 'ยังไม่มา', 'ยังไม่ได้บอก', 'ยังไม่ตื่น');
+  String get allIn => _pick('ขึ้นรถครบ', 'มาครบ', 'ถึงบ้านครบ', 'ตื่นครบ');
+  String get go => _pick('ออกรถ', 'เริ่มเลย', 'ปิดการ์ด', 'ปิดการ์ด');
+  String get pickTitle => _pick(
+    'ใครขึ้นรถแล้วบ้าง',
+    'ใครมาถึงแล้วบ้าง',
+    'ใครถึงบ้านแล้วบ้าง',
+    'ใครตื่นแล้วบ้าง',
+  );
   String confirmGo(int missing) => _pick(
     'ยังขาด $missing คน ออกรถเลยไหม?',
     'ยังไม่มา $missing คน เริ่มเลยไหม?',
     'ยังไม่ได้บอก $missing คน ปิดการ์ดเลยไหม?',
+    'ยังไม่ตื่น $missing คน ปิดการ์ดเลยไหม?',
   );
   String get confirmHint => _pick(
     'บางคนอาจขึ้นรถแล้วแต่ลืมกด ลองนับหัวบนรถอีกรอบก่อนนะครับ',
     'บางคนอาจมาถึงแล้วแต่ลืมกด ลองนับหัวอีกรอบก่อนนะครับ',
     'ปิดแล้วลูกทริปจะกดถึงบ้านไม่ได้อีก ลองโทรถามคนที่ยังไม่กดก่อนนะครับ',
+    'ปิดแล้วระบบจะไม่ปลุกซ้ำ ลองไปเคาะห้องที่ยังเงียบก่อนนะครับ',
   );
-  IconData get goIcon => home
-      ? Icons.home_rounded
-      : (meetup ? Icons.flag_rounded : Icons.directions_bus_rounded);
+  IconData get goIcon => wakeup
+      ? Icons.alarm_on_rounded
+      : (home
+            ? Icons.home_rounded
+            : (meetup ? Icons.flag_rounded : Icons.directions_bus_rounded));
+
+  /// กด "มาถึงแล้ว"/"ตื่นแล้ว" ได้ตั้งแต่เท่าไรก่อนเวลา (null = กดได้ตลอด)
+  Duration? get earlyWindow =>
+      wakeup ? _wakeWindow : (meetup ? _arriveWindow : null);
 }
 
 /// กด "มาถึงแล้ว" ได้ตั้งแต่กี่ชั่วโมงก่อนนัด — ตรงกับ MEETUP_ARRIVE_WINDOW_HOURS
 /// ฝั่งเซิร์ฟเวอร์
 const _arriveWindow = Duration(hours: 3);
+
+/// กด "ตื่นแล้ว" ได้ตั้งแต่กี่นาทีก่อนเวลาปลุก — ตรงกับ WAKEUP_EARLY_MINUTES
+const _wakeWindow = Duration(minutes: 60);
 
 const _thaiMonths = [
   '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', //
@@ -235,11 +265,12 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
         : (countdown?.late == true
               ? AppTheme.errorColor
               : AppTheme.primaryColor);
-    // นัดรวมพลล่วงหน้า: กด "มาถึงแล้ว" ได้เมื่อใกล้เวลานัดเท่านั้น
+    // นัดรวมพล/ปลุก: กด "มาถึงแล้ว"/"ตื่นแล้ว" ได้เมื่อใกล้เวลาเท่านั้น
+    final window = w.earlyWindow;
     final tooEarly =
-        w.meetup &&
+        window != null &&
         returnAt != null &&
-        returnAt.difference(DateTime.now()) > _arriveWindow;
+        returnAt.difference(DateTime.now()) > window;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,7 +283,9 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
               child: Text(
                 place.isEmpty
                     ? w.fallbackTitle
-                    : (w.meetup ? 'นัดรวมพล · $place' : place),
+                    : (w.meetup
+                          ? 'นัดรวมพล · $place'
+                          : (w.wakeup ? 'ปลุกรวม · $place' : place)),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
@@ -335,13 +368,45 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
             ),
           ),
         ],
+        if (w.wakeup && !departed && mineWaiting.isNotEmpty)
+          ValueListenableBuilder<Map<int, DateTime>>(
+            valueListenable: WakeAlarmService.instance.scheduled,
+            builder: (context, scheduled, _) {
+              if (!scheduled.containsKey(_int(stop['id']))) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.alarm_on_rounded,
+                      size: 15,
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'เครื่องนี้ตั้งปลุกไว้แล้ว ดังได้แม้ไม่มีสัญญาณ',
+                        style: appFont(
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         const SizedBox(height: 10),
         Row(
           children: [
             if (!departed && mine.isNotEmpty && tooEarly)
               Expanded(
                 child: Text(
-                  'กด "${w.arrived}" ได้ตั้งแต่ ${_clock(returnAt.subtract(_arriveWindow))}',
+                  'กด "${w.arrived}" ได้ตั้งแต่ ${_clock(returnAt.subtract(window))}',
                   style: appFont(
                     fontSize: AppText.sizeCaption,
                     fontWeight: FontWeight.w600,
@@ -598,8 +663,11 @@ class MeetupDraft {
 }
 
 /// ทีมงานนัดรวมพลล่วงหน้า — เลือกวัน (วันนี้/พรุ่งนี้/วันอื่น) + เวลา + จุดนัด
+/// [wakeup] = ตั้งปลุกรวม (ชีตเดียวกัน คำต่างกัน: เวลาปลุก + สิ่งที่ตามมาหลังตื่น)
 class OpenMeetupSheet extends StatefulWidget {
-  const OpenMeetupSheet({super.key});
+  final bool wakeup;
+
+  const OpenMeetupSheet({super.key, this.wakeup = false});
 
   @override
   State<OpenMeetupSheet> createState() => _OpenMeetupSheetState();
@@ -608,7 +676,9 @@ class OpenMeetupSheet extends StatefulWidget {
 class _OpenMeetupSheetState extends State<OpenMeetupSheet> {
   final _place = TextEditingController();
   late DateTime _day;
-  TimeOfDay _time = const TimeOfDay(hour: 5, minute: 0);
+  late TimeOfDay _time = widget.wakeup
+      ? const TimeOfDay(hour: 4, minute: 0)
+      : const TimeOfDay(hour: 5, minute: 0);
 
   @override
   void initState() {
@@ -666,15 +736,20 @@ class _OpenMeetupSheetState extends State<OpenMeetupSheet> {
     final isToday = _day == _today;
     final isTomorrow = _day == tomorrow;
 
+    final wakeup = widget.wakeup;
     return RestStopSheetFrame(
-      icon: Icons.place_rounded,
-      title: 'นัดรวมพลล่วงหน้า',
-      subtitle:
-          'เช่น พรุ่งนี้ 04:30 ขึ้นดูพระอาทิตย์ — ระบบเตือนทุกคนคืนก่อน 20:00 '
-          'เตือนคนที่ยังไม่มาก่อน 15 นาที และบอกคุณว่าใครยังไม่มาเมื่อถึงเวลา',
+      icon: wakeup ? Icons.alarm_rounded : Icons.place_rounded,
+      title: wakeup ? 'ปลุกรวม' : 'นัดรวมพลล่วงหน้า',
+      subtitle: wakeup
+          ? 'ทุกคนได้แจ้งเตือนปลุกตามเวลา (เครื่องตั้งปลุกเองด้วย เผื่อไม่มีสัญญาณ) '
+                'อีก 10 นาทียังไม่กดตื่น ระบบปลุกซ้ำและบอกคุณว่าห้องไหนยังเงียบ'
+          : 'เช่น พรุ่งนี้ 04:30 ขึ้นดูพระอาทิตย์ — ระบบเตือนทุกคนคืนก่อน 20:00 '
+                'เตือนคนที่ยังไม่มาก่อน 15 นาที และบอกคุณว่าใครยังไม่มาเมื่อถึงเวลา',
       footer: PrimaryCTAButton(
         label: _valid
-            ? 'ประกาศนัด · ${_when(_meetAt)}'
+            ? (wakeup
+                  ? 'ตั้งปลุก · ${_when(_meetAt)}'
+                  : 'ประกาศนัด · ${_when(_meetAt)}')
             : 'เลือกเวลาข้างหน้า (ไม่เกิน 7 วัน)',
         icon: Icons.campaign_rounded,
         onPressed: _valid
@@ -747,7 +822,7 @@ class _OpenMeetupSheetState extends State<OpenMeetupSheet> {
           ),
         ),
         const SizedBox(height: 14),
-        const RestStopSheetLabel('จุดนัด'),
+        RestStopSheetLabel(wakeup ? 'ตื่นแล้วทำอะไรต่อ (ไม่บังคับ)' : 'จุดนัด'),
         TextField(
           controller: _place,
           maxLength: 120,
@@ -758,7 +833,9 @@ class _OpenMeetupSheetState extends State<OpenMeetupSheet> {
           ),
           decoration: restStopFieldDecoration(
             context,
-            'เช่น หน้าลานกางเต็นท์ / ล็อบบี้ที่พัก',
+            wakeup
+                ? 'เช่น ออกเดิน 04:30 หน้าลานเต็นท์'
+                : 'เช่น หน้าลานกางเต็นท์ / ล็อบบี้ที่พัก',
           ),
         ),
       ],
@@ -883,6 +960,16 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
             color: AppTheme.onSurface(context),
           ),
         ),
+        // ปลุกรวม: ห้องที่พัก — ทีมงานจะได้เดินไปเคาะถูกห้อง
+        subtitle: (p['room']?.toString() ?? '').isEmpty
+            ? null
+            : Text(
+                p['room'].toString(),
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
         trailing: (widget.canManage && !isOn && phone != null)
             ? IconButton(
                 tooltip: 'โทรหา',
@@ -911,10 +998,13 @@ class _RestStopRollSheetState extends State<RestStopRollSheet>
           ? Row(
               children: [
                 // พักรถขยายทีละนิด, นัดรวมพลเลื่อนทีละมากกว่า, ถึงบ้านไม่มีเวลาให้ขยาย
+                // ปลุกรวมเลื่อนได้แบบนัดรวมพล (ฝนตก/หมอกไม่ลง)
                 for (final m
                     in w.home
                         ? const <int>[]
-                        : (w.meetup ? const [10, 30] : const [5, 10])) ...[
+                        : (w.meetup || w.wakeup
+                              ? const [10, 30]
+                              : const [5, 10])) ...[
                   OutlinedButton(
                     onPressed: () {
                       HapticFeedback.selectionClick();

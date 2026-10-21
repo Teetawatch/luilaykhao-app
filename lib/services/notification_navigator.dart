@@ -159,6 +159,14 @@ class NotificationNavigator {
       case 'supply_request':
       case 'food_bill':
       case 'room_assignment':
+      // เช็คพอยต์ (ขอพัก/รับทราบ/ถึงครบ), เช็คอาการ, จุดลงขากลับใกล้ถึง — ปลุกรวมใช้ rest_stop
+      case 'trail_help':
+      case 'trail_help_ack':
+      case 'trail_done':
+      case 'wellness_unwell':
+      case 'wellness_remind':
+      case 'wellness_handled':
+      case 'dropoff_soon':
         _openChat(data);
       // ถามทีมงานแบบส่วนตัว — ลูกทริปเปิดเธรดตัวเอง ทีมงานเปิดเธรดของลูกทริปคนนั้น
       case 'chat_private':

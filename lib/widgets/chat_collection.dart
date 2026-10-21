@@ -112,7 +112,10 @@ class ChatCollectionCard extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           [
-            'คนละ ${baht(c['amount'])}',
+            // ค่าลูกหาบ ฯลฯ — ยอดแต่ละคนไม่เท่ากัน ไม่มี "คนละ ฿x"
+            c['amounts_vary'] == true
+                ? 'ยอดแต่ละคนไม่เท่ากัน'
+                : 'คนละ ${baht(c['amount'])}',
             'เก็บแล้ว ${baht(c['collected'])}/${baht(c['total'])}',
             if (closed) 'ปิดยอดแล้ว',
           ].join(' · '),
@@ -732,7 +735,8 @@ class CollectionListSheet extends StatelessWidget {
       footer: canManage
           ? Row(
               children: [
-                if (!closed) ...[
+                // ยอดจากการชั่งกระเป๋า — แก้รายชื่อที่การ์ดฝากลูกหาบแทน
+                if (!closed && c['amounts_vary'] != true) ...[
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: onEditPayers,

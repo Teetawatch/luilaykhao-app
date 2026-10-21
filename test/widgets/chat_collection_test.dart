@@ -252,4 +252,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(result, isTrue);
   });
+
+  testWidgets('weight-based collections do not claim one price for everyone', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        ChatCollectionCard(
+          collection: {..._collection(), 'amount': 0, 'amounts_vary': true},
+          myUserId: 10,
+          canManage: false,
+          onPay: () {},
+          onOpenList: () {},
+        ),
+      ),
+    );
+
+    expect(find.textContaining('ยอดแต่ละคนไม่เท่ากัน'), findsOneWidget);
+    expect(find.textContaining('คนละ'), findsNothing);
+  });
 }

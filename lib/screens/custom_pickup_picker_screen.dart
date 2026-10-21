@@ -12,10 +12,28 @@ class CustomPickupPickerScreen extends StatefulWidget {
   final LatLng center;
   final Map<String, dynamic>? initial;
 
+  /// คำบนจอ — ค่าตั้งต้นคือปักหมุดจุดรับตอนจอง ใช้ซ้ำตอนเลือกจุดลงขากลับ
+  final String title;
+  final String hint;
+  final String labelText;
+  final String labelHint;
+  final String noteHint;
+  final int labelMaxLength;
+  final int noteMaxLength;
+
   const CustomPickupPickerScreen({
     super.key,
     required this.center,
     this.initial,
+    this.title = 'ปักหมุดจุดรับ',
+    this.hint =
+        'ปักหมุดจุดรับที่สะดวก แล้วจองต่อได้ทันที '
+        'ราคาคิดเท่าจุดรับที่ใกล้หมุดที่สุด (ไม่ต่ำกว่าราคารอบเดินทาง)',
+    this.labelText = 'ชื่อจุดรับ / จุดสังเกต *',
+    this.labelHint = 'เช่น ปั๊ม ปตท. ทางเข้าเขาใหญ่',
+    this.noteHint = 'เช่น รอตรงร้านกาแฟหน้าปั๊ม',
+    this.labelMaxLength = 255,
+    this.noteMaxLength = 1000,
   });
 
   @override
@@ -110,7 +128,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
       backgroundColor: AppTheme.background(context),
       appBar: AppBar(
         title: Text(
-          'ปักหมุดจุดรับ',
+          widget.title,
           style: appFont(fontSize: AppText.sizeTitle, fontWeight: FontWeight.w800),
         ),
       ),
@@ -240,8 +258,7 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ปักหมุดจุดรับที่สะดวก แล้วจองต่อได้ทันที '
-            'ราคาคิดเท่าจุดรับที่ใกล้หมุดที่สุด (ไม่ต่ำกว่าราคารอบเดินทาง)',
+            widget.hint,
             style: appFont(
               fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w500,
@@ -252,21 +269,19 @@ class _CustomPickupPickerScreenState extends State<CustomPickupPickerScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: _label,
-            maxLength: 255,
+            maxLength: widget.labelMaxLength,
             onChanged: (_) => setState(() {}),
             style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w600),
-            decoration: _decoration('ชื่อจุดรับ / จุดสังเกต *',
-                'เช่น ปั๊ม ปตท. ทางเข้าเขาใหญ่'),
+            decoration: _decoration(widget.labelText, widget.labelHint),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _note,
-            maxLength: 1000,
+            maxLength: widget.noteMaxLength,
             maxLines: 2,
             minLines: 1,
             style: appFont(fontSize: AppText.sizeBody, fontWeight: FontWeight.w500),
-            decoration: _decoration('รายละเอียดเพิ่มเติม (ถ้ามี)',
-                'เช่น รอตรงร้านกาแฟหน้าปั๊ม'),
+            decoration: _decoration('รายละเอียดเพิ่มเติม (ถ้ามี)', widget.noteHint),
           ),
           const SizedBox(height: 10),
           SizedBox(

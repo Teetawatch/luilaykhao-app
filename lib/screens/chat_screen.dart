@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -17,16 +18,21 @@ import '../config/api_config.dart';
 import '../models/chat_notify_level.dart';
 import '../providers/app_provider.dart';
 import '../services/push_notification_service.dart';
+import '../services/wake_alarm_service.dart';
 import '../widgets/app_snack.dart';
 import '../widgets/chat_collection.dart';
+import '../widgets/chat_dropoff.dart';
 import '../widgets/chat_food_bill.dart';
 import '../widgets/chat_food_round.dart';
 import '../widgets/chat_lost_item.dart';
+import '../widgets/chat_porter.dart';
 import '../widgets/chat_requests.dart';
 import '../widgets/chat_rest_stop.dart';
 import '../widgets/chat_staff_intro.dart';
+import '../widgets/chat_trail_check.dart';
 import '../widgets/chat_voice.dart';
 import '../widgets/chat_vote_sheet.dart';
+import '../widgets/chat_wellness.dart';
 import '../widgets/moderation_sheet.dart';
 import '../widgets/sheet_close_button.dart';
 import '../theme/app_theme.dart';
@@ -34,10 +40,13 @@ import '../services/quick_ask_matcher.dart';
 import '../widgets/weather_card.dart';
 import '../widgets/tier_badge.dart';
 import 'chat_private_screen.dart';
+import 'custom_pickup_picker_screen.dart';
 import 'schedule_itinerary_screen.dart';
 import 'lost_items_screen.dart';
 import 'trip_rooms_screen.dart';
 import '../widgets/confirm_dialog.dart';
+
+part 'chat_trip_tools.part.dart';
 
 /// Group chat room for a trip schedule. Members are the customers booked on
 /// the schedule, the assigned staff, and admins. Real-time via Reverb.
@@ -51,7 +60,8 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
+class _ChatScreenState extends State<ChatScreen>
+    with WidgetsBindingObserver, _TripToolsMixin {
   // Slow fallback poll cadence — only used when the realtime socket hasn't
   // delivered anything recently. When Reverb is alive we lengthen this so we
   // don't burn battery/data on a duplicate channel.
@@ -63,6 +73,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   // unit (no avatar/name repeat) — iMessage/LINE convention.
   static const _groupGap = Duration(minutes: 2);
 
+  @override
   final List<Map<String, dynamic>> _messages = [];
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
@@ -141,6 +152,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   // mentions from before we opened aren't re-flagged.
   int _mentionAckId = 0;
 
+  @override
   bool _canModerate = false;
 
   // ชีตรายการรวมของรอบสั่งอาหารที่เปิดอยู่ (ถ้ามี) — realtime ป้อนค่าใหม่เข้ามา
@@ -159,6 +171,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final _restSheetStop = ValueNotifier<Map<String, dynamic>?>(null);
   int? _restSheetMessageId;
   List<String> _reactionEmojis = const ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+  @override
   int? _myUserId;
 
   // Per-message keys so reply-quote and mention jumps can precisely anchor the
@@ -296,6 +309,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _foodSheetDietary.dispose();
     _restSheetStop.dispose();
     _collectionSheet.dispose();
+    disposeTripTools();
     _supplyQueue.dispose();
     _voice.dispose();
     // ออกจากห้องแล้วเสียงไม่ควรเล่นค้างต่อไปหน้าอื่น
@@ -351,6 +365,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       onCollection: _onCollectionSignal,
       onLostItem: _onLostItemSignal,
       onSupplies: _onSuppliesSignal,
+      onTrail: (d) => _onToolSignal('trail_check', d),
+      onDropoff: (d) => _onToolSignal('dropoff', d),
+      onWellness: (d) => _onToolSignal('wellness', d),
+      onPorter: (d) => _onToolSignal('porter', d),
     );
     // Let the rest of the room know we've entered, so they see a brief notice.
     app.sendChatJoin(widget.scheduleId);
@@ -373,6 +391,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _loading = false;
         _error = null;
       });
+      _hydrateTools(list);
       _scrollToBottom();
       _markRead();
       _refreshRoom(force: true);
@@ -449,6 +468,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _hasMore = data['has_more'] == true;
         _loadingMore = false;
       });
+      _hydrateTools(older);
     } catch (_) {
       if (mounted) setState(() => _loadingMore = false);
     }
@@ -533,10 +553,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _messages.addAll(fresh);
       if (!wasAtBottom) _newWhileAway += incomingFromOthers;
     });
+    _hydrateTools(fresh);
     _markRead();
     if (wasAtBottom) _scrollToBottom();
   }
 
+  @override
   void _markRead() {
     if (!_isForeground) return;
     context.read<AppProvider>().markChatRead(widget.scheduleId);
@@ -928,6 +950,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _dispatchOptimistic(token);
   }
 
+  @override
   void _snack(String message) {
     if (!mounted) return;
     AppSnack.show(context, message);
@@ -1169,6 +1192,116 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 if (_canModerate)
                   ListTile(
                     leading: const Icon(
+                      Icons.alarm_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'ปลุกรวม',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ทริปตีสี่ — ทุกคนกดตื่นแล้ว คุณเห็นว่าห้องไหนยังเงียบ',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openWakeup();
+                    },
+                  ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.terrain_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'เช็คพอยต์เส้นทางเดิน',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ใครถึงไหนแล้ว ใครอยู่ท้ายสุด + ขอพักถึงคุณคนเดียว',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openTrailCheck();
+                    },
+                  ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.favorite_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'เช็คอาการ (ยังไหวไหม)',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ทุกคนตอบสบาย/เหนื่อย/ไม่ไหว เห็นแค่ทีมงาน',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openWellnessCheck();
+                    },
+                  ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.airport_shuttle_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'จุดลงขากลับ',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ใครลงระหว่างทาง เรียงจุดส่งตามทาง เตือนก่อนถึง',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openDropoffCard();
+                    },
+                  ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.luggage_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'ฝากของลูกหาบ',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'ชั่งกระเป๋า เลขป้ายต่อใบ คิดเงินตามกิโลให้เอง',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _openPorterRound();
+                    },
+                  ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
                       Icons.savings_rounded,
                       color: AppTheme.primaryColor,
                     ),
@@ -1368,6 +1501,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         _scroll.position.maxScrollExtent - 120;
   }
 
+  @override
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
@@ -1886,6 +2020,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   // ── รับออเดอร์อาหาร ──────────────────────────────────────────────────────
 
+  @override
   Future<T?> _showSheet<T>(Widget sheet) {
     return showModalBottomSheet<T>(
       context: context,
@@ -2737,6 +2872,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (stop is! Map || !mounted) return;
     final next = Map<String, dynamic>.from(stop);
     if (_restSheetMessageId == messageId) _restSheetStop.value = next;
+    // ปลุกรวม: ตื่นครบ/เลื่อนเวลา/ปิดการ์ด = ย้ายหรือยกเลิกปลุกในเครื่อง
+    if (next['kind'] == 'wakeup') {
+      unawaited(WakeAlarmService.instance.sync(next, _myUserId));
+    }
 
     final idx = _messages.indexWhere(
       (m) => int.tryParse('${m['id']}') == messageId,
@@ -2860,6 +2999,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// quote or the mention chip). Anchors precisely with [Scrollable.ensureVisible]
   /// when the target widget is built; otherwise approximates the jump first and
   /// anchors on the next frame once the target lays out.
+  @override
   void _scrollToMessage(int messageId) {
     final idx =
         _messages.indexWhere((m) => int.tryParse('${m['id']}') == messageId);
@@ -3565,6 +3705,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         onPayCollection: (c) => _payCollection(mId, c),
         onOpenCollection: (c) => _openCollectionList(mId, c),
         onOpenLostItems: () => _openLostItems(),
+        tools: _BubbleTools(
+          onTrailReach: (t, ids, index) => _reachTrail(mId, t, ids, index),
+          onTrailHelp: (t) => _askTrailHelp(mId, t),
+          onTrailCancelHelp: (t) => _cancelTrailHelp(mId, t),
+          onOpenTrail: (t) => _openTrailBoard(mId, t),
+          onWellnessAnswer: (w, a) => _answerWellness(mId, w, [a]),
+          onOpenWellnessAnswer: (w, status) =>
+              _openWellnessAnswer(mId, w, status),
+          onOpenWellnessStaff: (w) => _openWellnessStaff(mId, w),
+          onChooseDropoff: (d) => _chooseDropoff(mId, d),
+          onOpenDropoffStaff: (d) => _openDropoffStaff(mId, d),
+          onRegisterPorter: (p) => _registerPorter(mId, p),
+          onOpenPorter: (p) => _openPorterManage(mId, p),
+        ),
       );
 
       // Keyed so jumps can anchor exactly on this bubble (see _scrollToMessage).
@@ -5827,6 +5981,7 @@ class _MessageBubble extends StatelessWidget {
   final ValueChanged<Map<String, dynamic>> onPayCollection;
   final ValueChanged<Map<String, dynamic>> onOpenCollection;
   final VoidCallback onOpenLostItems;
+  final _BubbleTools tools;
 
   const _MessageBubble({
     required this.message,
@@ -5859,6 +6014,7 @@ class _MessageBubble extends StatelessWidget {
     required this.onPayCollection,
     required this.onOpenCollection,
     required this.onOpenLostItems,
+    required this.tools,
   });
 
   static const _roleLabels = {
@@ -5909,11 +6065,23 @@ class _MessageBubble extends StatelessWidget {
     final lostItem = (!isDeleted && message['lost_item'] is Map)
         ? Map<String, dynamic>.from(message['lost_item'] as Map)
         : null;
+    Map<String, dynamic>? card(String key) =>
+        (!isDeleted && message[key] is Map)
+            ? Map<String, dynamic>.from(message[key] as Map)
+            : null;
+    final trail = card('trail_check');
+    final wellness = card('wellness');
+    final dropoff = card('dropoff');
+    final porter = card('porter');
     final isCard = poll != null ||
         foodRound != null ||
         restStop != null ||
         collection != null ||
-        lostItem != null;
+        lostItem != null ||
+        trail != null ||
+        wellness != null ||
+        dropoff != null ||
+        porter != null;
     final body = message['body']?.toString() ?? '';
     final imageUrl = isDeleted ? '' : ApiConfig.mediaUrl(message['image_url']);
     // A locally-picked image shown while an optimistic send is in flight (before
@@ -6116,6 +6284,42 @@ class _MessageBubble extends StatelessWidget {
                             canManage: canModerate,
                             onPay: () => onPayCollection(collection),
                             onOpenList: () => onOpenCollection(collection),
+                          )
+                        else if (trail != null)
+                          ChatTrailCheckCard(
+                            trail: trail,
+                            myUserId: myUserId,
+                            canManage: canModerate,
+                            onReach: (ids, index) =>
+                                tools.onTrailReach(trail, ids, index),
+                            onHelp: () => tools.onTrailHelp(trail),
+                            onCancelHelp: () => tools.onTrailCancelHelp(trail),
+                            onOpenBoard: () => tools.onOpenTrail(trail),
+                          )
+                        else if (wellness != null)
+                          ChatWellnessCard(
+                            wellness: wellness,
+                            canManage: canModerate,
+                            onAnswer: (a) => tools.onWellnessAnswer(wellness, a),
+                            onOpenAnswer: (status) =>
+                                tools.onOpenWellnessAnswer(wellness, status),
+                            onOpenStaff: () =>
+                                tools.onOpenWellnessStaff(wellness),
+                          )
+                        else if (dropoff != null)
+                          ChatDropoffCard(
+                            dropoff: dropoff,
+                            canManage: canModerate,
+                            onChoose: () => tools.onChooseDropoff(dropoff),
+                            onOpenStaff: () => tools.onOpenDropoffStaff(dropoff),
+                          )
+                        else if (porter != null)
+                          ChatPorterCard(
+                            porter: porter,
+                            myUserId: myUserId,
+                            canManage: canModerate,
+                            onRegister: () => tools.onRegisterPorter(porter),
+                            onOpen: () => tools.onOpenPorter(porter),
                           )
                         else if (restStop != null)
                           ChatRestStopCard(

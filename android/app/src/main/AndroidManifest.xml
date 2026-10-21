@@ -183,6 +183,12 @@
             </intent-filter>
         </activity>
 
+        <!-- ปลุกรวมในห้องแชท (WakeAlarmService) — แจ้งเตือนที่ตั้งเวลาไว้ในเครื่อง ดังได้แม้
+             ตอนนั้นไม่มีสัญญาณ ตัวรับของ flutter_local_notifications ต้องประกาศเอง -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+
         <!-- วิดเจ็ตนับถอยหลังทริปบนหน้าโฮม (ดู TripCountdownWidget.kt)
              ต้อง exported=true เพราะ launcher เป็นคนส่ง broadcast มาให้ -->
         <receiver

@@ -4376,6 +4376,247 @@ class AppProvider extends ChangeNotifier {
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
 
+  // ── เครื่องมือหน้างาน: เช็คพอยต์ / จุดลงขากลับ / เช็คอาการ / ลูกหาบ ─────────
+  // ทุกตัวคืน {message_id, <การ์ด>} ยกเว้น open* ที่คืนข้อความใหม่
+
+  Map<String, dynamic> _map(dynamic response) =>
+      Map<String, dynamic>.from(api.data(response) as Map);
+
+  Future<Map<String, dynamic>> openChatTrailCheck(
+    int scheduleId, {
+    String? title,
+    required List<String> checkpoints,
+  }) async => _map(
+    await api.post(
+      ApiEndpoints.chatTrailChecks(scheduleId),
+      body: {'title': ?title, 'checkpoints': checkpoints},
+    ),
+  );
+
+  Future<Map<String, dynamic>> getChatTrailCheck(int scheduleId, int id) async =>
+      _map(await api.get('${ApiEndpoints.chatTrailChecks(scheduleId)}/$id'));
+
+  /// [index] null = ยังไม่ถึงจุดแรก (แก้กดผิด)
+  Future<Map<String, dynamic>> reachChatTrailCheck(
+    int scheduleId,
+    int id, {
+    required List<int> passengerIds,
+    required int? index,
+  }) async => _map(
+    await api.post(
+      '${ApiEndpoints.chatTrailChecks(scheduleId)}/$id/reach',
+      body: {'passenger_ids': passengerIds, 'index': index},
+    ),
+  );
+
+  /// "ตามไม่ทัน ขอพัก" — ไม่ส่ง [passengerIds] = ทุกคนที่ฉันดูแล
+  Future<Map<String, dynamic>> requestChatTrailHelp(
+    int scheduleId,
+    int id, {
+    List<int>? passengerIds,
+    String? note,
+  }) async => _map(
+    await api.post(
+      '${ApiEndpoints.chatTrailChecks(scheduleId)}/$id/help',
+      body: {'passenger_ids': ?passengerIds, 'note': ?note},
+    ),
+  );
+
+  Future<Map<String, dynamic>> cancelChatTrailHelp(int scheduleId, int id) async =>
+      _map(await api.delete('${ApiEndpoints.chatTrailChecks(scheduleId)}/$id/help'));
+
+  Future<Map<String, dynamic>> ackChatTrailHelp(
+    int scheduleId,
+    int id,
+    List<int> passengerIds,
+  ) async => _map(
+    await api.post(
+      '${ApiEndpoints.chatTrailChecks(scheduleId)}/$id/help/ack',
+      body: {'passenger_ids': passengerIds},
+    ),
+  );
+
+  Future<Map<String, dynamic>> closeChatTrailCheck(int scheduleId, int id) async =>
+      _map(await api.post('${ApiEndpoints.chatTrailChecks(scheduleId)}/$id/close'));
+
+  Future<Map<String, dynamic>> openChatDropoff(int scheduleId) async =>
+      _map(await api.post(ApiEndpoints.chatDropoffs(scheduleId)));
+
+  /// {message_id, dropoff, options} — options = จุดรับของรอบที่เลือกเป็นจุดลงได้
+  Future<Map<String, dynamic>> getChatDropoff(int scheduleId, int id) async =>
+      _map(await api.get('${ApiEndpoints.chatDropoffs(scheduleId)}/$id'));
+
+  /// [pickupPointId] = จุดรับของรอบ, [label] (+พิกัด) = จุดที่ปักเอง,
+  /// ไม่ส่งทั้งคู่ = กลับไปใช้จุดรับขาไป
+  Future<Map<String, dynamic>> chooseChatDropoff(
+    int scheduleId,
+    int id, {
+    required List<int> passengerIds,
+    int? pickupPointId,
+    String? label,
+    double? lat,
+    double? lng,
+    String? note,
+  }) async => _map(
+    await api.put(
+      '${ApiEndpoints.chatDropoffs(scheduleId)}/$id/choice',
+      body: {
+        'passenger_ids': passengerIds,
+        'pickup_point_id': ?pickupPointId,
+        'label': ?label,
+        'lat': ?lat,
+        'lng': ?lng,
+        'note': ?note,
+      },
+    ),
+  );
+
+  Future<Map<String, dynamic>> dropChatDropoff(
+    int scheduleId,
+    int id, {
+    required List<int> passengerIds,
+    required bool dropped,
+  }) async => _map(
+    await api.post(
+      '${ApiEndpoints.chatDropoffs(scheduleId)}/$id/drop',
+      body: {'passenger_ids': passengerIds, 'dropped': dropped},
+    ),
+  );
+
+  Future<Map<String, dynamic>> closeChatDropoff(int scheduleId, int id) async =>
+      _map(await api.post('${ApiEndpoints.chatDropoffs(scheduleId)}/$id/close'));
+
+  Future<Map<String, dynamic>> openChatWellness(
+    int scheduleId, {
+    String? label,
+  }) async => _map(
+    await api.post(ApiEndpoints.chatWellness(scheduleId), body: {'label': ?label}),
+  );
+
+  /// ของฉัน (+ detail ของทีมงาน)
+  Future<Map<String, dynamic>> getChatWellness(int scheduleId, int id) async =>
+      _map(await api.get('${ApiEndpoints.chatWellness(scheduleId)}/$id'));
+
+  /// [status] ok | tired | unwell
+  Future<Map<String, dynamic>> answerChatWellness(
+    int scheduleId,
+    int id, {
+    required List<int> passengerIds,
+    required String status,
+    String? note,
+  }) async => _map(
+    await api.post(
+      '${ApiEndpoints.chatWellness(scheduleId)}/$id/answer',
+      body: {'passenger_ids': passengerIds, 'status': status, 'note': ?note},
+    ),
+  );
+
+  Future<Map<String, dynamic>> handleChatWellness(
+    int scheduleId,
+    int id,
+    int passengerId,
+  ) async => _map(
+    await api.post(
+      '${ApiEndpoints.chatWellness(scheduleId)}/$id/handled',
+      body: {'passenger_id': passengerId},
+    ),
+  );
+
+  Future<Map<String, dynamic>> closeChatWellness(int scheduleId, int id) async =>
+      _map(await api.post('${ApiEndpoints.chatWellness(scheduleId)}/$id/close'));
+
+  Future<Map<String, dynamic>> openChatPorter(
+    int scheduleId, {
+    String? title,
+    required double ratePerKg,
+    double minCharge = 0,
+    bool roundUp = true,
+    String? promptPayId,
+    String? payeeName,
+  }) async => _map(
+    await api.post(
+      ApiEndpoints.chatPorters(scheduleId),
+      body: {
+        'title': ?title,
+        'rate_per_kg': ratePerKg,
+        'min_charge': minCharge,
+        'round_up': roundUp,
+        'promptpay_id': ?promptPayId,
+        'payee_name': ?payeeName,
+      },
+    ),
+  );
+
+  Future<Map<String, dynamic>> getChatPorter(int scheduleId, int id) async =>
+      _map(await api.get('${ApiEndpoints.chatPorters(scheduleId)}/$id'));
+
+  /// ลูกทริปลงชื่อฝาก (ไม่มีน้ำหนัก) — ทีมงานใส่ [weightKg] ไปพร้อมกันได้
+  Future<Map<String, dynamic>> addChatPorterBags(
+    int scheduleId,
+    int id, {
+    required int passengerId,
+    int count = 1,
+    String? note,
+    double? weightKg,
+  }) async => _map(
+    await api.post(
+      '${ApiEndpoints.chatPorters(scheduleId)}/$id/bags',
+      body: {
+        'passenger_id': passengerId,
+        'count': count,
+        'note': ?note,
+        'weight_kg': ?weightKg,
+      },
+    ),
+  );
+
+  /// [weightKg] null = ล้างน้ำหนัก (ยังไม่ชั่ง)
+  Future<Map<String, dynamic>> weighChatPorterBag(
+    int scheduleId,
+    int id,
+    int bagId,
+    double? weightKg,
+  ) async => _map(
+    await api.put(
+      '${ApiEndpoints.chatPorters(scheduleId)}/$id/bags/$bagId',
+      body: {'weight_kg': weightKg},
+    ),
+  );
+
+  Future<Map<String, dynamic>> removeChatPorterBag(
+    int scheduleId,
+    int id,
+    int bagId,
+  ) async => _map(
+    await api.delete('${ApiEndpoints.chatPorters(scheduleId)}/$id/bags/$bagId'),
+  );
+
+  Future<Map<String, dynamic>> setChatPorterReturned(
+    int scheduleId,
+    int id, {
+    required List<int> bagIds,
+    required bool returned,
+  }) async => _map(
+    await api.post(
+      '${ApiEndpoints.chatPorters(scheduleId)}/$id/returned',
+      body: {'bag_ids': bagIds, 'returned': returned},
+    ),
+  );
+
+  Future<Map<String, dynamic>> billChatPorter(int scheduleId, int id) async =>
+      _map(await api.post('${ApiEndpoints.chatPorters(scheduleId)}/$id/bill'));
+
+  Future<Map<String, dynamic>> setChatPorterClosed(
+    int scheduleId,
+    int id, {
+    required bool closed,
+  }) async => _map(
+    await api.post(
+      '${ApiEndpoints.chatPorters(scheduleId)}/$id/close',
+      body: {'closed': closed},
+    ),
+  );
+
   // ── ของหาย / ลืมของในทริป ──────────────────────────────────────────────
 
   /// ของในทุกทริปที่ฉันไป ([scheduleId] null) หรือเฉพาะรอบ — คืน {items, can_manage?}
@@ -4676,6 +4917,10 @@ class AppProvider extends ChangeNotifier {
     RealtimeEventHandler? onCollection,
     RealtimeEventHandler? onLostItem,
     RealtimeEventHandler? onSupplies,
+    RealtimeEventHandler? onTrail,
+    RealtimeEventHandler? onDropoff,
+    RealtimeEventHandler? onWellness,
+    RealtimeEventHandler? onPorter,
   }) async {
     final channel = 'private-chat.schedule.$scheduleId';
     final disposers = <VoidCallback>[];
@@ -4700,6 +4945,10 @@ class AppProvider extends ChangeNotifier {
     await bind('chat.collection', onCollection);
     await bind('chat.lost_item', onLostItem);
     await bind('chat.supplies', onSupplies);
+    await bind('chat.trail', onTrail);
+    await bind('chat.dropoff', onDropoff);
+    await bind('chat.wellness', onWellness);
+    await bind('chat.porter', onPorter);
 
     return () {
       for (final d in disposers) {
