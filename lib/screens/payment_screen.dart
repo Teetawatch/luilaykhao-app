@@ -52,12 +52,17 @@ class PaymentScreen extends StatefulWidget {
   /// of an already-confirmed booking instead of an initial payment.
   final int? splitShareId;
 
+  /// เก็บ "ยอดเพิ่มเติม" แม้ใบมัดจำยังค้างยอดคงเหลือ — มาจากหน้าเช่าอุปกรณ์เพิ่ม
+  /// ลูกค้ากดจ่ายค่าเช่า ไม่ใช่ยอดคงเหลือที่มีวันครบกำหนดของมันเอง
+  final bool extraOnly;
+
   const PaymentScreen({
     super.key,
     required this.bookingRef,
     this.initialPaymentType = 'full',
     this.installmentNo,
     this.splitShareId,
+    this.extraOnly = false,
   });
 
   @override
@@ -526,8 +531,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
               payingShare && !sharePaid && shareRecord.isNotEmpty;
           // When the booking is on a deposit plan with an unpaid balance, we
           // collect the balance from this screen even though status is "confirmed".
-          final collectingBalance =
-              status == 'confirmed' && balanceUnpaid && !payingShare;
+          final collectingBalance = status == 'confirmed' &&
+              balanceUnpaid &&
+              !payingShare &&
+              !(widget.extraOnly && _extraDue(booking) > 0);
           // Paying one installment of an already-confirmed installment booking.
           final payingInstallment = widget.installmentNo != null;
           final installmentRecord = payingInstallment

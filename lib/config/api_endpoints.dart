@@ -225,6 +225,9 @@ class ApiEndpoints {
 
   // ไปครบไหม — คนจองตอบทั้งใบ เพื่อนตอบเฉพาะตัวเอง
   static String bookingAttendance(String ref) => 'bookings/$ref/attendance';
+  static String bookingRentals(String ref) => 'bookings/$ref/rentals';
+  static String bookingRentalOrder(String ref, int orderId) =>
+      'bookings/$ref/rentals/orders/$orderId';
   static String bookingAttendancePassenger(String ref, int passengerId) =>
       'bookings/$ref/attendance/$passengerId';
 

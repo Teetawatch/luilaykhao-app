@@ -3160,6 +3160,42 @@ class AppProvider extends ChangeNotifier {
     );
   }
 
+  // ─── เช่าอุปกรณ์เพิ่ม ──────────────────────────────────────────────────────
+
+  /// แคตตาล็อก + ของที่เช่าไว้แล้ว + ก้อนที่รอจ่าย (กติกาปิดรับมาจากเซิร์ฟเวอร์)
+  Future<Map<String, dynamic>> bookingRentals(String ref) async {
+    final response = await api.get(ApiEndpoints.bookingRentals(ref));
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// สั่งเช่า — [quantities] คือ key ของอุปกรณ์ → จำนวน ยอดกลายเป็นยอดเพิ่มเติม
+  /// ของใบจอง แล้วจ่ายผ่านหน้าชำระเงินเดิม
+  Future<Map<String, dynamic>> orderRentals(
+    String ref,
+    Map<String, int> quantities,
+  ) async {
+    final response = await api.post(
+      ApiEndpoints.bookingRentals(ref),
+      body: {
+        'items': [
+          for (final entry in quantities.entries)
+            if (entry.value > 0) {'key': entry.key, 'quantity': entry.value},
+        ],
+      },
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
+  /// ยกเลิกก้อนที่ยังไม่จ่าย — ของกับยอดถูกถอดออกจากใบจอง
+  Future<Map<String, dynamic>> cancelRentalOrder(String ref, int orderId) async {
+    final response = await api.delete(
+      ApiEndpoints.bookingRentalOrder(ref, orderId),
+    );
+    await loadAccountData();
+    return Map<String, dynamic>.from(api.data(response) ?? const {});
+  }
+
   // ─── ส่งต่อที่นั่ง ─────────────────────────────────────────────────────────
 
   /// ที่นั่งที่ผู้ใช้ส่งต่อได้ + ลิงก์ที่เปิดค้าง + ประวัติ (กติกาทั้งหมดมาจากเซิร์ฟเวอร์)

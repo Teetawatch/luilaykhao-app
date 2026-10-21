@@ -41,7 +41,11 @@ Map<String, dynamic> _booking({required num extraDue}) => {
   },
 };
 
-Future<void> _pump(WidgetTester tester, Map<String, dynamic> data) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Map<String, dynamic> data, {
+  bool extraOnly = false,
+}) async {
   tester.view.physicalSize = const Size(900 * 3, 3000 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
@@ -49,7 +53,9 @@ Future<void> _pump(WidgetTester tester, Map<String, dynamic> data) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<AppProvider>.value(
       value: _FakeApp(data),
-      child: const MaterialApp(home: PaymentScreen(bookingRef: 'LLK')),
+      child: MaterialApp(
+        home: PaymentScreen(bookingRef: 'LLK', extraOnly: extraOnly),
+      ),
     ),
   );
   await tester.pump();
@@ -84,6 +90,39 @@ void main() {
 
     expect(find.text('พร้อมสำหรับเช็คอิน'), findsOneWidget);
     expect(find.text('มียอดที่ต้องชำระเพิ่ม'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  // มัดจำที่ยังค้างยอดคงเหลือ + สั่งเช่าอุปกรณ์เพิ่ม — ปกติหน้านี้เก็บยอดคงเหลือก่อน
+  // แต่มาจากหน้าเช่าอุปกรณ์ต้องเก็บค่าเช่า ไม่งั้นลูกค้าโอนยอดคงเหลือทั้งก้อนแทน
+  Map<String, dynamic> depositWithRental() => {
+    ..._booking(extraDue: 300),
+    'payment_type': 'deposit',
+    'total_amount': 3300,
+    'paid_amount': 1000,
+    'deposit_amount': 1000,
+    'balance_amount': 2000,
+    'balance_due_at': '2026-11-01T00:00:00Z',
+  };
+
+  testWidgets('a deposit booking collects its balance first by default', (
+    tester,
+  ) async {
+    await _pump(tester, depositWithRental());
+
+    expect(find.text('มียอดที่ต้องชำระเพิ่ม'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('extraOnly collects the rental even with a balance open', (
+    tester,
+  ) async {
+    await _pump(tester, depositWithRental(), extraOnly: true);
+
+    expect(find.text('มียอดที่ต้องชำระเพิ่ม'), findsOneWidget);
+    expect(find.textContaining('ชำระยอดเพิ่มเติม'), findsWidgets);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

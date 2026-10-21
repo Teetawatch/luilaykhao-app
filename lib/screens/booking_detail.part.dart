@@ -262,6 +262,37 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   ),
                 ],
 
+                // เช่าอุปกรณ์เพิ่มเอง — เปิดถึง 2 วันก่อนเดินทาง (กติกามาจากหลังบ้าน)
+                if (!isCancelled &&
+                    asMap(booking['rental_ordering'])['open'] == true) ...[
+                  _detailGap,
+                  _BookingActionCard(
+                    icon: Icons.backpack_rounded,
+                    color: AppTheme.primaryColor,
+                    title: 'เช่าอุปกรณ์เพิ่ม',
+                    subtitle: [
+                      if (DateTime.tryParse(
+                            textOf(
+                              asMap(booking['rental_ordering'])['last_day'],
+                            ),
+                          ) !=
+                          null)
+                        'เช่าได้ถึง ${thaiDateShort(DateTime.parse(textOf(asMap(booking['rental_ordering'])['last_day'])))}',
+                      'ชำระในแอปได้เลย',
+                    ].join(' · '),
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => RentEquipmentScreen(
+                            bookingRef: textOf(booking['booking_ref']),
+                          ),
+                        ),
+                      );
+                      if (context.mounted) reload();
+                    },
+                  ),
+                ],
+
                 // งวดถัดไปของใบที่ผ่อน
                 if (nextInstallmentNo != null && !isCancelled) ...[
                   _detailGap,

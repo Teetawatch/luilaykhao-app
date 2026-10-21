@@ -97,6 +97,9 @@ class NotificationNavigator {
       case 'flexi_offer_expired':
         // Flexi-Price (ไปต่อกันไหม?) — เปิดใบจองเพื่อตอบรับ/ดูผล
         _openBookingDetail(data);
+      // อุปกรณ์ที่สั่งเช่าเองแต่ไม่จ่ายก่อนปิดรับ ถูกยกเลิก — เปิดใบจองดูรายการที่เหลือ
+      case 'rental_order_cancelled':
+        _openBookingDetail(data);
       case 'trip_post_liked':
       case 'trip_post_comment':
         // ฟีดรูปหลังทริป: เปิดฟีดของทริปนั้น (หรือฟีดรวมถ้าไม่มี slug)
