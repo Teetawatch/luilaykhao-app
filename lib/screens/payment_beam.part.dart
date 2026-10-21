@@ -52,8 +52,8 @@ class _BankMark extends StatelessWidget {
     final mark = _bankMark(type);
 
     return Container(
-      width: 34,
-      height: 34,
+      width: 42,
+      height: 42,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: mark.color,
@@ -63,8 +63,11 @@ class _BankMark extends StatelessWidget {
         mark.initials,
         style: appFont(
           color: mark.onColor,
-          fontSize: AppText.sizeCaption,
+          fontSize: mark.initials.length > 2
+              ? AppText.sizeCaption
+              : AppText.sizeBody,
           fontWeight: FontWeight.w900,
+          letterSpacing: -0.2,
         ),
       ),
     );
@@ -128,6 +131,9 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection>
   Map<String, dynamic>? _payment;
   Uint8List? _qrBytes;
   bool _loading = false;
+
+  /// ช่องทางของใบที่กำลังขออยู่ — ให้สปินเนอร์ขึ้นตรงแถวแอปธนาคารที่ลูกค้าเพิ่งกด
+  String? _pendingMethod;
   String? _error;
   DateTime? _expiresAt;
   Duration _timeLeft = Duration.zero;
@@ -209,6 +215,7 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection>
     _stopTimers();
     setState(() {
       _loading = true;
+      _pendingMethod = methodType;
       _error = null;
       _payment = null;
       _qrBytes = null;
@@ -422,7 +429,9 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection>
           ),
         ),
         if (_availableBankApps.isNotEmpty) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
+          const _OrDivider(),
+          const SizedBox(height: 10),
           _buildBankApps(context),
         ],
       ],
@@ -563,76 +572,215 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection>
   }
 
   Widget _buildBankApps(BuildContext context) {
+    final apps = _availableBankApps;
+
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const _SectionTitle(
             icon: Icons.smartphone_rounded,
-            title: 'หรือเปิดแอปธนาคารโดยตรง',
+            title: 'เปิดแอปธนาคารโดยตรง',
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: _availableBankApps.map((app) {
-              return SizedBox(
-                width: (MediaQuery.of(context).size.width - 32 - 36 - 10) / 2,
-                child: OutlinedButton(
-                  onPressed: _loading
-                      ? null
-                      : () {
-                          HapticFeedback.selectionClick();
-                          _createCharge(app.type);
-                        },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 12,
+          const SizedBox(height: 6),
+          Text(
+            'จ่ายจากมือถือเครื่องนี้ได้เลย ไม่ต้องสแกน QR',
+            style: appFont(
+              color: AppTheme.mutedText(context),
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // กลุ่มเดียวคั่นด้วยเส้นบาง — อ่านง่ายกว่าปุ่มกรอบแยกสี่ก้อน และชื่อธนาคาร
+          // ภาษาไทยยาวแค่ไหนก็ไม่ถูกบีบจนตัด
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              border: Border.all(color: AppTheme.border(context)),
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < apps.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 70,
+                      color: AppTheme.border(context),
                     ),
-                    side: BorderSide(color: AppTheme.border(context)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    ),
+                  _BankAppRow(
+                    type: apps[i].type,
+                    label: apps[i].label,
+                    bank: apps[i].bank,
+                    opening: _loading && _pendingMethod == apps[i].type,
+                    enabled: !_loading,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      _createCharge(apps[i].type);
+                    },
                   ),
-                  child: Row(
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'ยอด ${money(widget.amount)} จะขึ้นในแอปให้เอง กดยืนยันในแอปธนาคารแล้วกลับมาที่หน้านี้ ระบบจะตรวจสอบให้อัตโนมัติ',
+                  style: appFont(
+                    color: AppTheme.mutedText(context),
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// คั่นระหว่างการ์ด QR กับการ์ดแอปธนาคาร — บอกว่าเป็นทางเลือก ไม่ใช่ขั้นตอนถัดไป
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final line = Expanded(
+      child: Divider(thickness: 1, color: AppTheme.border(context)),
+    );
+
+    return Row(
+      children: [
+        line,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            'หรือ',
+            style: appFont(
+              color: AppTheme.mutedText(context),
+              fontSize: AppText.sizeCaption,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        line,
+      ],
+    );
+  }
+}
+
+class _BankAppRow extends StatelessWidget {
+  final String type;
+  final String label;
+  final String bank;
+
+  /// แถวนี้คือตัวที่เพิ่งกด และกำลังขอลิงก์จากเกตเวย์อยู่
+  final bool opening;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _BankAppRow({
+    required this.type,
+    required this.label,
+    required this.bank,
+    required this.opening,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: opening
+          ? _accent.withValues(alpha: AppTheme.isDark(context) ? 0.14 : 0.06)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 150),
+          // ระหว่างขอลิงก์ให้อีกแถว แถวอื่นจางลงให้รู้ว่ากดไม่ได้ชั่วคราว
+          opacity: enabled || opening ? 1 : 0.45,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                _BankMark(type: type),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _BankMark(type: app.type),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              app.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: appFont(
-                                color: AppTheme.onSurface(context),
-                                fontSize: AppText.sizeBody,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            Text(
-                              app.bank,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: appFont(
-                                color: AppTheme.mutedText(context),
-                                fontSize: AppText.sizeCaption,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          color: AppTheme.onSurface(context),
+                          fontSize: AppText.sizeBody,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'ธนาคาร$bank',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: appFont(
+                          color: AppTheme.mutedText(context),
+                          fontSize: AppText.sizeCaption,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
-              );
-            }).toList(),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: opening
+                      ? const Padding(
+                          padding: EdgeInsets.all(7),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: _accent,
+                          ),
+                        )
+                      : DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AppTheme.subtleSurface(context),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.arrow_outward_rounded,
+                            size: 16,
+                            color: AppTheme.onSurface(context),
+                          ),
+                        ),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
