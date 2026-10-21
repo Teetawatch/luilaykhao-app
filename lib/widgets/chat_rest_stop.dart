@@ -48,9 +48,7 @@ class _Words {
   bool get wakeup => kind == 'wakeup';
 
   String _pick(String rest, String meetup, String home, String wakeup) =>
-      this.wakeup
-      ? wakeup
-      : (this.home ? home : (this.meetup ? meetup : rest));
+      this.wakeup ? wakeup : (this.home ? home : (this.meetup ? meetup : rest));
 
   IconData get icon => wakeup
       ? Icons.alarm_rounded
@@ -63,12 +61,8 @@ class _Words {
   String get deadline => _pick('กลับขึ้นรถ', 'นัดรวมพล', 'ถึงบ้าน', 'ปลุก');
   String get arrived =>
       _pick('ขึ้นรถแล้ว', 'มาถึงแล้ว', 'ถึงบ้านแล้ว', 'ตื่นแล้ว');
-  String get meArrived => _pick(
-    'ฉันขึ้นรถแล้ว',
-    'ฉันมาถึงแล้ว',
-    'ฉันถึงบ้านแล้ว',
-    'ฉันตื่นแล้ว',
-  );
+  String get meArrived =>
+      _pick('ฉันขึ้นรถแล้ว', 'ฉันมาถึงแล้ว', 'ฉันถึงบ้านแล้ว', 'ฉันตื่นแล้ว');
   String get waiting =>
       _pick('ยังไม่ขึ้น', 'ยังไม่มา', 'ยังไม่ได้บอก', 'ยังไม่ตื่น');
   String get allIn => _pick('ขึ้นรถครบ', 'มาครบ', 'ถึงบ้านครบ', 'ตื่นครบ');
@@ -369,34 +363,14 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
           ),
         ],
         if (w.wakeup && !departed && mineWaiting.isNotEmpty)
-          ValueListenableBuilder<Map<int, DateTime>>(
+          ValueListenableBuilder<Map<int, WakeAlarmEntry>>(
             valueListenable: WakeAlarmService.instance.scheduled,
             builder: (context, scheduled, _) {
-              if (!scheduled.containsKey(_int(stop['id']))) {
-                return const SizedBox.shrink();
-              }
-              return Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.alarm_on_rounded,
-                      size: 15,
-                      color: AppTheme.primaryColor,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'เครื่องนี้ตั้งปลุกไว้แล้ว ดังได้แม้ไม่มีสัญญาณ',
-                        style: appFont(
-                          fontSize: AppText.sizeCaption,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              final entry = scheduled[_int(stop['id'])];
+              if (entry == null) return const SizedBox.shrink();
+              return WakeAlarmStatus(
+                exact: entry.exact,
+                onMakeExact: WakeAlarmService.instance.requestExact,
               );
             },
           ),
@@ -506,6 +480,64 @@ class _ChatRestStopCardState extends State<ChatRestStopCard>
           ],
         ),
       ],
+    );
+  }
+}
+
+/// สถานะปลุกในเครื่องบนการ์ดปลุกรวม — ตรงเวลา / อาจช้าไม่กี่นาที (Android ที่ยัง
+/// ไม่ให้สิทธิ์ตั้งเวลาแม่นยำ) พร้อมปุ่มพาไปเปิดสิทธิ์
+class WakeAlarmStatus extends StatelessWidget {
+  final bool exact;
+  final VoidCallback onMakeExact;
+
+  const WakeAlarmStatus({
+    super.key,
+    required this.exact,
+    required this.onMakeExact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = exact ? AppTheme.primaryColor : AppTheme.warningColor;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(
+            exact ? Icons.alarm_on_rounded : Icons.alarm_rounded,
+            size: 15,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              exact
+                  ? 'เครื่องนี้ตั้งปลุกไว้แล้ว ดังตรงเวลาแม้ไม่มีสัญญาณ'
+                  : 'ตั้งปลุกในเครื่องแล้ว แต่อาจช้าไม่กี่นาที',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
+          if (!exact)
+            TextButton(
+              onPressed: onMakeExact,
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              child: Text(
+                'ให้ปลุกตรงเวลา',
+                style: appFont(
+                  fontSize: AppText.sizeCaption,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

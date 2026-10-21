@@ -43,6 +43,7 @@ import 'chat_private_screen.dart';
 import 'custom_pickup_picker_screen.dart';
 import 'schedule_itinerary_screen.dart';
 import 'lost_items_screen.dart';
+import 'onsite_money_screen.dart';
 import 'trip_rooms_screen.dart';
 import '../widgets/confirm_dialog.dart';
 
@@ -331,6 +332,8 @@ class _ChatScreenState extends State<ChatScreen>
       _poll();
       // Refresh server-side read marker — the user is looking at the chat now.
       _markRead();
+      // กลับจากตั้งค่าที่เพิ่งเปิดสิทธิ์ "นาฬิกาปลุก" — ย้ายปลุกรวมไปแบบตรงเวลา
+      unawaited(WakeAlarmService.instance.refreshExactness());
     } else {
       _stopPolling();
       // สายเข้า/สลับแอประหว่างอัด — ทิ้งไปเลย ดีกว่าอัดเสียงรอบข้างค้างไว้
@@ -1319,6 +1322,33 @@ class _ChatScreenState extends State<ChatScreen>
                     onTap: () {
                       Navigator.pop(sheetContext);
                       _openCollection();
+                    },
+                  ),
+                if (_canModerate)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'สรุปยอดหน้างาน',
+                      style: appFont(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'เงินอยู่กับใครเท่าไร ใครยังค้าง — จบทริปกดส่งเงินให้บริษัท',
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              OnsiteMoneyScreen(scheduleId: widget.scheduleId),
+                        ),
+                      );
                     },
                   ),
                 ListTile(
@@ -2650,13 +2680,14 @@ class _ChatScreenState extends State<ChatScreen>
       CollectionListSheet(
         collection: _collectionSheet,
         canManage: _canModerate,
-        onSetPaid: (ids, paid, method) => run(
+        onSetPaid: (ids, paid, method, reason) => run(
           () => app.setChatCollectionPaid(
             widget.scheduleId,
             id,
             passengerIds: ids,
             paid: paid,
             method: method,
+            reason: reason,
           ),
         ),
         onLoadSlip: (passengerId) =>

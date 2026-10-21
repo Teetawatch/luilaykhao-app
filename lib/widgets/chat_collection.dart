@@ -575,7 +575,13 @@ class CollectionListSheet extends StatelessWidget {
   final bool canManage;
 
   /// [method] `transfer` (ต้องมีสลิป) / `cash` เมื่อ [paid] — null เมื่อยกเลิก
-  final Future<void> Function(List<int> passengerIds, bool paid, String? method)
+  /// [reason] = เหตุผลที่ตีกลับสลิป (ส่งถึงลูกทริปในแจ้งเตือน)
+  final Future<void> Function(
+    List<int> passengerIds,
+    bool paid,
+    String? method,
+    String? reason,
+  )
   onSetPaid;
   final Future<void> Function(bool close) onSetClosed;
   final Future<void> Function() onEditPayers;
@@ -614,7 +620,7 @@ class CollectionListSheet extends StatelessWidget {
         confirmLabel: 'ยกเลิก',
         cancelLabel: 'ไม่ยกเลิก',
       );
-      if (ok) await onSetPaid([id], false, null);
+      if (ok) await onSetPaid([id], false, null, null);
       return;
     }
 
@@ -646,11 +652,23 @@ class CollectionListSheet extends StatelessWidget {
     final groupIds = [for (final d in group) _int(d['passenger_id'])];
     switch (action) {
       case CollectionDueAction.confirmTransfer:
-        await onSetPaid(groupIds, true, 'transfer');
+        await onSetPaid(groupIds, true, 'transfer', null);
       case CollectionDueAction.cash:
-        await onSetPaid([id], true, 'cash');
+        await onSetPaid([id], true, 'cash', null);
       case CollectionDueAction.rejectSlip:
-        await onSetPaid(groupIds, false, null);
+        if (!context.mounted) return;
+        final reason = await showModalBottomSheet<String>(
+          context: context,
+          backgroundColor: AppTheme.surface(context),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppTheme.radiusLg),
+            ),
+          ),
+          builder: (_) => const SlipRejectReasonSheet(),
+        );
+        if (reason == null) return;
+        await onSetPaid(groupIds, false, null, reason.isEmpty ? null : reason);
       case null:
         return;
     }
@@ -808,6 +826,56 @@ class CollectionListSheet extends StatelessWidget {
 }
 
 enum CollectionDueAction { confirmTransfer, cash, rejectSlip }
+
+/// เหตุผลที่สลิปไม่ผ่าน — ลูกทริปเห็นในแจ้งเตือน จะได้แก้ถูกจุด
+/// คืน '' เมื่อไม่ระบุ, null = ยกเลิก (ไม่ตีกลับ)
+class SlipRejectReasonSheet extends StatelessWidget {
+  const SlipRejectReasonSheet({super.key});
+
+  static const reasons = [
+    'ยอดในสลิปไม่ตรง',
+    'ยังไม่เห็นยอดเข้าบัญชี',
+    'สลิปไม่ใช่ของรายการนี้',
+    'รูปสลิปไม่ชัด',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return RestStopSheetFrame(
+      icon: Icons.receipt_long_rounded,
+      title: 'สลิปไม่ผ่านเพราะอะไร',
+      subtitle: 'ลูกทริปได้แจ้งเตือนพร้อมเหตุผล และแนบสลิปใหม่ได้ทันที',
+      children: [
+        for (final r in reasons)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.chevron_right_rounded),
+            title: Text(
+              r,
+              style: appFont(
+                fontSize: AppText.sizeBody,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            onTap: () => Navigator.pop(context, r),
+          ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.chevron_right_rounded),
+          title: Text(
+            'ไม่ระบุเหตุผล',
+            style: appFont(
+              fontSize: AppText.sizeBody,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+          onTap: () => Navigator.pop(context, ''),
+        ),
+      ],
+    );
+  }
+}
 
 /// ทีมงานแตะชื่อคนที่ยังไม่จ่าย — ดูสลิปก่อนยืนยันยอดโอน หรือกดรับเงินสดแยก
 ///

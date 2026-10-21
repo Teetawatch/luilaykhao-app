@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'
+    show AndroidScheduleMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:luilaykhao_app/services/wake_alarm_service.dart';
 import 'package:luilaykhao_app/widgets/chat_dropoff.dart';
@@ -610,6 +612,45 @@ void main() {
       expect(find.textContaining('กด "ตื่นแล้ว" ได้ตั้งแต่'), findsOneWidget);
       expect(find.text('ฉันตื่นแล้ว'), findsNothing);
       await tester.pumpWidget(const SizedBox());
+    });
+  });
+
+  group('ปลุกในเครื่อง Android', () {
+    test('rings like an alarm clock when allowed, inexact otherwise', () {
+      expect(
+        WakeAlarmService.scheduleModeFor(exact: true),
+        AndroidScheduleMode.alarmClock,
+      );
+      expect(
+        WakeAlarmService.scheduleModeFor(exact: false),
+        AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    });
+
+    testWidgets('inexact alarm offers to ring on time', (tester) async {
+      var asked = 0;
+      await tester.pumpWidget(
+        _host(
+          Column(
+            children: [
+              WakeAlarmStatus(exact: false, onMakeExact: () => asked++),
+              WakeAlarmStatus(exact: true, onMakeExact: () => asked++),
+            ],
+          ),
+        ),
+      );
+
+      expect(
+        find.text('ตั้งปลุกในเครื่องแล้ว แต่อาจช้าไม่กี่นาที'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('เครื่องนี้ตั้งปลุกไว้แล้ว ดังตรงเวลาแม้ไม่มีสัญญาณ'),
+        findsOneWidget,
+      );
+      expect(find.text('ให้ปลุกตรงเวลา'), findsOneWidget);
+      await tester.tap(find.text('ให้ปลุกตรงเวลา'));
+      expect(asked, 1);
     });
   });
 }

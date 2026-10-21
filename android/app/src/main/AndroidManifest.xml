@@ -23,6 +23,11 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- ปลุกรวมในห้องแชท (WakeAlarmService) — ตั้งปลุกในเครื่องให้ดังตรงเวลาแม้ไม่มีสัญญาณ
+         Android 14+ ไม่ให้สิทธิ์นี้เอง แอปพาไปเปิดในตั้งค่าจากการ์ดปลุก ไม่มีสิทธิ์ก็ยังปลุกได้
+         แบบช้าไม่กี่นาที / BOOT_COMPLETED = เปิดเครื่องใหม่หรืออัปเดตแอปแล้วปลุกยังอยู่ -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- บันทึกการ์ดแชร์ลงคลังรูป (แพ็กเกจ gal) — Android 10 ลงไปต้องขอสิทธิ์เขียน
          ที่เก็บข้อมูล ตั้งแต่ 11 ขึ้นไปเขียนผ่าน MediaStore ได้เองไม่ต้องขอ -->
     <uses-permission
@@ -188,6 +193,16 @@
         <receiver
             android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
         <!-- วิดเจ็ตนับถอยหลังทริปบนหน้าโฮม (ดู TripCountdownWidget.kt)
              ต้อง exported=true เพราะ launcher เป็นคนส่ง broadcast มาให้ -->

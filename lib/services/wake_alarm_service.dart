@@ -4,6 +4,23 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'push_notification_service.dart';
 
+/// ปลุกที่ตั้งไว้ในเครื่องแล้ว — [exact] = ดังตรงเวลา (Android ได้สิทธิ์ตั้งเวลาแม่นยำ
+/// หรือเป็น iOS) ไม่งั้นเครื่องที่หลับลึกอาจเลื่อนไปไม่กี่นาที
+@immutable
+class WakeAlarmEntry {
+  final DateTime at;
+  final bool exact;
+
+  const WakeAlarmEntry({required this.at, required this.exact});
+
+  @override
+  bool operator ==(Object other) =>
+      other is WakeAlarmEntry && other.at == at && other.exact == exact;
+
+  @override
+  int get hashCode => Object.hash(at, exact);
+}
+
 /// ปลุกรวมในห้องแชท — ตั้งแจ้งเตือนในเครื่องไว้ที่เวลาปลุก
 ///
 /// ทริปขึ้นดูทะเลหมอกตีสี่มักนอนในที่ที่ไม่มีสัญญาณ แจ้งเตือนจากเซิร์ฟเวอร์ (ทางหลัก)
@@ -12,9 +29,10 @@ import 'push_notification_service.dart';
 /// ตั้งเมื่อห้องแชทเห็นการ์ดปลุกที่ฉันมีคนต้องปลุก (ตัวเองหรือคนในกลุ่ม) และยกเลิก
 /// เมื่อทุกคนของฉันกด "ตื่นแล้ว" / การ์ดปิด / เวลาปลุกเลื่อน (ตั้งใหม่ที่เวลาใหม่)
 ///
-/// Android ใช้แบบไม่ตรงเวลาเป๊ะ (inexact) เมื่อเครื่องไม่ให้สิทธิ์ตั้งเวลาแม่นยำ —
-/// แอปไม่ขอสิทธิ์ SCHEDULE_EXACT_ALARM โดยตั้งใจ เครื่องที่หลับลึกอาจช้าไปไม่กี่นาที
-/// แต่ยังดังแม้ไม่มีเน็ต ส่วน iOS ตรงเวลาเสมอ
+/// Android: ได้สิทธิ์ SCHEDULE_EXACT_ALARM = ตั้งแบบนาฬิกาปลุก (alarmClock) ดังตรงเวลา
+/// แม้เครื่องหลับลึก ไม่ได้สิทธิ์ (ค่าตั้งต้นของ Android 14+) = ตั้งแบบไม่ตรงเป๊ะ และ
+/// การ์ดมีปุ่มพาไปเปิดสิทธิ์ — กลับเข้าแอปแล้ว [refreshExactness] ย้ายไปแบบตรงเวลาให้
+/// iOS ตรงเวลาเสมอ
 class WakeAlarmService {
   WakeAlarmService._();
 
@@ -23,35 +41,52 @@ class WakeAlarmService {
   /// id ของแจ้งเตือนในเครื่อง — กันชนกับ id อื่นของแอป (0 = แจ้งเตือนแชท, 9911 = SOS)
   static int notificationId(int stopId) => 700000 + stopId;
 
+  /// เสียงผ่านช่องนาฬิกาปลุก — ดังแม้ปิดเสียงเรียกเข้าไว้ (ปลุกตีสี่ต้องดังจริง)
   static const _channel = AndroidNotificationChannel(
-    'wake_call',
+    'wake_call_alarm',
     'ปลุกรวมในทริป',
     description: 'ปลุกตามเวลาที่ทีมงานนัดไว้ แม้ตอนนั้นไม่มีสัญญาณ',
     importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
+    audioAttributesUsage: AudioAttributesUsage.alarm,
   );
 
   final _plugin = FlutterLocalNotificationsPlugin();
 
-  /// การ์ดปลุกที่ตั้งไว้ในเครื่องแล้ว: stopId → เวลาปลุก (UTC) — การ์ดใช้บอกผู้ใช้ว่า
-  /// "เครื่องนี้ตั้งปลุกไว้แล้ว" และกันตั้งซ้ำทุกครั้งที่การ์ดอัปเดต
-  final ValueNotifier<Map<int, DateTime>> scheduled = ValueNotifier(const {});
+  /// การ์ดปลุกที่ตั้งไว้ในเครื่องแล้ว: stopId → เวลา + ตรงเวลาไหม — การ์ดใช้บอกผู้ใช้
+  /// และกันตั้งซ้ำทุกครั้งที่การ์ดอัปเดต
+  final ValueNotifier<Map<int, WakeAlarmEntry>> scheduled = ValueNotifier(
+    const {},
+  );
+
+  /// payload ล่าสุดของแต่ละการ์ด — ไว้ตั้งใหม่เมื่อได้สิทธิ์ตั้งเวลาแม่นยำทีหลัง
+  final Map<int, ({Map<String, dynamic> stop, int? userId})> _last = {};
 
   bool _channelReady = false;
+
+  bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   /// การ์ดปลุก [stop] (payload rest_stop kind=wakeup) ควรมีปลุกในเครื่องไหม
   /// แล้วตั้ง/ย้าย/ยกเลิกให้ตรง — เรียกซ้ำได้ ไม่ตั้งซ้ำถ้าไม่มีอะไรเปลี่ยน
   Future<void> sync(Map<String, dynamic> stop, int? myUserId) async {
     final stopId = int.tryParse('${stop['id']}') ?? 0;
     if (stopId == 0 || stop['kind'] != 'wakeup') return;
+    _last[stopId] = (stop: stop, userId: myUserId);
 
     final wakeAt = wakeTimeFor(stop, myUserId, DateTime.now());
     if (wakeAt == null) {
+      _last.remove(stopId);
       await cancel(stopId);
       return;
     }
-    if (scheduled.value[stopId] == wakeAt) return;
 
     try {
+      final exact = await canRingExactly();
+      final entry = WakeAlarmEntry(at: wakeAt, exact: exact);
+      if (scheduled.value[stopId] == entry) return;
+
       await _ensureChannel();
       await _plugin.zonedSchedule(
         id: notificationId(stopId),
@@ -66,6 +101,9 @@ class WakeAlarmService {
             importance: Importance.max,
             priority: Priority.max,
             category: AndroidNotificationCategory.alarm,
+            audioAttributesUsage: AudioAttributesUsage.alarm,
+            // ขึ้นเต็มจอบนหน้าจอล็อก (เครื่องไม่ให้สิทธิ์ = ขึ้นแบบป๊อปอัปแทน)
+            fullScreenIntent: true,
           ),
           iOS: const DarwinNotificationDetails(
             presentAlert: true,
@@ -74,10 +112,10 @@ class WakeAlarmService {
             interruptionLevel: InterruptionLevel.active,
           ),
         ),
-        androidScheduleMode: await _scheduleMode(),
+        androidScheduleMode: scheduleModeFor(exact: exact),
         payload: null,
       );
-      scheduled.value = {...scheduled.value, stopId: wakeAt};
+      scheduled.value = {...scheduled.value, stopId: entry};
     } catch (e) {
       // ตั้งไม่ได้ (ปิดสิทธิ์แจ้งเตือน ฯลฯ) — ยังมีแจ้งเตือนจากเซิร์ฟเวอร์เป็นทางหลัก
       debugPrint('[WakeAlarm] schedule failed: $e');
@@ -85,6 +123,7 @@ class WakeAlarmService {
   }
 
   Future<void> cancel(int stopId) async {
+    _last.remove(stopId);
     if (!scheduled.value.containsKey(stopId)) return;
     try {
       await _plugin.cancel(id: notificationId(stopId));
@@ -92,6 +131,42 @@ class WakeAlarmService {
       debugPrint('[WakeAlarm] cancel failed: $e');
     }
     scheduled.value = {...scheduled.value}..remove(stopId);
+  }
+
+  /// เครื่องนี้ตั้งปลุกให้ดังตรงเวลาได้ไหม — iOS ได้เสมอ, Android ขึ้นกับสิทธิ์
+  Future<bool> canRingExactly() async {
+    if (!_isAndroid) return true;
+    try {
+      return await _android()?.canScheduleExactNotifications() ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// พาไปเปิดสิทธิ์ "นาฬิกาปลุกและการเตือนความจำ" ในตั้งค่า แล้วตั้งปลุกใหม่ให้ตรงเวลา
+  /// (ผู้ใช้กลับเข้าแอปทีหลังก็ได้ — ห้องแชทเรียก [refreshExactness] ตอน resume)
+  Future<void> requestExact() async {
+    if (!_isAndroid) return;
+    try {
+      await _android()?.requestExactAlarmsPermission();
+    } catch (e) {
+      debugPrint('[WakeAlarm] request exact failed: $e');
+    }
+    await refreshExactness();
+  }
+
+  /// สิทธิ์ตั้งเวลาแม่นยำเปลี่ยนไป (เพิ่งเปิด/ปิดในตั้งค่า) — ตั้งปลุกที่มีอยู่ใหม่ให้ตรงสิทธิ์
+  Future<void> refreshExactness() async {
+    if (_last.isEmpty) return;
+    final exact = await canRingExactly();
+    final stale = scheduled.value.entries
+        .where((e) => e.value.exact != exact)
+        .map((e) => e.key)
+        .toList();
+    for (final stopId in stale) {
+      final last = _last[stopId];
+      if (last != null) await sync(last.stop, last.userId);
+    }
   }
 
   /// เวลาที่ควรปลุกเครื่องนี้ — null เมื่อไม่ต้องปลุก: การ์ดปิดแล้ว, เลยเวลาแล้ว,
@@ -115,6 +190,18 @@ class WakeAlarmService {
     return at;
   }
 
+  /// ได้สิทธิ์ = แบบนาฬิกาปลุก (ตรงเวลา ไม่โดนโหมดประหยัดพลังงานเลื่อน และขึ้นไอคอน
+  /// นาฬิกาปลุกบนแถบสถานะ) ไม่ได้ = แบบไม่ตรงเป๊ะที่ยังดังตอนเครื่องหลับ
+  @visibleForTesting
+  static AndroidScheduleMode scheduleModeFor({required bool exact}) => exact
+      ? AndroidScheduleMode.alarmClock
+      : AndroidScheduleMode.inexactAllowWhileIdle;
+
+  AndroidFlutterLocalNotificationsPlugin? _android() => _plugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >();
+
   String _body(Map<String, dynamic> stop) {
     final note = stop['place']?.toString() ?? '';
     return note.isEmpty
@@ -125,22 +212,7 @@ class WakeAlarmService {
   Future<void> _ensureChannel() async {
     if (_channelReady) return;
     await PushNotificationService.instance.ensureLocalNotificationsReady();
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(_channel);
+    await _android()?.createNotificationChannel(_channel);
     _channelReady = true;
-  }
-
-  Future<AndroidScheduleMode> _scheduleMode() async {
-    final android = _plugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >();
-    final exact = await android?.canScheduleExactNotifications() ?? false;
-    return exact
-        ? AndroidScheduleMode.exactAllowWhileIdle
-        : AndroidScheduleMode.inexactAllowWhileIdle;
   }
 }

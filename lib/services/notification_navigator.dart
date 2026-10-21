@@ -11,6 +11,7 @@ import '../screens/gift_voucher_screen.dart';
 import '../screens/account_claim_screen.dart';
 import '../screens/charter_request_screen.dart';
 import '../screens/lost_items_screen.dart';
+import '../screens/onsite_money_screen.dart';
 import '../screens/group_room_screen.dart';
 import '../screens/handover_claim_screen.dart';
 import '../screens/join_booking_screen.dart';
@@ -167,7 +168,12 @@ class NotificationNavigator {
       case 'wellness_remind':
       case 'wellness_handled':
       case 'dropoff_soon':
+      // สลิปเก็บเงินไม่ผ่าน — เปิดห้องที่การ์ดเก็บเงินอยู่ให้แนบใหม่
+      case 'collection_slip_rejected':
         _openChat(data);
+      // ยังถือเงินหน้างานของรอบที่จบแล้ว — เปิดสรุปยอด (ห้องแชทอาจถูกล้างไปแล้ว)
+      case 'onsite_money':
+        _openOnsiteMoney(data);
       // ถามทีมงานแบบส่วนตัว — ลูกทริปเปิดเธรดตัวเอง ทีมงานเปิดเธรดของลูกทริปคนนั้น
       case 'chat_private':
         _openPrivateChat(data);
@@ -304,6 +310,19 @@ class NotificationNavigator {
         MaterialPageRoute(
           builder: (_) => LostItemsScreen(scheduleId: id == 0 ? null : id),
         ),
+      ),
+    );
+  }
+
+  static void _openOnsiteMoney(Map<String, dynamic> data) {
+    final id = int.tryParse('${data['schedule_id']}') ?? 0;
+    if (id == 0) {
+      _openNotifications();
+      return;
+    }
+    _withNav(
+      (nav) => nav.push(
+        MaterialPageRoute(builder: (_) => OnsiteMoneyScreen(scheduleId: id)),
       ),
     );
   }

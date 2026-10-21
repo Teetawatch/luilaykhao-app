@@ -4357,10 +4357,16 @@ class AppProvider extends ChangeNotifier {
     required List<int> passengerIds,
     required bool paid,
     String? method,
+    String? reason,
   }) async {
     final response = await api.post(
       '${ApiEndpoints.chatCollections(scheduleId)}/$collectionId/paid',
-      body: {'passenger_ids': passengerIds, 'paid': paid, 'method': ?method},
+      body: {
+        'passenger_ids': passengerIds,
+        'paid': paid,
+        'method': ?method,
+        'reason': ?reason,
+      },
     );
     return Map<String, dynamic>.from(api.data(response) as Map);
   }
@@ -4614,6 +4620,23 @@ class AppProvider extends ChangeNotifier {
     await api.post(
       '${ApiEndpoints.chatPorters(scheduleId)}/$id/close',
       body: {'closed': closed},
+    ),
+  );
+
+  // ── สรุปยอดหน้างาน ─────────────────────────────────────────────────────
+
+  /// สรุปเงินหน้างานของรอบ + "mine" = เงินที่ฉันถือและสถานะส่งมอบ
+  Future<Map<String, dynamic>> getOnsiteMoney(int scheduleId) async =>
+      _map(await api.get('schedules/$scheduleId/onsite-money'));
+
+  /// ยืนยันส่งเงินที่ฉันถือให้บริษัท — คืนสรุปใหม่
+  Future<Map<String, dynamic>> submitOnsiteMoney(
+    int scheduleId, {
+    String? note,
+  }) async => _map(
+    await api.post(
+      'schedules/$scheduleId/onsite-money/handover',
+      body: {'note': ?note},
     ),
   );
 

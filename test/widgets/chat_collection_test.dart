@@ -168,7 +168,7 @@ void main() {
             body: CollectionListSheet(
               collection: ValueNotifier(slipCollection()),
               canManage: true,
-              onSetPaid: (ids, paid, method) async =>
+              onSetPaid: (ids, paid, method, reason) async =>
                   calls.add('$ids $paid $method'),
               onSetClosed: (_) async {},
               onEditPayers: () async {},
@@ -196,6 +196,37 @@ void main() {
     },
   );
 
+  testWidgets('rejecting a slip asks why and sends it back for the group', (
+    tester,
+  ) async {
+    tallScreen(tester);
+    final calls = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CollectionListSheet(
+            collection: ValueNotifier(slipCollection()),
+            canManage: true,
+            onSetPaid: (ids, paid, method, reason) async =>
+                calls.add('$ids $paid $method $reason'),
+            onSetClosed: (_) async {},
+            onEditPayers: () async {},
+            onLoadSlip: (_) async => null,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('แม่'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('สลิปไม่ถูกต้อง ให้แนบใหม่'));
+    await tester.pumpAndSettle();
+    expect(find.text('สลิปไม่ผ่านเพราะอะไร'), findsOneWidget);
+    await tester.tap(find.text('ยอดในสลิปไม่ตรง'));
+    await tester.pumpAndSettle();
+    expect(calls, ['[1, 2] false null ยอดในสลิปไม่ตรง']);
+  });
+
   testWidgets('no slip means no transfer confirm — only cash', (tester) async {
     tallScreen(tester);
     final calls = <String>[];
@@ -205,7 +236,7 @@ void main() {
           body: CollectionListSheet(
             collection: ValueNotifier(slipCollection()),
             canManage: true,
-            onSetPaid: (ids, paid, method) async =>
+            onSetPaid: (ids, paid, method, reason) async =>
                 calls.add('$ids $paid $method'),
             onSetClosed: (_) async {},
             onEditPayers: () async {},
