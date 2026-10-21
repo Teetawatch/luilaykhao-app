@@ -953,6 +953,7 @@ class TravelRequirementsSection extends StatelessWidget {
     final visaDays = int.tryParse(textOf(visa['days']));
     final checkedAt = DateTime.tryParse(textOf(visa['checked_at']));
     final disclaimer = textOf(visa['disclaimer']).trim();
+    final documentMode = textOf(trip['travel_document_mode'], 'passport');
 
     const accent = Color(0xFF2563EB); // Blue 600 — ข้อมูลเอกสาร ไม่ใช่คำเตือน
 
@@ -981,11 +982,24 @@ class TravelRequirementsSection extends StatelessWidget {
                     iconBackground: accent.withValues(alpha: 0.10),
                   ),
                 // กฎ 6 เดือนบังคับตอนจองอยู่แล้ว แต่ลูกค้าต้องรู้ก่อนจอง ไม่ใช่
-                // ไปเจอตอนกดจองแล้วผ่านไม่ได้
+                // ไปเจอตอนกดจองแล้วผ่านไม่ได้ — ส่วน "ไม่มีพาสปอร์ตไปได้ไหม"
+                // ก็เป็นคำถามแรก ๆ ของทริปลาว/กัมพูชาทางบก
                 _FeatureRow(
                   icon: Icons.menu_book_rounded,
-                  title: 'พาสปอร์ตต้องเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง',
-                  description: 'กรอกเลขพาสปอร์ตตอนจอง หรือกรอกเพิ่มทีหลังในใบจองได้',
+                  title: switch (documentMode) {
+                    'passport_or_border_pass' =>
+                      'ใช้พาสปอร์ต หรือ Border Pass ก็ได้',
+                    'on_site' => 'นำเอกสารเดินทางฉบับจริงมาในวันเดินทาง',
+                    _ => 'พาสปอร์ตต้องเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง',
+                  },
+                  description: switch (documentMode) {
+                    'passport_or_border_pass' =>
+                      'ไม่มีพาสปอร์ตก็ไปได้ เลือก "ทำ Border Pass" ตอนจอง '
+                          'ทีมงานยื่นทำให้จากเลขบัตรประชาชน',
+                    'on_site' =>
+                      'ไม่ต้องกรอกเลขพาสปอร์ตตอนจอง ทีมงานตรวจฉบับจริงหน้างาน',
+                    _ => 'กรอกเลขพาสปอร์ตตอนจอง หรือกรอกเพิ่มทีหลังในใบจองได้',
+                  },
                   iconColor: accent,
                   iconBackground: accent.withValues(alpha: 0.10),
                 ),

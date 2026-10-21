@@ -57,9 +57,26 @@ class _HandoverClaimScreenState extends State<HandoverClaimScreen> {
   DateTime? _passportExpiry;
   bool _foreigner = false;
   bool _acceptTerms = false;
+  String? _travelDocument;
 
   bool get _isInternational =>
       asMap(_preview?['trip'])['is_international'] == true;
+
+  /// passport | passport_or_border_pass | on_site — null = ทริปในประเทศ
+  /// (backend รุ่นก่อนที่ยังไม่ส่งค่านี้ = พาสปอร์ต)
+  String? get _docMode {
+    final mode = textOf(asMap(_preview?['trip'])['travel_document_mode']);
+    if (mode.isNotEmpty) return mode;
+    return _isInternational ? 'passport' : null;
+  }
+
+  /// Border Pass ออกจากบัตรประชาชนไทย — ชาวต่างชาติไม่มีตัวเลือกนี้
+  bool get _canBorderPass =>
+      _docMode == 'passport_or_border_pass' && !_foreigner;
+
+  bool get _asksPassport =>
+      (_docMode == 'passport' || _docMode == 'passport_or_border_pass') &&
+      (!_canBorderPass || _travelDocument == 'passport');
   bool get _womenOnly => asMap(_preview?['trip'])['is_women_only'] == true;
   List<String> get _titles =>
       _womenOnly ? const ['นาง', 'นางสาว'] : const ['นาย', 'นาง', 'นางสาว'];
@@ -132,6 +149,15 @@ class _HandoverClaimScreenState extends State<HandoverClaimScreen> {
       );
       return;
     }
+    if (_canBorderPass && _travelDocument == null) {
+      setState(
+        () => _errors = {
+          'travel_document':
+              'กรุณาเลือกว่ามีพาสปอร์ต หรือให้ทีมงานทำ Border Pass',
+        },
+      );
+      return;
+    }
 
     final payload = <String, dynamic>{
       'title': _title,
@@ -145,7 +171,8 @@ class _HandoverClaimScreenState extends State<HandoverClaimScreen> {
       'accept_terms': _acceptTerms,
       'terms_version': textOf(asMap(_preview?['terms'])['version']),
     };
-    if (_isInternational) {
+    if (_canBorderPass) payload['travel_document'] = _travelDocument;
+    if (_asksPassport) {
       payload['passport_expires_at'] = _passportExpiry == null
           ? null
           : _date(_passportExpiry!);
@@ -318,7 +345,68 @@ class _HandoverClaimScreenState extends State<HandoverClaimScreen> {
           'เลขบัตรประชาชน 13 หลัก',
           keyboard: TextInputType.number,
         ),
-      if (_isInternational) ...[
+      if (_docMode == 'on_site')
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            'เอกสารเดินทางไม่ต้องกรอกล่วงหน้า วันเดินทางนำฉบับจริงมาแสดงกับทีมงาน',
+            style: appFont(
+              fontSize: AppText.sizeCaption,
+              color: AppTheme.mutedText(context),
+            ),
+          ),
+        ),
+      if (_canBorderPass)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'ทริปนี้ใช้พาสปอร์ต หรือ Border Pass ก็ได้ — มีพาสปอร์ตไหม',
+                style: appFont(
+                  fontSize: AppText.sizeLabel,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.mutedText(context),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('มีพาสปอร์ต'),
+                    selected: _travelDocument == 'passport',
+                    onSelected: (_) =>
+                        setState(() => _travelDocument = 'passport'),
+                  ),
+                  ChoiceChip(
+                    label: const Text('ไม่มี · ทำ Border Pass'),
+                    selected: _travelDocument == 'border_pass',
+                    onSelected: (_) =>
+                        setState(() => _travelDocument = 'border_pass'),
+                  ),
+                ],
+              ),
+              if (_errors['travel_document'] != null)
+                _errorText(_errors['travel_document']!)
+              else if (_travelDocument == 'border_pass')
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'ทีมงานยื่นทำ Border Pass จากเลขบัตรประชาชนด้านบน '
+                    'วันเดินทางพกบัตรประชาชนตัวจริงมาด้วย',
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      color: AppTheme.mutedText(context),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      if (_asksPassport) ...[
         _field('name_en', 'ชื่อ-สกุลภาษาอังกฤษ (ตามพาสปอร์ต)'),
         _field('passport_no', 'เลขที่พาสปอร์ต'),
         _dateField(

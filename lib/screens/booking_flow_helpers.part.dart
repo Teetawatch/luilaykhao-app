@@ -342,6 +342,9 @@ class _PassengerControllers {
   final nameEn = TextEditingController();
   final passportNo = TextEditingController();
   final passportExpiresAt = ValueNotifier<DateTime?>(null);
+  // ทริปที่ให้เลือก "มีพาสปอร์ต / ให้ทีมงานทำ Border Pass" — เก็บเป็นป้ายที่ชิป
+  // แสดง (ดู _travelDocumentLabel) แปลงเป็นค่า API ตอนส่ง
+  final travelDocument = TextEditingController();
   final birthDate = ValueNotifier<DateTime?>(null);
   final bloodGroup = TextEditingController();
   final emergencyContact = TextEditingController();
@@ -372,6 +375,7 @@ class _PassengerControllers {
     nameEn,
     passportNo,
     passportExpiresAt,
+    travelDocument,
     birthDate,
     bloodGroup,
     emergencyContact,
@@ -394,7 +398,7 @@ class _PassengerControllers {
   /// จำนวนช่องบังคับที่ยังไม่ผ่าน — เรียกตัวตรวจชุดเดียวกับที่ฟอร์มใช้ จึงไม่มี
   /// กฎซ้ำสองที่ (เอกสารแนบตรวจแยกที่หน้าจอ เพราะไม่ใช่ FormField)
   int missingCount({
-    bool international = false,
+    String? documentMode,
     bool needsPickup = false,
     DateTime? minPassportExpiry,
   }) {
@@ -416,7 +420,9 @@ class _PassengerControllers {
       emergencyContact.text.trim().isNotEmpty,
       _phoneValidator('-')(emergencyPhone.text) == null,
       if (needsPickup) pickupPointId.value != null,
-      if (international) ...[
+      if (documentMode == _docsPassportOrBorderPass)
+        _travelDocumentValue(travelDocument.text) != null,
+      if (asksPassport(documentMode)) ...[
         nameEn.text.trim().isNotEmpty,
         passportNo.text.trim().length >= 5,
         expiry != null &&
@@ -425,6 +431,19 @@ class _PassengerControllers {
     ];
     return checks.where((ok) => !ok).length;
   }
+
+  /// คนนี้เลือกให้ทีมงานทำ Border Pass — ต้องแนบรูปบัตรประชาชนหน้า/หลัง
+  bool choseBorderPass(String? documentMode) =>
+      documentMode == _docsPassportOrBorderPass &&
+      _travelDocumentValue(travelDocument.text) == 'border_pass';
+
+  /// ฟอร์มต้องถามพาสปอร์ตของคนนี้ไหม — ทริปที่ให้เลือกถามเฉพาะคนที่ตอบว่ามี
+  bool asksPassport(String? documentMode) => switch (documentMode) {
+    _docsPassport => true,
+    _docsPassportOrBorderPass =>
+      _travelDocumentValue(travelDocument.text) == 'passport',
+    _ => false,
+  };
 
   void applyWallet(Map<String, dynamic> wallet) {
     final t = (wallet['title'] as String? ?? '').trim();
@@ -474,6 +493,9 @@ class _PassengerControllers {
     nameEn.text = textOf(user['name_en']);
     passportNo.text = textOf(user['passport_no']);
     passportExpiresAt.value = _parseBirthDate(user['passport_expires_at']);
+    // โปรไฟล์ไม่มีค่านี้ — เติมเฉพาะตอนคืนร่างการจอง ไม่ล้างที่เพิ่งเลือกไว้
+    final doc = textOf(user['travel_document']);
+    if (doc.isNotEmpty) travelDocument.text = doc;
     birthDate.value = _parseBirthDate(user['birth_date']);
     bloodGroup.text = _profileBloodGroup(user['blood_group']);
     emergencyContact.text = textOf(user['emergency_contact']);
@@ -487,20 +509,34 @@ class _PassengerControllers {
     );
   }
 
-  Map<String, dynamic> payload() => {
+  /// [documentMode] คือโหมดเอกสารของทริป — ไม่ส่ง (ร่างการจอง) = เก็บทุกช่อง
+  /// ตามที่กรอกไว้ คนที่เลือก Border Pass หรือทริปที่ใช้ฉบับจริงหน้างานไม่ส่ง
+  /// เลขพาสปอร์ต แต่ยังส่งคีย์ไป (null) ให้ backend รู้ว่าแอปรุ่นนี้ถามได้แล้ว
+  Map<String, dynamic> payload({String? documentMode}) {
+    final sendPassport = documentMode == null ||
+        documentMode == _docsPassport ||
+        (documentMode == _docsPassportOrBorderPass &&
+            _travelDocumentValue(travelDocument.text) != 'border_pass');
+    return _payload(sendPassport: sendPassport);
+  }
+
+  Map<String, dynamic> _payload({required bool sendPassport}) => {
     'title': title.text.trim(),
     'name': name.text.trim(),
     'nickname': nickname.text.trim().isEmpty ? null : nickname.text.trim(),
     'phone': phone.text.trim(),
     'email': email.text.trim().isEmpty ? null : email.text.trim(),
     'id_card': idCard.text.trim().isEmpty ? null : idCard.text.trim(),
-    'name_en': nameEn.text.trim().isEmpty
+    'name_en': !sendPassport || nameEn.text.trim().isEmpty
         ? null
         : nameEn.text.trim().toUpperCase(),
-    'passport_no': passportNo.text.trim().isEmpty
+    'passport_no': !sendPassport || passportNo.text.trim().isEmpty
         ? null
         : passportNo.text.trim().toUpperCase(),
-    'passport_expires_at': _formatBirthDate(passportExpiresAt.value),
+    'passport_expires_at': sendPassport
+        ? _formatBirthDate(passportExpiresAt.value)
+        : null,
+    'travel_document': _travelDocumentValue(travelDocument.text),
     'birth_date': _formatBirthDate(birthDate.value),
     'blood_group': bloodGroup.text.trim().isEmpty
         ? null
@@ -529,6 +565,7 @@ class _PassengerControllers {
     nameEn.dispose();
     passportNo.dispose();
     passportExpiresAt.dispose();
+    travelDocument.dispose();
     birthDate.dispose();
     bloodGroup.dispose();
     emergencyContact.dispose();
@@ -1062,3 +1099,26 @@ Map<String, dynamic>? _seatById(Map<String, dynamic> seatMap, String id) {
   }
   return null;
 }
+
+/// โหมดเอกสารเดินทางของทริป — ค่าเดียวกับ Trip::TRAVEL_DOCUMENT_MODES ฝั่ง backend
+const _docsPassport = 'passport';
+const _docsPassportOrBorderPass = 'passport_or_border_pass';
+const _docsOnSite = 'on_site';
+
+const _docPassportLabel = 'มีพาสปอร์ต';
+const _docBorderPassLabel = 'ไม่มี · ทำ Border Pass';
+
+/// ป้ายบนชิปของคำตอบ "มีพาสปอร์ตไหม" — รับทั้งป้ายและค่า API (ร่างการจองเก็บ
+/// ค่า API ไว้) คืน null เมื่อยังไม่ได้เลือก
+String? _travelDocumentLabel(String text) => switch (text.trim()) {
+  'passport' || _docPassportLabel => _docPassportLabel,
+  'border_pass' || _docBorderPassLabel => _docBorderPassLabel,
+  _ => null,
+};
+
+String? _travelDocumentValue(String text) =>
+    switch (_travelDocumentLabel(text)) {
+      _docPassportLabel => 'passport',
+      _docBorderPassLabel => 'border_pass',
+      _ => null,
+    };

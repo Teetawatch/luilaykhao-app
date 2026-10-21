@@ -118,6 +118,9 @@ class _TravelDocumentsScreenState extends State<TravelDocumentsScreen> {
             'passport_expires_at': entry.value.expiresAt == null
                 ? ''
                 : _isoDate(entry.value.expiresAt!),
+            // เฉพาะทริปที่ให้เลือก — คนเลือก Border Pass ไม่ต้องมีช่องพาสปอร์ต
+            if (entry.value.travelDocument != null)
+              'travel_document': entry.value.travelDocument,
           },
         )
         .toList();
@@ -392,6 +395,9 @@ class _PassengerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMissing = passenger['is_missing'] == true;
     final isExpiring = passenger['is_expiring'] == true;
+    final canBorderPass = passenger['can_border_pass'] == true;
+    // ทริปที่ให้เลือก: ยังไม่เลือก = แสดงช่องพาสปอร์ตไว้ก่อน (ค่าเดิมของระบบ)
+    final borderPass = canBorderPass && fields.travelDocument == 'border_pass';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -411,55 +417,96 @@ class _PassengerCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _StatusPill(isMissing: isMissing, isExpiring: isExpiring),
+              _StatusPill(
+                isMissing: isMissing,
+                isExpiring: isExpiring,
+                borderPass:
+                    textOf(passenger['travel_document']) == 'border_pass',
+              ),
             ],
           ),
-          const SizedBox(height: 14),
-          _Field(
-            controller: fields.nameEn,
-            label: 'ชื่อ-สกุลภาษาอังกฤษ (ตามพาสปอร์ต)',
-            hint: 'SOMCHAI JAIDEE',
-            icon: Icons.badge_rounded,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z\s.'-]")),
-              _UpperCaseFormatter(),
-            ],
-            onChanged: (_) => onChanged(),
-            validator: (value) {
-              if (fields.isBlank) return null;
-              return (value ?? '').trim().isEmpty
-                  ? 'กรุณากรอกชื่อ-สกุลภาษาอังกฤษตามพาสปอร์ต'
-                  : null;
-            },
-          ),
-          const SizedBox(height: 12),
-          _Field(
-            controller: fields.passportNo,
-            label: 'เลขที่พาสปอร์ต',
-            hint: 'AA1234567',
-            icon: Icons.menu_book_rounded,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-              LengthLimitingTextInputFormatter(20),
-              _UpperCaseFormatter(),
-            ],
-            onChanged: (_) => onChanged(),
-            validator: (value) {
-              if (fields.isBlank) return null;
-              final text = (value ?? '').trim();
-              if (text.isEmpty) return 'กรุณากรอกเลขที่พาสปอร์ต';
-              if (text.length < 5) return 'เลขที่พาสปอร์ตไม่ถูกต้อง';
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
-          _ExpiryPicker(
-            fields: fields,
-            minimumExpiry: minimumExpiry,
-            onChanged: onChanged,
-          ),
+          if (canBorderPass) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (value, label) in const [
+                  ('passport', 'มีพาสปอร์ต'),
+                  ('border_pass', 'ไม่มี · ทำ Border Pass'),
+                ])
+                  ChoiceChip(
+                    label: Text(label),
+                    selected: (fields.travelDocument ?? 'passport') == value,
+                    onSelected: (_) {
+                      HapticFeedback.selectionClick();
+                      fields.travelDocument = value;
+                      onChanged();
+                    },
+                  ),
+              ],
+            ),
+          ],
+          if (borderPass) ...[
+            const SizedBox(height: 10),
+            Text(
+              'ทีมงานยื่นทำ Border Pass จากเลขบัตรประชาชนที่ให้ไว้ตอนจอง '
+              'กดบันทึกเพื่อยืนยัน แล้วแนบรูปบัตรประชาชนหน้า-หลังที่ "เอกสารแนบ" '
+              'ในใบจอง (ด่านใช้เป็นหลักฐาน) วันเดินทางพกบัตรตัวจริงมาด้วย',
+              style: appFont(
+                fontSize: AppText.sizeCaption,
+                color: AppTheme.mutedText(context),
+                height: 1.5,
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 14),
+            _Field(
+              controller: fields.nameEn,
+              label: 'ชื่อ-สกุลภาษาอังกฤษ (ตามพาสปอร์ต)',
+              hint: 'SOMCHAI JAIDEE',
+              icon: Icons.badge_rounded,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z\s.'-]")),
+                _UpperCaseFormatter(),
+              ],
+              onChanged: (_) => onChanged(),
+              validator: (value) {
+                if (fields.isBlank) return null;
+                return (value ?? '').trim().isEmpty
+                    ? 'กรุณากรอกชื่อ-สกุลภาษาอังกฤษตามพาสปอร์ต'
+                    : null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _Field(
+              controller: fields.passportNo,
+              label: 'เลขที่พาสปอร์ต',
+              hint: 'AA1234567',
+              icon: Icons.menu_book_rounded,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                LengthLimitingTextInputFormatter(20),
+                _UpperCaseFormatter(),
+              ],
+              onChanged: (_) => onChanged(),
+              validator: (value) {
+                if (fields.isBlank) return null;
+                final text = (value ?? '').trim();
+                if (text.isEmpty) return 'กรุณากรอกเลขที่พาสปอร์ต';
+                if (text.length < 5) return 'เลขที่พาสปอร์ตไม่ถูกต้อง';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _ExpiryPicker(
+              fields: fields,
+              minimumExpiry: minimumExpiry,
+              onChanged: onChanged,
+            ),
+          ],
           if (serverError != null) ...[
             const SizedBox(height: 10),
             Row(
@@ -494,12 +541,19 @@ class _PassengerCard extends StatelessWidget {
 class _StatusPill extends StatelessWidget {
   final bool isMissing;
   final bool isExpiring;
+  final bool borderPass;
 
-  const _StatusPill({required this.isMissing, required this.isExpiring});
+  const _StatusPill({
+    required this.isMissing,
+    required this.isExpiring,
+    this.borderPass = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = isMissing
+    final (label, color) = borderPass
+        ? ('ทำ Border Pass', AppTheme.successColor)
+        : isMissing
         ? ('ยังไม่กรอก', AppTheme.errorColor)
         : isExpiring
         ? ('ใกล้หมดอายุ', AppTheme.warningColor)
@@ -788,10 +842,14 @@ class _PassengerFields {
   final TextEditingController passportNo;
   DateTime? expiresAt;
 
+  /// passport | border_pass — null เมื่อทริปไม่ได้ให้เลือก หรือยังไม่เคยตอบ
+  String? travelDocument;
+
   _PassengerFields({
     required this.nameEn,
     required this.passportNo,
     this.expiresAt,
+    this.travelDocument,
   });
 
   factory _PassengerFields.fromJson(Map<String, dynamic> passenger) {
@@ -799,7 +857,13 @@ class _PassengerFields {
       nameEn: TextEditingController(text: textOf(passenger['name_en'])),
       passportNo: TextEditingController(text: textOf(passenger['passport_no'])),
       expiresAt: DateTime.tryParse(textOf(passenger['passport_expires_at'])),
+      travelDocument: _travelDocumentOf(passenger),
     );
+  }
+
+  static String? _travelDocumentOf(Map<String, dynamic> passenger) {
+    final value = textOf(passenger['travel_document']);
+    return value.isEmpty ? null : value;
   }
 
   /// หลังบันทึกสำเร็จ ค่าที่เซิร์ฟเวอร์เก็บจริง (ตัวพิมพ์ใหญ่) กลับมา — รับมาแทน
@@ -813,10 +877,12 @@ class _PassengerFields {
       textOf(passenger['passport_expires_at']),
     );
     if (savedExpiry != null) expiresAt = savedExpiry;
+    travelDocument = _travelDocumentOf(passenger) ?? travelDocument;
   }
 
   /// เว้นว่างทั้งแถว = ยังไม่พร้อมกรอกของคนนี้ ไม่นับเป็นกรอกผิด
   bool get isBlank =>
+      travelDocument != 'border_pass' &&
       nameEn.text.trim().isEmpty &&
       passportNo.text.trim().isEmpty &&
       expiresAt == null;

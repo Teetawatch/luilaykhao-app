@@ -73,12 +73,16 @@ class TravelerFormSection extends StatelessWidget {
   final ValueChanged<int> onUseWallet;
   final ValueChanged<int> onUseSavedTraveller;
   final List<dynamic> pickupPoints;
-  /// ทริปต่างประเทศเก็บเอกสารเดินทางเพิ่ม และไม่มีขั้นตอนเลือกจุดขึ้นรถ
-  final bool isInternational;
+  /// เอกสารเดินทางที่ต้องถาม (passport | passport_or_border_pass | on_site)
+  /// null = ทริปในประเทศ ไม่มีกล่องเอกสารเดินทาง
+  final String? travelDocumentMode;
   /// วันหมดอายุพาสปอร์ตที่เร็วที่สุดที่ยังใช้เดินทางรอบนี้ได้ (วันเดินทาง + 6 เดือน)
   final DateTime? minPassportExpiry;
   /// เอกสารที่ทริปนี้ขอให้แนบ — แอดมินตั้งไว้บนทริป ว่างได้ (ไม่ต้องแนบอะไร)
   final List<dynamic> documentRequirements;
+
+  /// บัตรประชาชนหน้า/หลัง — ขอเพิ่มเฉพาะคนที่เลือก Border Pass
+  final List<dynamic> borderPassDocuments;
 
   const TravelerFormSection({
     super.key,
@@ -92,9 +96,10 @@ class TravelerFormSection extends StatelessWidget {
     required this.onUseWallet,
     required this.onUseSavedTraveller,
     this.pickupPoints = const [],
-    this.isInternational = false,
+    this.travelDocumentMode,
     this.minPassportExpiry,
     this.documentRequirements = const [],
+    this.borderPassDocuments = const [],
   });
 
   /// พับคนที่กรอกเสร็จ แล้วกางคนถัดไปและเลื่อนไปหา — กรอกทีละคนเป็นจังหวะ
@@ -143,9 +148,10 @@ class TravelerFormSection extends StatelessWidget {
                   ? selectedSeatIds[index]
                   : null,
               pickupPoints: pickupPoints,
-              isInternational: isInternational,
+              travelDocumentMode: travelDocumentMode,
               minPassportExpiry: minPassportExpiry,
               documentRequirements: documentRequirements,
+              borderPassDocuments: borderPassDocuments,
               onUseProfile: () => onUseProfile(index),
               onUseWallet: () => onUseWallet(index),
               onUseSavedTraveller: () => onUseSavedTraveller(index),
@@ -966,9 +972,10 @@ class _TravelerDocumentBox extends StatelessWidget {
     required this.documents,
   });
 
-  void _add(String key, String path) {
+  /// บัตรประชาชนของ Border Pass มีได้ด้านละไฟล์เดียว — เลือกใหม่ = แทนที่
+  void _add(String key, String path, {bool single = false}) {
     final next = Map<String, List<String>>.from(documents.value);
-    next[key] = [...(next[key] ?? const []), path];
+    next[key] = single ? [path] : [...(next[key] ?? const []), path];
     documents.value = next;
   }
 
@@ -1044,7 +1051,11 @@ class _TravelerDocumentBox extends StatelessWidget {
                       fileNames: files
                           .map((path) => path.split('/').last)
                           .toList(),
-                      onPicked: (path) => _add(key, path),
+                      onPicked: (path) => _add(
+                        key,
+                        path,
+                        single: requirement['for'] == 'border_pass',
+                      ),
                       onRemove: (index) => _remove(key, index),
                     );
                   },
@@ -1459,9 +1470,10 @@ class _TravelerCard extends StatelessWidget {
   final _PassengerControllers controllers;
   final String? seatId;
   final List<dynamic> pickupPoints;
-  final bool isInternational;
+  final String? travelDocumentMode;
   final DateTime? minPassportExpiry;
   final List<dynamic> documentRequirements;
+  final List<dynamic> borderPassDocuments;
   final VoidCallback onUseProfile;
   final VoidCallback onUseWallet;
   final VoidCallback onUseSavedTraveller;
@@ -1474,9 +1486,10 @@ class _TravelerCard extends StatelessWidget {
     required this.controllers,
     this.seatId,
     this.pickupPoints = const [],
-    this.isInternational = false,
+    this.travelDocumentMode,
     this.minPassportExpiry,
     this.documentRequirements = const [],
+    this.borderPassDocuments = const [],
     required this.onUseProfile,
     required this.onUseWallet,
     required this.onUseSavedTraveller,
@@ -1514,7 +1527,7 @@ class _TravelerCard extends StatelessWidget {
                 open: open,
                 collapsible: _collapsible,
                 needsPickup: pickupPoints.isNotEmpty,
-                isInternational: isInternational,
+                travelDocumentMode: travelDocumentMode,
                 minPassportExpiry: minPassportExpiry,
               ),
               AnimatedSize(
@@ -1644,11 +1657,15 @@ class _TravelerCard extends StatelessWidget {
         ),
         // เอกสารเดินทาง — ข้อมูลชุดนี้เอาไปออกตั๋วเครื่องบินตรง ๆ สะกดผิด
         // แม้ตัวเดียวคือขึ้นเครื่องไม่ได้ จึงแยกกล่องให้เห็นชัดว่าคนละชุดกัน
-        if (isInternational) ...[
+        if (travelDocumentMode == _docsOnSite) ...[
+          const SizedBox(height: 16),
+          const _OnSiteDocumentNote(),
+        ] else if (travelDocumentMode != null) ...[
           const SizedBox(height: 16),
           _PassportBox(
             controllers: controllers,
             minPassportExpiry: minPassportExpiry,
+            offersBorderPass: travelDocumentMode == _docsPassportOrBorderPass,
           ),
         ],
         const _FormGroupLabel(
@@ -1684,13 +1701,25 @@ class _TravelerCard extends StatelessWidget {
         ),
         // เอกสารแนบที่ทริปขอ — รายการและข้อความ "ใช้สำหรับ..." มาจากที่แอดมิน
         // ตั้งไว้บนทริป ไฟล์ถูกเก็บไว้ในหน้าจอก่อน แล้วส่งขึ้นหลังสร้างการจอง
-        if (documentRequirements.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          _TravelerDocumentBox(
-            requirements: documentRequirements,
-            documents: controllers.documents,
-          ),
-        ],
+        // บัตรประชาชนของ Border Pass ขึ้นเมื่อคนนี้เลือก Border Pass เท่านั้น
+        ListenableBuilder(
+          listenable: controllers.travelDocument,
+          builder: (context, _) {
+            final requirements = [
+              ...documentRequirements,
+              if (controllers.choseBorderPass(travelDocumentMode))
+                ...borderPassDocuments,
+            ];
+            if (requirements.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _TravelerDocumentBox(
+                requirements: requirements,
+                documents: controllers.documents,
+              ),
+            );
+          },
+        ),
         const _FormGroupLabel(
           icon: Icons.contact_emergency_rounded,
           text: 'ผู้ติดต่อฉุกเฉิน',
@@ -1764,7 +1793,7 @@ class _TravelerCardHeader extends StatelessWidget {
   final bool open;
   final bool collapsible;
   final bool needsPickup;
-  final bool isInternational;
+  final String? travelDocumentMode;
   final DateTime? minPassportExpiry;
 
   const _TravelerCardHeader({
@@ -1774,7 +1803,7 @@ class _TravelerCardHeader extends StatelessWidget {
     required this.open,
     required this.collapsible,
     required this.needsPickup,
-    required this.isInternational,
+    required this.travelDocumentMode,
     required this.minPassportExpiry,
   });
 
@@ -1784,7 +1813,7 @@ class _TravelerCardHeader extends StatelessWidget {
       listenable: controllers.changes,
       builder: (context, _) {
         final missing = controllers.missingCount(
-          international: isInternational,
+          documentMode: travelDocumentMode,
           needsPickup: needsPickup,
           minPassportExpiry: minPassportExpiry,
         );
@@ -2403,14 +2432,161 @@ class _PassengerPickupChips extends StatelessWidget {
   }
 }
 
-/// ช่องพาสปอร์ตของทริปต่างประเทศ — กรอบสีเตือนให้รู้ว่าต้องตรงหน้าพาสปอร์ต
+/// กล่องเอกสารเดินทางของทริปต่างประเทศ — กรอบสีเตือนให้รู้ว่าต้องตรงหน้าพาสปอร์ต
+///
+/// ทริปที่ให้เลือก Border Pass ถามก่อนว่ามีพาสปอร์ตไหม แล้วค่อยกางช่องพาสปอร์ต
+/// ให้คนที่ตอบว่ามี — ช่องที่ไม่ได้วาดก็ไม่ถูกตรวจ คนเลือก Border Pass จึงผ่านได้
 class _PassportBox extends StatelessWidget {
   final _PassengerControllers controllers;
   final DateTime? minPassportExpiry;
+  final bool offersBorderPass;
 
   const _PassportBox({
     required this.controllers,
     required this.minPassportExpiry,
+    this.offersBorderPass = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _DocumentTintBox(
+      icon: offersBorderPass
+          ? Icons.badge_rounded
+          : Icons.flight_takeoff_rounded,
+      title: 'เอกสารเดินทาง',
+      subtitle: offersBorderPass
+          ? 'ทริปนี้ใช้พาสปอร์ต หรือ Border Pass ก็ได้'
+          : 'กรอกให้ตรงกับหน้าพาสปอร์ตทุกตัวอักษร เพราะใช้ออกตั๋วเครื่องบิน',
+      children: [
+        if (!offersBorderPass)
+          _passportFields()
+        else ...[
+          _ChoiceChipsField(
+            label: 'มีพาสปอร์ตไหม',
+            controller: controllers.travelDocument,
+            options: const [_docPassportLabel, _docBorderPassLabel],
+            normalize: _travelDocumentLabel,
+            errorText: 'กรุณาเลือกว่ามีพาสปอร์ต หรือให้ทีมงานทำ Border Pass',
+          ),
+          ListenableBuilder(
+            listenable: controllers.travelDocument,
+            builder: (context, _) {
+              return switch (_travelDocumentValue(
+                controllers.travelDocument.text,
+              )) {
+                'passport' => Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _passportFields(),
+                ),
+                'border_pass' => Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(
+                    'ทีมงานยื่นทำ Border Pass จากเลขบัตรประชาชนด้านบน '
+                    'วันเดินทางพกบัตรประชาชนตัวจริงมาด้วย',
+                    style: appFont(
+                      fontSize: AppText.sizeCaption,
+                      color: _mutedTextColor(context),
+                    ),
+                  ),
+                ),
+                _ => const SizedBox.shrink(),
+              };
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _passportFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _PremiumTextField(
+          controller: controllers.nameEn,
+          label: 'ชื่อ-สกุลภาษาอังกฤษ (ตามพาสปอร์ต)',
+          hint: 'SOMCHAI JAIDEE',
+          icon: Icons.badge_rounded,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z\s.'-]")),
+            _UpperCaseFormatter(),
+          ],
+          validator: _requiredValidator(
+            'กรุณากรอกชื่อ-สกุลภาษาอังกฤษตามพาสปอร์ต',
+          ),
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 12),
+        _PremiumTextField(
+          controller: controllers.passportNo,
+          label: 'เลขที่พาสปอร์ต',
+          hint: 'AA1234567',
+          icon: Icons.menu_book_rounded,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+            LengthLimitingTextInputFormatter(20),
+            _UpperCaseFormatter(),
+          ],
+          validator: (value) {
+            final text = (value ?? '').trim();
+            if (text.isEmpty) return 'กรุณากรอกเลขที่พาสปอร์ต';
+            if (text.length < 5) return 'เลขที่พาสปอร์ตไม่ถูกต้อง';
+            return null;
+          },
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 12),
+        _PremiumDatePicker(
+          value: controllers.passportExpiresAt,
+          label: 'วันหมดอายุพาสปอร์ต',
+          icon: Icons.event_available_rounded,
+          future: true,
+          firstDate: minPassportExpiry,
+          helpText: 'เลือกวันหมดอายุพาสปอร์ต',
+          hint: 'แตะเพื่อเลือกวันหมดอายุ',
+          validator: (date) {
+            if (date == null) return 'กรุณาระบุวันหมดอายุพาสปอร์ต';
+            final minimum = minPassportExpiry;
+            if (minimum != null && date.isBefore(minimum)) {
+              return 'พาสปอร์ตต้องเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// ทริปที่ทีมงานตรวจเอกสารฉบับจริงหน้างาน — ไม่มีช่องให้กรอก บอกให้รู้ว่าต้องพกมา
+class _OnSiteDocumentNote extends StatelessWidget {
+  const _OnSiteDocumentNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _DocumentTintBox(
+      icon: Icons.badge_rounded,
+      title: 'เอกสารเดินทาง',
+      subtitle:
+          'ไม่ต้องกรอกล่วงหน้า วันเดินทางนำเอกสารเดินทางฉบับจริงมาแสดงกับทีมงาน',
+      children: [],
+    );
+  }
+}
+
+class _DocumentTintBox extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+
+  const _DocumentTintBox({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.children,
   });
 
   @override
@@ -2431,14 +2607,14 @@ class _PassportBox extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.flight_takeoff_rounded, size: 18, color: tone),
+              Icon(icon, size: 18, color: tone),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'เอกสารเดินทาง',
+                      title,
                       style: appFont(
                         fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w800,
@@ -2447,7 +2623,7 @@ class _PassportBox extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'กรอกให้ตรงกับหน้าพาสปอร์ตทุกตัวอักษร เพราะใช้ออกตั๋วเครื่องบิน',
+                      subtitle,
                       style: appFont(
                         fontSize: AppText.sizeCaption,
                         color: _mutedTextColor(context),
@@ -2458,60 +2634,10 @@ class _PassportBox extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _PremiumTextField(
-            controller: controllers.nameEn,
-            label: 'ชื่อ-สกุลภาษาอังกฤษ (ตามพาสปอร์ต)',
-            hint: 'SOMCHAI JAIDEE',
-            icon: Icons.badge_rounded,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z\s.'-]")),
-              _UpperCaseFormatter(),
-            ],
-            validator: _requiredValidator(
-              'กรุณากรอกชื่อ-สกุลภาษาอังกฤษตามพาสปอร์ต',
-            ),
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          _PremiumTextField(
-            controller: controllers.passportNo,
-            label: 'เลขที่พาสปอร์ต',
-            hint: 'AA1234567',
-            icon: Icons.menu_book_rounded,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-              LengthLimitingTextInputFormatter(20),
-              _UpperCaseFormatter(),
-            ],
-            validator: (value) {
-              final text = (value ?? '').trim();
-              if (text.isEmpty) return 'กรุณากรอกเลขที่พาสปอร์ต';
-              if (text.length < 5) return 'เลขที่พาสปอร์ตไม่ถูกต้อง';
-              return null;
-            },
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          _PremiumDatePicker(
-            value: controllers.passportExpiresAt,
-            label: 'วันหมดอายุพาสปอร์ต',
-            icon: Icons.event_available_rounded,
-            future: true,
-            firstDate: minPassportExpiry,
-            helpText: 'เลือกวันหมดอายุพาสปอร์ต',
-            hint: 'แตะเพื่อเลือกวันหมดอายุ',
-            validator: (date) {
-              if (date == null) return 'กรุณาระบุวันหมดอายุพาสปอร์ต';
-              final minimum = minPassportExpiry;
-              if (minimum != null && date.isBefore(minimum)) {
-                return 'พาสปอร์ตต้องเหลืออายุอย่างน้อย 6 เดือนนับจากวันเดินทาง';
-              }
-              return null;
-            },
-          ),
+          if (children.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ...children,
+          ],
         ],
       ),
     );

@@ -63,7 +63,10 @@ void main() {
     ],
   };
 
-  Map<String, dynamic> preview({bool claimable = true}) => {
+  Map<String, dynamic> preview({
+    bool claimable = true,
+    Map<String, dynamic> trip = const {},
+  }) => {
     'token': 'tok',
     'status': claimable ? 'pending' : 'claimed',
     'claimable': claimable,
@@ -75,6 +78,7 @@ void main() {
       'title': 'ภูกระดึง',
       'is_international': false,
       'is_women_only': false,
+      ...trip,
     },
     'schedule': {'departure_label': '10 ตุลาคม 2642'},
     'seat_label': 'A2',
@@ -169,6 +173,63 @@ void main() {
       scrollable: list,
     );
     expect(find.text('รับที่นั่งนี้'), findsOneWidget);
+  });
+
+  testWidgets('ทริปที่ให้เลือก Border Pass ถามก่อน แล้วค่อยกางช่องพาสปอร์ต', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      const HandoverClaimScreen(token: 'tok'),
+      (_) async => json({
+        'success': true,
+        'data': preview(
+          trip: {
+            'is_international': true,
+            'travel_document_mode': 'passport_or_border_pass',
+          },
+        ),
+      }),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('ไม่มี · ทำ Border Pass'),
+      300,
+      scrollable: list,
+    );
+    expect(find.text('เลขที่พาสปอร์ต'), findsNothing);
+
+    await tester.tap(find.text('ไม่มี · ทำ Border Pass'));
+    await tester.pump();
+    expect(find.textContaining('ทีมงานยื่นทำ Border Pass'), findsOneWidget);
+    expect(find.text('เลขที่พาสปอร์ต'), findsNothing);
+
+    await tester.tap(find.text('มีพาสปอร์ต'));
+    await tester.pump();
+    expect(find.text('เลขที่พาสปอร์ต'), findsOneWidget);
+  });
+
+  testWidgets('ทริปที่ใช้เอกสารฉบับจริงหน้างานไม่มีช่องพาสปอร์ตเลย', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      const HandoverClaimScreen(token: 'tok'),
+      (_) async => json({
+        'success': true,
+        'data': preview(
+          trip: {'is_international': true, 'travel_document_mode': 'on_site'},
+        ),
+      }),
+    );
+
+    await tester.scrollUntilVisible(
+      find.textContaining('นำฉบับจริงมาแสดง'),
+      300,
+      scrollable: list,
+    );
+    expect(find.text('เลขที่พาสปอร์ต'), findsNothing);
+    expect(find.text('มีพาสปอร์ต'), findsNothing);
   });
 
   testWidgets('ลิงก์ที่มีคนรับไปแล้ว ไม่โชว์ฟอร์ม', (tester) async {

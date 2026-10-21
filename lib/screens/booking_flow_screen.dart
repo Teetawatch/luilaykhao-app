@@ -343,19 +343,35 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     });
   }
 
-  /// ทริปต่างประเทศ — บังคับเก็บเอกสารเดินทาง และไม่มีจุดขึ้นรถให้เลือก
-  /// เพราะนัดเจอกันที่สนามบิน (backend ยกเว้นการบังคับจุดรับให้ตรงกัน)
+  /// ทริปต่างประเทศ — เก็บเอกสารเดินทางตาม [_travelDocumentMode]
+  /// (จุดขึ้นรถไม่ได้ผูกกับปลายทาง — ลาว/กัมพูชาขับรถตู้ไปรับเหมือนในประเทศ)
   bool get _isInternational => _asBool(widget.trip['is_international']);
+
+  /// เอกสารเดินทางที่ฟอร์มต้องถาม: passport | passport_or_border_pass | on_site
+  /// (null = ทริปในประเทศ) — backend รุ่นก่อนที่ยังไม่ส่งค่านี้ = พาสปอร์ต
+  String? get _travelDocumentMode {
+    final mode = textOf(widget.trip['travel_document_mode']);
+    if (mode.isNotEmpty) return mode;
+    return _isInternational ? _docsPassport : null;
+  }
 
   /// เอกสารที่ทริปนี้ขอให้แนบ — แอดมินกำหนดเองต่อทริป ว่างคือไม่ต้องแนบอะไร
   List<dynamic> get _documentRequirements =>
       _isGift ? const [] : asList(widget.trip['document_requirements']);
 
-  /// จุดขึ้นรถที่ให้เลือกรายคน — ทริปต่างประเทศ จอยทริป และรอบที่บินไม่มี
+  /// บัตรประชาชนหน้า/หลัง — ด่านบังคับใช้เป็นหลักฐาน ขอเฉพาะคนที่เลือก Border Pass
+  List<dynamic> get _borderPassDocuments =>
+      _isGift ? const [] : asList(widget.trip['border_pass_documents']);
+
+  /// เอกสารที่ต้องขอจากผู้เดินทางคนนี้ — ของทุกคน + บัตรประชาชนถ้าเลือก Border Pass
+  List<dynamic> _requirementsFor(_PassengerControllers passenger) => [
+    ..._documentRequirements,
+    if (passenger.choseBorderPass(_travelDocumentMode)) ..._borderPassDocuments,
+  ];
+
+  /// จุดขึ้นรถที่ให้เลือกรายคน — จอยทริปและรอบที่บินไม่มี
   List<dynamic> get _passengerPickupPoints =>
-      _isInternational || _isJoinTrip || _isFlightSchedule
-      ? const []
-      : _pickupPoints;
+      _isJoinTrip || _isFlightSchedule ? const [] : _pickupPoints;
 
   /// รอบที่เลือกบินไปไหม — ถ้าใช่ ขั้นตอน "จุดขึ้นรถ" กลายเป็น "จุดนัดพบ"
   /// ที่สนามบิน ไม่มีจุดรับให้เลือกและไม่ต้องปักหมุดอะไรทั้งนั้น
@@ -1454,9 +1470,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             isSeatSelectionMode: _hasSeatMap,
             selectedSeatIds: _hasSeatMap ? _selectedSeatList : const <String>[],
             pickupPoints: _passengerPickupPoints,
-            isInternational: _isInternational,
+            travelDocumentMode: _travelDocumentMode,
             minPassportExpiry: _minPassportExpiry,
             documentRequirements: _documentRequirements,
+            borderPassDocuments: _borderPassDocuments,
             onAddPassenger: _addPassenger,
             onRemovePassenger: _removePassenger,
             onUseProfile: _fillPassengerFromProfile,
@@ -1612,12 +1629,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
 
   /// ข้อความบอกว่าใครยังไม่ได้แนบเอกสารที่บังคับ — null เมื่อครบทุกคน
   String? _missingDocumentMessage() {
-    final requirements = _documentRequirements;
-    if (requirements.isEmpty) return null;
-
     for (var i = 0; i < _passengers.length; i++) {
       final picked = _passengers[i].documents.value;
-      for (final raw in requirements) {
+      for (final raw in _requirementsFor(_passengers[i])) {
         final requirement = asMap(raw);
         if (requirement['required'] != true) continue;
         final files = picked[textOf(requirement['key'])] ?? const <String>[];
@@ -1639,8 +1653,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
     String bookingRef,
     List<dynamic> createdPassengers,
   ) async {
-    final requirements = _documentRequirements;
-    if (requirements.isEmpty || bookingRef.isEmpty) return;
+    if (bookingRef.isEmpty) return;
 
     final app = context.read<AppProvider>();
     var failed = 0;
@@ -1653,7 +1666,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       if (passengerId == null) continue;
 
       final picked = _passengers[i].documents.value;
-      for (final raw in requirements) {
+      for (final raw in _requirementsFor(_passengers[i])) {
         final key = textOf(asMap(raw)['key']);
         for (final path in picked[key] ?? const <String>[]) {
           try {
@@ -1914,7 +1927,7 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           .where(
             (p) =>
                 p.missingCount(
-                  international: _isInternational,
+                  documentMode: _travelDocumentMode,
                   needsPickup: needsPickup,
                   minPassportExpiry: _minPassportExpiry,
                 ) >
@@ -2026,7 +2039,9 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
                       : _pickupPointId,
                 };
               })
-            : _passengers.map((p) => p.payload()).toList(),
+            : _passengers
+                  .map((p) => p.payload(documentMode: _travelDocumentMode))
+                  .toList(),
       });
       // ไฟล์เอกสารต้องมี booking_ref ก่อน จึงส่งตามหลังการจอง
       await _uploadDocuments(
