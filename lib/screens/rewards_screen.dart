@@ -341,44 +341,80 @@ class _Segmented extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final count = labels.length;
+    final duration = (MediaQuery.maybeDisableAnimationsOf(context) ?? false)
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
+
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          for (var i = 0; i < labels.length; i++)
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onChanged(i);
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(vertical: 9),
+          // ไฮไลต์ชิ้นเดียวที่เลื่อนไปหาช่องที่เลือก — เดิมแต่ละช่องไล่สีพื้นเอง
+          // ระหว่างสีพื้นผิวกับ Colors.transparent (ดำโปร่งใส) ช่วงกลางอนิเมชัน
+          // ทั้งช่องเก่าและช่องใหม่จึงเป็นสีเทาเข้มพร้อมกัน เห็นเป็นกระพริบทุกครั้งที่แตะ
+          Positioned.fill(
+            child: AnimatedAlign(
+              alignment: Alignment(
+                count <= 1 ? 0 : -1 + 2 * index / (count - 1),
+                0,
+              ),
+              duration: duration,
+              curve: Curves.easeOutCubic,
+              child: FractionallySizedBox(
+                widthFactor: 1 / count,
+                heightFactor: 1,
+                child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: index == i
-                        ? AppTheme.surface(context)
-                        : Colors.transparent,
+                    color: AppTheme.surface(context),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                  ),
-                  child: Text(
-                    labels[i],
-                    textAlign: TextAlign.center,
-                    style: appFont(
-                      fontSize: AppText.sizeBody,
-                      fontWeight: FontWeight.w800,
-                      color: index == i
-                          ? AppTheme.primaryColor
-                          : AppTheme.mutedText(context),
-                    ),
                   ),
                 ),
               ),
             ),
+          ),
+          Row(
+            children: [
+              for (var i = 0; i < count; i++)
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: index == i,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        if (index == i) return;
+                        HapticFeedback.selectionClick();
+                        onChanged(i);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        child: AnimatedDefaultTextStyle(
+                          duration: duration,
+                          style: appFont(
+                            fontSize: AppText.sizeBody,
+                            fontWeight: FontWeight.w800,
+                            color: index == i
+                                ? AppTheme.primaryColor
+                                : AppTheme.mutedText(context),
+                          ),
+                          child: Text(
+                            labels[i],
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
