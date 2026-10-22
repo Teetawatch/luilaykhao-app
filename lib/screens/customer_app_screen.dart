@@ -66,6 +66,7 @@ import 'schedule_announcements_screen.dart';
 import 'article_list_screen.dart';
 import 'article_detail_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen, AllReviewsScreen;
+import 'trip_calendar_screen.dart' show TripCalendarScreen;
 import 'booking_documents_screen.dart';
 import 'travel_documents_screen.dart';
 import 'trip_day_screen.dart';

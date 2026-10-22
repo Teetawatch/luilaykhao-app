@@ -2277,12 +2277,16 @@ class _UpcomingDeparturesSection extends StatelessWidget {
                     ],
                   ),
                 ),
+                // รายการนี้เรียงตามวันออกเดินทางอยู่แล้ว "ดูต่อ" จึงไปที่ปฏิทินทริป
+                // ซึ่งตอบคำถามเดียวกันทั้งเดือน ไม่ใช่หน้าทริปทั้งหมดที่ไม่มีวันที่
                 TextButton(
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AllTripsScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const TripCalendarScreen(),
+                    ),
                   ),
                   child: Text(
-                    'ดูทั้งหมด',
+                    'ดูปฏิทิน',
                     style: appFont(
                       color: const Color(0xFF065F46),
                       fontSize: AppText.sizeBody,

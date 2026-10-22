@@ -481,6 +481,25 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
             TravelSliverAppBar(
               title: 'กิจกรรมและทริปทั้งหมด',
               showBackButton: widget.showBackButton,
+              actions: [
+                // ดูเป็นปฏิทินว่าวันไหนมีรอบอะไร — ไม่ต้องกดเข้าไปดูวันทีละทริป
+                IconButton(
+                  tooltip: 'ปฏิทินทริป',
+                  icon: Icon(
+                    Icons.calendar_month_rounded,
+                    color: AppTheme.onSurface(context),
+                  ),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const TripCalendarScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 4),
+              ],
             ),
             SliverToBoxAdapter(
               child: SafeArea(
