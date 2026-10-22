@@ -70,6 +70,10 @@ class AppSnack {
       ..showSnackBar(
         SnackBar(
           duration: Duration(seconds: icon == Icons.error_rounded ? 5 : 3),
+          // Flutter ตั้งให้ snackbar ที่มีปุ่ม (เช่น "เลิกทำ") ค้างจนกว่าจะกด
+          // ไม่สน duration — ปุ่มในแอปนี้เป็นทางลัด ไม่ใช่คำถามที่ต้องตอบ
+          // จึงให้หายเองตามเวลาเสมอ
+          persist: false,
           action: action,
           content: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

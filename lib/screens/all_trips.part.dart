@@ -354,13 +354,121 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
     );
   }
 
-  bool get _hasFilters =>
-      _selectedType.isNotEmpty ||
-      _selectedDifficulty.isNotEmpty ||
-      _selectedDestination.isNotEmpty ||
-      _selectedCountry.isNotEmpty ||
-      _selectedRegion.isNotEmpty ||
-      _searchController.text.trim().isNotEmpty;
+  /// ตัวกรองที่กำลังใช้ เรียงตามลำดับแผงด้านบน — แต่ละอันกดเอาออกเองได้
+  List<_ActiveFilter> get _activeFilters {
+    final query = _searchController.text.trim();
+    final country = _countryFacets.firstWhere(
+      (item) => textOf(item['code']) == _selectedCountry,
+      orElse: () => const <String, dynamic>{},
+    );
+    final region = _regionFacets.firstWhere(
+      (item) => textOf(item['key']) == _selectedRegion,
+      orElse: () => const <String, dynamic>{},
+    );
+    final category = _categories.firstWhere(
+      (item) => textOf(item['slug']) == _selectedType,
+      orElse: () => const <String, dynamic>{},
+    );
+    final difficulty = _difficulties.where((d) => d.$1 == _selectedDifficulty);
+
+    return [
+      if (query.isNotEmpty)
+        _ActiveFilter(
+          id: 'search',
+          icon: Icons.search_rounded,
+          label: '“$query”',
+          onRemove: () {
+            HapticFeedback.selectionClick();
+            _clearSearch();
+          },
+        ),
+      // เลือกประเทศ/ภาคแล้วบอกฝั่งอยู่ในตัว ไม่ต้องมีชิป "ต่างประเทศ" ซ้อน
+      if (_selectedDestination.isNotEmpty &&
+          _selectedCountry.isEmpty &&
+          _selectedRegion.isEmpty)
+        _ActiveFilter(
+          id: 'destination',
+          icon: _selectedDestination == 'international'
+              ? Icons.flight_takeoff_rounded
+              : Icons.terrain_rounded,
+          label: _selectedDestination == 'international'
+              ? 'ต่างประเทศ'
+              : 'ในประเทศ',
+          onRemove: () => _selectDestination(''),
+        ),
+      if (_selectedCountry.isNotEmpty)
+        _ActiveFilter(
+          id: 'country',
+          icon: Icons.public_rounded,
+          label:
+              '${textOf(country['flag'])} ${textOf(country['name'], _selectedCountry)}'
+                  .trim(),
+          onRemove: () => _toggleCountry(_selectedCountry),
+        ),
+      if (_selectedRegion.isNotEmpty)
+        _ActiveFilter(
+          id: 'region',
+          icon: Icons.place_rounded,
+          label: textOf(region['label'], _selectedRegion),
+          onRemove: () => _toggleRegion(_selectedRegion),
+        ),
+      if (_selectedType.isNotEmpty)
+        _ActiveFilter(
+          id: 'type',
+          icon: categoryIcon(
+            textOf(category['icon']).isEmpty ? null : textOf(category['icon']),
+          ),
+          label: _categoryLabel(_selectedType),
+          onRemove: () => _toggleType(_selectedType),
+        ),
+      if (difficulty.isNotEmpty)
+        _ActiveFilter(
+          id: 'difficulty',
+          icon: Icons.signal_cellular_alt_rounded,
+          label: difficulty.first.$2,
+          onRemove: () => _toggleDifficulty(_selectedDifficulty),
+        ),
+    ];
+  }
+
+  /// ล้างทั้งหมดแล้วให้กด "เลิกทำ" ได้ — ตัวกรองหลายชั้นกว่าจะเลือกครบใช้หลาย
+  /// ขั้น เผลอกดทีเดียวไม่ควรต้องเริ่มใหม่หมด
+  void _clearAllFilters() {
+    final count = _activeFilters.length;
+    final query = _searchController.text;
+    final type = _selectedType;
+    final difficulty = _selectedDifficulty;
+    final destination = _selectedDestination;
+    final country = _selectedCountry;
+    final region = _selectedRegion;
+    final sort = _sortOrder;
+
+    HapticFeedback.mediumImpact();
+    _clearFilters();
+    AppSnack.show(
+      context,
+      'ล้างตัวกรอง $count รายการแล้ว',
+      action: SnackBarAction(
+        label: 'เลิกทำ',
+        onPressed: () {
+          if (!mounted) return;
+          _searchController.text = query;
+          // ตั้งคำค้นกลับแล้ว listener จะนัดค้นซ้ำ — ค้นทีเดียวด้านล่างพอ
+          _searchDebounce?.cancel();
+          _pendingHistoryQuery = null;
+          setState(() {
+            _selectedType = type;
+            _selectedDifficulty = difficulty;
+            _selectedDestination = destination;
+            _selectedCountry = country;
+            _selectedRegion = region;
+            _sortOrder = sort;
+          });
+          _fetchTrips();
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -411,8 +519,8 @@ class _AllTripsScreenState extends State<AllTripsScreen> {
                         onSelectRecent: _applyRecentSearch,
                         onRemoveRecent: _removeRecentSearch,
                         onClearRecents: _clearRecentSearches,
-                        onClear: _clearFilters,
-                        hasFilters: _hasFilters,
+                        onClear: _clearAllFilters,
+                        activeFilters: _activeFilters,
                       ),
                       const SizedBox(height: 22),
                       _TripsResultsToolbar(
@@ -509,7 +617,9 @@ class _TripsFilterPanel extends StatelessWidget {
   final VoidCallback onSubmitSearch;
   final VoidCallback onClearSearch;
   final VoidCallback onClear;
-  final bool hasFilters;
+
+  /// ตัวกรองที่ใช้อยู่ — ว่าง = ไม่มีแถบสรุป
+  final List<_ActiveFilter> activeFilters;
 
   /// คำค้นล่าสุด เรียงใหม่สุดก่อน — ว่างได้ (แถบจะไม่ขึ้น)
   final List<String> recentSearches;
@@ -539,7 +649,7 @@ class _TripsFilterPanel extends StatelessWidget {
     required this.onSubmitSearch,
     required this.onClearSearch,
     required this.onClear,
-    required this.hasFilters,
+    required this.activeFilters,
     required this.recentSearches,
     required this.onSelectRecent,
     required this.onRemoveRecent,
@@ -700,36 +810,208 @@ class _TripsFilterPanel extends StatelessWidget {
             ],
           ),
         ],
-        if (hasFilters) ...[
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: onClear,
-            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.close_rounded,
-                    size: 15,
-                    color: AppTheme.mutedText(context),
+        // ขยาย/หดนุ่มๆ ตอนแถบโผล่ หายไป หรือชิปเพิ่ม/ลด แทนการกระโดด
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: activeFilters.isEmpty
+              ? const SizedBox(width: double.infinity)
+              : Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: _ActiveFiltersBar(
+                    filters: activeFilters,
+                    onClearAll: onClear,
                   ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'ล้างตัวกรองทั้งหมด',
-                    style: appFont(
-                      color: AppTheme.mutedText(context),
-                      fontSize: AppText.sizeLabel,
-                      fontWeight: FontWeight.w600,
-                    ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// ตัวกรองหนึ่งอันที่กำลังใช้ — [id] คงที่ต่อชนิด ให้ชิปเดิมไม่ถูกสร้างใหม่
+/// (และไม่เล่นอนิเมชันโผล่ซ้ำ) ตอนตัวกรองอื่นถูกเพิ่มหรือเอาออก
+class _ActiveFilter {
+  final String id;
+  final IconData icon;
+  final String label;
+  final VoidCallback onRemove;
+
+  const _ActiveFilter({
+    required this.id,
+    required this.icon,
+    required this.label,
+    required this.onRemove,
+  });
+}
+
+/// สรุปตัวกรองที่ใช้อยู่ — หัวการ์ดบอกจำนวนพร้อมปุ่ม "ล้างทั้งหมด" ด้านล่าง
+/// เป็นชิปของแต่ละตัวกรองที่กดเอาออกทีละอันได้ แทนลิงก์ล้างทั้งหมดบรรทัดเดียว
+/// ที่ไม่บอกว่ากำลังกรองอะไรอยู่
+class _ActiveFiltersBar extends StatelessWidget {
+  final List<_ActiveFilter> filters;
+  final VoidCallback onClearAll;
+
+  const _ActiveFiltersBar({required this.filters, required this.onClearAll});
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppTheme.onTintOf(context, AppTheme.primaryColor);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 6, 6, 14),
+      decoration: AppTheme.cardDecoration(context, radius: AppTheme.radiusLg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.tune_rounded, size: 18, color: accent),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'ตัวกรองที่ใช้อยู่',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: appFont(
+                    color: AppTheme.onSurface(context),
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.1,
                   ),
-                ],
+                ),
               ),
+              const SizedBox(width: 8),
+              Container(
+                constraints: const BoxConstraints(minWidth: 22),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.selectedTint(context),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                ),
+                child: Text(
+                  '${filters.length}',
+                  textAlign: TextAlign.center,
+                  style: appFont(
+                    color: accent,
+                    fontSize: AppText.sizeCaption,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: onClearAll,
+                style: TextButton.styleFrom(
+                  foregroundColor: accent,
+                  minimumSize: const Size(0, MinTapTarget.minSize),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: const StadiumBorder(),
+                  textStyle: appFont(
+                    fontSize: AppText.sizeLabel,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                label: const Text('ล้างทั้งหมด'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final filter in filters)
+                  _ActiveFilterChip(key: ValueKey(filter.id), filter: filter),
+              ],
             ),
           ),
         ],
-      ],
+      ),
+    );
+  }
+}
+
+/// ชิปของตัวกรองที่ใช้อยู่ — แตะตรงไหนของชิปก็เอาตัวกรองนั้นออก (กากบาทเป็น
+/// แค่สัญลักษณ์บอก) โผล่มาด้วยการขยายจาง ๆ ตอนเพิ่งเลือก
+class _ActiveFilterChip extends StatelessWidget {
+  final _ActiveFilter filter;
+
+  const _ActiveFilterChip({super.key, required this.filter});
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppTheme.onTintOf(context, AppTheme.primaryColor);
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
+    final chip = Semantics(
+      button: true,
+      label: 'เอาตัวกรอง ${filter.label} ออก',
+      excludeSemantics: true,
+      child: Material(
+        color: AppTheme.selectedTint(context),
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: AppTheme.primaryColor.withValues(alpha: 0.28),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: filter.onRemove,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(11, 7, 7, 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(filter.icon, size: 15, color: accent),
+                const SizedBox(width: 6),
+                // คำค้นยาว ๆ ต้องไม่ลากชิปจนล้นการ์ด
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 200),
+                  child: Text(
+                    filter.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: appFont(
+                      color: accent,
+                      fontSize: AppText.sizeLabel,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.close_rounded, size: 12, color: accent),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (reduceMotion) return chip;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      builder: (_, t, child) => Opacity(
+        opacity: t,
+        child: Transform.scale(scale: 0.9 + 0.1 * t, child: child),
+      ),
+      child: chip,
     );
   }
 }
@@ -859,7 +1141,7 @@ class _DestinationTab extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: appFont(
-                  color: selected ? Colors.white : AppTheme.textMain,
+                  color: selected ? Colors.white : AppTheme.onSurface(context),
                   fontSize: AppText.sizeLabel,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.2,
@@ -1022,7 +1304,7 @@ class _FilterChipButton extends StatelessWidget {
             Text(
               label,
               style: appFont(
-                color: selected ? Colors.white : AppTheme.textMain,
+                color: selected ? Colors.white : AppTheme.onSurface(context),
                 fontSize: AppText.sizeLabel,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.1,
@@ -1083,7 +1365,7 @@ class _RecentSearchChip extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: appFont(
-                        color: AppTheme.textMain,
+                        color: AppTheme.onSurface(context),
                         fontSize: AppText.sizeLabel,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.1,
@@ -1159,7 +1441,7 @@ class _TripsResultsToolbar extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               isExpanded: true,
               style: appFont(
-                color: AppTheme.textMain,
+                color: AppTheme.onSurface(context),
                 fontSize: AppText.sizeBody,
                 fontWeight: FontWeight.w600,
               ),

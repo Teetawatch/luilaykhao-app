@@ -816,6 +816,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('ยังไม่มีข้อมูลใน Wallet กรุณาบันทึกก่อนใช้งาน'),
+          // มีปุ่มแล้ว Flutter จะให้ค้างจนกว่าจะกด — ให้หายเองตามเวลา
+          persist: false,
           action: SnackBarAction(
             label: 'เปิด Wallet',
             onPressed: () => Navigator.push(

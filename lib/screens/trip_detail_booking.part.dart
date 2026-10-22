@@ -617,6 +617,8 @@ class _WaitlistButtonState extends State<_WaitlistButton> {
             'เพิ่มเข้าคิวรอแล้ว — เราจะแจ้งเตือนทันทีที่มีที่นั่งว่าง',
             style: appFont(color: Colors.white),
           ),
+          // มีปุ่มแล้ว Flutter จะให้ค้างจนกว่าจะกด — ให้หายเองตามเวลา
+          persist: false,
           action: SnackBarAction(
             label: 'ดูคิว',
             textColor: Colors.white,
