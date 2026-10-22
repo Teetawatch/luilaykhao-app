@@ -1371,6 +1371,8 @@ class _PickupPointRowState extends State<_PickupPointRow> {
     final showRegion =
         !widget.isDefault && regionLabel.isNotEmpty && regionLabel != label;
     final count = _numberValue(widget.point['passenger_count']);
+    // หมุดที่ปักเอง (ของใบจองหรือรายคน) — ไม่ใช่จุดรับตายตัวของรอบ
+    final isCustom = widget.point['is_custom'] == true;
     final passengers = _passengers;
     final canExpand = passengers.isNotEmpty;
     final accent = widget.isJoinTrip
@@ -1398,7 +1400,9 @@ class _PickupPointRowState extends State<_PickupPointRow> {
                       ? Icons.hail_rounded
                       : (widget.isDefault
                           ? Icons.help_outline
-                          : Icons.trip_origin),
+                          : (isCustom
+                              ? Icons.push_pin_rounded
+                              : Icons.trip_origin)),
                   size: 14,
                   color: accent,
                 ),
