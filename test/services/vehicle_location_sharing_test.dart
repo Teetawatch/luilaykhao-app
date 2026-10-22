@@ -44,6 +44,21 @@ class _FakeGeolocator extends GeolocatorPlatform {
   @override
   Future<Position> getCurrentPosition({LocationSettings? locationSettings}) async =>
       _fix();
+
+  int appSettingsOpened = 0;
+  int locationSettingsOpened = 0;
+
+  @override
+  Future<bool> openAppSettings() async {
+    appSettingsOpened++;
+    return true;
+  }
+
+  @override
+  Future<bool> openLocationSettings() async {
+    locationSettingsOpened++;
+    return true;
+  }
 }
 
 /// มือถือของสตาฟคือ GPS ของรถ และต้องเป็นเองโดยไม่เพิ่มงานให้สตาฟ —
@@ -120,6 +135,57 @@ void main() {
     );
 
     expect(gps.prompts, 1);
+  });
+
+  test('checking access ahead of the trip never opens a dialog', () async {
+    gps.permission = LocationPermission.denied;
+
+    expect(await sharing.checkAccess(), LocationAccess.denied);
+    expect(gps.prompts, 0);
+    expect(sharing.needsPermission, isTrue);
+    expect(sharing.accessProblem, LocationAccess.denied);
+
+    gps.permission = LocationPermission.whileInUse;
+    expect(await sharing.checkAccess(), LocationAccess.ready);
+    expect(sharing.needsPermission, isFalse);
+    expect(sharing.accessProblem, isNull);
+  });
+
+  test('asking for access sends each problem to the place that fixes it', () async {
+    gps.permission = LocationPermission.denied;
+    expect(await sharing.requestAccess(), LocationAccess.denied);
+    expect(gps.prompts, 1, reason: 'ยังขอผ่านกล่องของระบบได้');
+
+    // ปฏิเสธถาวร — กล่องไม่ขึ้นอีกแล้ว ต้องพาไปหน้าการตั้งค่าของแอป
+    gps.permission = LocationPermission.deniedForever;
+    expect(await sharing.requestAccess(), LocationAccess.deniedForever);
+    expect(gps.appSettingsOpened, 1);
+    expect(gps.prompts, 1);
+
+    // GPS ของเครื่องปิด — ไปหน้าการตั้งค่าตำแหน่งของเครื่อง
+    gps.serviceEnabled = false;
+    expect(await sharing.requestAccess(), LocationAccess.serviceOff);
+    expect(gps.locationSettingsOpened, 1);
+  });
+
+  test('a blocked start says what to fix, not just that it failed', () async {
+    gps.permission = LocationPermission.deniedForever;
+
+    await withApi((api) => sharing.startManually(api: api, scheduleId: 7));
+
+    expect(sharing.accessProblem, LocationAccess.deniedForever);
+    expect(sharing.error, contains('การตั้งค่า'));
+    expect(calls, isEmpty);
+  });
+
+  test('a passing access check does not hide an unrelated error', () async {
+    // เริ่มจากเครื่องที่สิทธิ์พร้อมอยู่แล้ว (singleton — ล้างค่าที่เทสต์ก่อนทิ้งไว้)
+    await sharing.checkAccess();
+    sharing.error = 'เครื่องของเพื่อนกำลังส่งอยู่';
+
+    await sharing.checkAccess();
+
+    expect(sharing.error, 'เครื่องของเพื่อนกำลังส่งอยู่');
   });
 
   test('turning it off keeps it off for that round', () async {

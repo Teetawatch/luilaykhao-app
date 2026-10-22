@@ -122,6 +122,12 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
                             const StaffCheckInScreen(),
                           ),
                         ),
+                      // มือถือสตาฟ = GPS ของรถ — สถานะอยู่บนหน้าแรกของแท็บ ไม่ใช่
+                      // ซ่อนอยู่ในหน้ารายชื่อที่หน้างานวุ่น ๆ ไม่มีใครเข้าไปหา
+                      _StaffVehicleShareSlot(
+                        active: activeSchedules,
+                        upcoming: upcomingSchedules,
+                      ),
                       if (primarySchedule != null) ...[
                         const SizedBox(height: 12),
                         _StaffToolbar(schedule: primarySchedule),
@@ -207,6 +213,47 @@ class _StaffWorkScreenState extends State<StaffWorkScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// การ์ดแชร์ตำแหน่งรถใต้การ์ดงานวันนี้ — รอบที่พูดถึงเลือกโดย
+/// [VehicleShareStatusCard.pickRound]
+class _StaffVehicleShareSlot extends StatelessWidget {
+  final List<Map<String, dynamic>> active;
+  final List<Map<String, dynamic>> upcoming;
+
+  const _StaffVehicleShareSlot({required this.active, required this.upcoming});
+
+  @override
+  Widget build(BuildContext context) {
+    final sharing = VehicleLocationSharing.instance;
+    return AnimatedBuilder(
+      animation: sharing,
+      builder: (context, _) {
+        final schedule = VehicleShareStatusCard.pickRound(
+          active,
+          upcoming,
+          isSharingFor: sharing.isSharingFor,
+        );
+        if (schedule == null) return const SizedBox.shrink();
+        final scheduleId = int.parse('${schedule['id']}');
+        final trip = _toMap(schedule['trip']);
+        final tripTitle = _cleanText(trip['title'], fallback: 'ทริป');
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: VehicleShareStatusCard(
+            // เปลี่ยนรอบ = เริ่มเช็คสิทธิ์ใหม่ ไม่ใช่ใช้สถานะของรอบก่อน
+            key: ValueKey('vehicle-share-$scheduleId'),
+            schedule: schedule,
+            onOpenManifest: () => _pushPremium(
+              context,
+              StaffManifestScreen(scheduleId: scheduleId, title: tripTitle),
+            ),
+          ),
+        );
+      },
     );
   }
 }

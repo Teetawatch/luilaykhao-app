@@ -170,6 +170,9 @@ class LocationStreamHub {
     _nextId = 1;
     _factory = (settings) =>
         Geolocator.getPositionStream(locationSettings: settings);
+    // คิวใหม่ใน zone ของคนเรียก — คิวเดิมผูกกับ zone ที่ singleton ถูกสร้าง
+    // ถ้าเป็น zone จริงแต่เทสต์วิ่งในนาฬิกาจำลอง งานที่ต่อคิวไว้จะไม่เดินเลย
+    _queue = Future<void>.value();
   }
 
   /// มีใครใช้ GPS อยู่กี่ราย

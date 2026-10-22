@@ -8,6 +8,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'location_stream_hub.dart';
 
+/// สิทธิ์ตำแหน่งของเครื่องนี้พร้อมให้แชร์ตำแหน่งรถไหม — แต่ละแบบแก้คนละที่
+enum LocationAccess {
+  ready,
+
+  /// GPS ของเครื่องปิดอยู่ — เปิดที่การตั้งค่าตำแหน่งของเครื่อง
+  serviceOff,
+
+  /// ยังไม่ได้อนุญาต — ขอผ่านกล่องของระบบได้
+  denied,
+
+  /// ปฏิเสธถาวร — กล่องของระบบไม่ขึ้นอีกแล้ว ต้องไปเปิดในการตั้งค่าของแอป
+  deniedForever,
+}
+
 /// มือถือของสตาฟที่นั่งไปกับรถ = GPS ของรถ
 ///
 /// คนขับไม่ได้ใช้แอป ตำแหน่งรถที่ลูกค้าเห็นบนแผนที่ ETA จุดรับ และการ์ด
@@ -81,6 +95,10 @@ class VehicleLocationSharing extends ChangeNotifier {
   /// เปิดให้เองไม่ได้เพราะยังไม่เคยอนุญาตตำแหน่ง — การ์ดจะได้ขอแบบกดครั้งเดียว
   bool needsPermission = false;
 
+  /// เหตุที่เปิดไม่ได้ครั้งล่าสุด (null = ไม่มีปัญหาเรื่องสิทธิ์) — บอกว่าปุ่มต้อง
+  /// พาไปแก้ที่ไหน: กล่องขอสิทธิ์, การตั้งค่าแอป หรือการตั้งค่าตำแหน่งของเครื่อง
+  LocationAccess? accessProblem;
+
   bool get busy => _busy;
   bool get isSharing => _lease != null;
 
@@ -126,15 +144,16 @@ class VehicleLocationSharing extends ChangeNotifier {
         await _teardown();
       }
 
-      if (!await _ensurePermission(prompt: !silent)) {
-        error = silent
-            ? null
-            : 'ต้องอนุญาตให้เข้าถึงตำแหน่งก่อน จึงจะแชร์ตำแหน่งรถได้';
+      final access = await _access(prompt: !silent);
+      if (access != LocationAccess.ready) {
+        error = silent ? null : accessMessage(access);
+        accessProblem = access;
         needsPermission = true;
         return false;
       }
 
       needsPermission = false;
+      accessProblem = null;
 
       _api = api;
       _scheduleId = scheduleId;
@@ -387,16 +406,81 @@ class VehicleLocationSharing extends ChangeNotifier {
     lastSentAt = null;
   }
 
-  Future<bool> _ensurePermission({bool prompt = true}) async {
-    if (!await Geolocator.isLocationServiceEnabled()) return false;
+  /// ดูว่าเครื่องนี้พร้อมแชร์ไหมโดยไม่เด้งกล่องอะไรขึ้นมา — ใช้เตรียมตัวล่วงหน้า
+  /// (การ์ด "พรุ่งนี้มือถือเครื่องนี้จะเป็น GPS ของรถ")
+  ///
+  /// เรียกซ้ำตอนกลับเข้าแอป — สตาฟที่เพิ่งไปเปิดสิทธิ์ในการตั้งค่าจะเห็นการ์ด
+  /// เปลี่ยนเป็น "พร้อมแล้ว" ทันที ไม่ต้องกดอะไรอีก
+  Future<LocationAccess> checkAccess() async {
+    final access = await _access(prompt: false);
+    _settleAccess(access);
+    return access;
+  }
+
+  /// ขอสิทธิ์ตอนสตาฟกดเองเท่านั้น — ถ้ากล่องของระบบขึ้นไม่ได้แล้ว (GPS ปิด/
+  /// ปฏิเสธถาวร) จะพาไปหน้าการตั้งค่าที่แก้ได้จริงแทน
+  Future<LocationAccess> requestAccess() async {
+    final before = await _access(prompt: false);
+    switch (before) {
+      case LocationAccess.ready:
+        break;
+      case LocationAccess.denied:
+        final after = await _access(prompt: true);
+        _settleAccess(after);
+        return after;
+      case LocationAccess.serviceOff:
+        await _openSettings(Geolocator.openLocationSettings);
+      case LocationAccess.deniedForever:
+        await _openSettings(Geolocator.openAppSettings);
+    }
+    _settleAccess(before);
+    return before;
+  }
+
+  void _settleAccess(LocationAccess access) {
+    final ok = access == LocationAccess.ready;
+    // ล้างเฉพาะข้อความเรื่องสิทธิ์ ("ต้องอนุญาตก่อน") — ข้อความอื่น เช่น
+    // อีกเครื่องเป็นคนส่งอยู่ ยังเป็นความจริงอยู่ ห้ามหายไปเพราะเช็คสิทธิ์ผ่าน
+    if (ok && accessProblem != null) error = null;
+    needsPermission = !ok;
+    accessProblem = ok ? null : access;
+    notifyListeners();
+  }
+
+  Future<void> _openSettings(Future<bool> Function() open) async {
+    try {
+      await open();
+    } catch (e) {
+      debugPrint('[VehicleLocationSharing] open settings failed: $e');
+    }
+  }
+
+  /// ข้อความที่บอกสตาฟว่าต้องแก้อะไร — ไม่ใช่แค่ "ไม่ได้รับอนุญาต" เฉย ๆ
+  static String accessMessage(LocationAccess access) => switch (access) {
+    LocationAccess.ready => '',
+    LocationAccess.serviceOff =>
+      'GPS ของเครื่องปิดอยู่ เปิดตำแหน่งที่ตั้งก่อน จึงจะแชร์ตำแหน่งรถได้',
+    LocationAccess.denied =>
+      'ต้องอนุญาตให้เข้าถึงตำแหน่งก่อน จึงจะแชร์ตำแหน่งรถได้',
+    LocationAccess.deniedForever =>
+      'แอปถูกปิดสิทธิ์ตำแหน่งไว้ เปิดได้ที่การตั้งค่าของเครื่อง > ลุยเลเขา > ตำแหน่ง',
+  };
+
+  Future<LocationAccess> _access({required bool prompt}) async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      return LocationAccess.serviceOff;
+    }
 
     var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      if (!prompt) return false;
+    if (permission == LocationPermission.denied && prompt) {
       permission = await Geolocator.requestPermission();
     }
 
-    return permission == LocationPermission.always ||
-        permission == LocationPermission.whileInUse;
+    return switch (permission) {
+      LocationPermission.always ||
+      LocationPermission.whileInUse => LocationAccess.ready,
+      LocationPermission.deniedForever => LocationAccess.deniedForever,
+      _ => LocationAccess.denied,
+    };
   }
 }
