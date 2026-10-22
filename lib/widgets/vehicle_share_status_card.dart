@@ -240,7 +240,7 @@ class _VehicleShareStatusCardState extends State<VehicleShareStatusCard>
                   'เครื่องนี้ไม่ต้องเปิด — ถ้า$nameไม่ได้นั่งรถคันนี้ '
                   'ให้เครื่องนี้แชร์แทนได้',
               action: _ActionButton(
-                label: 'ให้เครื่องนี้แชร์แทน',
+                label: 'แชร์แทน',
                 busy: _working || _sharing.busy,
                 outlined: true,
                 onPressed: _turnOn,
@@ -260,8 +260,7 @@ class _VehicleShareStatusCardState extends State<VehicleShareStatusCard>
               action: _ActionButton(
                 label: switch (problem) {
                   LocationAccess.serviceOff => 'เปิด GPS',
-                  LocationAccess.deniedForever => 'เปิดในการตั้งค่า',
-                  LocationAccess.denied => 'อนุญาตแล้วเปิดแชร์',
+                  LocationAccess.deniedForever => 'ตั้งค่า',
                   _ => 'เปิดแชร์',
                 },
                 busy: _working || _sharing.busy,
@@ -293,8 +292,8 @@ class _VehicleShareStatusCardState extends State<VehicleShareStatusCard>
               action: _ActionButton(
                 label: switch (access) {
                   LocationAccess.serviceOff => 'เปิด GPS',
-                  LocationAccess.deniedForever => 'เปิดในการตั้งค่า',
-                  _ => 'อนุญาตตำแหน่ง',
+                  LocationAccess.deniedForever => 'ตั้งค่า',
+                  _ => 'อนุญาต',
                 },
                 busy: _working,
                 onPressed: _allow,
@@ -386,52 +385,48 @@ class _Shell extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            // ปุ่มอยู่ท้ายแถวเดียวกับข้อความ — การ์ดเตี้ยลง ไม่ต้องมีบรรทัดปุ่มแยก
+            // ไอคอนยังเกาะบรรทัดหัวข้อ ส่วนปุ่มอยู่กึ่งกลางแนวตั้งของทั้งแถว
+            child: Row(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 1),
-                      child: Icon(icon, size: 20, color: accent),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: appFont(
-                              fontSize: AppText.sizeLabel,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.onSurface(context),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            body,
-                            style: appFont(
-                              fontSize: AppText.sizeCaption,
-                              height: 1.4,
-                              color: AppTheme.mutedText(context),
-                            ),
-                          ),
-                        ],
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Icon(icon, size: 20, color: accent),
                       ),
-                    ),
-                    if (trailing != null) ...[
-                      const SizedBox(width: 6),
-                      trailing!,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: appFont(
+                                fontSize: AppText.sizeLabel,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.onSurface(context),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              body,
+                              style: appFont(
+                                fontSize: AppText.sizeCaption,
+                                height: 1.4,
+                                color: AppTheme.mutedText(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
-                  ],
+                  ),
                 ),
-                if (action != null) ...[
-                  const SizedBox(height: 10),
-                  Align(alignment: Alignment.centerRight, child: action),
-                ],
+                if (action != null) ...[const SizedBox(width: 10), action!],
+                if (trailing != null) ...[const SizedBox(width: 6), trailing!],
               ],
             ),
           ),
@@ -458,21 +453,25 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final child = busy
         ? const SizedBox(
-            width: 18,
-            height: 18,
+            width: 14,
+            height: 14,
             child: CircularProgressIndicator(strokeWidth: 2),
           )
         : Text(
             label,
+            maxLines: 1,
             style: appFont(
-              fontSize: AppText.sizeLabel,
+              fontSize: AppText.sizeCaption,
               fontWeight: FontWeight.w800,
             ),
           );
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
     );
-    const padding = EdgeInsets.symmetric(horizontal: 16, vertical: 10);
+    // ปุ่มเล็กท้ายแถว — ตัวปุ่มสูง 32 แต่พื้นที่แตะยังเต็ม 48 ตามค่าเริ่มต้นของ
+    // Material (materialTapTargetSize แบบ padded) แตะพลาดยากเหมือนเดิม
+    const padding = EdgeInsets.symmetric(horizontal: 12, vertical: 6);
+    const minimumSize = Size(0, 32);
 
     if (outlined) {
       return OutlinedButton(
@@ -481,6 +480,7 @@ class _ActionButton extends StatelessWidget {
           foregroundColor: AppTheme.primaryColor,
           side: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.5)),
           padding: padding,
+          minimumSize: minimumSize,
           shape: shape,
         ),
         child: child,
@@ -492,6 +492,7 @@ class _ActionButton extends StatelessWidget {
         backgroundColor: AppTheme.warningColor,
         foregroundColor: Colors.white,
         padding: padding,
+        minimumSize: minimumSize,
         shape: shape,
       ),
       child: child,

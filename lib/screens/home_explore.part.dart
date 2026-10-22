@@ -1305,8 +1305,8 @@ class _TrustHub extends StatelessWidget {
         final avgRating = num.tryParse('${community['avg_rating'] ?? 0}') ?? 0;
         final travellers =
             int.tryParse('${community['travellers_count'] ?? 0}') ?? 0;
-        final personKm =
-            num.tryParse('${community['total_distance_km'] ?? 0}') ?? 0;
+        final rounds =
+            int.tryParse('${community['rounds_completed'] ?? 0}') ?? 0;
 
         final statCells = <({IconData icon, String value, String label})>[
           if (reviewCount > 0 && avgRating > 0)
@@ -1321,11 +1321,11 @@ class _TrustHub extends StatelessWidget {
               value: _compactCount(travellers),
               label: 'คนเคยไปกับเรา',
             ),
-          if (personKm > 0)
+          if (rounds > 0)
             (
-              icon: Icons.straighten_rounded,
-              value: _compactCount(personKm.round()),
-              label: 'กม. ที่เดินร่วมกัน',
+              icon: Icons.hiking_rounded,
+              value: _compactCount(rounds),
+              label: 'รอบที่เดินทางแล้ว',
             ),
         ].take(3).toList();
 
@@ -1349,7 +1349,7 @@ class _TrustHub extends StatelessWidget {
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
-                        decoration: const BoxDecoration(color: Color(0xFF065F46)),
+                        decoration: const BoxDecoration(color: AppTheme.brandDark),
                         child: Row(
                           children: [
                             const Icon(
@@ -1404,7 +1404,7 @@ class _TrustHub extends StatelessWidget {
                                         ? progress.cumulativeBytesLoaded /
                                               progress.expectedTotalBytes!
                                         : null,
-                                    color: const Color(0xFF059669),
+                                    color: AppTheme.primaryColor,
                                   ),
                                 ),
                               );
@@ -1455,144 +1455,161 @@ class _TrustHub extends StatelessWidget {
           );
         }
 
-        // Compact, fully-tappable trust strip: a small seal, a one-line claim +
-        // licence number, and a trailing chevron — far slimmer than the old
-        // card with its full-width white button, so it reassures without
-        // competing with the hero above it.
-        // Green header — the tappable licence claim.
+        final hairline = AppTheme.border(context).withValues(alpha: 0.55);
+        final brandTint = AppTheme.tintOf(context, AppTheme.primaryColor);
+        final brandInk = AppTheme.onTintOf(context, AppTheme.primaryColor);
+
+        // Licence row — a seal on a soft brand tint, the claim, and a chevron.
+        // Flat white like the rest of Home: the old solid green slab outweighed
+        // the hero above it and read as a banner ad, not a credential.
         final header = Semantics(
           button: true,
           label: 'ดูใบอนุญาตประกอบธุรกิจนำเที่ยว เลขที่ $licenceNo',
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: showLicenseDialog,
-              child: Ink(
-                decoration: const BoxDecoration(color: Color(0xFF047857)),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 13 : 15,
-                    vertical: compact ? 11 : 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface(context).withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.24),
-                            width: 1,
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.verified_rounded,
-                          color: Colors.white,
-                          size: compact ? 20 : 22,
-                        ),
-                      ),
-                      SizedBox(width: compact ? 11 : 13),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'ผู้ประกอบการนำเที่ยวจดทะเบียน',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: appFont(
-                                color: Colors.white,
-                                fontSize: titleSize,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'ใบอนุญาตเลขที่ $licenceNo',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: appFont(
-                                color: Colors.white.withValues(alpha: 0.85),
-                                fontSize: bodySize,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        size: 22,
-                      ),
-                    ],
-                  ),
-                ),
+          excludeSemantics: true,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              showLicenseDialog();
+            },
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                compact ? 12 : 14,
+                compact ? 12 : 14,
+                compact ? 10 : 12,
+                compact ? 12 : 14,
               ),
-            ),
-          ),
-        );
-
-        // One rounded card, clipped so the green header and the light stats row
-        // share the same corners; the shadow rides on the outer container.
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                header,
-                if (statCells.isNotEmpty)
+              child: Row(
+                children: [
                   Container(
-                    width: double.infinity,
-                    color: AppTheme.subtleSurface(context),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 13,
-                      horizontal: 8,
+                    width: compact ? 40 : 44,
+                    height: compact ? 40 : 44,
+                    decoration: BoxDecoration(
+                      color: brandTint,
+                      shape: BoxShape.circle,
                     ),
+                    child: Icon(
+                      Icons.verified_user_rounded,
+                      color: brandInk,
+                      size: compact ? 20 : 22,
+                    ),
+                  ),
+                  SizedBox(width: compact ? 10 : 12),
+                  Expanded(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            for (var i = 0; i < statCells.length; i++) ...[
-                              if (i > 0)
-                                Container(
-                                  width: 1,
-                                  height: 34,
-                                  color: const Color(
-                                    0xFF065F46,
-                                  ).withValues(alpha: 0.08),
-                                ),
-                              Expanded(child: _TrustCell(data: statCells[i])),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 9),
-                        // Say where the numbers come from — a figure you can
-                        // check reassures in a way a rounded-up one cannot.
                         Text(
-                          'นับจากรอบที่เดินทางจบแล้วจริง',
-                          textAlign: TextAlign.center,
+                          'ผู้ประกอบการนำเที่ยวจดทะเบียน',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: appFont(
-                            fontSize: AppText.sizeMicro,
-                            height: 1.0,
-                            fontWeight: FontWeight.w600,
+                            color: AppTheme.onSurface(context),
+                            fontSize: titleSize,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'ใบอนุญาตเลขที่ $licenceNo',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: appFont(
                             color: AppTheme.mutedText(context),
+                            fontSize: bodySize,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
-              ],
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppTheme.mutedText(context),
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        // One flat bordered card; Material + clip so the licence row's ripple
+        // keeps the card's corners.
+        return Container(
+          decoration: AppTheme.cardDecoration(
+            context,
+            radius: AppTheme.radiusMd,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd - 1),
+            child: Material(
+              color: Colors.transparent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  header,
+                  if (statCells.isNotEmpty) ...[
+                    Container(height: 1, color: hairline),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 14, 8, 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IntrinsicHeight(
+                            child: Row(
+                              children: [
+                                for (var i = 0; i < statCells.length; i++) ...[
+                                  if (i > 0)
+                                    VerticalDivider(
+                                      width: 1,
+                                      thickness: 1,
+                                      indent: 4,
+                                      endIndent: 4,
+                                      color: hairline,
+                                    ),
+                                  Expanded(
+                                    child: _TrustCell(data: statCells[i]),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Say where the numbers come from — a figure you can
+                          // check reassures in a way a rounded-up one cannot.
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                size: 12,
+                                color: AppTheme.mutedText(context),
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  'นับจากรอบที่เดินทางจบแล้วจริง',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: appFont(
+                                    fontSize: AppText.sizeMicro,
+                                    height: 1.0,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.mutedText(context),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         );
@@ -2149,27 +2166,32 @@ class _TrustCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF065F46);
+    // The star keeps its familiar amber; the other icons take the brand ink so
+    // the number itself, in plain text colour, is what the eye lands on.
+    final iconColor = data.icon == Icons.star_rounded
+        ? AppTheme.warningColor
+        : AppTheme.onTintOf(context, AppTheme.primaryColor);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(data.icon, size: 16, color: accent),
+            Icon(data.icon, size: 16, color: iconColor),
             const SizedBox(width: 4),
             Text(
               data.value,
               style: appFont(
-                fontSize: AppText.sizeSubtitle,
+                fontSize: AppText.sizeTitle,
                 height: 1.0,
-                fontWeight: FontWeight.w900,
-                color: accent,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+                color: AppTheme.onSurface(context),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 5),
         Text(
           data.label,
           maxLines: 1,

@@ -227,7 +227,7 @@ void main() {
       round(mode: 'pickup'),
       then: () async {
         expect(find.textContaining('การตั้งค่าของเครื่อง'), findsOneWidget);
-        await tapAndWait(tester, find.text('เปิดในการตั้งค่า'));
+        await tapAndWait(tester, find.text('ตั้งค่า'));
       },
     );
 
@@ -261,7 +261,7 @@ void main() {
         expect(find.text('พี่ดี กำลังแชร์ตำแหน่งรถอยู่'), findsOneWidget);
         expect(find.text('ยังไม่ได้แชร์ตำแหน่งรถ'), findsNothing);
 
-        await tapAndWait(tester, find.text('ให้เครื่องนี้แชร์แทน'));
+        await tapAndWait(tester, find.text('แชร์แทน'));
         expect(find.text('กำลังแชร์ตำแหน่งรถให้ลูกค้า'), findsOneWidget);
       },
     );
@@ -317,7 +317,7 @@ void main() {
         round(),
         then: () async {
           expect(find.text('อนุญาตตำแหน่งไว้ก่อนวันเดินทาง'), findsOneWidget);
-          await tapAndWait(tester, find.text('อนุญาตตำแหน่ง'));
+          await tapAndWait(tester, find.text('อนุญาต'));
           expect(find.text('พร้อมแชร์ตำแหน่งรถแล้ว'), findsOneWidget);
         },
       );
@@ -337,7 +337,7 @@ void main() {
       tester,
       round(),
       then: () async {
-        expect(find.text('เปิดในการตั้งค่า'), findsOneWidget);
+        expect(find.text('ตั้งค่า'), findsOneWidget);
 
         gps.permission = LocationPermission.whileInUse;
         tester.binding.handleAppLifecycleStateChanged(
