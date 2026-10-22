@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:vibration/vibration.dart';
 
 import '../config/firebase_config.dart';
 import 'api_client.dart';
@@ -143,6 +144,22 @@ class PushNotificationService {
     importance: Importance.low,
     playSound: false,
     enableVibration: false,
+  );
+
+  /// รูปแบบสั่นของคำขอถึงทีมงาน — ยาวพอให้คนที่งีบอยู่บนรถรู้สึกตัว
+  /// (ฝั่ง Laravel มีชุดเดียวกันใน `FcmService::STAFF_ALERT_VIBRATION` สำหรับ Android รุ่นเก่า)
+  static const staffAlertVibration = [0, 800, 300, 800, 300, 800];
+
+  /// คำขอจากลูกทริปถึงทีมงาน: ขอแวะห้องน้ำ ขอยา ขาดคนตอนออกรถ ไม่สบาย ตามไม่ทัน …
+  /// ชื่อ channel ต้องตรงกับ `FcmService::STAFF_ALERT_CHANNEL` ฝั่ง Laravel —
+  /// Android 8+ ล็อกการสั่นไว้กับ channel ตั้งแต่สร้าง เปลี่ยนรูปแบบทีหลังต้องเปลี่ยน id
+  static final staffAlertChannel = AndroidNotificationChannel(
+    'staff_alerts',
+    'คำขอจากลูกทริป (ทีมงาน)',
+    description: 'ขอแวะห้องน้ำ ขอยา ขาดคนตอนออกรถ — สั่นยาวเผื่องีบอยู่',
+    importance: Importance.max,
+    enableVibration: true,
+    vibrationPattern: Int64List.fromList(staffAlertVibration),
   );
 
   /// tag ของแจ้งเตือนห้องแชท — ต้องตรงกับ `SendChatPushJob::tagFor()`
@@ -289,7 +306,12 @@ class PushNotificationService {
           _onRefreshRequested?.call();
           return;
         }
-        _showForegroundNotification(message);
+        final staffAlert = isStaffAlert(message.data);
+        if (staffAlert) _vibrateForStaffAlert();
+        _showForegroundNotification(
+          message,
+          channel: staffAlert ? staffAlertChannel : _channel,
+        );
         _fireForegroundCallback(message);
         _onRefreshRequested?.call();
       });
@@ -334,6 +356,26 @@ class PushNotificationService {
       _initFuture = null; // allow retry on next initialize() call
       debugPrint('[PushNotificationService] init failed: $e\n$st');
     }
+  }
+
+  /// เซิร์ฟเวอร์ติดธงนี้เฉพาะใบที่ทีมงานต้องลุกมาจัดการ (`staff_alert` ใน FcmService)
+  static bool isStaffAlert(Map<String, dynamic> data) =>
+      data['staff_alert']?.toString() == '1';
+
+  /// ตอนแอปอยู่หน้าจอ iOS ไม่สั่นให้เมื่อแบนเนอร์ระบบถูกปิดไว้ (เปิดห้องแชทอยู่ —
+  /// ดู [watchChatRoom]) จึงสั่นเอง ส่วน Android ใบที่วาดบน [staffAlertChannel]
+  /// สั่นตาม channel อยู่แล้ว
+  void _vibrateForStaffAlert() {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+    unawaited(() async {
+      try {
+        if (await Vibration.hasVibrator()) {
+          await Vibration.vibrate(pattern: staffAlertVibration);
+        } else {
+          await HapticFeedback.vibrate();
+        }
+      } catch (_) {}
+    }());
   }
 
   void _handleNotificationTap(Map<String, dynamic> data) {
@@ -494,6 +536,7 @@ class PushNotificationService {
     await androidPlugin?.createNotificationChannel(_channel);
     await androidPlugin?.createNotificationChannel(_chatChannel);
     await androidPlugin?.createNotificationChannel(_chatQuietChannel);
+    await androidPlugin?.createNotificationChannel(staffAlertChannel);
     // Alarm-grade SOS channel with the looping siren sound. Must exist before
     // a killed app receives an FCM SOS, otherwise Android picks a silent channel.
     await androidPlugin?.createNotificationChannel(SosAlarmService.sosChannel);
@@ -642,6 +685,7 @@ class PushNotificationService {
           priority: silent ? Priority.low : Priority.high,
           playSound: !silent,
           enableVibration: !silent,
+          vibrationPattern: channel.vibrationPattern,
           tag: tag,
           icon: android?.smallIcon ?? '@mipmap/ic_launcher',
         ),
