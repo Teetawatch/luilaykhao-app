@@ -389,7 +389,9 @@ class _ChatScreenState extends State<ChatScreen>
     }
     FocusScope.of(context).unfocus();
     setState(() => _stickerPanelOpen = true);
-    if (_stickerPacks.isEmpty) _loadStickers(force: _stickersError != null);
+    // ขอใหม่ทุกครั้งที่เปิดแผง (AppProvider กันยิงถี่ด้วย TTL) — เดิมโหลดครั้งเดียวตอน
+    // เข้าห้อง สติกเกอร์ที่แอดมินอัปเพิ่มระหว่างนั้นจึงไม่โผล่จนกว่าจะออกแล้วเข้าใหม่
+    _loadStickers(force: _stickersError != null);
   }
 
   /// ส่งสติกเกอร์ — จากแผง หรือจากแถบเสนอ (ซึ่งแทนข้อความที่พิมพ์ค้างไว้)

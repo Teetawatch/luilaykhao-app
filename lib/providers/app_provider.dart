@@ -3765,7 +3765,8 @@ class AppProvider extends ChangeNotifier {
   // ไม่ต้องดึงใหม่ทุกครั้งที่เปิดห้อง
   List<dynamic>? _stickerPacks;
   DateTime? _stickerPacksAt;
-  static const _stickerPacksTtl = Duration(minutes: 30);
+  // สั้นพอที่สติกเกอร์ที่แอดมินเพิ่งอัปจะโผล่ในไม่กี่นาที — แผงขอใหม่ทุกครั้งที่เปิด
+  static const _stickerPacksTtl = Duration(minutes: 2);
 
   /// ชุดสติกเกอร์ที่เปิดให้ใช้ (ข้อมูลดิบ — แปลงด้วย ChatStickerPack.parseList)
   Future<List<dynamic>> chatStickerPacks({bool force = false}) async {
