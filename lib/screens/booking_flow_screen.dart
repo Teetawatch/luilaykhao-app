@@ -18,6 +18,8 @@ import '../widgets/booking_terms_sheet.dart';
 import '../widgets/document_attach_field.dart';
 import '../widgets/gift_voucher_card.dart';
 import '../widgets/gift_voucher_picker.dart';
+import '../services/partner_ref_store.dart';
+import '../widgets/partner_code_tile.dart';
 import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../services/booking_draft_store.dart';
@@ -150,6 +152,8 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
   String? _promoError;
   // บัตรของขวัญที่เลือกใช้ — หักหลังส่วนลด ยอดจริงคิดที่หลังบ้านตอนสร้างการจอง
   SelectedGiftVoucher? _appliedVoucher;
+  // พาร์ทเนอร์ช่วยขาย (ลิงก์ที่เปิดเข้ามา/รหัสที่พิมพ์) — ไม่มีผลกับยอดเงิน
+  PartnerRef? _partnerRef;
 
   int? _scheduleId;
   int? _pickupPointId;
@@ -1537,6 +1541,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
           vehicleLabel: textOf(_selectedVehicleOption['label']),
           vehicleAdjustment: _vehicleAdjustment,
         ),
+        if (!_isAdmin) ...[
+          const SizedBox(height: 12),
+          PartnerCodeTile(onChanged: (ref) => _partnerRef = ref),
+        ],
       ],
     );
   }
@@ -2015,6 +2023,10 @@ class _BookingCheckoutPageState extends State<BookingCheckoutPage> {
             : null,
         if (_appliedVoucher != null && !_isAdmin)
           'gift_voucher_code': _appliedVoucher!.code,
+        if (_partnerRef != null && !_isAdmin) ...{
+          'partner_code': _partnerRef!.code,
+          'partner_source': _partnerRef!.source,
+        },
         'seat_ids': _hasSeatMap ? _selectedSeatList : <String>[],
         'is_join_trip': _isJoinTrip,
         'vehicle_option_id': _isJoinTrip ? null : _vehicleOptionId,

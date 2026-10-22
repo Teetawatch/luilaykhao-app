@@ -15,6 +15,7 @@ import '../models/trip_medal.dart';
 import '../services/analytics_service.dart';
 import '../services/api_client.dart';
 import '../services/booking_draft_store.dart';
+import '../services/partner_ref_store.dart';
 import '../services/connectivity_service.dart';
 import '../services/home_widget_service.dart';
 import '../services/notification_navigator.dart';
@@ -486,6 +487,12 @@ class AppProvider extends ChangeNotifier {
     }
     _lastDeepLink = uri;
     _lastDeepLinkAt = now;
+
+    // ลิงก์ของพาร์ทเนอร์ช่วยขาย — จำโค้ดไว้ส่งไปกับการจอง ลิงก์จะพาไปหน้าไหนก็ตาม
+    final partnerCode = uri.queryParameters['partner'];
+    if (partnerCode != null && partnerCode.isNotEmpty) {
+      unawaited(PartnerRefStore.remember(partnerCode));
+    }
 
     // Trip/booking links take precedence; fall through to social auth flow.
     if (NotificationNavigator.handleDeepLink(uri)) return;

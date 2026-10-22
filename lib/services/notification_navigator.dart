@@ -19,6 +19,7 @@ import '../screens/join_booking_screen.dart';
 import '../screens/challenges_screen.dart';
 import '../screens/medals_screen.dart';
 import '../screens/year_review_screen.dart';
+import '../screens/partner_screen.dart';
 import '../screens/payment_screen.dart';
 import '../screens/reset_password_screen.dart';
 import '../screens/trip_attendance_screen.dart';
@@ -118,6 +119,14 @@ class NotificationNavigator {
       case 'gift_voucher_review':
       case 'gift_voucher_restored':
         _openGiftVoucher(focusId: int.tryParse('${data['voucher_id'] ?? ''}'));
+      // พาร์ทเนอร์ช่วยขาย: มีคนจองผ่านลิงก์ / โอนคอมแล้ว
+      case 'partner_sale':
+      case 'partner_payout':
+        _withNav(
+          (nav) => nav.push(
+            MaterialPageRoute(builder: (_) => const PartnerScreen()),
+          ),
+        );
       case 'medal_earned':
       // เหรียญพิชิตใหม่ / มีคนปรบมือให้ — เปิดตู้เหรียญแล้วชี้ไปที่เหรียญนั้น
       case 'medal_kudos':

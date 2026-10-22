@@ -57,6 +57,7 @@ import 'payment_screen.dart';
 import 'sos_alert_screen.dart';
 import 'tracking_screen.dart';
 import 'trip_detail_screen.dart' show TripDetailScreen;
+import 'partner_screen.dart' show PartnerScreen;
 import 'referral_screen.dart' show ReferralScreen;
 import 'rewards_screen.dart' show RewardsScreen;
 import 'passport_screen.dart' show PassportScreen;
@@ -991,6 +992,14 @@ class AccountMenu extends StatelessWidget {
           subtitle: 'เพื่อนจองทริปแรกสำเร็จ รับแต้มทั้งคู่',
           onTap: () => _pushPremium(context, const ReferralScreen()),
         ),
+        // บัญชีที่ทีมงานเปิดเป็นพาร์ทเนอร์ช่วยขายเท่านั้น
+        if (user['is_partner'] == true)
+          _MenuItem(
+            icon: Icons.handshake_outlined,
+            label: 'พาร์ทเนอร์ช่วยขาย',
+            subtitle: 'โค้ด ลิงก์ และค่าคอมของคุณ',
+            onTap: () => _pushPremium(context, const PartnerScreen()),
+          ),
       ],
     );
   }
