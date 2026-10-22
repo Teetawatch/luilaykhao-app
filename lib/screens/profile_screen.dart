@@ -67,6 +67,8 @@ import 'my_tracks_screen.dart' show MyTracksScreen;
 import 'public_profile_settings_screen.dart'
     show PublicProfileSettingsScreen;
 import '../widgets/confirm_dialog.dart';
+import '../widgets/loading_fade.dart';
+import '../widgets/staggered_entrance.dart';
 
 part 'profile_edit.part.dart';
 part 'profile_bookings.part.dart';

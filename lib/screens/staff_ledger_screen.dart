@@ -15,6 +15,7 @@ import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart' show PrimaryCTAButton;
 import 'staff_check_in_screen.dart' show asList, asMap, money, textOf;
 import '../widgets/confirm_dialog.dart';
+import '../widgets/loading_fade.dart';
 
 /// สมุดบัญชีหน้างานของรอบเดินทาง
 ///
@@ -194,12 +195,18 @@ class _StaffLedgerScreenState extends State<StaffLedgerScreen> {
                 ),
               ),
             ),
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: LoadingFade(loading: _showSkeleton, child: _buildBody()),
+      ),
     );
   }
 
+  /// โหลดครั้งแรกยังไม่มีข้อมูล — โชว์โครงร่าง แล้วจางเป็นเนื้อหาด้วย [LoadingFade]
+  bool get _showSkeleton => _loading && _data == null;
+
   Widget _buildBody() {
-    if (_loading && _data == null) {
+    if (_showSkeleton) {
       return const SkeletonList(count: 5, padding: EdgeInsets.only(top: 8));
     }
     if (_error != null) {

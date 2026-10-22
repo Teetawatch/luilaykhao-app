@@ -348,6 +348,7 @@ class PricingSummaryCard extends StatelessWidget {
           _PriceRow(
             label: pricing.voucher > 0 ? 'ยอดที่ต้องชำระ' : 'รวมทั้งหมด',
             value: money(pricing.total),
+            amount: pricing.total,
             isTotal: true,
           ),
           if (pricing.voucher > 0 && pricing.total <= 0) ...[
@@ -1269,8 +1270,9 @@ class StickyCheckoutBar extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    money(total),
+                  CountUpText(
+                    value: total,
+                    format: money,
                     style: appFont(
                       color: _premiumText(context),
                       fontSize: priceFontSize,

@@ -17,6 +17,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
 
+  /// การ์ดไล่กันเข้ามาเฉพาะรอบแรกที่รายการโผล่ — สลับหมวด/ค้นหาไม่เล่นซ้ำ
+  final _entrance = EntranceWindow();
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -175,95 +178,110 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: contentMaxWidth),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (isInitialLoading)
-                            const _BookingsLoadingSkeleton()
-                          else if (hasLoadError)
-                            _BookingsErrorState(
-                              message: app.accountError!,
-                              onRetry: app.loadAccountData,
-                            )
-                          else if (hasNoBookings) ...[
-                            const EmptyStateWidget(),
-                            const SizedBox(height: 16),
-                            const _ClaimBookingEntry(),
-                          ] else ...[
-                          if (app.claimableBookingCount > 0) ...[
-                            const _ClaimBookingEntry(),
-                            const SizedBox(height: 20),
-                          ],
-                          _BookingsHeader(
-                            totalCount: totalCount,
-                            upcomingCount: upcomingCount,
-                            completedCount: pastCount,
-                            provinceCount: provinceCount,
-                            // ใบที่รอเลือกรอบใหม่ไม่มีวันเดินทางให้นับถอยหลัง
-                            nextTrip: upcoming
-                                .where((b) => !_awaitsNewRound(b))
-                                .firstOrNull,
-                          ),
-                          const SizedBox(height: 24),
-                          ReservationSegmentTabs(
-                            selected: _segment,
-                            counts: {
-                              _ReservationSegment.all: totalCount,
-                              _ReservationSegment.upcoming: upcomingCount,
-                              _ReservationSegment.past: pastCount,
-                              _ReservationSegment.cancelled: cancelledCount,
-                            },
-                            onChanged: (value) =>
-                                setState(() => _segment = value),
-                          ),
-                          const SizedBox(height: 16),
-                          _BookingUtilityBar(
-                            controller: _searchController,
-                            sort: _sort,
-                            statusFilter: _statusFilter,
-                            // ตัวกรองสถานะมีความหมายเฉพาะรายการที่ยังไม่จบ
-                            showStatusFilter:
-                                _segment == _ReservationSegment.all ||
-                                _segment == _ReservationSegment.upcoming,
-                            onQueryChanged: _onQueryChanged,
-                            onClearQuery: _clearQuery,
-                            onSortChanged: (value) =>
-                                setState(() => _sort = value),
-                            onStatusFilterChanged: (value) =>
-                                setState(() => _statusFilter = value),
-                          ),
-                          const SizedBox(height: 24),
-                          if (filtered.isEmpty && !showHistoryFooter)
-                            const _FilteredEmptyState()
-                          else if (filtered.isNotEmpty) ...[
-                            if (_segment == _ReservationSegment.all) ...[
-                              UpcomingSection(bookings: upcoming),
-                              if (upcoming.isNotEmpty) const SizedBox(height: 28),
-                              PastTripsSection(bookings: past),
-                              if (past.isNotEmpty) const SizedBox(height: 28),
-                              BookingSection(
-                                eyebrow: 'รายการที่ปิดแล้ว',
-                                title: 'ยกเลิก',
-                                bookings: cancelled,
-                              ),
-                            ] else
-                              BookingSection(
-                                eyebrow: _segmentEyebrow,
-                                title: _segmentTitle,
-                                bookings: filtered,
-                              ),
-                          ],
-                          if (_segmentShowsHistory &&
-                              (showHistoryFooter ||
-                                  app.bookingHistoryError != null))
-                            BookingHistoryFooter(
-                              loading: app.bookingHistoryLoading,
-                              error: app.bookingHistoryError,
-                              searching: _query.trim().isNotEmpty,
-                              onLoadMore: app.loadMoreBookingHistory,
+                      child: LoadingFade(
+                        loading: isInitialLoading,
+                        // การ์ดลอยขึ้นเองทีละใบอยู่แล้ว ทั้งก้อนแค่จาง ไม่ลอยซ้อน
+                        rise: 0,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (isInitialLoading)
+                              const _BookingsLoadingSkeleton()
+                            else if (hasLoadError)
+                              _BookingsErrorState(
+                                message: app.accountError!,
+                                onRetry: app.loadAccountData,
+                              )
+                            else if (hasNoBookings) ...[
+                              const EmptyStateWidget(),
+                              const SizedBox(height: 16),
+                              const _ClaimBookingEntry(),
+                            ] else ...[
+                            if (app.claimableBookingCount > 0) ...[
+                              const _ClaimBookingEntry(),
+                              const SizedBox(height: 20),
+                            ],
+                            _BookingsHeader(
+                              totalCount: totalCount,
+                              upcomingCount: upcomingCount,
+                              completedCount: pastCount,
+                              provinceCount: provinceCount,
+                              // ใบที่รอเลือกรอบใหม่ไม่มีวันเดินทางให้นับถอยหลัง
+                              nextTrip: upcoming
+                                  .where((b) => !_awaitsNewRound(b))
+                                  .firstOrNull,
                             ),
+                            const SizedBox(height: 24),
+                            ReservationSegmentTabs(
+                              selected: _segment,
+                              counts: {
+                                _ReservationSegment.all: totalCount,
+                                _ReservationSegment.upcoming: upcomingCount,
+                                _ReservationSegment.past: pastCount,
+                                _ReservationSegment.cancelled: cancelledCount,
+                              },
+                              onChanged: (value) =>
+                                  setState(() => _segment = value),
+                            ),
+                            const SizedBox(height: 16),
+                            _BookingUtilityBar(
+                              controller: _searchController,
+                              sort: _sort,
+                              statusFilter: _statusFilter,
+                              // ตัวกรองสถานะมีความหมายเฉพาะรายการที่ยังไม่จบ
+                              showStatusFilter:
+                                  _segment == _ReservationSegment.all ||
+                                  _segment == _ReservationSegment.upcoming,
+                              onQueryChanged: _onQueryChanged,
+                              onClearQuery: _clearQuery,
+                              onSortChanged: (value) =>
+                                  setState(() => _sort = value),
+                              onStatusFilterChanged: (value) =>
+                                  setState(() => _statusFilter = value),
+                            ),
+                            const SizedBox(height: 24),
+                            if (filtered.isEmpty && !showHistoryFooter)
+                              const _FilteredEmptyState()
+                            else if (filtered.isNotEmpty) ...[
+                              if (_segment == _ReservationSegment.all) ...[
+                                UpcomingSection(
+                                  bookings: upcoming,
+                                  animateEntrance: _entrance.isOpen,
+                                ),
+                                if (upcoming.isNotEmpty) const SizedBox(height: 28),
+                                PastTripsSection(
+                                  bookings: past,
+                                  animateEntrance: _entrance.isOpen,
+                                  entranceOffset: upcoming.length,
+                                ),
+                                if (past.isNotEmpty) const SizedBox(height: 28),
+                                BookingSection(
+                                  eyebrow: 'รายการที่ปิดแล้ว',
+                                  title: 'ยกเลิก',
+                                  bookings: cancelled,
+                                  animateEntrance: _entrance.isOpen,
+                                  entranceOffset: upcoming.length + past.length,
+                                ),
+                              ] else
+                                BookingSection(
+                                  eyebrow: _segmentEyebrow,
+                                  title: _segmentTitle,
+                                  bookings: filtered,
+                                  animateEntrance: _entrance.isOpen,
+                                ),
+                            ],
+                            if (_segmentShowsHistory &&
+                                (showHistoryFooter ||
+                                    app.bookingHistoryError != null))
+                              BookingHistoryFooter(
+                                loading: app.bookingHistoryLoading,
+                                error: app.bookingHistoryError,
+                                searching: _query.trim().isNotEmpty,
+                                onLoadMore: app.loadMoreBookingHistory,
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ),

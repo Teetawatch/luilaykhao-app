@@ -33,6 +33,7 @@ import '../widgets/chat_requests.dart';
 import '../widgets/chat_rest_stop.dart';
 import '../widgets/chat_social.dart';
 import '../widgets/chat_staff_intro.dart';
+import '../widgets/chat_bubble_entrance.dart';
 import '../widgets/chat_stickers.dart';
 import '../widgets/chat_todos.dart';
 import '../widgets/chat_trail_check.dart';
@@ -86,6 +87,14 @@ class _ChatScreenState extends State<ChatScreen>
 
   @override
   final List<Map<String, dynamic>> _messages = [];
+
+  /// ข้อความที่เป็น "ประวัติ" (โหลดตอนเข้าห้อง/เลื่อนขึ้นไปโหลดเพิ่ม) — ที่เหลือ
+  /// คือข้อความที่เพิ่งเข้ามาระหว่างเปิดห้อง ซึ่งเลื่อนขึ้น/เด้งเข้ามาตอนโผล่
+  /// ([ChatBubbleEntrance]) เก็บเป็นชุด key แทนการไล่ติดธงทุกทางที่เพิ่มข้อความ
+  final Set<String> _historyKeys = {};
+
+  /// ข้อความใหม่ที่ได้เล่นอนิเมชันไปแล้ว — เล่นครั้งเดียว ไม่เล่นซ้ำตอนเลื่อนผ่าน
+  final Set<String> _enteredKeys = {};
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
   final _scroll = ScrollController();
@@ -644,6 +653,7 @@ class _ChatScreenState extends State<ChatScreen>
         _messages
           ..clear()
           ..addAll(list);
+        _rememberHistory(list);
         _hasMore = data['has_more'] == true;
         _loading = false;
         _error = null;
@@ -724,6 +734,7 @@ class _ChatScreenState extends State<ChatScreen>
       if (!mounted) return;
       setState(() {
         _messages.insertAll(0, older);
+        _rememberHistory(older);
         _hasMore = data['has_more'] == true;
         _loadingMore = false;
       });
@@ -3538,6 +3549,7 @@ class _ChatScreenState extends State<ChatScreen>
       if (!mounted) return;
       setState(() {
         _messages.insertAll(0, older);
+        _rememberHistory(older);
         _hasMore = data['has_more'] == true;
       });
       _hydrateTools(older);
@@ -4379,6 +4391,28 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
+  /// ตัวตนของข้อความที่ไม่เปลี่ยนตอนข้อความชั่วคราว (ส่งอยู่) ถูกแทนด้วยตัวจริง
+  /// จากเซิร์ฟเวอร์ — client_token ก่อน แล้วค่อย id
+  static String? _entryKey(Map<String, dynamic> m) {
+    final token = m['client_token']?.toString();
+    if (token != null && token.isNotEmpty) return 't:$token';
+    final id = m['id']?.toString();
+    return id == null || id.isEmpty ? null : 'i:$id';
+  }
+
+  void _rememberHistory(Iterable<Map<String, dynamic>> messages) {
+    for (final m in messages) {
+      final key = _entryKey(m);
+      if (key != null) _historyKeys.add(key);
+    }
+  }
+
+  /// true ครั้งเดียวต่อข้อความใหม่ — build แรกที่เห็นมันหลังเข้ามา
+  bool _takesEntrance(Map<String, dynamic> m) {
+    final key = _entryKey(m);
+    return key != null && !_historyKeys.contains(key) && _enteredKeys.add(key);
+  }
+
   /// Builds the flat widget list for the message ListView, weaving in date
   /// separators and computing grouping flags so consecutive messages from the
   /// same sender within [_groupGap] collapse into one visual unit.
@@ -4428,7 +4462,14 @@ class _ChatScreenState extends State<ChatScreen>
           onCta: _onSystemCta,
         );
         // คีย์ไว้เหมือนบับเบิล — แถบ "รอคุณอยู่" กระโดดมาที่ประกาศระบบได้
-        items.add(mId > 0 ? KeyedSubtree(key: _keyFor(mId), child: system) : system);
+        items.add(
+          ChatBubbleEntrance(
+            animate: _takesEntrance(m),
+            child: mId > 0
+                ? KeyedSubtree(key: _keyFor(mId), child: system)
+                : system,
+          ),
+        );
         continue;
       }
 
@@ -4503,9 +4544,18 @@ class _ChatScreenState extends State<ChatScreen>
       );
 
       // Keyed so jumps can anchor exactly on this bubble (see _scrollToMessage).
-      items.add(mId > 0
-          ? KeyedSubtree(key: _keyFor(mId), child: bubble)
-          : bubble);
+      // ChatBubbleEntrance อยู่นอก KeyedSubtree — ข้อความชั่วคราว (ยังไม่มี id)
+      // ถูกแทนด้วยตัวจริงที่มีคีย์ได้โดยไม่เล่นอนิเมชันซ้ำ
+      items.add(
+        ChatBubbleEntrance(
+          animate: _takesEntrance(m),
+          sticker: m['sticker'] is Map,
+          isMine: isMine,
+          child: mId > 0
+              ? KeyedSubtree(key: _keyFor(mId), child: bubble)
+              : bubble,
+        ),
+      );
     }
 
     return items;

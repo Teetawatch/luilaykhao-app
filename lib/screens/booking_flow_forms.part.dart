@@ -255,11 +255,16 @@ class _PriceRow extends StatelessWidget {
   final Color? valueColor;
   final bool isTotal;
 
+  /// ยอดเป็นตัวเลข — ใส่แล้วตัวเลขจะวิ่งไปค่าใหม่ตอนยอดเปลี่ยน (เพิ่ม add-on,
+  /// ใส่โค้ดส่วนลด) แทน [value] ที่เป็นข้อความตายตัว
+  final num? amount;
+
   const _PriceRow({
     required this.label,
     required this.value,
     this.valueColor,
     this.isTotal = false,
+    this.amount,
   });
 
   @override
@@ -277,8 +282,9 @@ class _PriceRow extends StatelessWidget {
             ),
           ),
         ),
-        Text(
-          value,
+        CountUpText(
+          value: amount ?? 0,
+          format: (shown) => amount == null ? value : money(shown),
           style: appFont(
             color: valueColor ?? _premiumText(context),
             fontSize: isTotal ? 20 : 14,

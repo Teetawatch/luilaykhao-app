@@ -210,15 +210,18 @@ class _AllReviewsScreenState extends State<AllReviewsScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                child: _statsLoading
-                    ? const _ReviewsOverviewSkeleton()
-                    : (_stats != null && _statTotal(_stats!) > 0)
-                    ? _ReviewsOverview(
-                        stats: _stats!,
-                        selectedRating: _filter.rating,
-                        onRatingTap: _toggleRating,
-                      )
-                    : const SizedBox.shrink(),
+                child: LoadingFade(
+                  loading: _statsLoading,
+                  child: _statsLoading
+                      ? const _ReviewsOverviewSkeleton()
+                      : (_stats != null && _statTotal(_stats!) > 0)
+                      ? _ReviewsOverview(
+                          stats: _stats!,
+                          selectedRating: _filter.rating,
+                          onRatingTap: _toggleRating,
+                        )
+                      : const SizedBox.shrink(),
+                ),
               ),
             ),
             SliverPersistentHeader(
@@ -229,7 +232,12 @@ class _AllReviewsScreenState extends State<AllReviewsScreen> {
                 onSelect: _setFilter,
               ),
             ),
-            ..._buildBody(),
+            // รวมเป็น sliver เดียว ให้ทั้งก้อนจางขึ้นพร้อมกันตอนโหลดเสร็จ / เปลี่ยน
+            // ตัวกรอง (ตอนนั้นโหลดใหม่และโชว์โครงร่างก่อน)
+            LoadingFade.sliver(
+              loading: _loading,
+              sliver: SliverMainAxisGroup(slivers: _buildBody()),
+            ),
             SliverToBoxAdapter(
               child: SizedBox(height: 24 + MediaQuery.paddingOf(context).bottom),
             ),

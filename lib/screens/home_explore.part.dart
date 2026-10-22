@@ -3930,6 +3930,9 @@ class _HomeNextTripCard extends StatelessWidget {
       _ => ('อีก $days วัน', AppTheme.primaryColor),
     };
 
+    final countsDown =
+        !isPending && !_awaitsNewRound(booking) && days != null && days > 1;
+
     void openSheet() {
       if (ref.isEmpty) return;
       HapticFeedback.selectionClick();
@@ -4003,8 +4006,16 @@ class _HomeNextTripCard extends StatelessWidget {
                               color: Colors.white,
                             ),
                             const SizedBox(width: 5),
-                            Text(
-                              isPending ? 'ค้างชำระ' : countLabel,
+                            CountUpText(
+                              // "อีก N วัน" นับถอยลงมาจากอีกสัปดาห์ตอนการ์ดโผล่
+                              // ป้ายอื่น (พรุ่งนี้/วันนี้/ค้างชำระ) ไม่วิ่ง
+                              value: countsDown ? days : 0,
+                              from: countsDown ? days + 7 : null,
+                              format: (n) => countsDown
+                                  ? 'อีก $n วัน${days <= 3 ? '!' : ''}'
+                                  : isPending
+                                  ? 'ค้างชำระ'
+                                  : countLabel,
                               style: appFont(
                                 color: Colors.white,
                                 fontSize: AppText.sizeCaption,

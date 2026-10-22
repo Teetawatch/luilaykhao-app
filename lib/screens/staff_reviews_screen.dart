@@ -6,6 +6,7 @@ import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
+import '../widgets/loading_fade.dart';
 import 'staff_check_in_screen.dart' show asMap, dateText, textOf;
 
 /// รีวิวจากลูกค้า — เปิดจากช่อง "คะแนนเฉลี่ย" ในแท็บงานสตาฟ
@@ -100,13 +101,16 @@ class _StaffReviewsScreenState extends State<StaffReviewsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () => _load(reset: true),
-        child: _buildBody(),
+        child: LoadingFade(loading: _showSkeleton, child: _buildBody()),
       ),
     );
   }
 
+  /// โหลดครั้งแรกยังไม่มีข้อมูล — โชว์โครงร่าง แล้วจางเป็นเนื้อหาด้วย [LoadingFade]
+  bool get _showSkeleton => !_loadedOnce && _items.isEmpty;
+
   Widget _buildBody() {
-    if (!_loadedOnce && _items.isEmpty) {
+    if (_showSkeleton) {
       return const SkeletonList(count: 5, padding: EdgeInsets.only(top: 8));
     }
     if (_items.isEmpty && _error != null) {

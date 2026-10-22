@@ -533,8 +533,9 @@ class _BeamPaymentSectionState extends State<_BeamPaymentSection>
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                Text(
-                  money(widget.amount),
+                CountUpText(
+                  value: widget.amount,
+                  format: money,
                   style: appFont(
                     color: _accent,
                     fontSize: AppText.sizeTitle,

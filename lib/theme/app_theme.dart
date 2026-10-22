@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 /// Latin + numeral face (assets/fonts/Inter-Variable.ttf, declared in
@@ -379,6 +380,25 @@ class AppTheme {
     );
   }
 
+  /// ทรานซิชันเปลี่ยนหน้าของทั้งแอป — ทุก MaterialPageRoute ใช้ชุดนี้
+  ///
+  /// iOS: เลื่อนเข้าจากขวา + ปัดขอบจอย้อนกลับ ตามระบบ
+  /// Android: predictive back (ปัดย้อนแล้วเห็นหน้าก่อนหน้า) และ fade-forwards
+  /// แบบ Android 14+ ตอนกดปุ่ม/เปิดหน้า
+  ///
+  /// ตรงกับค่าตั้งต้นของ Flutter ยกเว้นสีพื้นหลังระหว่างจาง: ค่าตั้งต้นคือ
+  /// colorScheme.surface (ขาวล้วน / เทาเข้ม) ซึ่งต่างจากพื้นหน้าจริง จึงเห็น
+  /// แฟลชสีแวบหนึ่งทุกครั้งที่เปลี่ยนหน้า — ชัดในโหมดมืด
+  static PageTransitionsTheme _pageTransitions(Color background) =>
+      PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(
+            fallbackColor: background,
+          ),
+          TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
+        },
+      );
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -391,6 +411,7 @@ class AppTheme {
         outline: outlineColor,
       ),
       scaffoldBackgroundColor: bgLight,
+      pageTransitionsTheme: _pageTransitions(bgLight),
       textTheme: _textTheme(
         ThemeData.light().textTheme,
       ).apply(bodyColor: textMain, displayColor: textMain),
@@ -530,6 +551,7 @@ class AppTheme {
         error: errorColor,
       ),
       scaffoldBackgroundColor: bgDark,
+      pageTransitionsTheme: _pageTransitions(bgDark),
       textTheme: _textTheme(
         ThemeData.dark().textTheme,
       ).apply(bodyColor: darkTextMain, displayColor: darkTextMain),

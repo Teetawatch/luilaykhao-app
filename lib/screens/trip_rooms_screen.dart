@@ -12,6 +12,7 @@ import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart';
 import '../widgets/confirm_dialog.dart';
+import '../widgets/loading_fade.dart';
 
 /// ห้องพักของรอบ — ลูกทริปเห็นห้องของตัวเอง (และห้องทั้งหมด) ทีมงานจัดคนเข้าห้อง
 ///
@@ -349,12 +350,18 @@ class _TripRoomsScreenState extends State<TripRoomsScreen> {
               )
             : null,
       ),
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: LoadingFade(loading: _showSkeleton, child: _buildBody()),
+      ),
     );
   }
 
+  /// โหลดครั้งแรกยังไม่มีข้อมูล — โชว์โครงร่าง แล้วจางเป็นเนื้อหาด้วย [LoadingFade]
+  bool get _showSkeleton => _data == null && _error == null;
+
   Widget _buildBody() {
-    if (_data == null && _error == null) {
+    if (_showSkeleton) {
       return const SkeletonList(count: 4, padding: EdgeInsets.only(top: 8));
     }
     if (_data == null) {

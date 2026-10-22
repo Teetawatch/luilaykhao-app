@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_tile_layer.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
+import '../widgets/loading_fade.dart';
 
 /// "แผนที่พิชิต" — every trip this traveller has actually finished, dropped on a
 /// map of Thailand, with how deep they have gone into each region underneath.
@@ -130,49 +131,52 @@ class _ConquestMapScreenState extends State<ConquestMapScreen> {
       appBar: AppBar(
         title: const Text('แผนที่พิชิต'),
       ),
-      body: _loading
-          ? const _ConquestSkeleton()
-          : _error
-          ? EmptyStateView(
-              icon: Icons.wifi_off_rounded,
-              title: 'โหลดแผนที่ไม่สำเร็จ',
-              body: 'ตรวจสอบการเชื่อมต่อแล้วลองใหม่อีกครั้ง',
-              actionLabel: 'ลองอีกครั้ง',
-              onAction: _load,
-            )
-          : _pins.isEmpty
-          ? const EmptyStateView(
-              icon: Icons.map_outlined,
-              title: 'ยังไม่มีหมุดบนแผนที่',
-              body:
-                  'เมื่อคุณเดินทางจบทริปแรก ทริปนั้นจะขึ้นมาเป็นหมุดที่นี่ '
-                  'พร้อมสถิติของคุณเองในแต่ละภาค',
-            )
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  _buildMap(),
-                  _ConquestSummary(summary: _summary),
-                  _RegionProgress(
-                    regions: _regions,
-                    selected: _selectedRegion,
-                    onSelect: _focusRegion,
-                  ),
-                  if (_selectedRegion != null)
-                    _RegionDetail(
-                      region: _regions.firstWhere(
-                        (r) => r['key'] == _selectedRegion,
-                        orElse: () => const {},
-                      ),
-                      pins: _visiblePins,
+      body: LoadingFade(
+        loading: _loading,
+        child: _loading
+            ? const _ConquestSkeleton()
+            : _error
+            ? EmptyStateView(
+                icon: Icons.wifi_off_rounded,
+                title: 'โหลดแผนที่ไม่สำเร็จ',
+                body: 'ตรวจสอบการเชื่อมต่อแล้วลองใหม่อีกครั้ง',
+                actionLabel: 'ลองอีกครั้ง',
+                onAction: _load,
+              )
+            : _pins.isEmpty
+            ? const EmptyStateView(
+                icon: Icons.map_outlined,
+                title: 'ยังไม่มีหมุดบนแผนที่',
+                body:
+                    'เมื่อคุณเดินทางจบทริปแรก ทริปนั้นจะขึ้นมาเป็นหมุดที่นี่ '
+                    'พร้อมสถิติของคุณเองในแต่ละภาค',
+              )
+            : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _buildMap(),
+                    _ConquestSummary(summary: _summary),
+                    _RegionProgress(
+                      regions: _regions,
+                      selected: _selectedRegion,
+                      onSelect: _focusRegion,
                     ),
-                  _FrontierNote(frontier: _frontier),
-                  const SizedBox(height: 32),
-                ],
+                    if (_selectedRegion != null)
+                      _RegionDetail(
+                        region: _regions.firstWhere(
+                          (r) => r['key'] == _selectedRegion,
+                          orElse: () => const {},
+                        ),
+                        pins: _visiblePins,
+                      ),
+                    _FrontierNote(frontier: _frontier),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 

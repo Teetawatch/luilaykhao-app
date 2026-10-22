@@ -8,6 +8,9 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  /// กลุ่มการแจ้งเตือนไล่กันเข้ามาเฉพาะรอบแรกที่รายการโผล่
+  final _entrance = EntranceWindow();
+
   bool _loading = false;
   bool _saving = false;
   bool _clearing = false;
@@ -178,6 +181,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ? notifications.where((item) => item['is_read'] != true).toList()
         : notifications;
     final groups = _groupNotifications(visible);
+    final showSkeleton = _loading && notifications.isEmpty;
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
@@ -221,45 +225,57 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   },
                 ),
               ),
-            if (_loading && notifications.isEmpty)
-              const SliverToBoxAdapter(
-                child: SkeletonList(count: 6, padding: EdgeInsets.only(top: 8)),
-              )
-            else if (notifications.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: _NotificationsEmptyState(),
-              )
-            else if (groups.isEmpty)
-              // กรองแล้วไม่เหลืออะไร — คนละเรื่องกับ "ยังไม่มีการแจ้งเตือน"
-              const SliverToBoxAdapter(child: _AllCaughtUpNote())
-            else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
-                sliver: SliverList.builder(
-                  itemCount: groups.length,
-                  itemBuilder: (context, index) {
-                    final group = groups[index];
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (index > 0) const SizedBox(height: 22),
-                        _NotificationSectionHeader(
-                          label: group.label,
-                          count: group.items.length,
-                        ),
-                        const SizedBox(height: 10),
-                        _NotificationGroupCard(
-                          items: group.items,
-                          busyIds: _busyIds,
-                          onTap: _openNotification,
-                          onDelete: _deleteNotification,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
+            LoadingFade.sliver(
+              // อยู่ท้ายรายการ sliver แต่แถบตัวกรองด้านบนโผล่ทีหลังตอนโหลดเสร็จ —
+              // key ให้ตัวเดิมถูกจับคู่แน่ๆ แม้ลำดับ sliver จะเลื่อน
+              key: const ValueKey('notifications-body'),
+              loading: showSkeleton,
+              sliver: showSkeleton
+                  ? const SliverToBoxAdapter(
+                      child: SkeletonList(
+                        count: 6,
+                        padding: EdgeInsets.only(top: 8),
+                      ),
+                    )
+                  : notifications.isEmpty
+                  ? const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _NotificationsEmptyState(),
+                    )
+                  : groups.isEmpty
+                  // กรองแล้วไม่เหลืออะไร — คนละเรื่องกับ "ยังไม่มีการแจ้งเตือน"
+                  ? const SliverToBoxAdapter(child: _AllCaughtUpNote())
+                  : SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+                      sliver: SliverList.builder(
+                        itemCount: groups.length,
+                        itemBuilder: (context, index) {
+                          final group = groups[index];
+                          return StaggeredEntrance(
+                            index: index,
+                            animate: _entrance.isOpen,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (index > 0) const SizedBox(height: 22),
+                                _NotificationSectionHeader(
+                                  label: group.label,
+                                  count: group.items.length,
+                                ),
+                                const SizedBox(height: 10),
+                                _NotificationGroupCard(
+                                  items: group.items,
+                                  busyIds: _busyIds,
+                                  onTap: _openNotification,
+                                  onDelete: _deleteNotification,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+            ),
           ],
         ),
       ),

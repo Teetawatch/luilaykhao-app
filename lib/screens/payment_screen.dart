@@ -19,8 +19,10 @@ import '../providers/app_provider.dart';
 import '../services/notification_navigator.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
+import '../widgets/animated_checkmark.dart';
 import '../widgets/active_seat_lock_overlay.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/count_up_text.dart';
 import 'booking_flow_screen.dart';
 
 part 'payment_status.part.dart';

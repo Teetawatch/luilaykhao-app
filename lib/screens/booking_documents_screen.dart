@@ -11,6 +11,7 @@ import '../widgets/document_attach_field.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart';
 import '../widgets/confirm_dialog.dart';
+import '../widgets/loading_fade.dart';
 
 /// เอกสารแนบของการจอง — ตามมาแนบทีหลังได้ที่นี่
 ///
@@ -159,41 +160,44 @@ class _BookingDocumentsScreenState extends State<BookingDocumentsScreen> {
             onPressed: () => Navigator.of(context).pop(_changed),
           ),
         ),
-        body: _loading && passengers.isEmpty
-            ? const Padding(
-                padding: EdgeInsets.fromLTRB(20, 12, 20, 32),
-                child: SkeletonDetail(showHero: false),
-              )
-            : _error != null
-            ? _DocumentsErrorState(message: _error!, onRetry: _load)
-            : requirements.isEmpty
-            ? _EmptyRequirements()
-            : RefreshIndicator(
-                onRefresh: _load,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-                  children: [
-                    _IntroCard(data: _data),
-                    const SizedBox(height: 20),
-                    ...passengers.map((passenger) {
-                      final passengerId =
-                          int.tryParse(textOf(passenger['passenger_id'])) ?? 0;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _PassengerDocumentCard(
-                          passenger: passenger,
-                          busySlots: _busy,
-                          deletingId: _deleting,
-                          onPick: (key, path) =>
-                              _upload(passengerId, key, path),
-                          onOpen: _open,
-                          onDelete: _delete,
-                        ),
-                      );
-                    }),
-                  ],
+        body: LoadingFade(
+          loading: _loading && passengers.isEmpty,
+          child: _loading && passengers.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, 32),
+                  child: SkeletonDetail(showHero: false),
+                )
+              : _error != null
+              ? _DocumentsErrorState(message: _error!, onRetry: _load)
+              : requirements.isEmpty
+              ? _EmptyRequirements()
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+                    children: [
+                      _IntroCard(data: _data),
+                      const SizedBox(height: 20),
+                      ...passengers.map((passenger) {
+                        final passengerId =
+                            int.tryParse(textOf(passenger['passenger_id'])) ?? 0;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _PassengerDocumentCard(
+                            passenger: passenger,
+                            busySlots: _busy,
+                            deletingId: _deleting,
+                            onPick: (key, path) =>
+                                _upload(passengerId, key, path),
+                            onOpen: _open,
+                            onDelete: _delete,
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }

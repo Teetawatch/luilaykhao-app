@@ -303,65 +303,68 @@ class VehicleSeatMap extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              width: metrics.tileWidth,
-              height: metrics.tileHeight,
-              decoration: BoxDecoration(
-                color: visual.fill,
-                borderRadius: BorderRadius.circular(metrics.tileRadius),
-                border: Border.all(
-                  color: spotlight
-                      ? Colors.white
-                      : emphasised
-                      ? Colors.transparent
-                      : visual.border,
-                  width: spotlight ? 2.5 : 1.5,
+            _SeatPop(
+              picked: tone == SeatTone.picking,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                width: metrics.tileWidth,
+                height: metrics.tileHeight,
+                decoration: BoxDecoration(
+                  color: visual.fill,
+                  borderRadius: BorderRadius.circular(metrics.tileRadius),
+                  border: Border.all(
+                    color: spotlight
+                        ? Colors.white
+                        : emphasised
+                        ? Colors.transparent
+                        : visual.border,
+                    width: spotlight ? 2.5 : 1.5,
+                  ),
                 ),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  // ไอคอนคนสำหรับที่นั่งของเรา (โหมดเน้น) — วางกึ่งกลางเบาะ
-                  // สื่อว่า "เรานั่งตรงนี้"
-                  if (spotlight)
-                    Center(
-                      child: Icon(
-                        Icons.person_rounded,
-                        color: Colors.white,
-                        size: metrics.tileHeight * 0.62,
-                      ),
-                    )
-                  else
-                    Padding(
-                      padding: EdgeInsets.all(metrics.glyphInset),
-                      child: _SeatGlyph(color: visual.glyph),
-                    ),
-                  if (badgeIcon != null)
-                    Positioned(
-                      top: spotlight ? -5 : 3,
-                      right: spotlight ? -5 : 3,
-                      child: Container(
-                        width: badgeSize,
-                        height: badgeSize,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: visual.badge,
-                          shape: BoxShape.circle,
-                          border: spotlight
-                              ? Border.all(color: _accent, width: 2)
-                              : null,
-                        ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    // ไอคอนคนสำหรับที่นั่งของเรา (โหมดเน้น) — วางกึ่งกลางเบาะ
+                    // สื่อว่า "เรานั่งตรงนี้"
+                    if (spotlight)
+                      Center(
                         child: Icon(
-                          badgeIcon,
-                          size: badgeSize * 0.64,
-                          color: visual.badgeIconColor,
+                          Icons.person_rounded,
+                          color: Colors.white,
+                          size: metrics.tileHeight * 0.62,
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: EdgeInsets.all(metrics.glyphInset),
+                        child: _SeatGlyph(color: visual.glyph),
+                      ),
+                    if (badgeIcon != null)
+                      Positioned(
+                        top: spotlight ? -5 : 3,
+                        right: spotlight ? -5 : 3,
+                        child: Container(
+                          width: badgeSize,
+                          height: badgeSize,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: visual.badge,
+                            shape: BoxShape.circle,
+                            border: spotlight
+                                ? Border.all(color: _accent, width: 2)
+                                : null,
+                          ),
+                          child: Icon(
+                            badgeIcon,
+                            size: badgeSize * 0.64,
+                            color: visual.badgeIconColor,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
             SizedBox(height: metrics.labelGap),
@@ -1008,4 +1011,59 @@ List<_SeatRowData> _seatRows(Map<String, dynamic> seatMap) {
   }
 
   return result;
+}
+
+/// ที่นั่งเด้งขึ้นนิดหนึ่ง (1 → 1.12 → 1) ตอนเพิ่งถูกกดเลือก — สีเปลี่ยนเองอยู่แล้ว
+/// ด้วย AnimatedContainer ตัวนี้เพิ่มแค่จังหวะ "รับรู้ว่ากดแล้ว"
+///
+/// เด้งเฉพาะตอน [picked] เปลี่ยนจาก false เป็น true ผังที่เปิดมาพร้อมที่นั่งที่
+/// เลือกไว้แล้ว (ย้อนกลับมาขั้นนี้) ไม่เด้งทั้งแถว
+class _SeatPop extends StatefulWidget {
+  final bool picked;
+  final Widget child;
+
+  const _SeatPop({required this.picked, required this.child});
+
+  @override
+  State<_SeatPop> createState() => _SeatPopState();
+}
+
+class _SeatPopState extends State<_SeatPop>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  );
+  late final Animation<double> _scale = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween(begin: 1.0, end: 1.12)
+          .chain(CurveTween(curve: Curves.easeOut)),
+      weight: 40,
+    ),
+    TweenSequenceItem(
+      tween: Tween(begin: 1.12, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOutBack)),
+      weight: 60,
+    ),
+  ]).animate(_controller);
+
+  @override
+  void didUpdateWidget(_SeatPop oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.picked &&
+        widget.picked &&
+        !(MediaQuery.maybeDisableAnimationsOf(context) ?? false)) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ScaleTransition(scale: _scale, child: widget.child);
 }

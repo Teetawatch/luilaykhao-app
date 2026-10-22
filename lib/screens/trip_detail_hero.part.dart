@@ -106,6 +106,7 @@ class TravelSliverAppBar extends StatelessWidget {
           tooltip: isFavorite ? 'นำออกจากทริปที่ชอบ' : 'บันทึกเป็นทริปที่ชอบ',
           isCollapsed: isCollapsed,
           foregroundColor: isFavorite ? const Color(0xFFE11D48) : null,
+          heart: isFavorite,
           onPressed: onFavoritePressed,
         ),
         const SizedBox(width: 14),
@@ -447,12 +448,17 @@ class FloatingActionIconButton extends StatefulWidget {
   final Color? foregroundColor;
   final VoidCallback onPressed;
 
+  /// ไม่ใช่ null = ปุ่มนี้คือหัวใจ "ถูกใจ" — วาดด้วย [HeartBounce] ให้เด้งตอน
+  /// เพิ่งกดถูกใจ เหมือนหัวใจบนการ์ดทริป ([icon] ถูกเมิน)
+  final bool? heart;
+
   const FloatingActionIconButton({
     super.key,
     required this.icon,
     required this.tooltip,
     required this.isCollapsed,
     this.foregroundColor,
+    this.heart,
     required this.onPressed,
   });
 
@@ -503,7 +509,13 @@ class _FloatingActionIconButtonState extends State<FloatingActionIconButton> {
                   widget.onPressed();
                 },
                 child: Center(
-                  child: Icon(widget.icon, size: 20, color: foreground),
+                  child: widget.heart == null
+                      ? Icon(widget.icon, size: 20, color: foreground)
+                      : HeartBounce(
+                          favourite: widget.heart!,
+                          size: 20,
+                          color: foreground,
+                        ),
                 ),
               ),
             ),

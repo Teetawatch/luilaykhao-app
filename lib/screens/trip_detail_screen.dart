@@ -26,10 +26,12 @@ import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/elevation_profile_chart.dart';
 import '../widgets/flash_countdown_pill.dart';
+import '../widgets/loading_fade.dart';
 import '../widgets/moderation_sheet.dart';
 import '../widgets/pickup_vehicle_guide.dart';
 import '../widgets/route_map_card.dart';
 import '../widgets/tier_badge.dart';
+import '../widgets/wishlist_button.dart' show HeartBounce;
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
 import '../widgets/weather_card.dart';
 import 'booking_flow_screen.dart';
@@ -945,11 +947,16 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       // ── หัวเรื่อง ────────────────────────────────────────────────────
       // ไม่มีกรอบการ์ด ตั้งใจให้เป็นหัวหน้าไม่ใช่ section หนึ่ง และอยู่เหนือ
       // จุดยึดของแท็บแรก
-      DestinationInfoSection(
-        trip: trip,
-        reviews: widget.reviews,
-        isLoading: widget.isLoading,
-        onReviewsTap: () => _handleTabSelected(_tabLabels.length - 1),
+      // สองส่วนนี้มีโครงร่างของตัวเองตอนโหลด — LoadingFade จางเนื้อหาจริงขึ้นแทน
+      // การตัดภาพ (section อื่นโผล่ทีหลังผ่าน _RevealOnScroll อยู่แล้ว)
+      LoadingFade(
+        loading: widget.isLoading,
+        child: DestinationInfoSection(
+          trip: trip,
+          reviews: widget.reviews,
+          isLoading: widget.isLoading,
+          onReviewsTap: () => _handleTabSelected(_tabLabels.length - 1),
+        ),
       ),
 
       // ── แท็บ 1: วันเดินทาง ───────────────────────────────────────────
@@ -991,11 +998,14 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
       if (textOf(trip['slug']).isNotEmpty)
         TripReadinessSection(slug: textOf(trip['slug'])),
       if (hasDescription)
-        AboutSection(
-          trip: trip,
-          isLoading: widget.isLoading,
-          isExpanded: widget.isDescriptionExpanded,
-          onToggle: widget.onDescriptionToggle,
+        LoadingFade(
+          loading: widget.isLoading,
+          child: AboutSection(
+            trip: trip,
+            isLoading: widget.isLoading,
+            isExpanded: widget.isDescriptionExpanded,
+            onToggle: widget.onDescriptionToggle,
+          ),
         ),
       // ตัวเลขเส้นทางจริง วางต่อจากคำบรรยาย — ซ่อนตัวเองถ้าทริปยังไม่มี
       // ระยะทาง/ความสูง (ตรงกับ routeFacts บนหน้าเว็บ)
@@ -1055,8 +1065,15 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
             // region changes, the charter entry once loading ends — doesn't
             // hand every later section's State to a different widget, which
             // threw away loaded review pages and refetched photos/feed/videos.
+            // ตัวที่ห่อ LoadingFade ไว้ใช้ชนิดของ section ข้างใน ไม่งั้นสอง
+            // section ที่ห่อจะได้ key เดียวกัน
             _RevealOnScroll(
-              key: ValueKey(sections[i].runtimeType),
+              key: ValueKey(
+                switch (sections[i]) {
+                  LoadingFade(:final child) => child.runtimeType,
+                  final section => section.runtimeType,
+                },
+              ),
               child: sections[i],
             ),
           ],

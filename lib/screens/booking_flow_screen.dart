@@ -29,6 +29,7 @@ import 'document_wallet_screen.dart';
 import 'payment_screen.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/join_trip_explainer_sheet.dart';
+import '../widgets/count_up_text.dart';
 
 part 'booking_flow_summary.part.dart';
 part 'booking_flow_seats.part.dart';

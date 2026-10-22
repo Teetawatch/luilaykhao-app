@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../widgets/app_snack.dart';
+import '../widgets/count_up_text.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 
@@ -248,8 +249,10 @@ class _PointsHero extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                _format(points),
+              CountUpText(
+                value: points,
+                from: 0,
+                format: (shown) => _format(shown.toInt()),
                 style: appFont(
                   color: Colors.white,
                   fontSize: 38,

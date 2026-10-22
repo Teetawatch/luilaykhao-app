@@ -490,26 +490,9 @@ class NotificationNavigator {
     // Account tab is index 4 after the "แชท" tab was inserted at index 3.
     _switchTab(4);
     Future.delayed(const Duration(milliseconds: 280), () {
+      // MaterialPageRoute = ทรานซิชันกลางของแอป และปัดย้อนกลับได้บน iOS
       _nav?.push(
-        PageRouteBuilder<void>(
-          pageBuilder: (_, anim, _) => const NotificationsScreen(),
-          transitionsBuilder: (_, anim, _, child) {
-            final curved = CurvedAnimation(
-              parent: anim,
-              curve: Curves.easeOutCubic,
-            );
-            return FadeTransition(
-              opacity: curved,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.06),
-                  end: Offset.zero,
-                ).animate(curved),
-                child: child,
-              ),
-            );
-          },
-        ),
+        MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
       );
     });
   }

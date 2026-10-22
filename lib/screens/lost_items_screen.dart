@@ -15,6 +15,7 @@ import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart';
 import '../widgets/confirm_dialog.dart';
+import '../widgets/loading_fade.dart';
 
 /// ของที่ลืมไว้ในทริป
 ///
@@ -234,13 +235,19 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
               ),
             )
           : null,
-      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: LoadingFade(loading: _showSkeleton, child: _buildBody()),
+      ),
     );
   }
 
+  /// โหลดครั้งแรกยังไม่มีข้อมูล — โชว์โครงร่าง แล้วจางเป็นเนื้อหาด้วย [LoadingFade]
+  bool get _showSkeleton => _items == null && _error == null;
+
   Widget _buildBody() {
     final items = _items;
-    if (items == null && _error == null) {
+    if (_showSkeleton) {
       return const SkeletonList(count: 3, padding: EdgeInsets.only(top: 8));
     }
     if (items == null) {

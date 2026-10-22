@@ -654,8 +654,13 @@ class _UtilityIconButton extends StatelessWidget {
 
 class UpcomingSection extends StatelessWidget {
   final List<Map<String, dynamic>> bookings;
+  final bool animateEntrance;
 
-  const UpcomingSection({super.key, required this.bookings});
+  const UpcomingSection({
+    super.key,
+    required this.bookings,
+    this.animateEntrance = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -663,14 +668,22 @@ class UpcomingSection extends StatelessWidget {
       eyebrow: 'ทริปถัดไปของคุณ',
       title: 'กำลังจะถึง',
       bookings: bookings,
+      animateEntrance: animateEntrance,
     );
   }
 }
 
 class PastTripsSection extends StatelessWidget {
   final List<Map<String, dynamic>> bookings;
+  final bool animateEntrance;
+  final int entranceOffset;
 
-  const PastTripsSection({super.key, required this.bookings});
+  const PastTripsSection({
+    super.key,
+    required this.bookings,
+    this.animateEntrance = false,
+    this.entranceOffset = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -678,6 +691,8 @@ class PastTripsSection extends StatelessWidget {
       eyebrow: 'ความทรงจำที่ผ่านมา',
       title: 'เดินทางแล้ว',
       bookings: bookings,
+      animateEntrance: animateEntrance,
+      entranceOffset: entranceOffset,
     );
   }
 }
@@ -687,11 +702,20 @@ class BookingSection extends StatelessWidget {
   final String title;
   final List<Map<String, dynamic>> bookings;
 
+  /// โหลดครั้งแรก — การ์ดไล่กันเข้ามาทีละใบ ([StaggeredEntrance])
+  final bool animateEntrance;
+
+  /// ลำดับของการ์ดใบแรกในหน้า เมื่อมีหลายหมวดต่อกัน ให้หมวดหลังไล่ต่อจาก
+  /// หมวดก่อน ไม่เริ่มพร้อมกันทุกหมวด
+  final int entranceOffset;
+
   const BookingSection({
     super.key,
     required this.eyebrow,
     required this.title,
     required this.bookings,
+    this.animateEntrance = false,
+    this.entranceOffset = 0,
   });
 
   @override
@@ -747,8 +771,12 @@ class BookingSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        for (final booking in bookings) ...[
-          ReservationCard(booking: booking),
+        for (var i = 0; i < bookings.length; i++) ...[
+          StaggeredEntrance(
+            index: entranceOffset + i,
+            animate: animateEntrance,
+            child: ReservationCard(booking: bookings[i]),
+          ),
           const SizedBox(height: 16),
         ],
       ],

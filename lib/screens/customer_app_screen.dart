@@ -81,6 +81,10 @@ import 'referral_screen.dart' show ReferralScreen;
 import '../models/group_plan.dart';
 import '../services/checklist_storage.dart';
 import '../widgets/confirm_dialog.dart';
+import '../widgets/fade_through_indexed_stack.dart';
+import '../widgets/loading_fade.dart';
+import '../widgets/staggered_entrance.dart';
+import '../widgets/count_up_text.dart';
 
 part 'my_bookings_screen.dart';
 part 'home_explore.part.dart';
@@ -337,7 +341,7 @@ class _CustomerAppScreenState extends State<CustomerAppScreen>
 
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(
+      body: FadeThroughIndexedStack(
         index: _index >= pages.length ? pages.length - 1 : _index,
         children: pages,
       ),
@@ -753,8 +757,13 @@ class _NavItemState extends State<_NavItem>
       duration: const Duration(milliseconds: 280),
       value: widget.isSelected ? 1.0 : 0.0,
     );
+    // ตอนถูกเลือกเด้งเกินนิดหนึ่งแล้วค่อยลงมาที่ 1.12 ตอนถูกปล่อยหดกลับเรียบๆ
     _iconScale = Tween<double>(begin: 1.0, end: 1.12).animate(
-      CurvedAnimation(parent: _anim, curve: Curves.easeOut),
+      CurvedAnimation(
+        parent: _anim,
+        curve: Curves.easeOutBack,
+        reverseCurve: Curves.easeIn,
+      ),
     );
     _pillWidth = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _anim, curve: Curves.easeInOut),

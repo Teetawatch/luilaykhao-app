@@ -1054,29 +1054,11 @@ String _loyaltyTierLabel(String tier, {String label = ''}) {
   };
 }
 
+/// เปิดหน้าย่อยของแท็บบัญชี — ใช้ทรานซิชันกลางของแอป ([AppTheme] →
+/// pageTransitionsTheme) เหมือนหน้าอื่น เดิมเป็น PageRouteBuilder จางขึ้นเอง
+/// ซึ่งทำให้ iOS ปัดขอบจอย้อนกลับไม่ได้ และ Android ไม่ได้ predictive back
 void _pushPremium(BuildContext context, Widget screen) {
-  Navigator.of(context).push(
-    PageRouteBuilder<void>(
-      pageBuilder: (_, animation, _) => screen,
-      transitionsBuilder: (_, animation, _, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.035),
-              end: Offset.zero,
-            ).animate(curved),
-            child: child,
-          ),
-        );
-      },
-    ),
-  );
+  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
 }
 
 Future<void> _openTrackingForBooking(

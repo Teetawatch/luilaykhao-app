@@ -8,6 +8,7 @@ import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/empty_state_view.dart';
+import '../widgets/loading_fade.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 
@@ -98,13 +99,16 @@ class _StaffOutstandingScreenState extends State<StaffOutstandingScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         color: AppTheme.primaryColor,
-        child: _buildBody(),
+        child: LoadingFade(loading: _showSkeleton, child: _buildBody()),
       ),
     );
   }
 
+  /// โหลดครั้งแรกยังไม่มีข้อมูล — โชว์โครงร่าง แล้วจางเป็นเนื้อหาด้วย [LoadingFade]
+  bool get _showSkeleton => _loading && _items.isEmpty;
+
   Widget _buildBody() {
-    if (_loading && _items.isEmpty) {
+    if (_showSkeleton) {
       return const SkeletonList(count: 5, padding: EdgeInsets.only(top: 8));
     }
     if (_error != null && _items.isEmpty) {

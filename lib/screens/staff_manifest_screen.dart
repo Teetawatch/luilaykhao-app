@@ -21,6 +21,7 @@ import 'report_incident_screen.dart';
 import 'staff_check_in_screen.dart'
     show StaffCheckInScreen, asMap, asList, textOf;
 import '../widgets/confirm_dialog.dart';
+import '../widgets/loading_fade.dart';
 
 /// Full passenger manifest for one schedule — shows every confirmed booking
 /// with contact name, callable phone and pickup point so staff can coordinate
@@ -519,13 +520,16 @@ class _StaffManifestScreenState extends State<StaffManifestScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         color: AppTheme.primaryColor,
-        child: _buildBody(summary),
+        child: LoadingFade(loading: _showSkeleton, child: _buildBody(summary)),
       ),
     );
   }
 
+  /// โหลดครั้งแรกยังไม่มีข้อมูล — โชว์โครงร่าง แล้วจางเป็นเนื้อหาด้วย [LoadingFade]
+  bool get _showSkeleton => _loading && _data == null;
+
   Widget _buildBody(Map<String, dynamic> summary) {
-    if (_loading && _data == null) {
+    if (_showSkeleton) {
       return const SkeletonList(count: 6, padding: EdgeInsets.only(top: 8));
     }
 

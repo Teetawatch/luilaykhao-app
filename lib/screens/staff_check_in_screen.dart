@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
+import '../widgets/animated_checkmark.dart';
 import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
@@ -34,6 +35,11 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
   String? _currentCode;
   String? _error;
   String? _success;
+
+  /// [_success] มาจากการเช็คอิน (ไม่ใช่ยกเลิก) — และนับรอบไว้เป็น key ให้
+  /// เครื่องหมายถูกวาดใหม่ทุกครั้งที่สแกนผ่าน
+  bool _successIsCheckIn = false;
+  int _checkInTick = 0;
   bool _loading = false;
   bool _confirming = false;
 
@@ -189,6 +195,7 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
         _meta = result.meta;
         _selected = <int>{};
         _success = result.message;
+        _successIsCheckIn = false;
       });
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -224,6 +231,8 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
         _meta = result.meta;
         _selected = <int>{};
         _success = result.message;
+        _successIsCheckIn = true;
+        _checkInTick++;
       });
       _successAnimController.forward(from: 0);
     } on ApiException catch (e) {
@@ -383,6 +392,16 @@ class _StaffCheckInScreenState extends State<StaffCheckInScreen>
                   icon: Icons.verified_rounded,
                   text: _success!,
                   color: AppTheme.primaryColor,
+                  // เช็คอินผ่าน = วาดเครื่องหมายถูกใหม่ทุกใบ (key ตามรอบ) ส่วน
+                  // ข้อความยกเลิกเช็คอินใช้ไอคอนเดิม
+                  leading: _checkInTick > 0 && _successIsCheckIn
+                      ? AnimatedCheckmark(
+                          key: ValueKey(_checkInTick),
+                          size: 22,
+                          strokeWidth: 2.4,
+                          color: AppTheme.primaryColor,
+                        )
+                      : null,
                 ),
               ),
             ],
@@ -1965,10 +1984,14 @@ class _MessageBanner extends StatelessWidget {
   final String text;
   final Color color;
 
+  /// แทนไอคอน — เช่นเครื่องหมายถูกที่ถูกวาดขึ้นมาตอนเช็คอินผ่าน
+  final Widget? leading;
+
   const _MessageBanner({
     required this.icon,
     required this.text,
     required this.color,
+    this.leading,
   });
 
   @override
@@ -1982,7 +2005,7 @@ class _MessageBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 20),
+          leading ?? Icon(icon, color: color, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

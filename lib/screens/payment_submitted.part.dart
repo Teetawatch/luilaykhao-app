@@ -222,9 +222,14 @@ class _SuccessBadge extends StatelessWidget {
             alpha: AppTheme.isDark(context) ? 0.20 : 0.12,
           ),
           shape: BoxShape.circle,
-          border: Border.all(color: _accent.withValues(alpha: 0.3), width: 2),
         ),
-        child: const Icon(Icons.check_rounded, color: _accent, size: 48),
+        // วงกลมถูกวาดรอบแล้วขีดถูก แทนวงขอบกับไอคอนที่โผล่มาเฉยๆ
+        child: const AnimatedCheckmark(
+          size: 92,
+          color: _accent,
+          strokeWidth: 3.5,
+          haptic: true,
+        ),
       ),
     );
   }
@@ -266,8 +271,11 @@ class _SubmittedSummaryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            money(amount),
+          // นับขึ้นจาก 0 ครั้งเดียวตอนเปิดหน้า — จังหวะ "ส่งแล้ว" ให้รู้สึกจบ
+          CountUpText(
+            value: amount,
+            from: 0,
+            format: money,
             textAlign: TextAlign.center,
             style: appFont(
               color: _accent,

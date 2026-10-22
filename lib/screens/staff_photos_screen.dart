@@ -16,6 +16,7 @@ import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart' show PrimaryCTAButton;
 import 'staff_check_in_screen.dart' show asMap, asList, textOf;
 import '../widgets/confirm_dialog.dart';
+import '../widgets/loading_fade.dart';
 
 /// รูปต่อคำขอที่แอปส่ง — เซิร์ฟเวอร์รับได้ถึง 20 แต่บนเน็ตมือถือชุดเล็กกว่า
 /// พลาดแล้วเสียน้อยกว่า และไม่ชนเพดาน body ของ nginx
@@ -308,7 +309,10 @@ class _StaffPhotosScreenState extends State<StaffPhotosScreen> {
             ),
           ],
         ),
-        body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
+        body: RefreshIndicator(
+          onRefresh: _load,
+          child: LoadingFade(loading: _showSkeleton, child: _buildBody()),
+        ),
         bottomNavigationBar: _data == null
             ? null
             : _UploadBar(
@@ -321,8 +325,11 @@ class _StaffPhotosScreenState extends State<StaffPhotosScreen> {
     );
   }
 
+  /// โหลดครั้งแรกยังไม่มีข้อมูล — โชว์โครงร่าง แล้วจางเป็นเนื้อหาด้วย [LoadingFade]
+  bool get _showSkeleton => _loading && _data == null;
+
   Widget _buildBody() {
-    if (_loading && _data == null) {
+    if (_showSkeleton) {
       return const SkeletonList(count: 4, padding: EdgeInsets.only(top: 8));
     }
     if (_error != null && _data == null) {

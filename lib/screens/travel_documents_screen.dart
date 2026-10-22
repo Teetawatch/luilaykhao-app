@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/loading_fade.dart';
 
 /// เอกสารเดินทาง (พาสปอร์ต) ของทริปต่างประเทศ — กรอก/แก้หลังจองแล้ว
 ///
@@ -205,56 +206,59 @@ class _TravelDocumentsScreenState extends State<TravelDocumentsScreen> {
         ),
         iconTheme: IconThemeData(color: AppTheme.onSurface(context)),
       ),
-      body: _loading && passengers.isEmpty
-          ? const Padding(
-              padding: EdgeInsets.fromLTRB(20, 12, 20, 32),
-              child: SkeletonDetail(showHero: false),
-            )
-          : _error != null
-          ? _ErrorState(message: _error!, onRetry: _load)
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-                children: [
-                  _IntroCard(data: _data),
-                  const SizedBox(height: 20),
-                  ...passengers.map((passenger) {
-                    final id = int.tryParse(textOf(passenger['id'])) ?? 0;
-                    final fields = _fields[id];
-                    if (fields == null) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _PassengerCard(
-                        passenger: passenger,
-                        fields: fields,
-                        minimumExpiry: _minimumExpiry,
-                        serverError: _serverErrors[id],
-                        onChanged: () => setState(() {}),
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 6),
-                  PrimaryCTAButton(
-                    label: _saving ? 'กำลังบันทึก...' : 'บันทึกเอกสารเดินทาง',
-                    icon: Icons.check_circle_outline_rounded,
-                    loading: _saving,
-                    onPressed: _save,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'ท่านที่ยังไม่มีเล่มอยู่กับตัว เว้นว่างไว้ได้ครับ กลับมากรอกทีหลังได้ '
-                    'ตราบใดที่ยังไม่ถึงวันเดินทาง',
-                    textAlign: TextAlign.center,
-                    style: appFont(
-                      fontSize: AppText.sizeCaption,
-                      color: AppTheme.mutedText(context),
-                      height: 1.5,
+      body: LoadingFade(
+        loading: _loading && passengers.isEmpty,
+        child: _loading && passengers.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.fromLTRB(20, 12, 20, 32),
+                child: SkeletonDetail(showHero: false),
+              )
+            : _error != null
+            ? _ErrorState(message: _error!, onRetry: _load)
+            : Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+                  children: [
+                    _IntroCard(data: _data),
+                    const SizedBox(height: 20),
+                    ...passengers.map((passenger) {
+                      final id = int.tryParse(textOf(passenger['id'])) ?? 0;
+                      final fields = _fields[id];
+                      if (fields == null) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _PassengerCard(
+                          passenger: passenger,
+                          fields: fields,
+                          minimumExpiry: _minimumExpiry,
+                          serverError: _serverErrors[id],
+                          onChanged: () => setState(() {}),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 6),
+                    PrimaryCTAButton(
+                      label: _saving ? 'กำลังบันทึก...' : 'บันทึกเอกสารเดินทาง',
+                      icon: Icons.check_circle_outline_rounded,
+                      loading: _saving,
+                      onPressed: _save,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    Text(
+                      'ท่านที่ยังไม่มีเล่มอยู่กับตัว เว้นว่างไว้ได้ครับ กลับมากรอกทีหลังได้ '
+                      'ตราบใดที่ยังไม่ถึงวันเดินทาง',
+                      textAlign: TextAlign.center,
+                      style: appFont(
+                        fontSize: AppText.sizeCaption,
+                        color: AppTheme.mutedText(context),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }

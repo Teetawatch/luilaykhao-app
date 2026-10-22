@@ -8,6 +8,7 @@ import '../providers/app_provider.dart';
 import '../widgets/skeleton.dart';
 import '../theme/app_theme.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/loading_fade.dart';
 import 'chat_screen.dart';
 import 'login_screen.dart';
 
@@ -62,6 +63,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final conversations = app.chatConversations
         .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
+    final showSkeleton = _loading && !_loadedOnce && conversations.isEmpty;
 
     return Scaffold(
       backgroundColor: AppTheme.background(context),
@@ -74,30 +76,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
           slivers: [
             const TravelSliverAppBar(title: 'แชท', showBackButton: false),
-            if (_loading && !_loadedOnce && conversations.isEmpty)
-              const SliverToBoxAdapter(
-                child: SkeletonList(count: 7, padding: EdgeInsets.only(top: 8)),
-              )
-            else if (conversations.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _EmptyChats(error: _error),
-              )
-            else
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  12,
-                  8,
-                  12,
-                  100 + MediaQuery.of(context).padding.bottom,
-                ),
-                sliver: SliverList.separated(
-                  itemCount: conversations.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 4),
-                  itemBuilder: (context, index) =>
-                      _ConversationTile(conversation: conversations[index]),
-                ),
-              ),
+            LoadingFade.sliver(
+              loading: showSkeleton,
+              sliver: showSkeleton
+                  ? const SliverToBoxAdapter(
+                      child: SkeletonList(
+                        count: 7,
+                        padding: EdgeInsets.only(top: 8),
+                      ),
+                    )
+                  : conversations.isEmpty
+                  ? SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _EmptyChats(error: _error),
+                    )
+                  : SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        12,
+                        8,
+                        12,
+                        100 + MediaQuery.of(context).padding.bottom,
+                      ),
+                      sliver: SliverList.separated(
+                        itemCount: conversations.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 4),
+                        itemBuilder: (context, index) =>
+                            _ConversationTile(conversation: conversations[index]),
+                      ),
+                    ),
+            ),
           ],
         ),
       ),

@@ -8,6 +8,7 @@ import '../widgets/skeleton.dart';
 import '../theme/app_theme.dart';
 import '../utils/thai_date.dart';
 import '../widgets/travel_widgets.dart';
+import '../widgets/loading_fade.dart';
 
 class RefundStatusScreen extends StatefulWidget {
   final String bookingRef;
@@ -68,11 +69,14 @@ class _RefundStatusScreenState extends State<RefundStatusScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-          child: _loading && _booking == null
-              ? const SkeletonDetail(showHero: false)
-              : _error != null
-              ? _ErrorState(message: _error!, onRetry: _load)
-              : _RefundBody(booking: _booking ?? const <String, dynamic>{}),
+          child: LoadingFade(
+            loading: _loading && _booking == null,
+            child: _loading && _booking == null
+                ? const SkeletonDetail(showHero: false)
+                : _error != null
+                ? _ErrorState(message: _error!, onRetry: _load)
+                : _RefundBody(booking: _booking ?? const <String, dynamic>{}),
+          ),
         ),
       ),
     );

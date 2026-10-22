@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_tile_layer.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/skeleton.dart';
+import '../widgets/loading_fade.dart';
 
 /// "เส้นทางที่ฉันเดิน" — คลังแทร็ก GPS ที่ลูกค้าอัดไว้เองระหว่างทริป
 ///
@@ -65,7 +66,7 @@ class _MyTracksScreenState extends State<MyTracksScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         color: AppTheme.primaryColor,
-        child: _buildBody(),
+        child: LoadingFade(loading: _loading, child: _buildBody()),
       ),
     );
   }
