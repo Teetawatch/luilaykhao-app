@@ -128,6 +128,7 @@ class TripSummaryCard extends StatelessWidget {
     final pickupLocationLabel = isJoinTrip
         ? 'เดินทางไปเอง · เจอกันที่จุดนัดพบ'
         : _pickupLocationLabel(pickupPoint);
+    final meals = TripMeals.tryParse(trip['meals']);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -216,6 +217,14 @@ class TripSummaryCard extends StatelessWidget {
                   icon: Icons.payments_rounded,
                   text: 'ราคาต่อคน ${money(pricePerTraveler)}',
                 ),
+                // กันเข้าใจผิดว่าค่าอาหารรวมหมด ทั้งที่บางมื้อต้องจ่ายเอง
+                if (meals != null) ...[
+                  const SizedBox(height: 8),
+                  _SummaryMeta(
+                    icon: Icons.restaurant_rounded,
+                    text: meals.summary,
+                  ),
+                ],
               ],
             ),
           ),

@@ -89,6 +89,46 @@ void main() {
     });
   });
 
+  group('มื้ออาหาร (ต้องตรงกับ ChatAutoAnswerService ฝั่ง PHP)', () {
+    test('ถามจำนวนมื้อ/มีอาหารไหม จับได้', () {
+      expect(
+        QuickAskMatcher.match('ทริปนี้อาหารกี่มื้อครับ'),
+        QuickAskTopic.meals,
+      );
+      expect(QuickAskMatcher.match('มีอาหาร ไหมคะ'), QuickAskTopic.meals);
+      expect(
+        QuickAskMatcher.match('มื้อเย็นวันแรกกินที่ไหนคะ'),
+        QuickAskTopic.meals,
+      );
+      // "อาหารเช้า" มาก่อน "กี่โมง" ของข้อเวลาขึ้นรถ
+      expect(QuickAskMatcher.match('อาหารเช้ากี่โมงครับ'), QuickAskTopic.meals);
+    });
+
+    test('คุยเรื่องอาหารที่ไม่ใช่คำถามเรื่องมื้อของทริป ไม่เด้ง', () {
+      expect(QuickAskMatcher.match('โอนค่าอาหารแล้วครับ'), isNull);
+      expect(QuickAskMatcher.match('มื้อเย็นอร่อยมากครับ'), isNull);
+      expect(QuickAskMatcher.match('สั่งอาหารเย็นยังไงคะ'), isNull);
+      expect(QuickAskMatcher.match('แพ้อาหารทะเลต้องแจ้งไหมคะ'), isNull);
+      expect(QuickAskMatcher.match('ขึ้นรถกี่โมงครับ'), QuickAskTopic.time);
+    });
+
+    test('คำตอบบนแถบใช้ประโยคจาก backend', () {
+      expect(
+        QuickAskAnswer.line(QuickAskTopic.meals, {
+          'meals': {'summary': 'รวมอาหาร 3 มื้อ · จ่ายเอง 1 มื้อ'},
+        }),
+        'รวมอาหาร 3 มื้อ · จ่ายเอง 1 มื้อ',
+      );
+      expect(
+        QuickAskAnswer.line(QuickAskTopic.meals, {
+          'meals': null,
+          'pending': {'meals': 'ทริปนี้ยังไม่ได้ระบุมื้ออาหาร'},
+        }),
+        'ทริปนี้ยังไม่ได้ระบุมื้ออาหาร',
+      );
+    });
+  });
+
   group('คำตอบหนึ่งบรรทัดบนแถบ', () {
     const info = {
       'pickup': {'location': 'ปั๊ม ปตท. วิภาวดี', 'time': '19:30'},

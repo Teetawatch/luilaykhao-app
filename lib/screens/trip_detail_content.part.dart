@@ -367,6 +367,29 @@ class ExcludedSection extends StatelessWidget {
   }
 }
 
+/// มื้ออาหารวัน × มื้อ — ตอบ "กี่มื้อ มื้อไหน ต้องจ่ายเองไหม" ก่อนจอง
+///
+/// กางไว้เสมอ ไม่พับเหมือน "ค่าใช้จ่ายนี้รวมอะไรบ้าง" เพราะเป็นคำถามที่ลูกค้า
+/// ทักมาถามบ่อยที่สุดข้อหนึ่ง หัวข้อย่อยคือคำตอบทั้งประโยคอยู่แล้ว
+class MealPlanSection extends StatelessWidget {
+  final Map<String, dynamic> trip;
+
+  const MealPlanSection({super.key, required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final meals = TripMeals.tryParse(trip['meals']);
+    if (meals == null) return const SizedBox.shrink();
+
+    return _SectionShell(
+      icon: Icons.restaurant_rounded,
+      title: 'มื้ออาหาร',
+      subtitle: meals.summary,
+      child: TripMealTable(meals: meals),
+    );
+  }
+}
+
 class ItinerarySection extends StatelessWidget {
   final Map<String, dynamic> trip;
   final String? pickupRegionKey;

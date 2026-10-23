@@ -20,6 +20,7 @@ import '../providers/trip_alert_provider.dart';
 import '../providers/wishlist_provider.dart';
 
 import '../config/api_config.dart';
+import '../models/trip_meals.dart';
 import '../services/api_client.dart';
 import '../widgets/min_tap_target.dart';
 import '../theme/app_theme.dart';
@@ -31,6 +32,7 @@ import '../widgets/moderation_sheet.dart';
 import '../widgets/pickup_vehicle_guide.dart';
 import '../widgets/route_map_card.dart';
 import '../widgets/tier_badge.dart';
+import '../widgets/trip_meal_table.dart';
 import '../widgets/wishlist_button.dart' show HeartBounce;
 import '../widgets/travel_widgets.dart' hide TravelSliverAppBar;
 import '../widgets/weather_card.dart';
@@ -1018,6 +1020,9 @@ class _TravelDetailPageState extends State<TravelDetailPage> {
           pickupRegionKey: _effectivePickupRegionKey,
           pickupRegionLabel: _pickupRegionLabel(_selectedPickupPoint),
         ),
+      // "อาหารกี่มื้อ" ต่อจากกำหนดการ — ซ่อนตัวเองเมื่อทริปยังไม่ได้ระบุ
+      if (TripMeals.tryParse(trip['meals']) != null)
+        MealPlanSection(trip: trip),
       if (_detailGalleryImages(trip).isNotEmpty)
         PhotoGallerySection(trip: trip),
       if (_tripVideos(trip).isNotEmpty) VideoGallerySection(trip: trip),

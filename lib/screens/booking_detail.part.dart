@@ -4365,6 +4365,7 @@ class _TripSummaryCard extends StatelessWidget {
     final driverPhone = textOf(vehicle['driver_phone']).trim();
     final staffList = asList(booking['assigned_staff']).map(asMap).toList();
     final countdown = _countdownLabel();
+    final meals = TripMeals.tryParse(asMap(schedule['trip'])['meals']);
 
     final departTime = textOf(schedule['departs_at']).isNotEmpty
         ? DateTime.tryParse(textOf(schedule['departs_at']))
@@ -4477,6 +4478,20 @@ class _TripSummaryCard extends StatelessWidget {
                   ].join(' · '),
             pendingText: 'ทีมงานจะยืนยันรถและทะเบียนให้ก่อนเดินทาง 1 วัน',
           ),
+
+          // อาหาร — ทริปที่ยังไม่ได้ระบุไม่ต้องโชว์แถว (ไม่มีอะไรให้ "รอยืนยัน")
+          if (meals != null)
+            _SummaryRow(
+              icon: Icons.restaurant_rounded,
+              label: 'อาหาร',
+              value: meals.summary,
+              actionIcon: Icons.table_rows_rounded,
+              actionLabel: 'รายมื้อ',
+              onAction: () {
+                HapticFeedback.selectionClick();
+                showTripMealsSheet(context, meals);
+              },
+            ),
 
           // 3) เบอร์คนขับ
           _SummaryRow(

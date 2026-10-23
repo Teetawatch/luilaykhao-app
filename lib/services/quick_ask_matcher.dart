@@ -11,7 +11,9 @@
 ///
 /// ข้อ [QuickAskTopic.van] ("รถถึงไหนแล้ว") มีแต่ในแอป ไม่มีในบอทของห้อง
 /// (ChatAutoAnswerService) โดยตั้งใจ — ระยะรถต่างกันตามจุดรับของแต่ละคน
-enum QuickAskTopic { itinerary, van, time, place, vehicle, contact }
+///
+/// ⚠️ รายการคำต้องตรงกับ `ChatAutoAnswerService` (STRONG/WEAK/AVOID) ฝั่ง PHP
+enum QuickAskTopic { itinerary, meals, van, time, place, vehicle, contact }
 
 class QuickAskMatcher {
   /// คำที่พบแล้วมั่นใจได้เลยว่าถามข้อนั้น
@@ -77,6 +79,24 @@ class QuickAskMatcher {
       'โทรหาใคร',
       'โทรเบอร์ไหน',
     ],
+    // ทุกคำเป็นรูปคำถามอยู่แล้ว — "ค่าอาหาร" ลอย ๆ อยู่ในกลุ่มคำกว้าง
+    // เพราะ "โอนค่าอาหารแล้วครับ" ไม่ใช่คำถาม
+    QuickAskTopic.meals: [
+      'กี่มื้อ',
+      'มีอาหารไหม',
+      'มีอาหารมั้ย',
+      'มีอาหารด้วยไหม',
+      'มีอาหารด้วยมั้ย',
+      'รวมอาหารไหม',
+      'รวมอาหารมั้ย',
+      'รวมค่าอาหารไหม',
+      'รวมค่าอาหารมั้ย',
+      'อาหารรวมไหม',
+      'อาหารรวมมั้ย',
+      'เลี้ยงอาหารไหม',
+      'มีข้าวกินไหม',
+      'มีข้าวกินมั้ย',
+    ],
   };
 
   /// คำกว้างเกินกว่าจะเชื่อลอย ๆ — ต้องมีรูปประโยคคำถามประกอบด้วย
@@ -94,6 +114,30 @@ class QuickAskMatcher {
     QuickAskTopic.time: ['กี่โมง'],
     QuickAskTopic.vehicle: ['ทะเบียน'],
     QuickAskTopic.contact: ['เบอร์'],
+    QuickAskTopic.meals: [
+      'มื้ออาหาร',
+      'มื้อเช้า',
+      'มื้อกลางวัน',
+      'มื้อเที่ยง',
+      'มื้อเย็น',
+      'มื้อค่ำ',
+      'อาหารเช้า',
+      'อาหารกลางวัน',
+      'อาหารเที่ยง',
+      'อาหารเย็น',
+      'อาหารค่ำ',
+      'ข้าวเช้า',
+      'ข้าวเที่ยง',
+      'ข้าวเย็น',
+      'รวมอาหาร',
+      'ค่าอาหาร',
+    ],
+  };
+
+  /// มีคำเหล่านี้แล้วไม่ใช่คำถามเรื่องมื้ออาหารของทริป — "สั่งอาหารเย็นยังไง"
+  /// คือรอบสั่งอาหารในห้อง "แพ้อาหารต้องแจ้งไหม" คือเรื่องแพ้อาหาร
+  static const Map<QuickAskTopic, List<String>> _avoid = {
+    QuickAskTopic.meals: ['สั่ง', 'แพ้'],
   };
 
   /// เครื่องหมายว่ากำลังถาม ไม่ใช่กำลังเล่า
@@ -124,6 +168,7 @@ class QuickAskMatcher {
   /// ไม่ถูกกลืนโดยคำกว้างของข้ออื่น
   static const List<QuickAskTopic> _order = [
     QuickAskTopic.itinerary,
+    QuickAskTopic.meals,
     QuickAskTopic.van,
     QuickAskTopic.place,
     QuickAskTopic.time,
@@ -137,13 +182,19 @@ class QuickAskMatcher {
     if (normalized.isEmpty) return null;
 
     for (final topic in _order) {
-      if (_containsAny(normalized, _strong[topic])) return topic;
+      if (_containsAny(normalized, _strong[topic]) &&
+          !_containsAny(normalized, _avoid[topic])) {
+        return topic;
+      }
     }
 
     if (!_looksLikeQuestion(normalized)) return null;
 
     for (final topic in _order) {
-      if (_containsAny(normalized, _weak[topic])) return topic;
+      if (_containsAny(normalized, _weak[topic]) &&
+          !_containsAny(normalized, _avoid[topic])) {
+        return topic;
+      }
     }
 
     return null;
@@ -181,6 +232,11 @@ class QuickAskAnswer {
         final total = int.tryParse('${itinerary['total']}') ?? 0;
 
         return 'กำหนดการของรอบนี้ $total รายการ';
+      case QuickAskTopic.meals:
+        // ประโยคมาจาก backend ทั้งคู่ — ทริปที่ยังไม่ระบุก็บอกตรง ๆ ไม่เดา
+        return _text(_map(info['meals'])?['summary']) ??
+            _text(_map(info['pending'])?['meals']) ??
+            'ทริปนี้ยังไม่ได้ระบุมื้ออาหาร ถามทีมงานในห้องแชทได้เลยครับ';
       case QuickAskTopic.van:
         final live = _map(info['live']);
         if (live == null) {

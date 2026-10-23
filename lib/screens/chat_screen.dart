@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
 import '../models/chat_notify_level.dart';
+import '../models/trip_meals.dart';
 import '../providers/app_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../services/push_notification_service.dart';
@@ -42,6 +43,7 @@ import '../widgets/chat_vote_sheet.dart';
 import '../widgets/chat_wellness.dart';
 import '../widgets/moderation_sheet.dart';
 import '../widgets/sheet_close_button.dart';
+import '../widgets/trip_meal_table.dart';
 import '../theme/app_theme.dart';
 import '../services/quick_ask_matcher.dart';
 import '../utils/thai_date.dart';
@@ -3969,6 +3971,9 @@ class _ChatScreenState extends State<ChatScreen>
 
   bool get _hasItinerary => _room?['has_itinerary'] == true;
 
+  /// ทริประบุมื้ออาหารแล้ว — ยังไม่ระบุก็ไม่มีชิปให้กดไปเจอคำว่า "ยังไม่ระบุ"
+  bool get _hasMeals => _room?['has_meals'] == true;
+
   /// คนที่ผู้ร่วมทริปโทรหาได้ — สตาฟ/ทีมงานประจำรอบ แล้วต่อด้วยคนขับ
   ///
   /// เอาเฉพาะคนที่มีเบอร์จริง เพราะแถบนี้มีไว้ให้ "กดโทร" การโชว์คนที่โทรไม่ได้
@@ -4255,6 +4260,7 @@ class _ChatScreenState extends State<ChatScreen>
             _QuickAskBar(
               canModerate: _canModerate,
               hasItinerary: _hasItinerary,
+              hasMeals: _hasMeals,
               tripLive: _room?['trip_live'] == true,
               onAsk: _openTripInfo,
               onSendSummary: _sendTripSummary,
@@ -5310,6 +5316,12 @@ class _SystemBodyTextState extends State<_SystemBodyText> {
 /// คำถามที่ลูกค้าถามซ้ำที่สุดในห้องแชท — ใช้เป็นทั้งป้ายปุ่มและหัวข้อคำตอบ
 enum _QuickAsk {
   itinerary(QuickAskTopic.itinerary, 'กำหนดการ', 'กำหนดการ', Icons.route_rounded),
+  meals(
+    QuickAskTopic.meals,
+    'อาหารกี่มื้อ',
+    'มื้ออาหาร',
+    Icons.restaurant_rounded,
+  ),
   van(
     QuickAskTopic.van,
     'รถถึงไหนแล้ว',
@@ -5430,6 +5442,7 @@ class _QuickAskSuggestion extends StatelessWidget {
 class _QuickAskBar extends StatelessWidget {
   final bool canModerate;
   final bool hasItinerary;
+  final bool hasMeals;
   final bool tripLive;
   final ValueChanged<_QuickAsk> onAsk;
   final Future<void> Function() onSendSummary;
@@ -5438,6 +5451,7 @@ class _QuickAskBar extends StatelessWidget {
   const _QuickAskBar({
     required this.canModerate,
     required this.hasItinerary,
+    this.hasMeals = false,
     required this.tripLive,
     required this.onAsk,
     required this.onSendSummary,
@@ -5460,6 +5474,7 @@ class _QuickAskBar extends StatelessWidget {
             // รอบที่ยังไม่มีกำหนดการ (ทั้งของรอบและของทริป) ไม่ต้องมีปุ่มให้กดค้าง
             // "รถถึงไหนแล้ว" มีความหมายเฉพาะวันเดินทาง (ช่วงเดียวกับการ์ดหน้าจอล็อก)
             if ((ask != _QuickAsk.itinerary || hasItinerary) &&
+                (ask != _QuickAsk.meals || hasMeals) &&
                 (ask != _QuickAsk.van || tripLive)) ...[
               _QuickAskChip(
                 icon: ask.icon,
@@ -5614,6 +5629,7 @@ class _TripInfoSheet extends StatelessWidget {
         .toList();
     final itineraryTotal =
         int.tryParse('${itinerary?['total']}') ?? itineraryItems.length;
+    final meals = TripMeals.tryParse(info['meals']);
 
     final pickupTime = _text(pickup?['time']);
     final pickupWhere = _text(pickup?['location']) ?? _text(pickup?['label']);
@@ -5730,6 +5746,21 @@ class _TripInfoSheet extends StatelessWidget {
                         ),
                     ],
                   ),
+                  // มื้ออาหาร — ทริปที่ยังไม่ระบุขึ้นเฉพาะตอนถามเรื่องนี้ตรง ๆ
+                  if (meals != null || focus == _QuickAsk.meals)
+                    _TripInfoBlock(
+                      ask: _QuickAsk.meals,
+                      highlight: focus == _QuickAsk.meals,
+                      answer: meals?.summary,
+                      pending: _text(_map(info['pending'])?['meals']) ??
+                          'ทริปนี้ยังไม่ได้ระบุมื้ออาหาร ถามทีมงานในห้องแชทได้เลยครับ',
+                      children: [
+                        if (meals != null) ...[
+                          const SizedBox(height: 8),
+                          TripMealTable(meals: meals),
+                        ],
+                      ],
+                    ),
                   _TripInfoBlock(
                     ask: _QuickAsk.time,
                     highlight: focus == _QuickAsk.time,

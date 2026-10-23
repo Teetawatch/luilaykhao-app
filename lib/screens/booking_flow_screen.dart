@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/api_config.dart';
+import '../models/trip_meals.dart';
 import '../providers/app_provider.dart';
 import '../services/api_client.dart';
 import '../services/realtime_service.dart';

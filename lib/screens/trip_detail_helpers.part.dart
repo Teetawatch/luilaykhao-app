@@ -175,6 +175,14 @@ List<_QuickInfoItem> _quickInfoItems(Map<String, dynamic> trip) {
     items.add(_QuickInfoItem(icon: Icons.schedule_rounded, label: duration));
   }
 
+  // "อาหาร 5 มื้อ" ข้างระยะเวลา — คำถามแรก ๆ ที่ลูกค้าทักมาถาม
+  final meals = TripMeals.tryParse(trip['meals']);
+  if (meals != null) {
+    items.add(
+      _QuickInfoItem(icon: Icons.restaurant_rounded, label: meals.label),
+    );
+  }
+
   if (type.isNotEmpty) {
     items.add(_QuickInfoItem(icon: Icons.hiking_rounded, label: type));
   }
@@ -210,7 +218,8 @@ List<_QuickInfoItem> _quickInfoItems(Map<String, dynamic> trip) {
     );
   }
 
-  return items.take(5).toList();
+  // ตาราง 2 คอลัมน์ — 6 ช่องเต็ม 3 แถวพอดี
+  return items.take(6).toList();
 }
 
 String _durationLabel(Map<String, dynamic> trip) {
